@@ -1,7 +1,12 @@
 import { createRootRoute, Link } from '@tanstack/react-router'
 import { Shell } from '../components/Shell'
+import { sumApi } from '../data/client'
+import { RouteError, RoutePending } from '../components/RouteStatus'
 
 export const Route = createRootRoute({
+  loader: ({ abortController }) => sumApi.get('formulario', { signal: abortController.signal }),
+  staleTime: 60_000,
+  pendingComponent: RoutePending,
   component: Shell,
   notFoundComponent: () => (
     <div className="not-found">
@@ -9,10 +14,5 @@ export const Route = createRootRoute({
       <Link to="/alumnoWebSum/v2/inicio">Volver al inicio</Link>
     </div>
   ),
-  errorComponent: ({ reset }) => (
-    <div className="not-found">
-      <h2>No se pudo mostrar la página</h2>
-      <button onClick={reset}>Intentar de nuevo</button>
-    </div>
-  ),
+  errorComponent: RouteError,
 })

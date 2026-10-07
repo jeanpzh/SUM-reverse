@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "verify": "node scripts/verify.mjs"
+    "verify": "node scripts/verify.mjs",
+    "test:data": "tsc -p tsconfig.data-tests.json && node --experimental-strip-types --test --test-isolation=none src/data/*.test.ts"
   },
   "dependencies": {
     "@tanstack/react-router": "^1.170.41",

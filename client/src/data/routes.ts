@@ -82,24 +82,3 @@ export const navigation: { label: string; icon: string; id?: ScreenId; children?
   { label: 'Plan de Estudios', icon: 'book', id: 'plan-estudios' },
   { label: 'Manuales y Tutoriales', icon: 'video', id: 'manuales' },
 ]
-
-// Fictional fixtures only; no account data or SUM requests are used.
-export const student = {
-  name: 'ESTUDIANTE DE DEMOSTRACIÓN',
-  code: 'DEMO-001',
-  period: '2026-2',
-  faculty: 'Facultad de Demostración',
-  program: 'Programa Académico de Demostración',
-  specialty: 'Estudios Generales',
-  plan: '2018 - Plan de Estudios 2018',
-}
-export const courses = [
-  'Matemática I',
-  'Introducción a la Informática',
-  'Lenguaje y Comunicación',
-  'Metodología del Estudio',
-  'Estadística',
-  'Programación I',
-  'Matemática II',
-  'Física General',
-]

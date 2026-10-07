@@ -1,4 +1,5 @@
 import { PageTitle } from '../components/Common'
+import type { ApiResponseMap } from '../data/contracts'
 
 const sections = [
   [
@@ -23,12 +24,21 @@ const sections = [
   ],
 ]
 
-export function EnrollmentInfo() {
+export function EnrollmentInfo({ response }: { response: ApiResponseMap['matriculaInfo'] }) {
+  const info = response.data
   return (
     <>
       <PageTitle>Información de Matrícula</PageTitle>
       <article className="enrollment-article">
         <h3>Módulo de Matrícula Vía Internet</h3>
+        <section className="enrollment-status">
+          <h4>Periodo Académico {info.codSemestre}</h4>
+          <p>Inicio: {info.fecIniMatInternet} · Fin: {info.fecFinMatInternet}</p>
+          <p>Acceso a matrícula: {info.indMatHabilitada ? 'Habilitado' : 'No habilitado'}</p>
+          <p>Matrícula: {info.matriculado ? 'Registrada' : 'No registrada'}</p>
+          <p>{info.mensajeMatricula}</p>
+          <p>Situación académica: {info.perfil.situAcademica} · Promedio: {info.perfil.promedio}</p>
+        </section>
         {sections.map(([title, text], index) => (
           <section key={title}>
             <h4>

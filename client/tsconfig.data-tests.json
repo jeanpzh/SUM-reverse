@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "strict": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/data-tests.tsbuildinfo"
+  },
+  "include": ["src/data/*.test.ts"],
+  "exclude": []
+}

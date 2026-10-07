@@ -1,6 +1,8 @@
-import { student } from '../data/routes'
+import { useStudent, useStudentFormData } from '../data/useStudent'
+import { toProfileRows } from '../data/adapters'
+import type { ApiResponseMap } from '../data/contracts'
 import { PageTitle } from '../components/Common'
-import { downloadFixture } from '../data/download'
+import { downloadCsv } from '../data/download'
 
 type Section = { title: string; fields: string[] }
 // Labels are representative fixtures where discovery retained only section names.
@@ -272,20 +274,29 @@ const socioeconomic: Section[] = [
   },
 ]
 
-function fieldValue(label: string) {
-  if (label === 'Código de estudiante') return student.code
-  if (label === 'Apellidos') return 'ESTUDIANTE'
-  if (label === 'Nombres') return 'DEMOSTRACIÓN'
-  if (label === 'Número de documento') return 'DOC-DEMO'
-  if (label === 'Fecha de nacimiento') return '01/01/2000'
-  return 'No registrado'
-}
-
 export function StudentForms({
   socioeconomic: isSocioeconomic = false,
+  profile,
 }: {
   socioeconomic?: boolean
+  profile?: ApiResponseMap['perfil']
 }) {
+  const student = useStudent()
+  const { data } = useStudentFormData()
+  const values = Object.fromEntries(profile ? toProfileRows(profile.data, data.alumno) : [
+    ['Código de estudiante', data.alumno.codAlumno],
+    ['Apellidos', `${data.alumno.apePaterno} ${data.alumno.apeMaterno}`.trim()],
+    ['Nombres', data.alumno.nomAlumno],
+  ])
+  const fieldValue = (label: string) => values[label.replace('?', '')] || 'No registrado'
+  const completed: Record<string, boolean> = {
+    'Datos Personales': data.datosPersonalesCompletado,
+    'Colegio de Procedencia': data.colegioCompletado,
+    'Dependencia Económica': data.dependenciaEconomicaCompletado,
+    'Recursos de Estudio': data.recursosEstudioCompletado,
+    Transporte: data.transporteCompletado, Salud: data.saludCompletado,
+    'Interés Académico': data.interesAcademicoCompletado, Contacto: data.contactoCompletado,
+  }
   const groups = isSocioeconomic ? socioeconomic : sections
   const title = isSocioeconomic ? 'Ficha Socioeconómica' : 'Formulario de Datos Personales'
   const exportRows = groups.flatMap((group) =>
@@ -306,11 +317,13 @@ export function StudentForms({
         <div className="form-column">
           <section className="form-intro">
             <h3>{title}</h3>
-            <p>{student.name}</p>
-            <p>
-              Código de estudiante: <strong>{student.code}</strong>
-            </p>
-            <p>Los datos del estudiante se muestran por sección.</p>
+          <p>{student.name}</p>
+          <p>
+            Código de estudiante: <strong>{student.code}</strong>
+          </p>
+          <p>{isSocioeconomic
+            ? 'Los campos de esta ficha son datos de demostración.'
+            : data.llenar ? 'Hay secciones pendientes de completar.' : 'Los datos se muestran por sección.'}</p>
           </section>
           {groups.map((group, i) => (
             <form
@@ -320,6 +333,9 @@ export function StudentForms({
               onSubmit={(event) => event.preventDefault()}
             >
               <h3>{group.title}</h3>
+              {!isSocioeconomic && group.title in completed && (
+                <p className="form-completion">{completed[group.title] ? 'Completado' : 'Pendiente'}</p>
+              )}
               <div className="form-fields">
                 {group.fields.map((field, j) => {
                   const select = field.endsWith('?')
@@ -329,8 +345,8 @@ export function StudentForms({
                     <label key={id} htmlFor={id}>
                       <span>{label}</span>
                       {select ? (
-                        <select id={id} disabled defaultValue="No especificado">
-                          <option>No especificado</option>
+                        <select id={id} disabled value={fieldValue(label)}>
+                          <option>{fieldValue(label)}</option>
                         </select>
                       ) : (
                         <input id={id} disabled value={fieldValue(label)} readOnly />
@@ -380,7 +396,7 @@ export function StudentForms({
             <button
               className="download-button"
               onClick={() =>
-                downloadFixture(
+                downloadCsv(
                   isSocioeconomic ? 'ficha-socioeconomica' : 'formulario-datos',
                   ['Sección', 'Campo', 'Valor'],
                   exportRows,

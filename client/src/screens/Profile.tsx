@@ -1,23 +1,13 @@
-import { student } from '../data/routes'
+import { useStudent, useStudentFormData } from '../data/useStudent'
+import { toProfileRows } from '../data/adapters'
+import type { ApiResponseMap } from '../data/contracts'
 import { Icon } from '../components/Common'
-import { downloadFixture } from '../data/download'
+import { downloadCsv } from '../data/download'
 
-const personal = [
-  ['Código de estudiante', student.code],
-  ['Apellidos', 'ESTUDIANTE'],
-  ['Nombres', 'DEMOSTRACIÓN'],
-  ['Tipo de documento', 'Documento de demostración'],
-  ['Número de documento', 'DOC-DEMO'],
-  ['Fecha de nacimiento', '01/01/2000'],
-  ['Sexo', 'No especificado'],
-  ['Estado civil', 'No especificado'],
-  ['Lugar de nacimiento', 'Lima'],
-  ['Dirección', 'Dirección de demostración'],
-  ['Correo electrónico', 'No registrado'],
-  ['Teléfono', 'No registrado'],
-]
-
-export function Profile() {
+export function Profile({ response }: { response: ApiResponseMap['perfil'] }) {
+  const student = useStudent()
+  const alumno = useStudentFormData().data.alumno
+  const personal = toProfileRows(response.data, alumno)
   return (
     <div className="profile-layout">
       <aside className="profile-summary">
@@ -32,7 +22,7 @@ export function Profile() {
         <p>{student.program}</p>
         <button
           className="download-button"
-          onClick={() => downloadFixture('perfil', ['Dato', 'Valor'], personal)}
+          onClick={() => downloadCsv('perfil', ['Dato', 'Valor'], personal)}
         >
           ⇩ Descargar Perfil
         </button>

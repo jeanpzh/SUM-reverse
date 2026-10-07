@@ -1,5 +1,6 @@
+import { useStudent } from '../data/useStudent'
 import { Link } from '@tanstack/react-router'
-import { student, routeUrl, type ScreenId } from '../data/routes'
+import { routeUrl, type ScreenId } from '../data/routes'
 import { StudentSummary, Icon } from '../components/Common'
 
 const shortcuts: {
@@ -62,6 +63,7 @@ const shortcuts: {
 ]
 
 export function Home() {
+  const student = useStudent()
   return (
     <>
       <section className="home-overview" aria-label="Resumen del estudiante">

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import { student } from '../data/routes'
-import { downloadFixture } from '../data/download'
+import { useStudent } from '../data/useStudent'
+import { downloadCsv } from '../data/download'
 
 export function PageTitle({ children }: { children: ReactNode }) {
   return (
@@ -11,6 +11,7 @@ export function PageTitle({ children }: { children: ReactNode }) {
 }
 
 export function StudentSummary() {
+  const student = useStudent()
   return (
     <fieldset className="student-summary">
       <legend>Datos del Estudiante</legend>
@@ -54,7 +55,7 @@ export function DownloadButton({
   rows?: string[][]
 }) {
   return (
-    <button className="download-button" onClick={() => downloadFixture(name, headers, rows)}>
+    <button className="download-button" onClick={() => downloadCsv(name, headers, rows)}>
       <span aria-hidden="true">⇩</span> Descargar
     </button>
   )

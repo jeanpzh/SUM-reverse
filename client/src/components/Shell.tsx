@@ -1,9 +1,11 @@
+import { useStudent } from '../data/useStudent'
 import { useState } from 'react'
 import { Link, Outlet, useLocation } from '@tanstack/react-router'
-import { navigation, routes, routeUrl, routeAt, student } from '../data/routes'
+import { navigation, routes, routeUrl, routeAt } from '../data/routes'
 import { Icon } from './Common'
 
 export function Shell() {
+  const student = useStudent()
   const pathname = useLocation({ select: (location) => location.pathname })
   const active = routeAt(pathname) ?? routes[0]
   const [collapsed, setCollapsed] = useState(false)

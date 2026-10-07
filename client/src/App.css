@@ -977,6 +977,79 @@ dd {
 }
 
 /* Inicio: compact student context and a calmer shortcut bento grid. */
+.route-status {
+  margin: 24px;
+  padding: 24px;
+  border-radius: 14px;
+  background: #fff;
+  color: #304f73;
+}
+.route-status p {
+  margin: 12px 0;
+}
+.route-status button {
+  padding: 8px 12px;
+  border: 1px solid #315f8f;
+  border-radius: 5px;
+  background: #fff;
+  color: #315f8f;
+}
+.calendar-card {
+  overflow-x: auto;
+}
+.calendar-week {
+  min-width: 700px;
+}
+.calendar-daynames {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  align-items: center;
+  text-align: center;
+}
+.calendar-event {
+  margin: 8px 4px;
+  padding: 10px;
+  border-radius: 5px;
+  background: #edf3fa;
+  color: #365983;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.schedule-button {
+  display: grid; place-items: center; width: 28px; height: 30px; margin: auto;
+  border: 0; border-radius: 5px; background: #e0b300; color: #252a30;
+}
+.schedule-button:hover { background: #c99e00; }
+.course-schedule-dialog {
+  width: min(516px, calc(100vw - 28px)); max-width: none; max-height: calc(100dvh - 10px);
+  margin: 4px auto 0; padding: 0; overflow: auto; border: 1px solid #89a4bd;
+  border-radius: 10px; background: #fff; color: #333b44; box-shadow: 0 3px 9px #20395655;
+}
+.course-schedule-dialog::backdrop { background: #17273c77; }
+.course-schedule-dialog__header {
+  display: flex; align-items: center; justify-content: space-between; min-height: 41px;
+  padding: 7px 10px 7px 14px; background: #8da8c1; color: #fff;
+}
+.course-schedule-dialog__header h2 { color: inherit; font-size: 14px; font-weight: 500; }
+.course-schedule-dialog__close {
+  display: grid; place-items: center; width: 19px; height: 19px; padding: 0;
+  border: 0; border-radius: 50%; background: #e4edf5; color: #839bb1; font-size: 18px; line-height: 16px;
+}
+.course-schedule-dialog__body { padding: 19px 14px; overflow-x: auto; }
+.course-schedule-dialog table { min-width: 420px; table-layout: fixed; font-family: Arial, sans-serif; font-size: 12px; }
+.course-schedule-dialog th { height: 35px; padding: 7px 5px; font-weight: 600; }
+.course-schedule-dialog td { height: 29px; padding: 5px; }
+.course-schedule-dialog th:nth-child(1) { width: 12%; }
+.course-schedule-dialog th:nth-child(2) { width: 20%; }
+.course-schedule-dialog th:nth-child(3) { width: 35%; }
+.course-schedule-dialog th:nth-child(4) { width: 15%; }
+.course-schedule-dialog th:nth-child(5) { width: 18%; }
+.form-completion {
+  margin-bottom: 12px;
+  color: #476887;
+  font-size: 12px;
+}
 .screen-home .home-overview {
   display: grid;
   grid-template-columns: minmax(230px, 0.8fr) minmax(0, 1.6fr);

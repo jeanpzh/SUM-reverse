@@ -1,6 +1,16 @@
 # SUM Student Frontend
 
-A standalone reconstruction of the 16 observed student screens. All records are fictional. The client does not authenticate with SUM or call SUM endpoints.
+A standalone reconstruction of the 16 observed student screens. All default records are fictional. The client does not authenticate with SUM. It defaults to local typed mocks and only sends requests to an explicitly configured API base.
+
+## Data sources
+
+Contracts in `../raw-types/` describe the response envelopes. `../raw-types/README.md` provides the twelve routes and `accion` values. Mocks satisfy those contracts and share one fictional student and course set. JSON date fields are strings even where the extracted source types use `Date`.
+
+By default the client uses mocks and makes no data requests. Set `VITE_SUM_DATA_MODE=api` and `VITE_SUM_API_BASE_URL=/api-proxy` to use an operator configured proxy, or set the base URL to an explicitly approved API host. API mode uses POST for all twelve queries. The README specifies POST for the first four and omits the method for eight; using POST for those eight is an assumption that needs confirmation against an authorized capture. The client sends session cookies, so the operator must configure the proxy, session, and CORS. The client does not call SUM's host by default.
+
+Debt has no supplied raw type; its payload remains opaque and the screen does not claim that an empty response proves there is no debt. Tutoring and evaluation item fields are also unknown; their default mock lists are empty and unknown items are not rendered as invented columns. History and socioeconomic screens retain labelled demonstration values because this README does not document endpoints for them.
+
+Copy `.env.example` for local setup. `pnpm --dir client test:data` checks typed mock consistency, API URL/action and error behavior, adapters, and schedule slots.
 
 ## Development
 

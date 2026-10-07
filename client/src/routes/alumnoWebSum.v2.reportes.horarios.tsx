@@ -1,6 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { sumApi } from '../data/client'
 import { TableScreen } from '../screens/TableScreens'
 
 export const Route = createFileRoute('/alumnoWebSum/v2/reportes/horarios')({
-  component: () => <TableScreen id="reportes-horarios" />,
+  loader: ({ abortController }) => sumApi.get('horarios', { signal: abortController.signal }),
+  component: function RouteComponent() {
+    return <TableScreen id="reportes-horarios" response={Route.useLoaderData()} />
+  },
 })
