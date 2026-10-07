@@ -1,0 +1,16 @@
+# Dependencies and generated output
+node_modules/
+dist/
+dist-ssr/
+*.tsbuildinfo
+
+# Local browser tooling and machine configuration
+/.playwright-mcp/
+/.codex/config.toml
+*.log
+.DS_Store
+
+# Local environment values
+.env
+.env.*
+!.env.example
