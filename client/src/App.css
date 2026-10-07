@@ -1,0 +1,977 @@
+.student-app {
+  min-height: 100vh;
+  font-size: 14px;
+}
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--sidebar-width);
+  background: #304767;
+  color: #b3b8d4;
+  z-index: 30;
+  overflow-y: auto;
+  font-family: Poppins, Arial, sans-serif;
+  transition: transform 0.18s;
+}
+.brand {
+  height: 74px;
+  display: flex;
+  align-items: center;
+  padding: 0 22px;
+  gap: 12px;
+  color: #eef1f8;
+  text-decoration: none;
+  border-bottom: 1px solid #ffffff0d;
+}
+.brand strong {
+  font-size: 27px;
+  letter-spacing: 1px;
+}
+.brand span {
+  font-size: 11px;
+  line-height: 17px;
+  max-width: 126px;
+}
+.nav-item {
+  width: 100%;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  background: none;
+  border: 0;
+  color: inherit;
+  font-size: 14px;
+  text-align: left;
+  text-decoration: none;
+}
+.nav-icon {
+  flex: 0 0 35px;
+  width: 35px;
+  height: 35px;
+  padding: 5px;
+}
+.nav-item span {
+  flex: 1;
+  line-height: 22px;
+}
+.nav-item .chevron {
+  flex: 0 0 12px;
+  font-size: 19px;
+  text-align: right;
+}
+.nav-item:hover,
+.subnav a:hover {
+  background: #ffffff12;
+  color: #fff;
+}
+.nav-item.active,
+.nav-item.active-group,
+.subnav .active {
+  color: #fff;
+  background: #203956;
+}
+.subnav {
+  background: #263d5b;
+  padding: 5px 0;
+}
+.subnav a {
+  display: block;
+  padding: 11px 18px 11px 65px;
+  line-height: 20px;
+  font-size: 12px;
+  text-decoration: none;
+}
+.topbar {
+  height: 64px;
+  position: fixed;
+  top: 0;
+  left: var(--sidebar-width);
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  background: #6e8fac;
+  color: #fff;
+  z-index: 20;
+  font-family: Poppins, Arial, sans-serif;
+  font-size: 14px;
+}
+.menu-toggle {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: #fff;
+  width: 18px;
+  font-size: 23px;
+  line-height: 21px;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.session-clock {
+  font-variant-numeric: tabular-nums;
+}
+.account-button {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  background: transparent;
+  color: #fff;
+  border: 0;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+.account-wrapper {
+  position: relative;
+}
+.account-menu {
+  position: absolute;
+  right: 0;
+  top: 40px;
+  width: 290px;
+  padding: 16px;
+  background: #fff;
+  color: #4c545f;
+  box-shadow: 0 4px 15px #263d5b33;
+  border-radius: 4px;
+  display: grid;
+  gap: 12px;
+  font-size: 12px;
+}
+.account-menu a {
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+  color: #244f97;
+}
+.sign-out {
+  background: transparent;
+  border: 0;
+  color: #fff;
+  padding: 0;
+  font-size: 12px;
+}
+.main-content {
+  margin: 70px 16px 0 280px;
+  padding: 20px;
+  min-height: calc(100vh - 70px);
+}
+.screen-tutoria,
+.screen-reportes-evaluaciones,
+.screen-reportes-deudas {
+  margin-right: 0;
+}
+.sidebar-collapsed .sidebar {
+  transform: translateX(-280px);
+}
+.sidebar-collapsed .topbar {
+  left: 0;
+}
+.sidebar-collapsed .main-content {
+  margin-left: 0;
+}
+.page-title {
+  height: 46px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+.page-title h2 {
+  font-size: 32px;
+  line-height: 38px;
+  color: #203e91;
+  font-weight: 700;
+}
+.student-summary {
+  height: 274px;
+  margin: 0;
+  padding: 16px 6px 20px;
+  border: 1px solid #ffffff9c;
+  border-radius: 15px;
+  background: #ffffff45;
+  position: relative;
+  min-width: 0;
+}
+.student-summary legend {
+  padding: 8px 13px;
+  background: #ffdab0;
+  border-radius: 20px;
+  color: #333;
+  font-size: 14px;
+  line-height: 18px;
+}
+.summary-row {
+  height: 68px;
+  display: flex;
+  align-items: stretch;
+}
+.summary-row > div {
+  flex: 1;
+  padding: 8px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  column-gap: 18px;
+  row-gap: 8px;
+  min-width: 0;
+}
+.summary-row span {
+  color: #345778;
+}
+.summary-row strong {
+  color: #485868;
+  font-weight: 400;
+}
+.table-card {
+  margin-top: 21px;
+  padding: 26px 20px 28px;
+  border-radius: 15px;
+  background: #fff;
+}
+.table-overflow {
+  overflow-x: auto;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-family: 'Times New Roman', serif;
+  font-size: 14px;
+  color: #182f47;
+}
+th {
+  height: 37px;
+  padding: 8px 12px;
+  color: #28518f;
+  font-weight: 400;
+  background: #f0f5fa;
+  border: 1px solid #e5e8ed;
+  text-align: center;
+  white-space: nowrap;
+}
+td {
+  height: 40px;
+  padding: 6px 12px;
+  border: 1px solid #eceef1;
+  text-align: center;
+}
+tbody tr:nth-child(even) {
+  background: #fafbfc;
+}
+.empty-cell {
+  height: 27px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+.table-footer {
+  margin-top: 22px;
+  line-height: 18px;
+  color: #001c3c;
+  font-size: 12px;
+}
+.tutoring-table th:nth-child(1) {
+  width: 20%;
+}
+.tutoring-table th:nth-child(2) {
+  width: 27%;
+}
+.tutoring-table th:nth-child(3) {
+  width: 15%;
+}
+.tutoring-table th:nth-child(4) {
+  width: 10%;
+}
+.tutoring-table th:nth-child(5) {
+  width: 20%;
+}
+.tutoring-table th:nth-child(6) {
+  width: 8%;
+}
+.report-section {
+  margin-top: 21px;
+  padding: 20px 20px 28px;
+  background: #fff;
+  border-radius: 15px;
+}
+.report-section .table-card {
+  padding: 0;
+  margin-top: 12px;
+}
+.report-toolbar {
+  height: 30px;
+}
+.download-button,
+.modify-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 4px;
+  background: #2469a5;
+  color: #fff;
+  font-size: 13px;
+  line-height: 20px;
+  text-decoration: none;
+}
+.download-button:hover {
+  background: #17588f;
+}
+.download-button span {
+  font-size: 17px;
+}
+.row-action {
+  background: #2179c5;
+  color: #fff;
+  border: 0;
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-size: 16px;
+}
+.prematricula-section {
+  padding-top: 82px;
+}
+.matricula-section {
+  padding-top: 20px;
+}
+.period-heading {
+  height: 140px;
+  padding-top: 24px;
+  font-size: 20px;
+  font-weight: 500;
+  color: #365174;
+  text-align: center;
+}
+.evaluations-table {
+  padding-top: 62px;
+}
+.evaluations-table td {
+  height: 28px;
+}
+.debts-table td {
+  height: 47px;
+}
+.attendance-table thead th {
+  height: 47px;
+}
+.attendance-table td {
+  height: 53px;
+}
+.screen-plan-estudios .student-summary {
+  height: 206px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+.screen-plan-estudios .summary-row {
+  height: 50px;
+}
+.screen-plan-estudios td {
+  height: 41px;
+}
+.screen-programacion-asignaturas td {
+  height: 41px;
+}
+.calendar-card {
+  margin-top: 21px;
+  padding: 20px;
+  height: 646px;
+  border-radius: 15px;
+  background: #fff;
+}
+.calendar-week {
+  height: 606px;
+}
+.calendar-daynames {
+  height: 42px;
+  border-bottom: 1px solid #eee;
+}
+.calendar-grid {
+  height: 558px;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 45px,
+    #eee 46px,
+    transparent 47px
+  );
+}
+.calendar-grid > div {
+  border-right: 1px solid #eee;
+}
+.history-summary {
+  background: #fff;
+  border-radius: 15px;
+  padding: 34px 20px 20px;
+  min-height: 413px;
+}
+h3 {
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 28px;
+  color: #335276;
+}
+.history-summary h3 {
+  margin-bottom: 24px;
+}
+dl {
+  margin: 0;
+}
+dl > div {
+  display: flex;
+  border-bottom: 1px solid #eef0f3;
+  min-height: 36px;
+  padding: 8px 0;
+  gap: 12px;
+}
+dt {
+  width: 35%;
+  color: #496581;
+}
+dd {
+  margin: 0;
+  flex: 1;
+}
+.weighted-average {
+  padding: 40px 20px 0;
+}
+.weighted-average h3 {
+  margin-bottom: 16px;
+}
+.history-table {
+  margin-top: 40px;
+}
+.home-overview {
+  height: 601px;
+}
+.home-student {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  padding: 40px 30px;
+  min-height: 225px;
+}
+.student-avatar,
+.profile-avatar {
+  display: grid;
+  place-items: center;
+  background: #b3c8df;
+  color: #fff;
+  border-radius: 50%;
+  width: 130px;
+  height: 130px;
+  flex-shrink: 0;
+}
+.student-avatar svg,
+.profile-avatar svg {
+  width: 80px;
+  height: 80px;
+}
+.home-student h1 {
+  font-size: 28px;
+  color: #23457d;
+  margin-bottom: 12px;
+}
+.role-label {
+  display: inline-block;
+  padding: 4px 15px;
+  border-radius: 4px;
+  background: #55789c;
+  color: white;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+.shortcut-slot {
+  min-height: 400px;
+}
+.shortcut-card {
+  width: calc(66.666% - 4px);
+  padding: 20px;
+  background: #fff;
+  border-radius: 15px;
+  min-height: 249px;
+  margin-left: 1px;
+}
+.shortcut-category {
+  display: block;
+  color: #7b8695;
+  margin-bottom: 12px;
+}
+.shortcut-card h2 {
+  color: #365983;
+  font-size: 24px;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+.shortcut-card ul {
+  padding-left: 21px;
+  line-height: 30px;
+  margin: 0 0 18px;
+}
+.more-button {
+  display: inline-block;
+  background: #45769f;
+  border-radius: 5px;
+  padding: 9px 15px;
+  color: #fff;
+  text-decoration: none;
+}
+.more-button:hover {
+  background: #315e87;
+}
+.profile-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 380px) minmax(0, 1fr);
+  gap: 30px;
+  min-height: 891px;
+}
+.profile-summary {
+  background: #fff;
+  border-radius: 15px;
+  padding: 30px 24px;
+  align-self: start;
+  text-align: center;
+}
+.profile-avatar {
+  margin: 0 auto 24px;
+}
+.profile-summary h2 {
+  font-size: 20px;
+  line-height: 30px;
+  color: #304e77;
+  margin-bottom: 12px;
+}
+.profile-summary p {
+  line-height: 25px;
+  margin-bottom: 14px;
+}
+.profile-summary hr {
+  border: 0;
+  border-top: 1px solid #eee;
+  margin: 18px 0;
+}
+.profile-summary .download-button {
+  margin-top: 15px;
+}
+.profile-tabs {
+  height: 59px;
+  display: flex;
+  background: #f5f7fb;
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
+}
+.profile-tabs button {
+  flex: 1;
+  padding: 12px;
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  color: #647891;
+}
+.profile-tabs button[aria-selected='true'] {
+  background: #fff;
+  border-bottom-color: #4d77a2;
+  color: #2e5384;
+}
+.profile-panel {
+  min-height: 701px;
+  background: #fff;
+  padding: 28px;
+  border-radius: 0 0 12px 12px;
+}
+.profile-panel h3 {
+  margin-bottom: 22px;
+}
+.profile-panel dl > div {
+  min-height: 45px;
+}
+.form-layout {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 10px;
+  margin-top: -10px;
+}
+.section-nav {
+  margin: 10px 0 0 10px;
+  align-self: start;
+  padding: 7px;
+  border-radius: 4px;
+  background: #fff;
+}
+.section-nav a {
+  display: block;
+  min-height: 42px;
+  padding: 11px 12px;
+  line-height: 20px;
+  color: #55738e;
+  text-decoration: none;
+  border-bottom: 1px solid #eef0f3;
+}
+.section-nav a:hover {
+  background: #eff4fa;
+  color: #244f97;
+}
+.form-intro {
+  height: 192px;
+  background: #fff;
+  padding: 26px 25px;
+  border-radius: 5px 5px 0 0;
+}
+.form-intro h3 {
+  margin-bottom: 20px;
+}
+.form-intro p {
+  margin: 12px 0;
+}
+.form-section {
+  min-height: 613px;
+  padding: 25px;
+  background: #fff;
+  margin-bottom: 24px;
+  border-radius: 5px;
+  scroll-margin-top: 84px;
+}
+.form-section h3 {
+  margin-bottom: 25px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #dfe6ef;
+}
+.form-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 26px 20px;
+}
+.form-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  line-height: 20px;
+  font-size: 13px;
+}
+.form-fields input,
+.form-fields select {
+  width: 100%;
+  height: 36px;
+  padding: 7px 10px;
+  border: 1px solid #cdd5df;
+  border-radius: 4px;
+  background: #e9edf1;
+  color: #65707e;
+  opacity: 1;
+  -webkit-text-fill-color: #65707e;
+}
+.modify-button {
+  margin-top: 25px;
+  background: #5186ae;
+}
+.form-download {
+  min-height: 100px;
+  padding: 20px 25px;
+  background: #fff;
+  border-radius: 5px;
+  scroll-margin-top: 84px;
+}
+.form-download h3 {
+  margin-bottom: 18px;
+}
+.socioeconomic-forms .form-section {
+  min-height: 697px;
+}
+.family-table {
+  margin-top: 45px;
+}
+.family-table th {
+  white-space: normal;
+  height: 59px;
+  font-size: 12px;
+  padding: 6px;
+}
+.manual-paper {
+  margin-top: 63px;
+  background: #fff;
+  min-height: 981px;
+  padding: 54px 20px 20px;
+}
+.tutorial-list {
+  width: 573px;
+  max-width: 100%;
+  background: #95adbb;
+  padding: 25px 20px 20px;
+  position: relative;
+  border-radius: 15px;
+}
+.tutorial-legend {
+  position: absolute;
+  top: -15px;
+  left: 20px;
+  padding: 8px 13px;
+  color: #333;
+  background: #eed3a5;
+  border-radius: 20px;
+  font-size: 12px;
+}
+.tutorial-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 12px 20px 15px;
+  min-height: 79px;
+  background: #fff;
+  border: 1px solid #d3d8de;
+  border-radius: 4px;
+}
+.tutorial-card > div:first-child {
+  min-width: 0;
+  flex: 1;
+}
+.tutorial-card h2 {
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 24px;
+  margin-bottom: 4px;
+  color: #505761;
+}
+.tutorial-card p {
+  font-size: 14px;
+  line-height: 21px;
+}
+.tutorial-meta {
+  display: flex;
+  flex: 0 0 77px;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 12px;
+  line-height: 16px;
+  text-align: right;
+}
+.enrollment-article {
+  padding: 24px 20px;
+  color: #4c5969;
+  line-height: 25px;
+  background: #fff;
+  border-radius: 5px;
+}
+.enrollment-article > h3 {
+  margin-bottom: 22px;
+}
+.enrollment-article section {
+  margin-bottom: 24px;
+}
+.enrollment-article h4 {
+  font-size: 17px;
+  font-weight: 500;
+  color: #355981;
+  margin-bottom: 10px;
+}
+.not-found {
+  background: #fff;
+  padding: 40px;
+  border-radius: 15px;
+}
+.not-found h2 {
+  margin-bottom: 20px;
+}
+@media (max-width: 1100px) {
+  .profile-layout {
+    grid-template-columns: 32% minmax(0, 1fr);
+    gap: 20px;
+  }
+  .form-layout {
+    grid-template-columns: 30% minmax(0, 1fr);
+  }
+  .form-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .account-button {
+    font-size: 11px;
+  }
+  .header-right {
+    gap: 8px;
+  }
+}
+@media (max-width: 800px) {
+  .topbar {
+    left: 0;
+  }
+  .main-content {
+    margin-left: 0;
+    margin-right: 0;
+    padding: 15px;
+  }
+  .sidebar {
+    box-shadow: 4px 0 16px #20395633;
+    top: 64px;
+  }
+  .session-clock {
+    display: none;
+  }
+  .account-button {
+    max-width: 235px;
+    font-size: 10px;
+  }
+  .page-title h2 {
+    font-size: 24px;
+  }
+  .shortcut-card {
+    width: 100%;
+  }
+  .home-student {
+    padding: 25px 10px;
+    gap: 15px;
+  }
+  .home-student h1 {
+    font-size: 20px;
+  }
+  .summary-row > div {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .student-avatar {
+    width: 75px;
+    height: 75px;
+  }
+  .profile-layout {
+    grid-template-columns: 1fr;
+  }
+  .form-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .section-nav {
+    margin: 0;
+  }
+  .form-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tutorial-card {
+    padding: 12px;
+    gap: 10px;
+  }
+  .tutorial-list {
+    padding: 25px 12px 12px;
+  }
+}
+/* Geometry corrections measured against the sanitized reference evidence. */
+.main-content {
+  padding-bottom: 30px;
+}
+.screen-tutoria {
+  min-height: 0;
+  padding-bottom: 29px;
+}
+.screen-reportes-evaluaciones,
+.screen-reportes-deudas {
+  min-height: 0;
+  padding-bottom: 28px;
+}
+.screen-reportes-evaluaciones {
+  padding-bottom: 26px;
+}
+.screen-perfil {
+  padding-bottom: 20px;
+}
+.screen-reportes-horarios {
+  padding-bottom: 30px;
+}
+.screen-home .shortcut-slot:last-child {
+  min-height: 381px;
+}
+.screen-manuales {
+  padding-bottom: 20px;
+}
+.manual-paper {
+  min-height: 961px;
+  padding-top: 55px;
+}
+.tutorial-meta time {
+  font-size: 13px;
+}
+.tutorial-meta span {
+  font-size: 13px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.tutorial-card:nth-of-type(4) .tutorial-meta,
+.tutorial-card:nth-of-type(5) .tutorial-meta {
+  flex-basis: 71px;
+  text-align: left;
+}
+.empty-cell {
+  height: 26px;
+}
+.evaluations-table td {
+  height: 27px;
+}
+.debts-table td {
+  height: 46px;
+}
+.report-section > .table-overflow {
+  margin-top: 12px;
+}
+.screen-asistencia .report-section {
+  padding-bottom: 65px;
+}
+.screen-plan-estudios td {
+  height: 41.14px;
+}
+.screen-programacion-asignaturas td {
+  height: 41.14px;
+}
+.history-summary {
+  padding-top: 20px;
+}
+.history-table {
+  margin-top: 17px;
+  padding-top: 0;
+}
+.calendar-grid {
+  background: none;
+}
+.calendar-grid > div {
+  border: 0;
+}
+.family-table {
+  margin-left: 30px;
+  width: calc(100% - 15px);
+}
+.sign-out {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.menu-toggle {
+  width: 12px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tutorial-card:nth-of-type(4) .tutorial-meta span,
+.tutorial-card:nth-of-type(5) .tutorial-meta span {
+  white-space: normal;
+}
+.student-summary legend {
+  margin-left: 13px;
+  font-size: 13px;
+}
+.tutorial-legend {
+  font-size: 13px;
+  line-height: 14px;
+}
+.manual-paper {
+  position: relative;
+}
+.manual-paper::before {
+  content: '';
+  position: absolute;
+  top: -18px;
+  left: 0;
+  right: 0;
+  height: 18px;
+  background: #e8e8e8;
+  border: 1px solid #d6dae0;
+}
