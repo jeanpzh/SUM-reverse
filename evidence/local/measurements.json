@@ -1,0 +1,792 @@
+[
+  {
+    "id": "home",
+    "viewport": {
+      "width": 1536,
+      "height": 735
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 280,
+      "height": 735
+    },
+    "header": {
+      "x": 280,
+      "y": 0,
+      "width": 1256,
+      "height": 64
+    },
+    "main": {
+      "x": 280,
+      "y": 70,
+      "width": 1240,
+      "height": 3832
+    },
+    "title": null,
+    "summary": {
+      "x": 300,
+      "y": 315,
+      "width": 1200,
+      "height": 274
+    },
+    "table": null,
+    "tableHeaders": [],
+    "resource": null,
+    "forms": 0,
+    "textboxes": 0,
+    "comboboxes": 0
+  },
+  {
+    "id": "perfil",
+    "viewport": {
+      "width": 1536,
+      "height": 735
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 280,
+      "height": 735
+    },
+    "header": {
+      "x": 280,
+      "y": 0,
+      "width": 1256,
+      "height": 64
+    },
+    "main": {
+      "x": 280,
+      "y": 70,
+      "width": 1240,
+      "height": 931
+    },
+    "title": null,
+    "summary": null,
+    "table": null,
+    "tableHeaders": [],
+    "resource": null,
+    "forms": 0,
+    "textboxes": 0,
+    "comboboxes": 0
+  },
+  {
+    "id": "historial",
+    "viewport": {
+      "width": 1536,
+      "height": 735
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 280,
+      "height": 735
+    },
+    "header": {
+      "x": 280,
+      "y": 0,
+      "width": 1256,
+      "height": 64
+    },
+    "main": {
+      "x": 280,
+      "y": 70,
+      "width": 1240,
+      "height": 840
+    },
+    "title": {
+      "x": 300,
+      "y": 90,
+      "width": 1200,
+      "height": 46
+    },
+    "summary": null,
+    "table": {
+      "x": 320,
+      "y": 653,
+      "width": 1160,
+      "height": 78
+    },
+    "tableHeaders": [
+      "Periodo Académico",
+      "Créditos",
+      "Promedio",
+      "Ciclo",
+      "Plan",
+      "Tipo",
+      "Asignatura",
+      "Calificación",
+      "Créditos",
+      "Sección",
+      "Acta"
+    ],
+    "resource": null,
+    "forms": 0,
+    "textboxes": 0,
+    "comboboxes": 0
+  },
+  {
+    "id": "formulario-datos",
+    "viewport": {
+      "width": 1536,
+      "height": 735
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 280,
+      "height": 735
+    },
+    "header": {
+      "x": 280,
+      "y": 0,
+      "width": 1256,
+      "height": 64
+    },
+    "main": {
+      "x": 280,
+      "y": 70,
+      "width": 1240,
+      "height": 5588
+    },
+    "title": {
+      "x": 300,
+      "y": 90,
+      "width": 1200,
+      "height": 46
+    },
+    "summary": null,
+    "table": null,
+    "tableHeaders": [],
+    "resource": null,
+    "forms": 8,
+    "textboxes": 46,
+    "comboboxes": 69
+  },
+  {
+    "id": "ficha-socioeconomica",
+    "viewport": {
+      "width": 1536,
+      "height": 735
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 280,
+      "height": 735
+    },
+    "header": {
+      "x": 280,
+      "y": 0,
+      "width": 1256,
+      "height": 64
+    },
+    "main": {
+      "x": 280,
+      "y": 70,
+      "width": 1240,
+      "height": 9151
+    },
+    "title": {
+      "x": 300,
+      "y": 90,
+      "width": 1200,
+      "height": 46
+    },
+    "summary": null,
+    "table": {
+      "x": 705,
+      "y": 5223,
+      "width": 785,
+      "height": 100
+    },
+    "tableHeaders": [
+      "Nombre",
+      "Edad",
+      "Parentesco",
+      "Educación",
+      "Ocupación",
+      "Empleo",
+      "Aporte",
+      "Enfermedad",
+      "Discapacidad",
+      "Acción"
+    ],
+    "resource": null,
+    "forms": 12,
+    "textboxes": 74,
+    "comboboxes": 108
+  },
+  {
+    "id": "matricula-informacion",
+    "viewport": {
+      "width": 1536,
+      "height": 735
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 280,
+      "height": 735
+    },
+    "header": {
+      "x": 280,
+      "y": 0,
+      "width": 1256,
+      "height": 64
+    },
+    "main": {
+      "x": 280,
+      "y": 70,
+      "width": 1240,
+      "height": 665
+    },
+    "title": {
+      "x": 300,
+      "y": 90,
+      "width": 1200,
+      "height": 46
+    },
+    "summary": null,
+    "table": null,
+    "tableHeaders": [],
+    "resource": null,
+    "forms": 0,
+    "textboxes": 0,
+    "comboboxes": 0
+  },
+  {
+    "id": "programacion-asignaturas",
+    "viewport": {
+      "width": 1536,
+      "height": 735
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 280,
+      "height": 735
+    },
+    "header": {
+      "x": 280,
+      "y": 0,
+      "width": 1256,
+      "height": 64
+    },
+    "main": {
+      "x": 280,
+      "y": 70,
+      "width": 1240,
+      "height": 7364.625
+    },
+    "title": {
+      "x": 300,
+      "y": 90,
+      "width": 1200,
+      "height": 46
+    },
+    "summary": {
+      "x": 300,
+      "y": 156,
+      "width": 1200,
+      "height": 274
+    },
+    "table": {
+      "x": 320,
+      "y": 513,
+      "width": 1160,
+      "height": 6823.625
+    },
+    "tableHeaders": [
+      "",
+      "Asignatura",
+      "Créd.",
+      "Sec.",
+      "Docente",
+      "Tope",
+      "Matriculados",
+      "Horarios"
+    ],
+    "resource": null,
+    "forms": 0,
+    "textboxes": 0,
+    "comboboxes": 0
+  },
+  {
+    "id": "reportes-prematricula",
+    "viewport": {
+      "width": 1536,
+      "height": 735
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 280,
+      "height": 735
+    },
+    "header": {
+      "x": 280,
+      "y": 0,
+      "width": 1256,
+      "height": 64
+    },
+    "main": {
+      "x": 280,
+      "y": 70,
+      "width": 1240,
+      "height": 761
+    },
+    "title": {
+      "x": 300,
+      "y": 90,
+      "width": 1200,
+      "height": 46
+    },
+    "summary": {
+      "x": 300,
+      "y": 156,
+      "width": 1200,
+      "height": 274
+    },
+    "table": {
+      "x": 320,
+      "y": 575,
+      "width": 1160,
+      "height": 158
+    },
+    "tableHeaders": [
+      "Plan",
+      "Ciclo",
+      "Asignatura",
+      "Créditos",
+      "Nro. Rep",
+      "Nro. Mat. Equiv",
+      "Nro. Rep. Total",
+      "Etapa"
+    ],
+    "resource": null,
+    "forms": 0,
+    "textboxes": 0,
+    "comboboxes": 0
+  },
+  {
+    "id": "reportes-matricula",
+    "viewport": {
+      "width": 1536,
+      "height": 735
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 280,
+      "height": 735
+    },
+    "header": {
+      "x": 280,
+      "y": 0,
+      "width": 1256,
+      "height": 64
+    },
+    "main": {
+      "x": 280,
+      "y": 70,
+      "width": 1240,
+      "height": 839
+    },
+    "title": {
+      "x": 300,
+      "y": 90,
+      "width": 1200,
+      "height": 46
+    },
+    "summary": {
+      "x": 300,
+      "y": 156,
+      "width": 1200,
+      "height": 274
+    },
+    "table": {
+      "x": 320,
+      "y": 653,
+      "width": 1160,
+      "height": 158
+    },
+    "tableHeaders": [
+      "Ciclo",
+      "Asignatura",
+      "Créditos",
+      "Sección",
+      "Docente Asignado"
+    ],
+    "resource": null,
+    "forms": 0,
+    "textboxes": 0,
+    "comboboxes": 0
+  },
+  {
+    "id": "reportes-horarios",
+    "viewport": {
+      "width": 1536,
+      "height": 735
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 280,
+      "height": 735
+    },
+    "header": {
+      "x": 280,
+      "y": 0,
+      "width": 1256,
+      "height": 64
+    },
+    "main": {
+      "x": 280,
+      "y": 70,
+      "width": 1240,
+      "height": 1057
+    },
+    "title": {
+      "x": 300,
+      "y": 90,
+      "width": 1200,
+      "height": 46
+    },
+    "summary": {
+      "x": 300,
+      "y": 156,
+      "width": 1200,
+      "height": 274
+    },
+    "table": null,
+    "tableHeaders": [],
+    "resource": null,
+    "forms": 0,
+    "textboxes": 0,
+    "comboboxes": 0
+  },
+  {
+    "id": "reportes-evaluaciones",
+    "viewport": {
+      "width": 1536,
+      "height": 735
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 280,
+      "height": 735
+    },
+    "header": {
+      "x": 280,
+      "y": 0,
+      "width": 1256,
+      "height": 64
+    },
+    "main": {
+      "x": 280,
+      "y": 70,
+      "width": 1256,
+      "height": 604
+    },
+    "title": {
+      "x": 300,
+      "y": 90,
+      "width": 1216,
+      "height": 46
+    },
+    "summary": {
+      "x": 300,
+      "y": 156,
+      "width": 1216,
+      "height": 274
+    },
+    "table": {
+      "x": 320,
+      "y": 513,
+      "width": 1176,
+      "height": 67
+    },
+    "tableHeaders": [
+      "Ciclo",
+      "Asignatura",
+      "Tipo Evaluación",
+      "Calificación",
+      "Fórmula"
+    ],
+    "resource": null,
+    "forms": 0,
+    "textboxes": 0,
+    "comboboxes": 0
+  },
+  {
+    "id": "reportes-deudas",
+    "viewport": {
+      "width": 1536,
+      "height": 735
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 280,
+      "height": 735
+    },
+    "header": {
+      "x": 280,
+      "y": 0,
+      "width": 1256,
+      "height": 64
+    },
+    "main": {
+      "x": 280,
+      "y": 70,
+      "width": 1256,
+      "height": 587
+    },
+    "title": {
+      "x": 300,
+      "y": 90,
+      "width": 1216,
+      "height": 46
+    },
+    "summary": {
+      "x": 300,
+      "y": 156,
+      "width": 1216,
+      "height": 274
+    },
+    "table": {
+      "x": 320,
+      "y": 477,
+      "width": 1176,
+      "height": 84
+    },
+    "tableHeaders": [
+      "Fecha Registro",
+      "Periodo Académico",
+      "Concepto",
+      "Monto Inicial",
+      "Monto Final",
+      "Observación"
+    ],
+    "resource": null,
+    "forms": 0,
+    "textboxes": 0,
+    "comboboxes": 0
+  },
+  {
+    "id": "asistencia",
+    "viewport": {
+      "width": 1536,
+      "height": 735
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 280,
+      "height": 735
+    },
+    "header": {
+      "x": 280,
+      "y": 0,
+      "width": 1256,
+      "height": 64
+    },
+    "main": {
+      "x": 280,
+      "y": 70,
+      "width": 1240,
+      "height": 832
+    },
+    "title": {
+      "x": 300,
+      "y": 90,
+      "width": 1200,
+      "height": 46
+    },
+    "summary": {
+      "x": 300,
+      "y": 156,
+      "width": 1200,
+      "height": 274
+    },
+    "table": {
+      "x": 320,
+      "y": 513,
+      "width": 1160,
+      "height": 254
+    },
+    "tableHeaders": [
+      "Asignatura",
+      "Sección",
+      "# Clases",
+      "Puntual",
+      "Tardanzas",
+      "Faltas",
+      "Asistencia Total",
+      "Acción",
+      "N°",
+      "(%)",
+      "N°",
+      "(%)",
+      "N°",
+      "(%)",
+      "N°",
+      "(%)"
+    ],
+    "resource": null,
+    "forms": 0,
+    "textboxes": 0,
+    "comboboxes": 0
+  },
+  {
+    "id": "tutoria",
+    "viewport": {
+      "width": 1536,
+      "height": 735
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 280,
+      "height": 735
+    },
+    "header": {
+      "x": 280,
+      "y": 0,
+      "width": 1256,
+      "height": 64
+    },
+    "main": {
+      "x": 280,
+      "y": 70,
+      "width": 1256,
+      "height": 568
+    },
+    "title": {
+      "x": 300,
+      "y": 90,
+      "width": 1216,
+      "height": 46
+    },
+    "summary": {
+      "x": 300,
+      "y": 156,
+      "width": 1216,
+      "height": 274
+    },
+    "table": {
+      "x": 320,
+      "y": 477,
+      "width": 1176,
+      "height": 64
+    },
+    "tableHeaders": [
+      "Docente",
+      "Cod. Asignatura",
+      "Resolucion",
+      "Fecha",
+      "Observacion",
+      "Acción"
+    ],
+    "resource": null,
+    "forms": 0,
+    "textboxes": 0,
+    "comboboxes": 0
+  },
+  {
+    "id": "plan-estudios",
+    "viewport": {
+      "width": 1536,
+      "height": 735
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 280,
+      "height": 735
+    },
+    "header": {
+      "x": 280,
+      "y": 0,
+      "width": 1256,
+      "height": 64
+    },
+    "main": {
+      "x": 280,
+      "y": 70,
+      "width": 1240,
+      "height": 4006.625
+    },
+    "title": {
+      "x": 300,
+      "y": 90,
+      "width": 1200,
+      "height": 46
+    },
+    "summary": {
+      "x": 300,
+      "y": 156,
+      "width": 1200,
+      "height": 206
+    },
+    "table": {
+      "x": 320,
+      "y": 445,
+      "width": 1160,
+      "height": 3533.625
+    },
+    "tableHeaders": [
+      "Esp.",
+      "Asignatura",
+      "Créd.",
+      "Tipo",
+      "Grupo",
+      "Pre-Requisito",
+      "Grupo"
+    ],
+    "resource": null,
+    "forms": 0,
+    "textboxes": 0,
+    "comboboxes": 0
+  },
+  {
+    "id": "manuales",
+    "viewport": {
+      "width": 1536,
+      "height": 735
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 280,
+      "height": 735
+    },
+    "header": {
+      "x": 280,
+      "y": 0,
+      "width": 1256,
+      "height": 64
+    },
+    "main": {
+      "x": 280,
+      "y": 70,
+      "width": 1240,
+      "height": 1064
+    },
+    "title": null,
+    "summary": null,
+    "table": null,
+    "tableHeaders": [],
+    "resource": {
+      "x": 340,
+      "y": 233,
+      "width": 533,
+      "height": 79
+    },
+    "forms": 0,
+    "textboxes": 0,
+    "comboboxes": 0
+  }
+]

@@ -1,0 +1,22 @@
+{
+  "routes": 16,
+  "viewport": [
+    1536,
+    735
+  ],
+  "pageErrors": [],
+  "consoleErrors": [],
+  "remoteRequests": [],
+  "checks": [
+    "16 direct routes",
+    "index redirect",
+    "typed SPA links",
+    "submenu reset",
+    "browser back/forward",
+    "sidebar toggle",
+    "profile initial state",
+    "read-only form fields",
+    "section anchors",
+    "local fixture download"
+  ]
+}
