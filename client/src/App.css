@@ -975,3 +975,186 @@ dd {
   background: #e8e8e8;
   border: 1px solid #d6dae0;
 }
+
+/* Inicio: compact student context and a calmer shortcut bento grid. */
+.screen-home .home-overview {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.8fr) minmax(0, 1.6fr);
+  align-items: stretch;
+  gap: 16px;
+  height: auto;
+  margin-bottom: 22px;
+}
+.screen-home .home-student {
+  min-height: 0;
+  padding: 18px;
+  gap: 14px;
+  background: #fff;
+  border-radius: 14px;
+}
+.screen-home .student-avatar {
+  width: 70px;
+  height: 70px;
+  background: #e6eef7;
+  color: #54769a;
+}
+.screen-home .student-avatar svg {
+  width: 38px;
+  height: 38px;
+}
+.screen-home .home-student h1 {
+  margin-bottom: 7px;
+  color: #29486c;
+  font-size: 20px;
+  line-height: 1.25;
+}
+.screen-home .role-label {
+  margin-bottom: 7px;
+  padding: 3px 9px;
+  background: #edf3f8;
+  color: #476887;
+  font-size: 10px;
+}
+.screen-home .home-student p {
+  color: #718094;
+  font-size: 12px;
+}
+.screen-home .student-summary {
+  height: auto;
+  min-height: 0;
+  margin: 0;
+  padding: 8px 12px 10px;
+  border: 1px solid #e5ebf2;
+  border-radius: 14px;
+  background: #fff;
+}
+.screen-home .student-summary legend {
+  padding: 5px 10px;
+  background: #eef3f8;
+  color: #476887;
+  font-size: 12px;
+}
+.screen-home .summary-row {
+  height: auto;
+  min-height: 39px;
+}
+.screen-home .summary-row > div {
+  padding: 6px 12px;
+  column-gap: 9px;
+  row-gap: 3px;
+  font-size: 12px;
+}
+.screen-home .summary-row span {
+  color: #7a8797;
+}
+.screen-home .summary-row strong {
+  color: #46586b;
+}
+.shortcut-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.screen-home .shortcut-slot,
+.screen-home .shortcut-slot:last-child {
+  min-height: 0;
+}
+.screen-home .shortcut-slot-featured {
+  grid-column: 1 / -1;
+}
+.screen-home .shortcut-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'category category'
+    'title title'
+    'description action';
+  align-content: start;
+  align-items: end;
+  gap: 8px 18px;
+  width: 100%;
+  min-height: 142px;
+  margin: 0;
+  padding: 18px 20px;
+  border: 1px solid #e7edf3;
+  border-radius: 14px;
+  background: #fff;
+}
+.screen-home .shortcut-slot-featured .shortcut-card {
+  min-height: 160px;
+  background: #f8fbfe;
+}
+.screen-home .shortcut-category {
+  grid-area: category;
+  margin: 0;
+  color: #77879a;
+  font-size: 11px;
+}
+.screen-home .shortcut-card h2 {
+  grid-area: title;
+  margin: 0;
+  color: #304f73;
+  font-size: 19px;
+  line-height: 1.3;
+}
+.screen-home .shortcut-card p {
+  grid-area: description;
+  align-self: center;
+  color: #718094;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.screen-home .more-button {
+  grid-area: action;
+  align-self: center;
+  padding: 4px 0 4px 6px;
+  background: transparent;
+  color: #315f8f;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.screen-home .more-button::after {
+  content: ' →';
+}
+.screen-home .more-button:hover {
+  background: transparent;
+  color: #1b4978;
+  text-decoration: underline;
+}
+@media (max-width: 800px) {
+  .screen-home .home-overview {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .shortcut-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .screen-home .shortcut-slot-featured {
+    grid-column: auto;
+  }
+}
+@media (max-width: 520px) {
+  .screen-home .home-student {
+    padding: 15px;
+  }
+  .screen-home .student-summary {
+    padding-inline: 6px;
+  }
+  .screen-home .summary-row > div {
+    padding-inline: 8px;
+  }
+  .screen-home .shortcut-card,
+  .screen-home .shortcut-slot-featured .shortcut-card {
+    min-height: 0;
+    padding: 16px;
+  }
+  .screen-home .shortcut-card p {
+    grid-column: 1 / -1;
+  }
+  .screen-home .more-button {
+    grid-column: 1 / -1;
+    justify-self: start;
+    padding-left: 0;
+  }
+}
