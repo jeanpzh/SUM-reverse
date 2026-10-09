@@ -1,0 +1,45 @@
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* Central local design tokens. See client/DESIGN_SYSTEM.md for usage. */
+@theme static {
+  --font-sans: 'Poppins', Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
+  --color-sum-background: #dbe7ff;
+  --color-sum-surface: #ffffff;
+  --color-sum-surface-muted: #f8fafc;
+  --color-sum-text: #334155;
+  --color-sum-heading: #202b40;
+  --color-sum-muted: #64748b;
+  --color-sum-subtle: #748096;
+  --color-sum-border: #e2e8f0;
+  --color-sum-sidebar: #304767;
+  --color-sum-sidebar-text: #b3b8d4;
+  --color-sum-sidebar-active: #203956;
+  --color-sum-topbar: #6e8fac;
+  --color-sum-link: #1c62b1;
+  --color-sum-accent: #6256d9;
+  --color-sum-accent-soft: #f0efff;
+  --color-sum-danger: #dc4444;
+  --color-sum-success: #087f5b;
+  --color-sum-warning: #8a5b08;
+  --text-meta: 0.6875rem;
+  --text-meta--line-height: 1.4;
+  --text-data: 0.75rem;
+  --text-data--line-height: 1.45;
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.5;
+  --text-section: 1.125rem;
+  --text-section--line-height: 1.3;
+  --text-page: 1.5rem;
+  --text-page--line-height: 1.25;
+  --radius-panel: 1rem;
+  --radius-control: 0.5rem;
+  --shadow-floating: 0 4px 12px rgb(32 43 64 / 12%);
+  --spacing: 0.25rem;
+}
+
+:root {
+  --sidebar-width: 280px;
+}
