@@ -1,0 +1,17 @@
+.student-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.student-photo-fallback {
+  display: grid;
+  place-items: center;
+}
+
+.student-photo-fallback .nav-icon {
+  width: 56%;
+  height: 56%;
+}

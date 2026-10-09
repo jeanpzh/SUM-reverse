@@ -1,294 +1,143 @@
 import { useStudent, useStudentFormData } from '../data/useStudent'
-import { toProfileRows } from '../data/adapters'
 import type { ApiResponseMap } from '../data/contracts'
 import { PageTitle } from '../components/Common'
 import { downloadCsv } from '../data/download'
+import { toProfileRows, toStudentSummary } from '../data/adapters'
+import { getMiRepresentation, toFichaLocalData } from '../data/miInformacion'
+import { getDataMode } from '../data/client'
 
 type Section = { title: string; fields: string[] }
-// Labels are representative fixtures where discovery retained only section names.
+type FieldView = { id: string; label: string; value: string | null; control: string }
+type SectionView = { id: string; title: string; fields: FieldView[] }
+// Sanitized labels observed in the authorized read-only session. Values remain synthetic.
 const sections: Section[] = [
   {
     title: 'Datos Personales',
     fields: [
-      'Código de estudiante',
-      'Apellidos',
-      'Nombres',
-      'Tipo de documento?',
-      'Número de documento',
-      'Fecha de nacimiento',
-      'Sexo?',
-      'Estado civil?',
-      'País de nacimiento?',
-      'Departamento?',
-      'Provincia?',
-      'Distrito?',
-      'Nacionalidad?',
-      'Dirección',
-      'Referencia de domicilio',
-      'Correo electrónico',
-      'Teléfono',
-      'Celular',
+      'Código de Estudiante*', 'Nombre de Estudiante*', 'Tipo de Doc. de Identidad*?',
+      'Número de Doc. de Identidad*', 'Fecha de Nacimiento*@', 'Sexo*?', 'Estado Civil*?',
+      'País*?', 'Departamento*?', 'Provincia*?', 'Distrito*?',
+      'POR SUS COSTUMBRES Y ANTEPASADOS SE SIENTE PARTE DE:?','Pueblo Indígena?',
+      'Especifique el grupo étnico:', 'HABLA ALGUNA LENGUA INDIGENA U ORIGINARIA:?', 'Lengua?',
+      'Departamento*?', 'Provincia*?', 'Distrito*?', 'Dirección*', 'Teléfono Fijo*',
+      'Teléfono Móvil*', 'Correo Personal*#',
     ],
   },
   {
     title: 'Colegio de Procedencia',
     fields: [
-      'Nombre del colegio',
-      'Tipo de colegio?',
-      'País?',
-      'Departamento?',
-      'Provincia?',
-      'Distrito?',
-      'Año de ingreso',
-      'Año de egreso',
-      'Modalidad de estudios?',
-      'Turno?',
-      'Nivel educativo?',
-      'Grado de instrucción?',
-      'Dirección del colegio',
-      'Tipo de gestión?',
-      'Lengua de enseñanza?',
+      'País*?', 'Departamento*?', 'Provincia*?', 'Distrito*?', 'Tipo de Colegio*?',
+      'nombre de Colegio*', 'Pago Mensual*', 'Año de conclusión de Secundaria*?',
+      'Tipo de Preparación Universitaria*?',
     ],
   },
   {
     title: 'Dependencia Económica',
     fields: [
-      'Dependencia económica?',
-      'Responsable del sustento?',
-      'Situación laboral?',
-      'Ocupación',
-      'Centro de trabajo',
-      'Actividad económica?',
-      'Ingreso mensual',
-      'Horario de trabajo',
-      'Número de dependientes',
-      'Tipo de empleo?',
-      'Tiene beca?',
-      'Tipo de beca?',
-      'Fuente de ingresos?',
-      'Apoyo familiar?',
-      'Otros ingresos',
+      '¿Depende económicamente de sus padres o tutores?*?', 'Número de Hijos*',
+      '¿Usted trabaja en la actualidad?*?', '¿Donde Trabaja?*', '¿Con quien vive?*?',
+      'Tipo de vivienda*?',
     ],
   },
   {
     title: 'Recursos de Estudio',
     fields: [
-      'Tiene computadora?',
-      'Tipo de computadora?',
-      'Acceso a internet?',
-      'Tipo de conexión?',
-      'Dispone de libros?',
-      'Biblioteca de consulta?',
-      'Lugar de estudio?',
-      'Ambiente exclusivo?',
-      'Horas de estudio',
-      'Material de consulta?',
-      'Acceso a impresora?',
-      'Dispositivo móvil?',
-      'Condiciones de iluminación?',
-      'Recursos digitales?',
-      'Otros recursos',
+      'Transporte*?', 'Acceso a Internet*?', 'Acceso a Bibliotecas*?', 'Alimentación*?',
+      '¿Pertenece a algún programa de Becas? ¿Cúal?*?',
     ],
   },
   {
     title: 'Transporte',
     fields: [
-      'Medio de transporte?',
-      'Tiempo de traslado',
-      'Número de viajes',
-      'Costo de transporte',
-      'Lugar de procedencia',
-      'Ruta habitual',
-      'Frecuencia de traslado?',
-      'Transporte propio?',
-      'Tipo de movilidad?',
-      'Punto de embarque',
-      'Distrito de residencia?',
-      'Distancia al centro de estudios',
+      '¿Es residente en la vivienda universitaria?*?', 'Medio de transporte hacia la Universidad*?',
+      '¿Cuánto tiempo te demoras(minutos) en llegar a la Universidad?*',
     ],
   },
   {
     title: 'Salud',
     fields: [
-      'Tipo de seguro?',
-      'Centro de atención',
-      'Grupo sanguíneo?',
-      'Enfermedad crónica?',
-      'Discapacidad?',
-      'Tratamiento médico?',
-      'Alergias',
-      'Medicamentos',
-      'Atención médica?',
-      'Antecedentes de salud',
-      'Actividad física?',
-      'Frecuencia de actividad?',
-      'Restricción alimentaria?',
-      'Observaciones',
+      '¿Sufres de alguna discapacidad física? ¿Cuál?*?',
+      '¿Estás inscrito en CONADIS, tienes carnet de CONADIS?*?',
+      '¿A que seguro de salud se encuentra incorporado?*?',
     ],
   },
   {
     title: 'Interés Académico',
     fields: [
-      'Área de interés?',
-      'Motivo de elección?',
-      'Especialidad de interés',
-      'Expectativa académica',
-      'Participa en investigación?',
-      'Área de investigación',
-      'Interés en idiomas?',
-      'Idioma?',
-      'Nivel de idioma?',
-      'Actividad extracurricular?',
-      'Participación académica?',
-      'Disponibilidad horaria?',
-      'Objetivos de estudio',
-      'Otros intereses',
+      '¿Cómo se siente en la carrera?*?', '¿Qué curso fue el más difícil y por qué?*?',
+      'Motivo*~', '¿Se siente motivado con la carrera?*?',
+      '¿Siente que los profesores motivan a seguir estudiando?*?',
+      '¿Qué área de cursos le agrada más?*~', '¿En qué área le gustaría especializarse?*~',
     ],
   },
   {
     title: 'Contacto',
     fields: [
-      'Nombre del contacto',
-      'Parentesco?',
-      'Teléfono de contacto',
-      'Celular de contacto',
-      'Correo de contacto',
-      'Dirección del contacto',
-      'Departamento?',
-      'Provincia?',
-      'Distrito?',
-      'Persona de emergencia',
-      'Teléfono de emergencia',
-      'Disponibilidad de contacto?',
+      'Nombres y Apellidos*', 'Departamento*?', 'Provincia*?', 'Distrito*?', 'Dirección*',
+      'Teléfono Fijo*', 'Teléfono Móvil*', 'Correo Personal*',
     ],
   },
 ]
 const socioeconomic: Section[] = [
-  sections[0],
-  sections[1],
-  sections[2],
-  { ...sections[7], title: 'Contacto de Emergencia' },
-  sections[5],
-  {
-    title: 'Interés Académico y Transporte',
-    fields: [...sections[6].fields, ...sections[4].fields.slice(0, 6)],
-  },
-  {
-    title: 'Salud Familiar',
-    fields: [
-      'Nombre del familiar',
-      'Edad',
-      'Parentesco?',
-      'Grado de instrucción?',
-      'Ocupación',
-      'Situación laboral?',
-      'Aporte familiar',
-      'Enfermedad?',
-      'Discapacidad?',
-      'Tipo de atención?',
-      'Seguro de salud?',
-      'Observaciones',
-    ],
-  },
-  sections[3],
-  {
-    title: 'Vivienda',
-    fields: [
-      'Tipo de vivienda?',
-      'Tenencia de vivienda?',
-      'Material de paredes?',
-      'Material del techo?',
-      'Material del piso?',
-      'Número de habitaciones',
-      'Número de habitantes',
-      'Servicio de agua?',
-      'Servicio de desagüe?',
-      'Servicio eléctrico?',
-      'Acceso a internet?',
-      'Ambiente de estudio?',
-      'Dirección de vivienda',
-      'Tiempo de residencia',
-      'Servicios disponibles?',
-      'Estado de la vivienda?',
-    ],
-  },
-  {
-    title: 'Situación Económica',
-    fields: [
-      'Ingreso familiar mensual',
-      'Número de aportantes',
-      'Número de dependientes',
-      'Gasto en alimentación',
-      'Gasto en vivienda',
-      'Gasto en transporte',
-      'Gasto en educación',
-      'Gasto en salud',
-      'Otros gastos',
-      'Tipo de sustento?',
-      'Apoyo económico?',
-      'Tipo de apoyo?',
-      'Tiene beca?',
-      'Tipo de beca?',
-      'Situación laboral?',
-      'Observaciones',
-    ],
-  },
-  {
-    title: 'Recreación',
-    fields: [
-      'Actividad deportiva?',
-      'Deporte?',
-      'Frecuencia?',
-      'Actividad cultural?',
-      'Tipo de actividad?',
-      'Participación artística?',
-      'Área artística?',
-      'Tiempo libre',
-      'Actividad recreativa',
-      'Participación en grupos?',
-      'Voluntariado?',
-      'Organización',
-      'Pasatiempos',
-      'Otros intereses',
-    ],
-  },
-  {
-    title: 'Aptitudes y Habilidades',
-    fields: [
-      'Habilidad principal',
-      'Área de aptitud?',
-      'Conocimiento de idiomas?',
-      'Idioma?',
-      'Nivel?',
-      'Conocimientos informáticos?',
-      'Herramientas utilizadas',
-      'Actividad artística?',
-      'Tipo de actividad?',
-      'Habilidades sociales',
-      'Intereses personales',
-      'Experiencia de voluntariado',
-      'Participación estudiantil?',
-      'Disponibilidad?',
-      'Otros conocimientos',
-    ],
-  },
+  { title: 'Datos Alumno', fields: ['Código de Estudiante', 'Nombre de Estudiante', 'Sexo', 'Identidad Étnica', 'Teléfono Fijo', 'Fecha de Nacimiento', 'País', 'Departamento', 'Provincia', 'Distrito', 'Estado Civil', 'Correo Personal', 'Tipo de Doc. de Identidad', 'Número de Doc. de Identidad', 'Teléfono Móvil', 'Religión', 'Lengua Materna', 'Cuenta de Facebook'] },
+  { title: 'Colegio de Procedencia', fields: ['País?', 'Departamento?', 'Provincia?', 'Distrito?', 'Tipo de Colegio?', 'Nombre del Colegio', 'Pago Mensual', 'Año de conclusión de Secundaria?', 'Tipo de Preparación Universitaria?'] },
+  { title: 'Dependencia Económica', fields: ['¿Depende económicamente de sus padres o tutores?^s', 'Número de Hijos', 'Cantidad de personas con las que vive', '¿Usted trabaja en la actualidad?^s', 'Actividad del trabajo', 'Teléfono del trabajo', 'Lugar de Trabajo'] },
+  { title: 'Contacto', fields: ['Nombres y Apellidos', 'Teléfono Fijo', 'Teléfono Móvil', 'Parentesco', 'Correo Personal', 'Departamento?', 'Provincia?', 'Distrito?', 'Dirección', 'Nombre del Exterior', 'Teléfono del Exterior', 'Dirección del Exterior'] },
+  { title: 'Salud', fields: ['¿A que seguro de salud se encuentra incorporado?^s', 'Especifique el tipo de seguro que tiene:~', 'Alergias~', 'Tipo de Sangre?^s', 'Discapacidad?^s', 'Especifique el tipo de discapacidad:~'] },
+  { title: 'Interés Académico', fields: ['¿Cómo se siente en la carrera?^s', '¿Qué curso fue el más difícil y por qué?^s', 'Motivo~', '¿Se siente motivado con la carrera?^s', '¿Siente que los profesores motivan a seguir estudiando?^s', '¿Qué área de cursos le agrada más?~', '¿En qué área le gustaría especializarse?~'] },
+  { title: 'Transporte', fields: ['¿Es residente en la vivienda universitaria?^s', 'Medio de transporte hacia la Universidad?^s', '¿Cuánto tiempo te demoras en llegar a la Universidad?(mins)'] },
+  { title: 'Familia Salud', fields: [] },
+  { title: 'Recursos de Estudio', fields: ['Transporte?', 'Acceso a Internet?', 'Acceso a Bibliotecas?', 'Alimentación?', '¿Pertenece a algún programa de Becas? ¿Cúal?'] },
+  { title: 'Datos Vivienda', fields: ['Tenencia de la Vivienda?^s', 'Especifique su tipo de vivienda:~', 'Número de habitaciones exclusivas para dormitorios', 'SISFOH?^s', 'Tipo de Vivienda?^s', 'Especifique su tipo de vivienda:~', 'Tipo de Techo?^s', 'Especifique su tipo de techo:~', 'Tipo de Pared?^s', 'Especifique su tipo de pared:~', 'Tipo de Piso?^s', 'Especifique su tipo de piso:~', 'Abastecimiento de Agua?^s', 'Especifique su tipo de abastecimiento de agua:~', 'Tipo de Desagüe?^s', 'Especifique su tipo de desagüe:~', 'Electricidad?^s', 'Telefono?^s', 'Cable?^s', 'Internet?^s', 'Otros servicios con los que cuente~'] },
+  { title: 'Situación Económica', fields: ['Ingresos del Estudiante', 'Ingresos de la Familia', 'Ingresos por Beca', 'Otros Ingresos', 'Alimentación', 'Movilidad', 'Vivienda', 'Servicio', 'Salud', 'Educacion', 'Recreación', 'Deuda', 'Otro', 'Alimentación', 'Movilidad', 'Vivienda', 'Servicio', 'Salud', 'Educacion', 'Recreación', 'Deuda', 'Otro'] },
+  { title: 'Recreación', fields: ['¿Qué deportes practicas?~', '¿Qué actividades artísticas practicas?~', '¿Qué actividades sociales practicas?~', '¿En que agrupación artística, cultural, deportiva, religiosa, política, etc. participas?~'] },
+  { title: 'Aptitudes y Habilidades', fields: ['Respeto^', 'Sinceridad^', 'Tolerancia^', 'Solidaridad^', 'Disciplina^', 'Creatividad^', 'Adaptación^', 'Cortesía^', 'Paciencia^', 'Aptitudes Personales:~', 'Trabajo en equipo^', 'Liderazgo^', 'Control de Estrés^', 'Capacidad Analítica^', 'Comunicación^', 'Innovación^', 'Proactiva^', 'Flexibilidad^', 'Motivación^', 'Habilidades Profesionales:~', 'Empatía^', 'Liderazgo^', 'Escucha Activa^', 'Persuasión^', 'Asertividad^', 'Positivo^', 'Habilidades Sociales:~'] },
 ]
 
 export function StudentForms({
   socioeconomic: isSocioeconomic = false,
+  ficha,
   profile,
 }: {
   socioeconomic?: boolean
-  profile?: ApiResponseMap['perfil']
+  ficha?: ApiResponseMap['fichaSocioeconomica'] | null
+  profile?: ApiResponseMap['perfil'] | null
 }) {
   const student = useStudent()
-  const { data } = useStudentFormData()
+  const formResponse = useStudentFormData()
+  const { data } = formResponse
+  const formRepresentation = getMiRepresentation(formResponse)
+  const candidateForm = !isSocioeconomic && formRepresentation === 'candidate-v1'
+  const fichaRepresentation = ficha ? getMiRepresentation(ficha) : undefined
+  const fichaData = ficha ? toFichaLocalData(ficha) : null
+  if (isSocioeconomic && fichaRepresentation === 'opaque') {
+    return <><PageTitle>Ficha Socioeconómica</PageTitle>
+      <p className="route-status" role="status">Información aún no disponible para mostrar.</p></>
+  }
+  if (isSocioeconomic && getDataMode() === 'local' && !fichaData) {
+    return <><PageTitle>Ficha Socioeconómica</PageTitle>
+      <p className="route-status" role="status">Información aún no disponible para mostrar.</p></>
+  }
   const values = Object.fromEntries(profile ? toProfileRows(profile.data, data.alumno) : [
     ['Código de estudiante', data.alumno.codAlumno],
     ['Apellidos', `${data.alumno.apePaterno} ${data.alumno.apeMaterno}`.trim()],
     ['Nombres', data.alumno.nomAlumno],
   ])
-  const fieldValue = (label: string) => values[label.replace('?', '')] || 'No registrado'
+  values['Código de Estudiante'] = data.alumno.codAlumno
+  values['Nombre de Estudiante'] = data.alumno.nomAlumno
+  if (profile) values['Número de Doc. de Identidad'] = profile.data.numDocumento
+  const formularioLocal = formRepresentation === 'local-v1' && 'secciones' in data ? data : null
+  const localSections = isSocioeconomic ? fichaData?.secciones ?? null : formularioLocal?.secciones ?? null
+  const displayedStudent = isSocioeconomic && fichaData ? toStudentSummary(fichaData.alumno) : student
+  const knownCandidateValues: Record<string, string> = {
+    'Código de Estudiante': data.alumno.codAlumno,
+    'Nombre de Estudiante': data.alumno.nomAlumno,
+  }
+  const fieldValue = (label: string) => {
+    const key = label.replace(/[?~^*]/g, '')
+    if (candidateForm) return knownCandidateValues[key] ?? 'Información no disponible'
+    return values[key] || 'Dato de demostración'
+  }
   const completed: Record<string, boolean> = {
     'Datos Personales': data.datosPersonalesCompletado,
     'Colegio de Procedencia': data.colegioCompletado,
@@ -297,18 +146,38 @@ export function StudentForms({
     Transporte: data.transporteCompletado, Salud: data.saludCompletado,
     'Interés Académico': data.interesAcademicoCompletado, Contacto: data.contactoCompletado,
   }
-  const groups = isSocioeconomic ? socioeconomic : sections
+  const catalog = isSocioeconomic ? socioeconomic : sections
   const title = isSocioeconomic ? 'Ficha Socioeconómica' : 'Formulario de Datos Personales'
-  const exportRows = groups.flatMap((group) =>
-    group.fields.map((field) => [group.title, field.replace('?', ''), fieldValue(field)]),
-  )
+  const groups: SectionView[] = localSections
+    ? localSections.map((section, sectionIndex) => ({
+      id: section.id,
+      title: section.titulo,
+      fields: section.campos.map((field, fieldIndex) => ({
+        id: field.id, label: field.etiqueta, value: field.valor,
+        control: catalog[sectionIndex]?.fields[fieldIndex] ?? field.etiqueta,
+      })),
+    }))
+    : catalog.map((section, sectionIndex) => ({
+      id: `${isSocioeconomic ? 'ficha' : 'formulario'}-${sectionIndex + 1}`,
+      title: section.title,
+      fields: section.fields.map((field, fieldIndex) => ({
+        id: `field-${sectionIndex}-${fieldIndex}`, label: field.replace(/[?~^*@#]/g, ''),
+        value: null, control: field,
+      })),
+    }))
+  const exportRows = candidateForm ? [] : localSections
+    ? groups.flatMap((group) => group.fields.map((field) => [group.title,
+      field.label, field.control.endsWith('^') ? ''
+        : field.value === null ? (field.control.endsWith('@') ? '' : 'No registrado') : field.value]))
+    : catalog.flatMap((group) => group.fields.map((field) => [group.title, field.replace('?', ''), fieldValue(field)]))
+  const family = fichaData?.familiares ?? []
   return (
     <>
       <PageTitle>{title}</PageTitle>
       <div className={`form-layout ${isSocioeconomic ? 'socioeconomic-forms' : 'personal-forms'}`}>
         <nav className="section-nav" aria-label="Secciones del formulario">
-          {groups.map((group, i) => (
-            <a key={group.title} href={`#section-${i}`}>
+            {groups.map((group, i) => (
+            <a key={group.id} href={`#section-${i}`}>
               {group.title}
             </a>
           ))}
@@ -317,19 +186,21 @@ export function StudentForms({
         <div className="form-column">
           <section className="form-intro">
             <h3>{title}</h3>
-          <p>{student.name}</p>
+          <p>{displayedStudent.name}</p>
           <p>
-            Código de estudiante: <strong>{student.code}</strong>
+            Código de estudiante: <strong>{displayedStudent.code}</strong>
           </p>
+          {candidateForm && <p>Correo institucional: <strong>{data.alumno.correoInstitucional}</strong></p>}
           <p>{isSocioeconomic
-            ? 'Los campos de esta ficha son datos de demostración.'
-            : data.llenar ? 'Hay secciones pendientes de completar.' : 'Los datos se muestran por sección.'}</p>
+            ? localSections ? 'Los datos se muestran por sección.' : 'Los campos de esta ficha son datos de demostración.'
+            : candidateForm ? 'Hay datos del formulario que aún no se pueden mostrar.'
+              : data.llenar ? 'Hay secciones pendientes de completar.' : 'Los datos se muestran por sección.'}</p>
           </section>
           {groups.map((group, i) => (
             <form
               className="form-section"
               id={`section-${i}`}
-              key={group.title}
+              key={group.id}
               onSubmit={(event) => event.preventDefault()}
             >
               <h3>{group.title}</h3>
@@ -337,25 +208,42 @@ export function StudentForms({
                 <p className="form-completion">{completed[group.title] ? 'Completado' : 'Pendiente'}</p>
               )}
               <div className="form-fields">
-                {group.fields.map((field, j) => {
-                  const select = field.endsWith('?')
-                  const label = field.replace('?', '')
-                  const id = `field-${i}-${j}`
+                {group.fields.map((field) => {
+                  const control = field.control
+                  const select = control.endsWith('?')
+                  const textarea = control.endsWith('~')
+                  const checkbox = control.endsWith('^')
+                  const explicitSelect = control.endsWith('^s')
+                  const inputType = control.endsWith('@') ? 'date' : control.endsWith('#') ? 'email' : 'text'
+                  const label = field.label
+                  const id = field.id
+                  const value = localSections
+                    ? (field.value === null ? 'No registrado' : field.value)
+                    : fieldValue(control.replace(/[?~^*]/g, '').replace(/s$/, explicitSelect ? '' : 's'))
+                  const candidateDate = candidateForm && inputType === 'date'
+                  const candidateUnavailable = candidateForm
+                    && !Object.hasOwn(knownCandidateValues, label)
                   return (
                     <label key={id} htmlFor={id}>
                       <span>{label}</span>
-                      {select ? (
-                        <select id={id} disabled value={fieldValue(label)}>
-                          <option>{fieldValue(label)}</option>
+                      {checkbox ? (
+                        <input id={id} type="checkbox" disabled />
+                      ) : textarea ? (
+                        <textarea id={id} disabled value={value} readOnly />
+                      ) : select || explicitSelect ? (
+                        <select id={id} disabled value={value}>
+                          <option>{value}</option>
                         </select>
                       ) : (
-                        <input id={id} disabled value={fieldValue(label)} readOnly />
+                        <input id={id} type={inputType} disabled={candidateForm || !(label === 'Especifique el grupo étnico:' && !isSocioeconomic)}
+                          value={candidateDate ? '' : inputType === 'date' && localSections ? (field.value ?? '') : value} readOnly />
                       )}
+                      {candidateUnavailable && <small>Información no disponible</small>}
                     </label>
                   )
                 })}
               </div>
-              {group.title === 'Salud Familiar' && (
+              {group.title === 'Familia Salud' && (
                 <div className="table-overflow family-table">
                   <table>
                     <thead>
@@ -364,12 +252,12 @@ export function StudentForms({
                           'Nombre',
                           'Edad',
                           'Parentesco',
-                          'Educación',
+                          'Grado',
                           'Ocupación',
-                          'Empleo',
-                          'Aporte',
+                          'Condición Laboral',
+                          'Aporte Económico(S/.)',
                           'Enfermedad',
-                          'Discapacidad',
+                          'Tipo Discapacidad',
                           'Acción',
                         ].map((header) => (
                           <th key={header}>{header}</th>
@@ -377,9 +265,15 @@ export function StudentForms({
                       </tr>
                     </thead>
                     <tbody>
-                      <tr>
-                        <td colSpan={10}>No hay registros familiares</td>
-                      </tr>
+                      {family.map((person) => <tr key={person.id}>
+                        <td>{person.nombre}</td><td>{person.edad}</td><td>{person.parentesco}</td>
+                        <td>{person.grado}</td><td>{person.ocupacion}</td><td>{person.condicionLaboral}</td>
+                        <td>{person.aporteEconomico}</td><td>{person.enfermedad ?? 'No registrado'}</td>
+                        <td>{person.tipoDiscapacidad ?? 'No registrado'}</td><td><button type="button" disabled>Acción</button></td>
+                      </tr>)}
+                      {!family.length && (localSections
+                        ? <tr><td colSpan={10}>No hay familiares registrados.</td></tr>
+                        : <tr><td colSpan={10} /> </tr>)}
                     </tbody>
                   </table>
                 </div>
@@ -393,8 +287,10 @@ export function StudentForms({
           ))}
           <section className="form-download" id="form-download">
             <h3>Descargar Formulario</h3>
+            {candidateForm && <p>La descarga estará disponible cuando se pueda asociar el mapa del formulario a sus campos.</p>}
             <button
               className="download-button"
+              disabled={candidateForm}
               onClick={() =>
                 downloadCsv(
                   isSocioeconomic ? 'ficha-socioeconomica' : 'formulario-datos',

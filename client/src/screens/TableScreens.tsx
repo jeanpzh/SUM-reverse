@@ -1,14 +1,23 @@
-import { useState, type ReactNode } from 'react'
+import { Fragment, useState, type ReactNode } from 'react'
 import { routes } from '../data/routes'
 import type { ApiResponseMap } from '../data/contracts'
 import { useStudent } from '../data/useStudent'
 import { toPlanRows, toPrematriculaRows, toMatriculaRows, toAttendanceRows,
-  toProgrammingRows, toScheduleEvents } from '../data/adapters'
+  toProgrammingRows, toEvaluacionRows, toDeudaRows } from '../data/adapters'
 import { DataTable, DownloadButton, PageTitle, StudentSummary } from '../components/Common'
 import { CourseScheduleModal } from '../components/CourseScheduleModal'
+import { toHistoryRows, toStudentSummary } from '../data/adapters'
+import { getDataMode } from '../data/client'
+import { useStudentFormData } from '../data/useStudent'
+import { getPlanEstudiosRepresentation, validatePlanEstudios } from '../data/planEstudios'
+import { downloadCsv } from '../data/download'
+import { toHistorialCandidateData, toHistorialLocalData } from '../data/miInformacion'
+import { toHistorialCandidatePromedios, toHistorialCandidateRows, toPlanCandidateRows } from '../data/adapters'
+import { AcademicHistory } from './AcademicHistory'
+import { WeeklySchedule } from './WeeklySchedule'
 
 type TableScreenProps =
-  | { id: 'historial' }
+  | { id: 'historial'; response?: ApiResponseMap['historial'] | null }
   | { id: 'asistencia'; response: ApiResponseMap['asistencias'] }
   | { id: 'reportes-horarios'; response: ApiResponseMap['horarios'] }
   | { id: 'tutoria'; response: ApiResponseMap['tutoria'] }
@@ -19,10 +28,6 @@ type TableScreenProps =
   | { id: 'reportes-prematricula'; response: ApiResponseMap['prematricula'] }
   | { id: 'reportes-matricula'; response: ApiResponseMap['matricula'] }
 
-const unavailableAction = (label: string) => (
-  <button className="row-action" disabled aria-label={label}>▦</button>
-)
-
 function Attendance({ data }: { data: ApiResponseMap['asistencias']['data'] }) {
   const headers = ['Asignatura', 'Sección', '# Clases', 'Puntual N°', 'Puntual (%)',
     'Tardanzas N°', 'Tardanzas (%)', 'Faltas N°', 'Faltas (%)', 'Asistencia Total N°', 'Asistencia Total (%)']
@@ -32,6 +37,9 @@ function Attendance({ data }: { data: ApiResponseMap['asistencias']['data'] }) {
       <div className="report-toolbar">
         <DownloadButton name="asistencias" headers={headers} rows={rows.map((row) => row.map(String))} />
       </div>
+      <p id="attendance-calendar-unavailable" className="sr-only">
+        La consulta del calendario de asistencia no está disponible en esta réplica.
+      </p>
       <div className="table-overflow">
         <table className="attendance-table">
           <thead>
@@ -50,7 +58,11 @@ function Attendance({ data }: { data: ApiResponseMap['asistencias']['data'] }) {
             {rows.map((row, i) => (
               <tr key={`${data[i].codAsignatura}-${data[i].codSeccion}`}>
                 {row.map((cell, j) => <td key={j}>{cell}</td>)}
-                <td>{unavailableAction(`Calendario de ${data[i].desAsignatura}`)}</td>
+                <td>
+                  <button className="row-action" disabled
+                    aria-label={`Calendario de ${data[i].desAsignatura}`}
+                    aria-describedby="attendance-calendar-unavailable">▦</button>
+                </td>
               </tr>
             ))}
             {!rows.length && <tr><td colSpan={12}>No hay registros de asistencia.</td></tr>}
@@ -65,99 +77,175 @@ function ReactGroup() {
   return <><th>N°</th><th>(%)</th></>
 }
 
-function Programming({ data }: { data: ApiResponseMap['programacion']['data']['programacion'] }) {
+function Programming({ response }: { response: ApiResponseMap['programacion'] }) {
+  const data = response.data.programacion
   const [selected, setSelected] = useState<(typeof data)[number] | null>(null)
-  const headers = ['Asignatura', 'Créd.', 'Sec.', 'Docente', 'Tope', 'Matriculados', 'Horarios']
+  const [search, setSearch] = useState('')
+  const headers = ['', 'Asignatura', 'Créd.', 'Sec.', 'Docente', 'Tope', 'Matriculados', 'Horarios']
   const values = toProgrammingRows(data)
-  const rows = values.map((row, index) => [...row.slice(0, -1),
-    <button className="schedule-button" aria-label={`Horarios de ${data[index].desAsignatura}, sección ${data[index].codSeccion}`}
-      onClick={() => setSelected(data[index])} title="Ver horarios"><span aria-hidden="true">▦</span></button>])
+  const query = search.trim().toLocaleLowerCase()
+  const matching = data.flatMap((course, index) => {
+    const cycle = course.ciclo === 99 ? 0 : course.ciclo
+    const cycleLabel = `CICLO${cycle}`
+    const searchable = [course.codAsignatura, course.desAsignatura, values[index][4],
+      String(course.codSeccion), cycleLabel].join(' ').toLocaleLowerCase()
+    return !query || searchable.includes(query) ? [{ course, value: values[index], cycleLabel }] : []
+  })
+  const csvRows = values.map((row) => row.map(String))
   return <>
-    <div className="report-toolbar"><DownloadButton name="programacion-asignaturas" headers={headers}
-      rows={values.map((row) => row.map(String))} /></div>
-    <DataTable headers={headers} rows={rows} />
+    <div className="report-toolbar">
+      <button className="download-button" onClick={() => downloadCsv('programacion-asignaturas', headers, csvRows)}>
+        <span aria-hidden="true">⇩</span> Descargar CSV local
+      </button>
+    </div>
+    <label className="history-search">
+      Buscar: <input type="search" aria-label="Buscar" value={search} onChange={(event) => setSearch(event.target.value)} />
+    </label>
+    <div className="table-card">
+      <div className="table-overflow">
+        <table>
+          <thead><tr>{headers.map((header, index) => <th key={`${header}-${index}`}>{header}</th>)}</tr></thead>
+          <tbody>
+            {matching.length ? matching.map(({ course, value, cycleLabel }, index) => <Fragment key={`${course.codAsignatura}-${course.codSeccion}-${index}`}>
+              {matching[index - 1]?.course.ciclo !== course.ciclo &&
+                <tr key={`cycle-${index}`}><th scope="colgroup" colSpan={8}>{cycleLabel}</th></tr>}
+              <tr key={`course-${course.codAsignatura}-${course.codSeccion}-${index}`}>
+                {[...value.slice(0, -1),
+                  <button className="schedule-button" aria-label={`Horarios de ${course.desAsignatura}, sección ${course.codSeccion}`}
+                    onClick={() => setSelected(course)} title="Ver horarios"><span aria-hidden="true">▦</span></button>]
+                  .map((cell, column) => <td key={column}>{cell}</td>)}
+              </tr>
+            </Fragment>)
+              : <tr><td className="empty-cell" colSpan={8}>No hay registros que coincidan.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+      <p className="table-footer">Mostrando {matching.length} registros</p>
+    </div>
     <CourseScheduleModal course={selected} onClose={() => setSelected(null)} />
   </>
 }
 
-function History() {
+function History({ response }: { response?: ApiResponseMap['historial'] | null }) {
   const student = useStudent()
-  return (
-    <>
-      <section className="history-summary">
-        <h3>RESUMEN DEL HISTORIAL ACADÉMICO</h3>
-        <p>Datos académicos de demostración.</p>
-        <dl>
-          {[
-            ['Estudiante', student.name], ['Código', student.code], ['Facultad', student.faculty],
-            ['Programa', student.program], ['Plan de Estudios', student.plan],
-            ['Asignaturas aprobadas', '8'], ['Créditos aprobados', '28'],
-          ].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
-        </dl>
-      </section>
-      <section className="weighted-average">
-        <h3>Promedio Ponderado</h3>
-        <table>
-          <thead><tr><th>Periodo Académico</th><th>Créditos</th><th>Promedio</th></tr></thead>
-          <tbody><tr><td>2026-1</td><td>28</td><td>15.00</td></tr></tbody>
-        </table>
-      </section>
-      <DataTable className="history-table"
-        headers={['Ciclo', 'Plan', 'Tipo', 'Asignatura', 'Calificación', 'Créditos', 'Sección', 'Acta']}
-        rows={[]} empty="" />
-    </>
-  )
-}
-
-function Schedule({ data }: { data: ApiResponseMap['horarios']['data'] }) {
-  const events = toScheduleEvents(data)
-  const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
-  return (
-    <div className="calendar-card">
-      {!events.length && <p>No hay horarios registrados.</p>}
-      <div className="calendar-week" aria-label="Calendario semanal">
-        <div className="calendar-daynames">{days.map((day) => <span key={day}>{day}</span>)}</div>
-        <div className="calendar-grid">
-          {days.map((day, i) => (
-            <div key={day}>
-              {events.filter((event) => event.day === i + 1).sort((a, b) => a.start - b.start)
-                .map((event, index) => (
-                  <article className="calendar-event" key={`${event.course}-${index}`}>
-                    <strong>{event.course}</strong><p>{event.time}</p>
-                    <p>Sección {event.section} · {event.kind}</p>
-                  </article>
-                ))}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
+  const candidateData = response ? toHistorialCandidateData(response) : null
+  if (candidateData) {
+    const allRows = toHistorialCandidateRows(candidateData)
+    const averageRows = toHistorialCandidatePromedios(candidateData)
+    const latestAverage = averageRows.at(-1)?.[1] || 'No registrado'
+    return <AcademicHistory
+      metadata={[
+        { label: 'Estudiante', value: student.name }, { label: 'Código', value: student.code },
+        { label: 'Año de ingreso', value: String(candidateData.anioIngreso) },
+        { label: 'Facultad', value: String(candidateData.facultad) },
+        { label: 'Escuela', value: String(candidateData.escuela) },
+        { label: 'Plan de estudios', value: student.plan },
+      ]}
+      metrics={[
+        { label: 'Créditos aprobados', value: 'No registrado', detail: 'No disponible en este registro' },
+        { label: 'Asignaturas aprobadas', value: 'No registrado', detail: 'No disponible en este registro' },
+        { label: 'Promedio último periodo', value: latestAverage },
+      ]}
+      averages={averageRows.map(([period, average]) => ({ period, average: Number(average), displayAverage: average }))}
+      courses={candidateData.historial.map((course, index) => ({
+        period: course.codSemestre,
+        cells: allRows[index]!.slice(0, 8),
+        searchable: `${course.codAsignatura} ${course.desAsignatura}`,
+      }))} />
+  }
+  const data = response ? toHistorialLocalData(response) : null
+  if (data) {
+    const summaryStudent = toStudentSummary(data.alumno)
+    const allRows = toHistoryRows(data.asignaturas)
+    return <AcademicHistory
+      metadata={[
+        { label: 'Estudiante', value: summaryStudent.name }, { label: 'Código', value: summaryStudent.code },
+        { label: 'Facultad', value: summaryStudent.faculty }, { label: 'Programa', value: summaryStudent.program },
+        { label: 'Plan de estudios', value: summaryStudent.plan },
+      ]}
+      metrics={[
+        { label: 'Créditos aprobados', value: String(data.resumen.creditosAprobados), detail: 'Acumulado registrado' },
+        { label: 'Asignaturas aprobadas', value: String(data.resumen.asignaturasAprobadas), detail: 'Acumulado registrado' },
+        { label: 'Promedio ponderado', value: data.resumen.promedioPonderado === null
+          ? 'No registrado' : data.resumen.promedioPonderado.toFixed(2) },
+      ]}
+      averages={data.periodos.map((period) => ({
+        period: period.periodoAcademico, average: period.promedio, displayAverage: String(period.promedio), credits: period.creditos,
+      }))}
+      courses={data.asignaturas.map((course, index) => ({
+        period: course.periodoAcademico,
+        cells: allRows[index]!.map(String),
+        searchable: `${course.codAsignatura} ${course.desAsignatura}`,
+      }))} />
+  }
+  if (!response && getDataMode() !== 'local') {
+    return <AcademicHistory
+      metadata={[
+        { label: 'Estudiante', value: student.name }, { label: 'Código', value: student.code },
+        { label: 'Facultad', value: student.faculty }, { label: 'Programa', value: student.program },
+        { label: 'Plan de estudios', value: student.plan },
+      ]}
+      metrics={[
+        { label: 'Créditos aprobados', value: '28', detail: 'Datos de demostración' },
+        { label: 'Asignaturas aprobadas', value: '8', detail: 'Datos de demostración' },
+        { label: 'Promedio ponderado', value: '15.00', detail: 'Datos de demostración' },
+      ]}
+      averages={[{ period: '2026-1', average: 15, displayAverage: '15.00' }]}
+      courses={[]} emptyMessage="No hay registros académicos en esta demostración." />
+  }
+  return <p className="route-status" role="status">Información aún no disponible para mostrar.</p>
 }
 
 function LoadedTable({ props }: { props: TableScreenProps }) {
   const student = useStudent()
-  if (props.id === 'historial') return <History />
-  if (props.id === 'programacion-asignaturas') return <Programming data={props.response.data.programacion} />
+  const formData = useStudentFormData()
+  if (props.id === 'historial') return <History response={props.response} />
+  if (props.id === 'programacion-asignaturas') return <Programming response={props.response} />
   if (props.id === 'asistencia') return <Attendance data={props.response.data} />
-  if (props.id === 'reportes-horarios') return <Schedule data={props.response.data} />
+  if (props.id === 'reportes-horarios') return <WeeklySchedule data={props.response.data} />
   if (props.id === 'tutoria') return (
     <DataTable headers={['Docente', 'Cod. Asignatura', 'Resolucion', 'Fecha', 'Observacion', 'Acción']}
-      rows={[]} empty={props.response.data.length ? 'Los registros no se pueden mostrar con la información disponible.' : 'No hay tutorías registradas.'}
+      rows={[]} empty={props.response.data.length ? 'Los registros no se pueden mostrar con la información disponible.' : 'No hay tutorías registradas'}
       className="tutoring-table" />
   )
-  if (props.id === 'reportes-evaluaciones') return (
-    <DataTable className="evaluations-table" headers={['Ciclo', 'Asignatura', 'Tipo Evaluación', 'Calificación', 'Fórmula']}
-      rows={[]} empty={props.response.data.length ? 'Los registros no se pueden mostrar con la información disponible.' : 'No hay evaluaciones registradas.'} />
-  )
-  if (props.id === 'reportes-deudas') return (
-    <DataTable className="debts-table" headers={['Fecha Registro', 'Periodo Académico', 'Concepto', 'Monto Inicial', 'Monto Final', 'Observación']}
-      rows={[]} empty="No se dispone de datos de deuda verificables." />
-  )
+  if (props.id === 'reportes-evaluaciones') {
+    const rows = toEvaluacionRows(props.response.data)
+    return <DataTable className="evaluations-table" headers={['Ciclo', 'Asignatura', 'Tipo Evaluación', 'Calificación', 'Fórmula']}
+      rows={rows} empty="No hay evaluaciones registradas." />
+  }
+  if (props.id === 'reportes-deudas') {
+    const rows = toDeudaRows(props.response.data)
+    return <DataTable className="debts-table" headers={['Fecha Registro', 'Periodo Académico', 'Concepto', 'Monto Inicial', 'Monto Final', 'Observación']}
+      rows={rows} empty="No hay deudas registradas." />
+  }
   let headers: string[]
   let values: (string | number)[][]
   let rows: ReactNode[][]
   if (props.id === 'plan-estudios') {
+    const representation = getPlanEstudiosRepresentation(props.response)
+    if (getDataMode() === 'local' && !representation) {
+      throw new Error('La respuesta local de Plan de Estudios no declara su representación.')
+    }
+    if (representation === 'candidate-v1') {
+      const headers = ['Esp.', 'Asignatura', 'Créd.', 'Tipo', 'Grupo', 'Pre-Requisito', 'Grupo']
+      const values = toPlanCandidateRows(props.response.data)
+      return <section className="report-section">
+        <div className="report-toolbar">
+          <button className="download-button" onClick={() => downloadCsv('plan-estudios', headers, values)}>
+            <span aria-hidden="true">⇩</span> Descargar CSV local
+          </button>
+        </div>
+        <DataTable headers={headers} rows={values} empty="No hay registros" />
+      </section>
+    }
+    if (representation === 'local-v1') {
+      validatePlanEstudios(props.response.data, {
+        codFacultad: formData.data.alumno.codFacultad,
+        codEscuela: formData.data.alumno.codEscuela,
+        codEspecialidad: formData.data.alumno.codEspecialidad,
+        codPlan: formData.data.alumno.codPlan,
+      })
+    }
     headers = ['Esp.', 'Asignatura', 'Créd.', 'Tipo', 'Grupo', 'Pre-Requisito', 'Grupo']
     values = toPlanRows(props.response.data)
     rows = values
@@ -181,10 +269,13 @@ function LoadedTable({ props }: { props: TableScreenProps }) {
 
 export function TableScreen(props: TableScreenProps) {
   const title = routes.find((route) => route.id === props.id)!.title
+  const candidatePlan = props.id === 'plan-estudios'
+    && getPlanEstudiosRepresentation(props.response) === 'candidate-v1'
   return (
     <>
       <PageTitle>{title}</PageTitle>
-      {props.id !== 'historial' && <StudentSummary />}
+      {props.id !== 'historial' && !candidatePlan && <StudentSummary student={props.id === 'programacion-asignaturas'
+        ? toStudentSummary(props.response.data.alumno) : undefined} />}
       <LoadedTable props={props} />
     </>
   )

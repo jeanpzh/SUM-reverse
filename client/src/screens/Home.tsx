@@ -1,7 +1,8 @@
-import { useStudent } from '../data/useStudent'
+import { useStudent, useStudentFormData } from '../data/useStudent'
 import { Link } from '@tanstack/react-router'
 import { routeUrl, type ScreenId } from '../data/routes'
-import { StudentSummary, Icon } from '../components/Common'
+import { StudentSummary } from '../components/Common'
+import { StudentPhoto } from '../components/StudentPhoto'
 
 const shortcuts: {
   id: ScreenId
@@ -64,12 +65,16 @@ const shortcuts: {
 
 export function Home() {
   const student = useStudent()
+  const formulario = useStudentFormData()
   return (
     <>
       <section className="home-overview" aria-label="Resumen del estudiante">
         <div className="home-student">
           <div className="student-avatar">
-            <Icon name="user" />
+            <StudentPhoto
+              photo={formulario?.data.alumno.foto}
+              alt={student.name ? `Foto de ${student.name}` : 'Foto del estudiante'}
+            />
           </div>
           <div>
             <h1>{student.name}</h1>

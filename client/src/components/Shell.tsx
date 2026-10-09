@@ -1,30 +1,39 @@
-import { useStudent } from '../data/useStudent'
+import type { ReactNode } from 'react'
 import { useState } from 'react'
-import { Link, Outlet, useLocation } from '@tanstack/react-router'
+import { Link, useLocation } from '@tanstack/react-router'
 import { navigation, routes, routeUrl, routeAt } from '../data/routes'
+import { useShellStudent } from '../data/useShellStudent'
 import { Icon } from './Common'
 
-export function Shell() {
-  const student = useStudent()
+export function Shell({ children }: { children: ReactNode }) {
+  const student = useShellStudent()
   const pathname = useLocation({ select: (location) => location.pathname })
   const active = routeAt(pathname) ?? routes[0]
   const [collapsed, setCollapsed] = useState(false)
-  const [expanded, setExpanded] = useState<string[]>([])
+  const [expanded, setExpanded] = useState<string | null>(null)
   const [accountOpen, setAccountOpen] = useState(false)
   const closeMenus = () => {
-    setExpanded([])
+    setExpanded(null)
     setAccountOpen(false)
   }
   return (
     <div className={`student-app ${collapsed ? 'sidebar-collapsed' : ''}`}>
       <title>{`Sistema Único de Matrícula - ${active.title}`}</title>
-      <aside className="sidebar" aria-label="Navegación del estudiante">
+      <aside
+        id="student-sidebar"
+        className="sidebar"
+        aria-label="Navegación del estudiante"
+        aria-hidden={collapsed}
+        inert={collapsed}
+      >
         <Link className="brand" to="/alumnoWebSum/v2/inicio" onClick={closeMenus}>
-          <strong>SUM</strong>
-          <span>Sistema Único de Matrícula</span>
+          <strong><i aria-hidden="true">S</i><span>SUM<small>UNMSM</small></span></strong>
         </Link>
-        <nav>
-          {navigation.map((item) => (
+        <nav aria-label="Menú principal">
+          {navigation.map((item) => {
+            const submenuId = `submenu-${item.label.toLowerCase().replaceAll(' ', '-')}`
+            const isExpanded = expanded === item.label
+            return (
             <div className="nav-group" key={item.label}>
               {item.id ? (
                 <Link
@@ -40,24 +49,23 @@ export function Shell() {
               ) : (
                 <button
                   className={`nav-item ${item.children?.includes(active.id) ? 'active-group' : ''}`}
-                  aria-expanded={expanded.includes(item.label)}
+                  aria-expanded={isExpanded}
+                  aria-controls={submenuId}
                   onClick={() =>
                     setExpanded((current) =>
-                      current.includes(item.label)
-                        ? current.filter((label) => label !== item.label)
-                        : [...current, item.label],
+                      current === item.label ? null : item.label,
                     )
                   }
                 >
                   <Icon name={item.icon} />
                   <span>{item.label}</span>
                   <span className="chevron" aria-hidden="true">
-                    {expanded.includes(item.label) ? '⌄' : '‹'}
+                    {isExpanded ? '⌄' : '›'}
                   </span>
                 </button>
               )}
-              {item.children && expanded.includes(item.label) && (
-                <div className="subnav">
+              {item.children && (
+                <div id={submenuId} className="subnav" hidden={!isExpanded}>
                   {item.children.map((id) => (
                     <Link
                       key={id}
@@ -65,13 +73,14 @@ export function Shell() {
                       to={routeUrl(id)}
                       onClick={closeMenus}
                     >
-                      {routes.find((route) => route.id === id)!.title}
+                      {item.childLabels?.[id] ?? routes.find((route) => route.id === id)!.title}
                     </Link>
                   ))}
                 </div>
               )}
             </div>
-          ))}
+            )
+          })}
         </nav>
       </aside>
       <header className="topbar">
@@ -79,6 +88,7 @@ export function Shell() {
           className="menu-toggle"
           aria-label={collapsed ? 'Mostrar menú' : 'Ocultar menú'}
           aria-expanded={!collapsed}
+          aria-controls="student-sidebar"
           onClick={() => setCollapsed(!collapsed)}
         >
           <svg width="12" height="14" viewBox="0 0 12 14" aria-hidden="true">
@@ -88,22 +98,28 @@ export function Shell() {
         <div className="header-right">
           <span className="session-clock">00:00:00</span>
           <div className="account-wrapper">
-            <button
-              className="account-button"
-              aria-expanded={accountOpen}
-              onClick={() => setAccountOpen(!accountOpen)}
-            >
-              {student.name}
-              <span aria-hidden="true">⌄</span>
-            </button>
-            {accountOpen && (
-              <div className="account-menu">
-                <strong>{student.name}</strong>
-                <span>ALUMNO · {student.code}</span>
-                <Link to="/alumnoWebSum/v2/informacion/perfil" onClick={closeMenus}>
-                  Mi Perfil
-                </Link>
-              </div>
+            {student.status === 'ready' ? (
+              <>
+                <button
+                  className="account-button"
+                  aria-expanded={accountOpen}
+                  onClick={() => setAccountOpen(!accountOpen)}
+                >
+                  {student.student.name}
+                  <span aria-hidden="true">⌄</span>
+                </button>
+                {accountOpen && (
+                  <div className="account-menu">
+                    <strong>{student.student.name}</strong>
+                    <span>ALUMNO · {student.student.code}</span>
+                    <Link to="/alumnoWebSum/v2/informacion/perfil" onClick={closeMenus}>
+                      Mi Perfil
+                    </Link>
+                  </div>
+                )}
+              </>
+            ) : (
+              <span>{student.status === 'pending' ? 'Cargando alumno…' : 'Información no disponible'}</span>
             )}
           </div>
           <button
@@ -124,7 +140,7 @@ export function Shell() {
         </div>
       </header>
       <main key={active.id} className={`main-content screen-${active.id}`}>
-        <Outlet />
+        {children}
       </main>
     </div>
   )
