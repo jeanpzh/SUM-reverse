@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useStudent } from '../data/useStudent'
 import { downloadCsv } from '../data/download'
+import type { StudentSummaryData } from '../data/adapters'
 
 export function PageTitle({ children }: { children: ReactNode }) {
   return (
@@ -10,8 +11,9 @@ export function PageTitle({ children }: { children: ReactNode }) {
   )
 }
 
-export function StudentSummary() {
-  const student = useStudent()
+export function StudentSummary({ student: override }: { student?: StudentSummaryData }) {
+  const shellStudent = useStudent()
+  const student = override ?? shellStudent
   return (
     <fieldset className="student-summary">
       <legend>Datos del Estudiante</legend>

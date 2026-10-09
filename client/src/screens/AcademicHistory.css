@@ -1,0 +1,429 @@
+.academic-history {
+  --history-ink: var(--color-sum-heading);
+  --history-muted: var(--color-sum-subtle);
+  --history-line: var(--color-sum-border);
+  --history-accent: var(--color-sum-accent);
+  --history-accent-soft: var(--color-sum-accent-soft);
+  display: grid;
+  grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.6fr);
+  gap: 16px;
+  color: var(--history-ink);
+  padding: 4px 0 32px;
+}
+
+.academic-history__overview,
+.academic-history__chart-card,
+.academic-history__courses {
+  min-width: 0;
+  border: 1px solid var(--color-sum-border);
+  border-radius: 20px;
+  background: var(--color-sum-surface);
+  box-shadow: none;
+}
+
+.academic-history__overview {
+  display: grid;
+  grid-column: 1;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  align-content: start;
+  padding: 18px 20px;
+  background: var(--color-sum-surface);
+}
+
+.academic-history__identity {
+  min-width: 0;
+  padding: 4px 0;
+}
+
+.academic-history__eyebrow {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--history-accent);
+  font-size: var(--text-meta);
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.academic-history__identity h2 {
+  margin: 0;
+  color: var(--color-sum-heading);
+  font-size: var(--text-section);
+  font-weight: 720;
+  letter-spacing: -0.04em;
+  line-height: 1.12;
+}
+
+.academic-history__metadata,
+.academic-history__metrics {
+  display: grid;
+  gap: 0;
+  margin: 12px 0 0;
+}
+
+.academic-history__metrics {
+  margin-top: 0;
+}
+
+.academic-history__metadata > div,
+.academic-history__metric {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--history-line);
+}
+
+.academic-history__metadata dt,
+.academic-history__metric dt {
+  width: auto;
+  color: var(--color-sum-muted);
+  font-size: var(--text-data);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.academic-history__metadata dd,
+.academic-history__metric dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-sum-text);
+  font-size: var(--text-data);
+  font-weight: 650;
+  line-height: 1.4;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.academic-history__metric:last-child {
+  border-bottom: 0;
+}
+
+.academic-history__chart-card {
+  display: flex;
+  flex-direction: column;
+  grid-column: 2;
+  padding: 18px 20px;
+}
+
+.academic-history__card-heading,
+.academic-history__courses-heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.academic-history__card-heading h3,
+.academic-history__courses-heading h3 {
+  margin: 0;
+  color: var(--color-sum-heading);
+  font-size: var(--text-section);
+  font-weight: 720;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+}
+
+.academic-history__card-heading .academic-history__eyebrow,
+.academic-history__courses-heading .academic-history__eyebrow {
+  margin-bottom: 4px;
+}
+
+.academic-history__chart-count,
+.academic-history__result-count {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: var(--color-sum-accent-soft);
+  color: var(--color-sum-accent);
+  font-size: var(--text-meta);
+  font-weight: 700;
+}
+
+.academic-history__chart {
+  width: 100%;
+  flex: 1;
+  min-height: 250px;
+  height: 250px;
+  margin-top: 10px;
+}
+
+.academic-history__chart-empty {
+  display: grid;
+  min-height: 170px;
+  place-items: center;
+  margin: 14px 0 0;
+  border-radius: 14px;
+  background: var(--color-sum-surface-muted);
+  color: var(--history-muted);
+  font-size: var(--text-body);
+}
+
+.academic-history__tooltip {
+  display: grid;
+  gap: 5px;
+  padding: 11px 13px;
+  border: 1px solid var(--history-line);
+  border-radius: 11px;
+  background: var(--color-sum-surface);
+  box-shadow: none;
+  color: var(--color-sum-text);
+  font-size: var(--text-data);
+}
+
+.academic-history__tooltip strong {
+  font-weight: 750;
+}
+
+.academic-history__courses {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  padding: 22px 0 0;
+}
+
+.academic-history__courses-heading {
+  padding: 0 24px;
+}
+
+.academic-history__search {
+  position: relative;
+  display: block;
+  width: min(100% - 48px, 390px);
+  margin: 20px 24px 16px;
+}
+
+.academic-history__search-icon {
+  position: absolute;
+  top: 50%;
+  left: 13px;
+  color: var(--color-sum-subtle);
+  font-size: 21px;
+  line-height: 1;
+  transform: translateY(-55%);
+  pointer-events: none;
+}
+
+.academic-history__search input {
+  width: 100%;
+  height: 42px;
+  padding: 0 13px 0 39px;
+  border: 1px solid var(--color-sum-border);
+  border-radius: 11px;
+  outline: none;
+  background: var(--color-sum-surface-muted);
+  color: var(--color-sum-text);
+  font: inherit;
+  font-size: var(--text-data);
+  transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+
+.academic-history__search input::placeholder {
+  color: var(--color-sum-subtle);
+}
+
+.academic-history__search input:focus {
+  border-color: var(--color-sum-accent);
+  background: var(--color-sum-surface);
+  outline: 2px solid var(--color-sum-accent);
+  outline-offset: 2px;
+}
+
+.academic-history__table-scroll {
+  max-width: 100%;
+  overflow: auto;
+  border-top: 1px solid var(--color-sum-border);
+  scrollbar-color: var(--color-sum-border) var(--color-sum-surface-muted);
+  scrollbar-width: thin;
+}
+
+.academic-history__table-scroll:focus-visible {
+  outline: 3px solid rgba(101, 88, 223, 0.4);
+  outline-offset: -3px;
+}
+
+.academic-history__table {
+  width: 100%;
+  min-width: 950px;
+  margin: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: var(--color-sum-text);
+  font-size: var(--text-data);
+}
+
+.academic-history__table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.academic-history__table th {
+  width: auto;
+  padding: 13px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--color-sum-border);
+  background: var(--color-sum-surface-muted);
+  color: var(--color-sum-muted);
+  font-size: var(--text-meta);
+  font-weight: 750;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.academic-history__table thead th:nth-child(4) {
+  min-width: 350px;
+  text-align: left;
+}
+
+.academic-history__table td {
+  height: auto;
+  padding: 12px;
+  border: 0;
+  border-bottom: 1px solid var(--color-sum-border);
+  background: var(--color-sum-surface);
+  color: var(--color-sum-text);
+  font-size: var(--text-data);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.academic-history__table .academic-history__course-row:nth-child(odd) td {
+  background: var(--color-sum-surface-muted);
+}
+
+.academic-history__table .academic-history__period-row th {
+  padding: 11px 16px;
+  border: 0;
+  background: var(--color-sum-accent-soft);
+  color: var(--color-sum-accent);
+  font-size: var(--text-meta);
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+.academic-history__period-row th span {
+  margin-right: 6px;
+  color: var(--color-sum-accent);
+  font-size: var(--text-meta);
+  font-weight: 650;
+}
+
+.academic-history__period-row th strong {
+  font-weight: 800;
+}
+
+.academic-history__table td:nth-child(4) {
+  text-align: left;
+}
+
+.academic-history__course-name {
+  display: block;
+  max-width: 520px;
+  color: var(--color-sum-text);
+  font-weight: 620;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.academic-history__grade {
+  display: inline-grid;
+  min-width: 39px;
+  min-height: 27px;
+  place-items: center;
+  padding: 3px 7px;
+  border: 1px solid var(--color-sum-border);
+  border-radius: 8px;
+  background: var(--color-sum-surface-muted);
+  color: var(--color-sum-text);
+  font-weight: 750;
+}
+
+.academic-history__acta {
+  display: inline-block;
+  max-width: 260px;
+  overflow: hidden;
+  color: var(--color-sum-muted);
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+
+.academic-history__table .academic-history__empty {
+  padding: 38px 16px;
+  color: var(--color-sum-subtle);
+  text-align: center;
+  white-space: normal;
+}
+
+.academic-history__table-footer {
+  margin: 0;
+  padding: 12px 24px 16px;
+  color: var(--color-sum-subtle);
+  font-size: var(--text-meta);
+}
+
+@media (max-width: 1100px) {
+  .academic-history {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .academic-history__overview {
+    grid-column: 1;
+  }
+
+  .academic-history__chart-card,
+  .academic-history__courses {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .academic-history {
+    gap: 14px;
+  }
+
+  .academic-history__overview,
+  .academic-history__chart-card {
+    border-radius: 16px;
+    padding: 19px 16px;
+  }
+
+  .academic-history__chart-card {
+    padding-bottom: 14px;
+  }
+
+  .academic-history__chart {
+    min-height: 235px;
+    height: 235px;
+  }
+
+  .academic-history__courses {
+    border-radius: 16px;
+    padding-top: 18px;
+  }
+
+  .academic-history__courses-heading {
+    align-items: flex-start;
+    padding: 0 16px;
+  }
+
+  .academic-history__courses-heading h3 {
+    font-size: var(--text-section);
+  }
+
+  .academic-history__result-count {
+    max-width: 110px;
+    text-align: center;
+  }
+
+  .academic-history__search {
+    width: calc(100% - 32px);
+    margin: 17px 16px 14px;
+  }
+
+  .academic-history__table-footer {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+}

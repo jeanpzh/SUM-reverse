@@ -1,0 +1,310 @@
+.screen-matricula-informacion {
+  --enrollment-info-text: var(--color-sum-text);
+  --enrollment-info-heading: var(--color-sum-heading);
+  --enrollment-info-link: var(--color-sum-link);
+  --enrollment-info-border: var(--color-sum-border);
+  --enrollment-info-muted: var(--color-sum-muted);
+  --enrollment-info-soft: var(--color-sum-surface-muted);
+  min-width: 0;
+  color: var(--enrollment-info-text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.screen-matricula-informacion,
+.screen-matricula-informacion * {
+  box-sizing: border-box;
+}
+
+.screen-matricula-informacion .page-title {
+  height: auto;
+  min-height: 0;
+  margin: 0 0 4px;
+  text-align: left;
+}
+
+.screen-matricula-informacion .page-title h2 {
+  margin: 0;
+  color: var(--enrollment-info-heading);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.screen-matricula-informacion .enrollment-info__header {
+  margin-bottom: 24px;
+}
+
+.screen-matricula-informacion .enrollment-info__subtitle {
+  margin: 0 0 12px;
+  color: var(--enrollment-info-text);
+}
+
+.screen-matricula-informacion .enrollment-info__period {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  margin: 0;
+  color: var(--enrollment-info-muted);
+}
+
+.screen-matricula-informacion .enrollment-info__period strong {
+  color: var(--enrollment-info-heading);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.screen-matricula-informacion .enrollment-info__record-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  min-width: 0;
+  margin-bottom: 16px;
+}
+
+.screen-matricula-informacion .enrollment-info__panel,
+.screen-matricula-informacion .enrollment-info__orientation {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--enrollment-info-border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.screen-matricula-informacion .enrollment-info__section-title {
+  min-width: 0;
+  margin: 0 0 16px;
+  color: var(--enrollment-info-heading);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.screen-matricula-informacion .enrollment-info__status-list,
+.screen-matricula-informacion .enrollment-info__date-list,
+.screen-matricula-informacion .enrollment-info__profile-list {
+  display: grid;
+  min-width: 0;
+  margin: 0;
+  gap: 12px 16px;
+}
+
+.screen-matricula-informacion .enrollment-info__status-list > div,
+.screen-matricula-informacion .enrollment-info__date-list > div,
+.screen-matricula-informacion .enrollment-info__profile-list > div {
+  display: block;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+}
+
+.screen-matricula-informacion .enrollment-info__status-list dt,
+.screen-matricula-informacion .enrollment-info__date-list dt,
+.screen-matricula-informacion .enrollment-info__profile-list dt {
+  width: auto;
+  margin: 0 0 4px;
+  color: var(--enrollment-info-muted);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.screen-matricula-informacion .enrollment-info__status-list dd,
+.screen-matricula-informacion .enrollment-info__date-list dd,
+.screen-matricula-informacion .enrollment-info__profile-list dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--enrollment-info-text);
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.screen-matricula-informacion .enrollment-info__status-message dd {
+  color: #263f5d;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.screen-matricula-informacion .enrollment-info__status-list > .enrollment-info__status-complement {
+  padding-top: 12px;
+  border-top: 1px solid var(--enrollment-info-border);
+}
+
+.screen-matricula-informacion .enrollment-info__date-list dd {
+  font-variant-numeric: tabular-nums;
+}
+
+.screen-matricula-informacion .enrollment-info__profile {
+  margin-bottom: 16px;
+}
+
+.screen-matricula-informacion .enrollment-info__profile-list {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+}
+
+.screen-matricula-informacion .enrollment-info__schedule-note {
+  margin: 16px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--enrollment-info-border);
+}
+
+.screen-matricula-informacion .enrollment-info__orientation-header {
+  min-width: 0;
+}
+
+.screen-matricula-informacion .enrollment-info__local-note {
+  margin: 0 0 12px;
+  color: var(--enrollment-info-muted);
+}
+
+.screen-matricula-informacion .enrollment-info__local-note strong {
+  color: var(--enrollment-info-heading);
+  font-weight: 600;
+}
+
+.screen-matricula-informacion .enrollment-info__orientation-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
+  align-items: start;
+  gap: 24px;
+  min-width: 0;
+}
+
+.screen-matricula-informacion .enrollment-info__index {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--enrollment-info-border);
+  border-radius: 8px;
+  background: var(--enrollment-info-soft);
+}
+
+.screen-matricula-informacion .enrollment-info__index-title {
+  margin: 0 0 8px;
+  color: var(--enrollment-info-heading);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.screen-matricula-informacion .enrollment-info__index ol {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style-position: inside;
+}
+
+.screen-matricula-informacion .enrollment-info__index li {
+  min-width: 0;
+  padding-left: 0;
+  color: var(--enrollment-info-text);
+}
+
+.screen-matricula-informacion .enrollment-info__index a {
+  display: inline-block;
+  min-height: 44px;
+  max-width: calc(100% - 1.5em);
+  padding: 9px 4px;
+  color: var(--enrollment-info-link);
+  font-weight: 500;
+  line-height: 1.6;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.screen-matricula-informacion .enrollment-info__index a:hover {
+  text-decoration: underline;
+}
+
+.screen-matricula-informacion .enrollment-info__index a:focus-visible,
+.screen-matricula-informacion .enrollment-info__sections h4:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid var(--enrollment-info-link);
+  outline-offset: 3px;
+}
+
+.screen-matricula-informacion .enrollment-info__sections {
+  min-width: 0;
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.screen-matricula-informacion .enrollment-info__sections li {
+  min-width: 0;
+  margin: 0 0 24px;
+  padding-left: 4px;
+}
+
+.screen-matricula-informacion .enrollment-info__sections li:last-child {
+  margin-bottom: 0;
+}
+
+.screen-matricula-informacion .enrollment-info__sections h4 {
+  margin: 0 0 8px;
+  color: #355981;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  scroll-margin-top: 80px;
+}
+
+.screen-matricula-informacion .enrollment-info__sections p {
+  max-width: 75ch;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.screen-matricula-informacion .enrollment-info__empty {
+  max-width: 75ch;
+  margin: 0;
+  padding: 16px 20px;
+  border: 1px solid var(--enrollment-info-border);
+  border-radius: 8px;
+  background: #fff;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 899px) {
+  .screen-matricula-informacion .enrollment-info__record-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .screen-matricula-informacion .page-title h2 {
+    font-size: 22px;
+  }
+
+  .screen-matricula-informacion .enrollment-info__header {
+    margin-bottom: 16px;
+  }
+
+  .screen-matricula-informacion .enrollment-info__panel,
+  .screen-matricula-informacion .enrollment-info__orientation {
+    padding: 16px;
+  }
+
+  .screen-matricula-informacion .enrollment-info__orientation-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .screen-matricula-informacion .enrollment-info__index {
+    padding: 12px;
+  }
+
+  .screen-matricula-informacion .enrollment-info__profile-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
