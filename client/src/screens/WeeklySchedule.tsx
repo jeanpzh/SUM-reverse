@@ -5,7 +5,7 @@ import './WeeklySchedule.css'
 
 const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 const dayCodes = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-const hourHeight = 48
+const hourHeight = 80
 const timeZone = 'America/Lima'
 
 function formatTime(minutes: number) {
@@ -61,9 +61,12 @@ export function WeeklySchedule({ data }: { data: ApiResponseMap['horarios']['dat
                 return { event, lane }
               })
               const laneCount = Math.max(1, laneEnds.length)
-              return <div key={day} className={`weekly-schedule__day ${dayIndex === currentDay ? 'is-today' : ''}`} aria-label={day}>
+              return <div key={day} className={`weekly-schedule__day ${dayIndex === currentDay ? 'is-today' : ''}`} aria-label={day}
+                style={{ backgroundSize: `100% ${hourHeight}px` }}>
                 {!dayEvents.length && <span className="weekly-schedule__no-classes">Sin clases</span>}
-                {positioned.map(({ event, lane }, index) => <article key={`${event.course}-${index}`} className="weekly-schedule__event"
+                {positioned.map(({ event, lane }, index) => <article key={`${event.course}-${index}`}
+                  className={`weekly-schedule__event${event.end - event.start < 60 ? ' is-compact' : ''}`} tabIndex={0}
+                  aria-label={`${day} · ${event.course} · ${event.time} · Sección ${event.section} · ${event.kind}`}
                   title={`${day} · ${event.course} · ${event.time} · Sección ${event.section} · ${event.kind}`}
                   style={{ top: (event.start - firstMinute) / 60 * hourHeight,
                     height: (event.end - event.start) / 60 * hourHeight,
