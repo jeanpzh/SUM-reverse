@@ -1,0 +1,18 @@
+services:
+  backend:
+    environment:
+      REPORTES_FIXTURE: !reset null
+      MI_INFORMACION_FIXTURE: !reset null
+      MATRICULA_INFORMACION_FIXTURE: !reset null
+      PROGRAMACION_FIXTURE: !reset null
+      PLAN_ESTUDIOS_FIXTURE: !reset null
+      MATRICULA_SNAPSHOT_DIR: /snapshots
+      MI_INFORMACION_SNAPSHOT_DIR: /snapshots
+      PLAN_ESTUDIOS_SNAPSHOT_DIR: /snapshots
+    volumes:
+      - type: bind
+        source: ./datos-sinteticos
+        target: /snapshots
+        read_only: true
+        bind:
+          create_host_path: false
