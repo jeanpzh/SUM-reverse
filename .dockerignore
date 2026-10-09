@@ -1,0 +1,35 @@
+# Only application build inputs enter the context.
+**
+!client/
+!client/Dockerfile
+!client/nginx.conf
+!client/package.json
+!client/pnpm-lock.yaml
+!client/index.html
+!client/vite.config.ts
+!client/tsconfig*.json
+!client/src/
+!client/src/**
+!client/public/
+!client/public/**
+!backend/
+!backend/Dockerfile
+!backend/package.json
+!backend/pnpm-lock.yaml
+!backend/nest-cli.json
+!backend/tsconfig.json
+!backend/tsconfig.build.json
+!backend/src/
+!backend/src/**
+!shared/
+!shared/*.mjs
+!shared/*.d.mts
+!raw-types/
+!raw-types/*.ts
+# Keep private data, local configuration and generated files excluded.
+datos-reales/
+**/.env*
+**/node_modules/
+**/dist/
+**/.git/
+**/*.tsbuildinfo

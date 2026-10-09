@@ -12,7 +12,10 @@ En una terminal:
 pnpm --dir backend start:dev
 ```
 
-El servidor escucha en `127.0.0.1:3000`. `PORT` permite elegir otro puerto.
+El servidor escucha en `127.0.0.1:3000`. `PORT` permite elegir otro puerto y
+`HOST` otra interfaz. Docker configura `HOST=0.0.0.0` para la red de contenedores.
+Para arrancar frontend y backend juntos, usa `docker compose up --build` desde
+la raíz y abre `http://localhost:5180`.
 
 En otra terminal, ejecutar el cliente con su perfil local:
 
