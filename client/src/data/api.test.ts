@@ -21,13 +21,14 @@ const documented: [EndpointKey, string, string][] = [
   ['plan', 'planEstudios', 'obtenerPlanEstudios'],
 ]
 
-test('all twelve documented requests use their action, POST and session credentials', async () => {
+test('documented requests preserve observed legacy methods and session credentials', async () => {
+  const legacyGet = new Set<EndpointKey>(['formulario', 'matriculaInfo', 'programacion', 'prematricula', 'matricula', 'horarios'])
   for (const [key, path, action] of documented) {
     let requests = 0
     const fetcher: typeof fetch = async (url, init) => {
       requests++
       assert.equal(String(url), `https://example.test/proxy/alumnoWebSum/v2/${path}?accion=${action}`)
-      assert.equal(init?.method, 'POST')
+      assert.equal(init?.method, legacyGet.has(key) ? 'GET' : 'POST')
       assert.equal(init?.credentials, 'include')
       assert.equal(new Headers(init?.headers).get('accept'), 'application/json')
       assert.equal(init?.body, undefined)
@@ -35,6 +36,21 @@ test('all twelve documented requests use their action, POST and session credenti
     }
     const result = await createSumApi({ mode: 'api', baseUrl: 'https://example.test/proxy/' }, fetcher).get(key)
     assert.deepEqual(result, mockResponses[key])
+    assert.equal(requests, 1)
+  }
+})
+
+test('the independent local API keeps POST and omits session credentials for all five snapshots', async () => {
+  const keys = ['matriculaInfo', 'programacion', 'prematricula', 'matricula', 'horarios'] as const
+  for (const key of keys) {
+    let requests = 0
+    const fetcher: typeof fetch = async (_url, init) => {
+      requests++
+      assert.equal(init?.method, 'POST')
+      assert.equal(init?.credentials, 'omit')
+      return Response.json(mockResponses[key])
+    }
+    await createSumApi({ mode: 'local', baseUrl: '/api' }, fetcher).get(key)
     assert.equal(requests, 1)
   }
 })

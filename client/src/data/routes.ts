@@ -5,7 +5,7 @@ export const routes = [
   {
     id: 'formulario-datos',
     path: '/alumnoWebSum/v2/informacion/formularioDatos',
-    title: 'Formulario de Datos Personales',
+    title: 'Formulario de Datos',
   },
   {
     id: 'ficha-socioeconomica',
@@ -54,7 +54,13 @@ export const routeUrl = (id: ScreenId) => routes.find((route) => route.id === id
 export const routeAt = (path: string) =>
   routes.find((route) => route.path === path.replace(/\/$/, ''))
 
-export const navigation: { label: string; icon: string; id?: ScreenId; children?: ScreenId[] }[] = [
+export const navigation: {
+  label: string
+  icon: string
+  id?: ScreenId
+  children?: ScreenId[]
+  childLabels?: Partial<Record<ScreenId, string>>
+}[] = [
   { label: 'Inicio', icon: 'home', id: 'home' },
   {
     label: 'Mi Información',
@@ -65,6 +71,7 @@ export const navigation: { label: string; icon: string; id?: ScreenId; children?
     label: 'Matrícula',
     icon: 'edit',
     children: ['matricula-informacion', 'programacion-asignaturas'],
+    childLabels: { 'matricula-informacion': 'Matrícula Vía Internet' },
   },
   {
     label: 'Reportes',

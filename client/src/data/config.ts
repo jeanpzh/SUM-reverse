@@ -1,4 +1,4 @@
-export type DataConfig = { mode: 'mock'; baseUrl?: string } | { mode: 'api'; baseUrl: string }
+export type DataConfig = { mode: 'mock'; baseUrl?: string } | { mode: 'api'; baseUrl: string } | { mode: 'local'; baseUrl: string }
 
 export function validateBaseUrl(baseUrl: string) {
   if (!baseUrl || baseUrl.startsWith('//') || baseUrl.includes('\\')) {
@@ -14,10 +14,13 @@ export function validateBaseUrl(baseUrl: string) {
 
 export function readDataConfig(values: { mode?: string; baseUrl?: string }): DataConfig {
   const mode = values.mode || 'mock'
-  if (mode !== 'mock' && mode !== 'api') throw new Error('Modo de datos inválido: usa mock o api.')
+  if (mode !== 'mock' && mode !== 'api' && mode !== 'local') throw new Error('Modo de datos inválido: usa mock, api o local.')
   if (mode === 'mock') return { mode }
   const baseUrl = values.baseUrl?.trim()
-  if (!baseUrl) throw new Error('URL base de API requerida en modo api.')
+  if (!baseUrl) throw new Error(`URL base de API requerida en modo ${mode}.`)
   validateBaseUrl(baseUrl)
+  if (mode === 'local' && !baseUrl.startsWith('/')) {
+    throw new Error('Modo local requiere una base URL relativa.')
+  }
   return { mode, baseUrl }
 }

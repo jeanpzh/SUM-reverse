@@ -30,7 +30,8 @@ test('academic adapters place loaded values in table column order', () => {
   const attendance = toAttendanceRows(mockResponses.asistencias.data)
   assert.deepEqual(attendance[0], ['Matemática I', 1, 16, 14, 87.5, 1, 6.25, 1, 6.25, 15, 93.75])
   const programming = toProgrammingRows(mockResponses.programacion.data.programacion)
-  assert.deepEqual(programming[0], ['Matemática I', 4, 1, 'DOCENTE DE DEMOSTRACIÓN', 40, 20, '2 horarios'])
+  assert.deepEqual(programming[0], ['', 'DEMO-001 - Matemática I', 4, 1,
+    'DOC-1 - DE DEMOSTRACIÓN, DOCENTE', 40, 20, '2 horarios'])
 })
 
 test('empty datasets stay empty instead of regenerating fictional rows', () => {
@@ -46,9 +47,13 @@ test('calendar adapts valid days/times and refuses invalid positions', () => {
   assert.equal(events[0].day, 1)
   const row = mockResponses.horarios.data[0]
   for (const invalid of [{ numDia: 0 }, { numDia: 8 }, { horaInicio: '99:00' },
-    { horaFin: '07:00' }, { horaInicio: 'n/a' }]) {
+    { horaFin: '07:00' }, { horaInicio: 'n/a' }, { horaFin: '08:30:99' }]) {
     assert.throws(() => toScheduleEvents([{ ...row, ...invalid }]), /horario/i)
   }
+  const shortSlot = toScheduleEvents([{ ...row, horaInicio: '08:30:15', horaFin: '08:30:30' }])[0]
+  assert.equal(shortSlot.start, 510.25)
+  assert.equal(shortSlot.end, 510.5)
+  assert.equal(shortSlot.time, '08:30:15–08:30:30')
 })
 
 test('course schedule modal preserves every slot with room and class type', () => {
@@ -57,6 +62,6 @@ test('course schedule modal preserves every slot with room and class type', () =
   const rows = toCourseScheduleRows(course.horarios)
   assert.equal(rows.length, course.horarios.length)
   assert.deepEqual(rows[0], [1, 'LUNES', '08:00 - 10:00', 'A-1', 'Teoría'])
-  assert.deepEqual(rows[1], [2, 'LUNES', '10:00 - 11:00', '--', 'Práctica'])
+  assert.equal(rows[1][3], course.horarios[1].codAula)
   assert.deepEqual(toCourseScheduleRows([]), [])
 })

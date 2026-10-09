@@ -63,6 +63,25 @@ export const mockResponses = {
     cantPresentes: 14, cantFaltas: 1, cantTardanzas: 1, cantAsistencias: 15,
     porcentajePresentes: 87.5, porcentajeFaltas: 6.25, porcentajeTardanzas: 6.25, porcentajeAsistencias: 93.75,
   }))),
+  historial: envelope({
+    alumno: mockStudent,
+    resumen: { asignaturasAprobadas: 3, creditosAprobados: 12, promedioPonderado: 15 },
+    periodos: [{ periodoAcademico: '2026-2', creditos: 12, promedio: 15 }],
+    asignaturas: enrolled.map((course, index) => ({ ciclo: 1, codPlan: mockStudent.codPlan,
+      tipoAsignatura: 'O', codAsignatura: course.code, desAsignatura: course.name,
+      calificacion: 15, creditos: 4, seccion: 1, acta: `DEMO-ACTA-00${index + 1}`, periodoAcademico: '2026-2' })),
+  }),
+  fichaSocioeconomica: envelope({
+    alumno: mockStudent,
+    secciones: ['Datos Alumno', 'Colegio de Procedencia', 'Dependencia Económica', 'Contacto', 'Salud',
+      'Interés Académico', 'Transporte', 'Familia Salud', 'Recursos de Estudio', 'Datos Vivienda',
+      'Situación Económica', 'Recreación', 'Aptitudes y Habilidades'].map((titulo, index) => ({
+      id: `ficha-${String(index + 1).padStart(2, '0')}`, titulo, campos: [],
+    })),
+    familiares: [{ id: 'DEMO-FAMILIAR-001', nombre: 'Familiar de demostración', edad: 40,
+      parentesco: 'Familiar', grado: 'Secundaria', ocupacion: 'Independiente',
+      condicionLaboral: 'Activo', aporteEconomico: '100.00', enfermedad: null, tipoDiscapacidad: null }],
+  }),
   plan: envelope(mockCourses.map((course, index) => ({
     codFacultad: 1, codEscuela: 1, codPlan: '2018  ', codEspecialidad: 0,
     ciclo: course.cycle, codAsignatura: course.code, desAsignatura: course.name,
