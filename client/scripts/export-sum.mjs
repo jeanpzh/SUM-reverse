@@ -9,14 +9,27 @@ import { snapshotJobs, sumOrigin, validateSnapshot, hasAuthenticationFields } fr
 
 const output = fileURLToPath(new URL('../../datos-reales/', import.meta.url))
 const replace = process.argv.includes('--replace')
+let cdpEndpoint
 let browser
+let context
+let page
+let readRoute
 let prompt
 let activeJob
+
+async function closeBrowser() {
+  if (cdpEndpoint) {
+    if (page) await page.close().catch(() => {})
+    if (context && readRoute) await context.unroute('**/*', readRoute).catch(() => {})
+  }
+  // For connectOverCDP, close disconnects without terminating the Windows browser.
+  if (browser) await browser.close().catch(() => {})
+}
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.once(signal, async () => {
     prompt?.close()
-    if (browser) await browser.close().catch(() => {})
+    await closeBrowser()
     process.exit(130)
   })
 }
@@ -31,7 +44,17 @@ function matches(url, job) {
 }
 
 async function main() {
-  if (process.argv.slice(2).some((arg) => arg !== '--replace')) throw new Error('ARGUMENTOS')
+  const args = process.argv.slice(2)
+  for (let index = 0; index < args.length; index++) {
+    if (args[index] === '--replace') continue
+    if (args[index] !== '--cdp' || cdpEndpoint || !args[index + 1]) throw new Error('ARGUMENTOS')
+    let endpoint
+    try { endpoint = new URL(args[++index]) } catch { throw new Error('ARGUMENTOS') }
+    if (endpoint.protocol !== 'http:' || !['127.0.0.1', 'localhost', '[::1]'].includes(endpoint.hostname)
+      || endpoint.username || endpoint.password || endpoint.search || endpoint.hash
+      || endpoint.pathname !== '/') throw new Error('ARGUMENTOS')
+    cdpEndpoint = endpoint.origin
+  }
   if (!process.stdin.isTTY) throw new Error('REQUIERE_TERMINAL_INTERACTIVA')
   await mkdir(output, { recursive: true, mode: 0o700 })
   if (!(await lstat(output)).isDirectory()) throw new Error('DIRECTORIO_INVALIDO')
@@ -44,17 +67,20 @@ async function main() {
       if (error.code !== 'ENOENT') throw error
     }
   }
-  browser = await chromium.launch({ headless: false })
-  const context = await browser.newContext({ acceptDownloads: false })
-  const page = await context.newPage()
+  browser = cdpEndpoint
+    ? await chromium.connectOverCDP(cdpEndpoint, { timeout: 15_000 })
+    : await chromium.launch({ headless: false })
+  context = cdpEndpoint ? browser.contexts()[0] : await browser.newContext({ acceptDownloads: false })
+  if (!context) throw new Error('CONTEXTO_CDP_NO_DISPONIBLE')
+  page = await context.newPage()
   prompt = createInterface({ input: process.stdin, output: process.stdout })
   await page.goto(`${sumOrigin}/alumnoWebSum/v2/inicio`, { waitUntil: 'domcontentloaded', timeout: 30_000 })
-  const consent = await prompt.question('Inicia sesión manualmente en Chromium con tu cuenta autorizada. No envíes formularios mientras se exporta. Escribe EXPORTAR para consultar tus nueve pantallas de solo lectura: ')
+  const consent = await prompt.question('Inicia sesión manualmente en el navegador con tu cuenta autorizada. No envíes formularios mientras se exporta. Escribe EXPORTAR para consultar tus nueve pantallas de solo lectura: ')
   if (consent.trim() !== 'EXPORTAR') throw new Error('CANCELADO')
   if (new URL(page.url()).origin !== sumOrigin) throw new Error('SESION_ORIGEN')
 
   // After login, allow only this origin, normal GET assets/views and whitelisted reads.
-  await context.route('**/*', async (route) => {
+  readRoute = async (route) => {
     const request = route.request()
     const url = new URL(request.url())
     const method = request.method()
@@ -63,7 +89,8 @@ async function main() {
       || (method === 'POST' && !known)
       || (url.searchParams.has('accion') && !known)) await route.abort()
     else await route.continue()
-  })
+  }
+  await context.route('**/*', readRoute)
 
   const captured = []
   for (const job of snapshotJobs) {
@@ -129,10 +156,10 @@ async function main() {
 try { await main() }
 catch (error) {
   // Never print Playwright errors, URLs, request bodies or server response values.
-  const allowed = /^(ARGUMENTOS|REQUIERE_TERMINAL_INTERACTIVA|DIRECTORIO_INVALIDO|DESTINO_INVALIDO|EXISTEN_ARCHIVOS_USE_REPLACE|CANCELADO|SESION_ORIGEN|CONSULTA_NO_DETECTADA_O_SESION|HTTP_\d{3}|NO_JSON|RESPUESTA_DEMASIADO_GRANDE|RED_SESION_O_TIMEOUT|JSON_O_ESQUEMA_INVALIDO|CAMPO_DE_AUTENTICACION_NO_EXPORTABLE)$/
+  const allowed = /^(ARGUMENTOS|REQUIERE_TERMINAL_INTERACTIVA|DIRECTORIO_INVALIDO|DESTINO_INVALIDO|EXISTEN_ARCHIVOS_USE_REPLACE|CANCELADO|SESION_ORIGEN|CONTEXTO_CDP_NO_DISPONIBLE|CONSULTA_NO_DETECTADA_O_SESION|HTTP_\d{3}|NO_JSON|RESPUESTA_DEMASIADO_GRANDE|RED_SESION_O_TIMEOUT|JSON_O_ESQUEMA_INVALIDO|CAMPO_DE_AUTENTICACION_NO_EXPORTABLE)$/
   console.error(`Exportación detenida: ${activeJob?.filename ?? 'inicio'} · ${allowed.test(error.message) ? error.message : 'ERROR_LOCAL_O_NAVEGADOR'}`)
   process.exitCode = 1
 } finally {
   prompt?.close()
-  if (browser) await browser.close().catch(() => {})
+  await closeBrowser()
 }
