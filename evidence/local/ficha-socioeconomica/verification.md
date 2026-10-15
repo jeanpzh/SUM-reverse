@@ -8,4 +8,9 @@ The shared sidebar width (280 px), header height (64 px), route title, and direc
 
 No sanitized reference screenshot is available. Structural coverage does not establish visual equivalence.
 
-Local fixture controls: 12 forms, 74 textboxes, 108 comboboxes. Detailed field labels and types are approximations, not verified source labels.
+## Playwright local — 2026-10-08
+
+- **Resultado:** cumple localmente para ruta, 13 secciones, controles read-only y encabezados de tabla familiar. Captura: `candidate.png` (1536 × 735).
+- **Comprobaciones:** la réplica usa datos sintéticos; se verificaron 13 formularios, cero controles habilitados y diez encabezados. La tabla local presenta una fila vacía para representar el estado visible sin retener contenido.
+- **Visual:** bloqueado; no hay captura SUM sanitaria comparable.
+- **Privacidad:** captura generada con fixture de demostración; no contiene información socioeconómica real.
