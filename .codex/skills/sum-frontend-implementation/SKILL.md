@@ -77,8 +77,10 @@ Examples:
 - scrolling;
 - modal appearance.
 
-Backend-dependent effects may be represented by local fixtures or
-frontend state.
+For frontend-only scope, backend-dependent effects may use explicitly labeled local fixtures.
+For requested backend/integration scope, use the own NestJS API through the existing data layer,
+following [sum-backend-implement](../../../.agents/skills/sum-backend-implement/SKILL.md) and the local API contract.
+Fixtures alone do not fulfill an integration criterion. Never call SUM endpoints.
 
 ## Step 6 — Render
 
@@ -94,4 +96,6 @@ Capture:
 
 Do not declare completion.
 
-Run visual verification against the SUM reference.
+Use sum-frontend-verify for visual acceptance when required and
+[sum-fullstack-verify](../../../.agents/skills/sum-fullstack-verify/SKILL.md) for requested React/NestJS behavior.
+Visual parity does not prove functional or backend fidelity.

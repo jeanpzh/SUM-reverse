@@ -8,8 +8,11 @@ description: >
 
 # SUM Frontend Discovery
 
-Use this skill when evidence must be collected from the real
-authenticated SUM frontend.
+Classify the source and apply AGENTS.md before browser access. Production requires the requester
+to explicitly declare authorized environment/account, screens and read-only actions.
+Use this skill for visual/DOM evidence from that reference or a local synthetic environment.
+For behavioral investigation use [sum-behavior-discovery](../../../.agents/skills/sum-behavior-discovery/SKILL.md):
+trace transitions, handlers, requests and results instead of stopping at screenshots.
 
 Do not implement React during this workflow unless explicitly asked.
 
@@ -128,7 +131,7 @@ When discoveries affect multiple screens, update as appropriate:
 
 `docs/frontend/components.md`
 
-`docs/frontend/unknowns.md`
+`docs/reverse-engineering/unknowns.md`
 
 ## Step 8 — Stop
 

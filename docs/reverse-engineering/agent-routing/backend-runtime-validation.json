@@ -1,0 +1,89 @@
+{
+  "cli": "codex-cli 0.162.0",
+  "scope": "Catalog, effective config and ephemeral threads; no inference, no SUM access",
+  "roles": [
+    {
+      "name": "sum-explorer",
+      "file": ".codex/agents/sum-explorer.toml",
+      "sha256": "21201cb0e048f1aed26532606570d4eb7d9c14dd08d1a89f3aae4c49444ba469",
+      "model": "gpt-6-luna",
+      "reasoningEffort": "low",
+      "validation": "ephemeral runtime with explicit TOML values"
+    },
+    {
+      "name": "sum-implementer",
+      "file": ".codex/agents/sum-implementer.toml",
+      "sha256": "e2631fb4f6f19dcd6436a9db8c70a6387e2d62324795ca5aaed1b71ddcc66bf9",
+      "model": "gpt-6-luna",
+      "reasoningEffort": "medium",
+      "validation": "ephemeral runtime with explicit TOML values"
+    },
+    {
+      "name": "sum-executor",
+      "file": ".codex/agents/sum-executor.toml",
+      "sha256": "de394b244f5d36d15a1220e3c148e8f905373d4cbd6f4065547247d17c8ab384",
+      "model": "gpt-6-luna",
+      "reasoningEffort": "high",
+      "validation": "ephemeral runtime with explicit TOML values"
+    },
+    {
+      "name": "sum-verifier",
+      "file": ".codex/agents/sum-verifier.toml",
+      "sha256": "591ff768cf4c73d86b96f8230d78997a6cfe7b396e2b148f05c4a36d6d134301",
+      "model": "gpt-6-luna",
+      "reasoningEffort": "low",
+      "validation": "ephemeral runtime with explicit TOML values"
+    },
+    {
+      "name": "sum-planner",
+      "file": ".codex/agents/sum-planner.toml",
+      "sha256": "3c36cc9634a685f889b34bca4e441625d5f0d0e8d1bdb23fec6c0cd42bb90c7d",
+      "model": "gpt-6.1-sol",
+      "reasoningEffort": "high",
+      "validation": "ephemeral runtime with explicit TOML values"
+    },
+    {
+      "name": "sum-reviewer",
+      "file": ".codex/agents/sum-reviewer.toml",
+      "sha256": "91308a63fcf4b63742c10ab2b007501e7a40a490f519d0ead2bc31096ca88ef8",
+      "model": "gpt-6.1-sol",
+      "reasoningEffort": "high",
+      "validation": "ephemeral runtime with explicit TOML values"
+    }
+  ],
+  "available": {
+    "gpt-6-luna": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "gpt-6.1-sol": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max",
+      "ultra"
+    ]
+  },
+  "effective": {
+    "model": "gpt-6-luna",
+    "model_reasoning_effort": "medium",
+    "agents": {
+      "enabled": true,
+      "max_concurrent_threads_per_session": 2,
+      "max_depth": null,
+      "default_subagent_model": "gpt-6-luna",
+      "default_subagent_reasoning_effort": "medium",
+      "job_max_runtime_seconds": null,
+      "interrupt_message": null
+    }
+  },
+  "inherited_user_settings": "MCP/hooks/skills/plugins preserved when present",
+  "parent_runtime": {
+    "model": "gpt-6-luna",
+    "reasoningEffort": "medium"
+  }
+}

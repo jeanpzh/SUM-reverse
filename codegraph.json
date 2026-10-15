@@ -1,0 +1,6 @@
+{
+  "exclude": [
+    "datos-reales/",
+    "**/datos-reales/**"
+  ]
+}

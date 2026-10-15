@@ -1,0 +1,326 @@
+{
+  "date": "2026-10-08",
+  "codex_version": "codex-cli 0.162.0",
+  "method": "skills/list",
+  "params": {
+    "cwds": [
+      "/home/jeanpzh/orca/workspaces/SUM-reverse/REA"
+    ],
+    "forceReload": true
+  },
+  "before_count": 45,
+  "after_count": 49,
+  "errors": [],
+  "added": [
+    "sum-evidence-to-spec",
+    "sum-frontend-implement",
+    "sum-frontend-verify",
+    "sum-workflow"
+  ],
+  "removed": [],
+  "protected_files_checked": 183,
+  "protected_files_changed": [],
+  "new_unignored_client_files": [],
+  "skill_sha256": {
+    "sum-evidence-to-spec": "2bd97e8d91ed30e03445992a563c3b2b80edbf0e019a5dd9a52b15bc3d19bd51",
+    "sum-frontend-implement": "fcf69eaccc16d46bea70e5c72a1db06022cc7cf3279ab119688d57f14f264e9d",
+    "sum-frontend-verify": "c1cf7394cfb537fcba8d748aa70b9e1496d72bd06de59c029a7e9eb0752c556d",
+    "sum-workflow": "c494b70a30d6059a3684e6e45d0f124833cdf99d756237940c6d186fbb149f80"
+  },
+  "inventory": [
+    {
+      "name": "accessibility",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/accessibility/SKILL.md"
+    },
+    {
+      "name": "auth-and-guards",
+      "scope": "repo",
+      "enabled": true,
+      "path": "/home/jeanpzh/orca/workspaces/SUM-reverse/REA/.codex/skills/router-core/auth-and-guards/SKILL.md"
+    },
+    {
+      "name": "bash-defensive-patterns",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/bash-defensive-patterns/SKILL.md"
+    },
+    {
+      "name": "brandkit",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/brandkit/SKILL.md"
+    },
+    {
+      "name": "code-splitting",
+      "scope": "repo",
+      "enabled": true,
+      "path": "/home/jeanpzh/orca/workspaces/SUM-reverse/REA/.codex/skills/router-core/code-splitting/SKILL.md"
+    },
+    {
+      "name": "context7-mcp",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/context7-mcp/SKILL.md"
+    },
+    {
+      "name": "data-loading",
+      "scope": "repo",
+      "enabled": true,
+      "path": "/home/jeanpzh/orca/workspaces/SUM-reverse/REA/.codex/skills/router-core/data-loading/SKILL.md"
+    },
+    {
+      "name": "design-taste-frontend",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/design-taste-frontend/SKILL.md"
+    },
+    {
+      "name": "design-taste-frontend-v1",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/design-taste-frontend-v1/SKILL.md"
+    },
+    {
+      "name": "documentation-lookup",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/documentation-lookup/SKILL.md"
+    },
+    {
+      "name": "find-docs",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/find-docs/SKILL.md"
+    },
+    {
+      "name": "find-skills",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/find-skills/SKILL.md"
+    },
+    {
+      "name": "frontend-design",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/frontend-design/SKILL.md"
+    },
+    {
+      "name": "full-output-enforcement",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/full-output-enforcement/SKILL.md"
+    },
+    {
+      "name": "gpt-taste",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/gpt-taste/SKILL.md"
+    },
+    {
+      "name": "high-end-visual-design",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/high-end-visual-design/SKILL.md"
+    },
+    {
+      "name": "image-to-code",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/image-to-code/SKILL.md"
+    },
+    {
+      "name": "imagegen",
+      "scope": "system",
+      "enabled": true,
+      "path": "/home/jeanpzh/.codex/skills/.system/imagegen/SKILL.md"
+    },
+    {
+      "name": "imagegen-frontend-mobile",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/imagegen-frontend-mobile/SKILL.md"
+    },
+    {
+      "name": "imagegen-frontend-web",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/imagegen-frontend-web/SKILL.md"
+    },
+    {
+      "name": "improve",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/improve/SKILL.md"
+    },
+    {
+      "name": "industrial-brutalist-ui",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/industrial-brutalist-ui/SKILL.md"
+    },
+    {
+      "name": "interface-design",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/interface-design/SKILL.md"
+    },
+    {
+      "name": "minimalist-ui",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/minimalist-ui/SKILL.md"
+    },
+    {
+      "name": "navigation",
+      "scope": "repo",
+      "enabled": true,
+      "path": "/home/jeanpzh/orca/workspaces/SUM-reverse/REA/.codex/skills/router-core/navigation/SKILL.md"
+    },
+    {
+      "name": "not-found-and-errors",
+      "scope": "repo",
+      "enabled": true,
+      "path": "/home/jeanpzh/orca/workspaces/SUM-reverse/REA/.codex/skills/router-core/not-found-and-errors/SKILL.md"
+    },
+    {
+      "name": "openai-docs",
+      "scope": "system",
+      "enabled": true,
+      "path": "/home/jeanpzh/.codex/skills/.system/openai-docs/SKILL.md"
+    },
+    {
+      "name": "orca-cli",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/orca-cli/SKILL.md"
+    },
+    {
+      "name": "orchestration",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/orchestration/SKILL.md"
+    },
+    {
+      "name": "path-params",
+      "scope": "repo",
+      "enabled": true,
+      "path": "/home/jeanpzh/orca/workspaces/SUM-reverse/REA/.codex/skills/router-core/path-params/SKILL.md"
+    },
+    {
+      "name": "react-router",
+      "scope": "repo",
+      "enabled": true,
+      "path": "/home/jeanpzh/orca/workspaces/SUM-reverse/REA/.codex/skills/react-router/SKILL.md"
+    },
+    {
+      "name": "redesign-existing-projects",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/redesign-existing-projects/SKILL.md"
+    },
+    {
+      "name": "reverse-engineer-anything",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/reverse-engineer-anything/SKILL.md"
+    },
+    {
+      "name": "review-agent",
+      "scope": "system",
+      "enabled": true,
+      "path": "/home/jeanpzh/.codex/skills/.system/review-agent/SKILL.md"
+    },
+    {
+      "name": "router-core",
+      "scope": "repo",
+      "enabled": true,
+      "path": "/home/jeanpzh/orca/workspaces/SUM-reverse/REA/.codex/skills/router-core/SKILL.md"
+    },
+    {
+      "name": "search-params",
+      "scope": "repo",
+      "enabled": true,
+      "path": "/home/jeanpzh/orca/workspaces/SUM-reverse/REA/.codex/skills/router-core/search-params/SKILL.md"
+    },
+    {
+      "name": "seo",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/seo/SKILL.md"
+    },
+    {
+      "name": "skill-creator",
+      "scope": "system",
+      "enabled": true,
+      "path": "/home/jeanpzh/.codex/skills/.system/skill-creator/SKILL.md"
+    },
+    {
+      "name": "skill-installer",
+      "scope": "system",
+      "enabled": true,
+      "path": "/home/jeanpzh/.codex/skills/.system/skill-installer/SKILL.md"
+    },
+    {
+      "name": "ssr",
+      "scope": "repo",
+      "enabled": true,
+      "path": "/home/jeanpzh/orca/workspaces/SUM-reverse/REA/.codex/skills/router-core/ssr/SKILL.md"
+    },
+    {
+      "name": "stitch-design-taste",
+      "scope": "user",
+      "enabled": true,
+      "path": "/home/jeanpzh/.agents/skills/stitch-design-taste/SKILL.md"
+    },
+    {
+      "name": "sum-evidence-to-spec",
+      "scope": "repo",
+      "enabled": true,
+      "path": "/home/jeanpzh/orca/workspaces/SUM-reverse/REA/.agents/skills/sum-evidence-to-spec/SKILL.md"
+    },
+    {
+      "name": "sum-frontend-discovery",
+      "scope": "repo",
+      "enabled": true,
+      "path": "/home/jeanpzh/orca/workspaces/SUM-reverse/REA/.codex/skills/sum-frontend-discovery/SKILL.md"
+    },
+    {
+      "name": "sum-frontend-implement",
+      "scope": "repo",
+      "enabled": true,
+      "path": "/home/jeanpzh/orca/workspaces/SUM-reverse/REA/.agents/skills/sum-frontend-implement/SKILL.md"
+    },
+    {
+      "name": "sum-frontend-implementation",
+      "scope": "repo",
+      "enabled": true,
+      "path": "/home/jeanpzh/orca/workspaces/SUM-reverse/REA/.codex/skills/sum-frontend-implementation/SKILL.md"
+    },
+    {
+      "name": "sum-frontend-verify",
+      "scope": "repo",
+      "enabled": true,
+      "path": "/home/jeanpzh/orca/workspaces/SUM-reverse/REA/.agents/skills/sum-frontend-verify/SKILL.md"
+    },
+    {
+      "name": "sum-visual-verification",
+      "scope": "repo",
+      "enabled": true,
+      "path": "/home/jeanpzh/orca/workspaces/SUM-reverse/REA/.codex/skills/sum-visual-verification/SKILL.md"
+    },
+    {
+      "name": "sum-workflow",
+      "scope": "repo",
+      "enabled": true,
+      "path": "/home/jeanpzh/orca/workspaces/SUM-reverse/REA/.agents/skills/sum-workflow/SKILL.md"
+    },
+    {
+      "name": "type-safety",
+      "scope": "repo",
+      "enabled": true,
+      "path": "/home/jeanpzh/orca/workspaces/SUM-reverse/REA/.codex/skills/router-core/type-safety/SKILL.md"
+    }
+  ]
+}

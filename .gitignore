@@ -6,7 +6,7 @@ dist-ssr/
 
 # Local browser tooling and machine configuration
 /.playwright-mcp/
-/.codex/config.toml
+# .codex/config.toml now contains shared agent routing only (no credentials).
 *.log
 .DS_Store
 
@@ -14,3 +14,9 @@ dist-ssr/
 .env
 .env.*
 !.env.example
+
+# Local CodeGraph index
+.codegraph/
+
+# Operator snapshots: never version or discover through normal file search.
+datos-reales/

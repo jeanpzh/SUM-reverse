@@ -1,0 +1,69 @@
+{
+  "method": "Native Codex CLI agent_type dispatch, sequential roles without model overrides; metadata read from local thread store and turn_context",
+  "parent": {
+    "model": "gpt-6-luna",
+    "reasoning_effort": "medium"
+  },
+  "children": [
+    {
+      "role": "sum-executor",
+      "model": "gpt-6-luna",
+      "reasoning_effort": "high",
+      "turn_context": [
+        {
+          "model": "gpt-6-luna",
+          "effort": "high"
+        }
+      ],
+      "completed": true,
+      "response": "OK.",
+      "tool_calls": [],
+      "role_sha256": "399eda14b56ba2ddc77cf4d805528b556e4d4fb7239a00941ff0aa0ba20aa298"
+    },
+    {
+      "role": "sum-explorer",
+      "model": "gpt-6-luna",
+      "reasoning_effort": "low",
+      "turn_context": [
+        {
+          "model": "gpt-6-luna",
+          "effort": "low"
+        }
+      ],
+      "completed": true,
+      "response": "OK.",
+      "tool_calls": [],
+      "role_sha256": "4f4e5533982b357ee5e7473934d220cb0b3e8d58d07b73e3786b7e4ce50dde0a"
+    },
+    {
+      "role": "sum-implementer",
+      "model": "gpt-6-luna",
+      "reasoning_effort": "medium",
+      "turn_context": [
+        {
+          "model": "gpt-6-luna",
+          "effort": "medium"
+        }
+      ],
+      "completed": true,
+      "response": "OK.",
+      "tool_calls": [],
+      "role_sha256": "1d072262d3ad87d90c0ff58a7fc0ad6275e9d42dbfcac38e98c9d8e920e7a02c"
+    },
+    {
+      "role": "sum-planner",
+      "model": "gpt-6.1-sol",
+      "reasoning_effort": "high",
+      "turn_context": [
+        {
+          "model": "gpt-6.1-sol",
+          "effort": "high"
+        }
+      ],
+      "completed": true,
+      "response": "OK",
+      "tool_calls": [],
+      "role_sha256": "a4b2d7e40d1daaaafa9800bb131834c8c9284e1eac624971ccbf661a47f1f2ad"
+    }
+  ]
+}
