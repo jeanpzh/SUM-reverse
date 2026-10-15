@@ -1,0 +1,20 @@
+/* O-UI-01 (#30) and V-01 (#31): colors approximated from the screenshots, not pixel-measured. */
+.matricula-info-sum__grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 1.75rem; align-items: start; }
+.matricula-info-sum__card { padding: 1.25rem 1.25rem 1.5rem; border-radius: 0.75rem; background: var(--color-sum-surface); }
+.matricula-info-sum__intro { margin: 0 0 1.25rem; font-size: 1.1rem; font-weight: 400; color: var(--color-sum-heading); }
+.matricula-info-sum__sections { margin: 0; padding: 0; list-style: none; }
+.matricula-info-sum__sections li + li { margin-top: 1.4rem; }
+.matricula-info-sum__sections h4 { margin: 0 0 0.4rem; font-size: 0.9rem; color: var(--color-sum-heading); }
+.matricula-info-sum__sections p { margin: 0; color: var(--color-sum-accent); font-size: 0.82rem; line-height: 1.6; }
+.matricula-info-sum__banner { margin: 0 0 1.25rem; padding: 0.9rem; border: 1px solid; border-radius: 0.35rem; text-align: center; font-size: 0.8rem; font-weight: 700; }
+.matricula-info-sum__banner--disabled { border-color: #f5c6cb; background: #f8d7da; color: #721c24; }
+.matricula-info-sum__banner--enabled { border-color: #c3e6cb; background: #d4edda; color: #155724; }
+.matricula-info-sum__tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem 1.75rem; margin: 0; }
+.matricula-info-sum__tiles div { padding: 0.6rem 0.9rem; border-radius: 0.35rem; background: #e6e3fa; }
+.matricula-info-sum__tiles dt { font-size: 0.8rem; font-weight: 600; color: var(--color-sum-heading); }
+.matricula-info-sum__tiles dd { margin: 0.2rem 0 0; font-size: 0.8rem; font-weight: 600; color: var(--color-sum-accent); }
+.matricula-info-sum__registered { margin: 1.5rem 0 0; padding: 0.9rem; border: 1px solid #bee5eb; border-radius: 0.35rem; background: #d1ecf1; color: #0c5460; text-align: center; font-size: 0.8rem; font-weight: 600; }
+.matricula-info-sum__registered a { color: #007bff; }
+.matricula-info-sum__start { display: block; width: fit-content; margin: 1.5rem auto 0; padding: 0.55rem 1rem; border-radius: 0.3rem; background: #3d42d6; color: #fff; font-size: 0.8rem; font-weight: 600; text-decoration: none; }
+.matricula-info-sum__local { margin-top: 1.5rem; }
+@media (max-width: 900px) { .matricula-info-sum__grid { grid-template-columns: 1fr; } }

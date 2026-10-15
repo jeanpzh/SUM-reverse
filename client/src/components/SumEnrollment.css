@@ -1,0 +1,44 @@
+/* V-02..V-07 (screen recording, other faculty/period): colors approximated, not pixel-measured. */
+.sum-enrollment__note { margin: 1rem 0 0; padding: 0.85rem 1rem; border: 1px solid #c6c8ca; border-radius: 0.35rem; background: #d6d8d9; color: #1b1e21; font-size: 0.8rem; }
+.sum-enrollment__mandatory-note { margin: 0.75rem 0 0; padding: 0.85rem 1rem; border: 1px solid #ffeeba; border-radius: 0.35rem; background: #fff3cd; color: #856404; font-size: 0.8rem; font-weight: 600; }
+.sum-enrollment__blocked { margin: 0.75rem 0 0; padding: 0.75rem 1rem; border-radius: 0.35rem; background: #f8d7da; color: #721c24; font-size: 0.8rem; }
+.sum-enrollment__table-card { margin-top: 1rem; padding: 1rem; border-radius: 0.75rem; background: var(--color-sum-surface); }
+.sum-enrollment__search { display: flex; justify-content: flex-end; margin-bottom: 0.5rem; font-size: 0.75rem; }
+.sum-enrollment__search input { margin-left: 0.35rem; padding: 0.25rem 0.4rem; border: 1px solid var(--color-sum-border); border-radius: 0.2rem; }
+.sum-enrollment__table { width: 100%; border-collapse: collapse; font-family: inherit; font-size: 0.72rem; }
+.sum-enrollment__table th, .sum-enrollment__table td { padding: 0.45rem 0.6rem; border: 1px solid var(--color-sum-border); text-align: center; }
+.sum-enrollment__table td:nth-child(3) { text-align: left; }
+.sum-enrollment__row--mandatory td { background: #f8d7da; }
+.sum-enrollment__cycle { display: inline-block; min-width: 1.2rem; padding: 0.05rem 0.3rem; border: 1px solid #c6c8ca; border-radius: 0.2rem; background: #e2e3e5; color: #383d41; font-weight: 600; }
+.sum-enrollment__section-badge { display: inline-block; min-width: 1.2rem; padding: 0.05rem 0.3rem; border-radius: 0.2rem; background: #d6d2f7; color: var(--color-sum-accent); font-weight: 600; }
+.sum-enrollment__actions { white-space: nowrap; }
+.sum-enrollment__pick, .sum-enrollment__remove { display: inline-flex; align-items: center; justify-content: center; width: 1.6rem; height: 1.6rem; margin: 0 0.1rem; border: 0; border-radius: 0.2rem; }
+.sum-enrollment__pick { background: #f6b500; color: #5a4100; }
+.sum-enrollment__remove { background: #dc3545; color: #fff; }
+.sum-enrollment__pick:disabled, .sum-enrollment__remove:disabled { opacity: 0.55; }
+.sum-enrollment__totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; margin: 1rem 0 0; }
+.sum-enrollment__totals div { display: flex; gap: 0.3rem; padding: 0.75rem 1rem; border: 1px solid #b8daff; border-radius: 0.35rem; background: #cce5ff; color: #004085; font-size: 0.75rem; font-weight: 600; }
+.sum-enrollment__totals dd { margin: 0; }
+.sum-enrollment__execute { display: flex; justify-content: center; margin-top: 1rem; }
+.sum-enrollment__execute-button { padding: 0.6rem 1.2rem; border: 0; border-radius: 0.25rem; background: #28c76f; color: #fff; font-weight: 600; }
+.sum-enrollment__execute-button:disabled { opacity: 0.55; }
+.sum-button { padding: 0.45rem 0.9rem; border: 0; border-radius: 0.25rem; font-weight: 600; }
+.sum-button--success { background: #28c76f; color: #fff; }
+.sum-button--danger { background: #ea5455; color: #fff; }
+.sum-button--light { background: #f1f1f1; color: #4b4b4b; }
+.sum-button:disabled { opacity: 0.8; }
+.sum-section-dialog__course { display: grid; gap: 0.15rem; margin: 0 0 1rem; padding: 0.75rem 1rem; border-radius: 0.35rem; background: var(--color-sum-accent-soft); font-size: 0.75rem; }
+.sum-section-dialog__course strong { color: var(--color-sum-accent); }
+.sum-section-dialog__schedule-toggle { width: 1.2rem; height: 1.2rem; border: 0; border-radius: 50%; background: #28c76f; color: #fff; line-height: 1; }
+.sum-section-dialog__actions { display: flex; justify-content: center; gap: 0.5rem; padding: 1rem; border-top: 1px solid var(--color-sum-border); }
+.sum-alert { width: min(22rem, calc(100vw - 2rem)); padding: 1.5rem; border: 0; border-radius: 0.5rem; text-align: center; box-shadow: 0 0.5rem 2rem rgb(0 0 0 / 0.25); }
+.sum-alert::backdrop { background: rgb(0 0 0 / 0.4); }
+.sum-alert__icon { color: #6c757d; }
+.sum-alert--success .sum-alert__icon { color: #28c76f; }
+.sum-alert--error .sum-alert__icon { color: #ea5455; }
+.sum-alert__title { margin: 0.5rem 0; font-size: 1.25rem; color: var(--color-sum-heading); }
+.sum-alert__body { font-size: 0.8rem; }
+.sum-alert__causes { margin: 0; padding-left: 1rem; text-align: left; }
+.sum-alert__actions { display: flex; justify-content: center; gap: 0.75rem; margin-top: 1.25rem; }
+.regular-enrollment__local-details { margin-top: 1.5rem; }
+@media (max-width: 720px) { .sum-enrollment__totals { grid-template-columns: 1fr; gap: 0.5rem; } }

@@ -1,0 +1,10 @@
+/* V-08 (#38): colors approximated from the screenshot, not pixel-measured. */
+.regular-enrollment-report__card { margin-top: 1.25rem; padding: 1.25rem; border-radius: 0.75rem; background: var(--color-sum-surface); }
+.regular-enrollment-report__heading { margin: 0 0 1rem; text-align: center; font-size: 1rem; font-weight: 400; color: var(--color-sum-heading); }
+.regular-enrollment-report__meta { width: fit-content; margin: 0 0 1rem auto; padding: 0.6rem 1rem; border: 1px solid #bee5eb; border-radius: 0.35rem; background: #d1ecf1; color: #0c5460; font-size: 0.75rem; }
+.regular-enrollment-report__meta p, .regular-enrollment-report__totals p { margin: 0.1rem 0; }
+.regular-enrollment-report__toolbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 0.5rem; font-size: 0.75rem; }
+.regular-enrollment-report__toolbar input { margin-left: 0.35rem; padding: 0.25rem 0.4rem; border: 1px solid var(--color-sum-border); border-radius: 0.2rem; }
+.regular-enrollment-report__range { margin: 0.5rem 0 0; font-size: 0.72rem; }
+.regular-enrollment-report__totals { width: fit-content; margin: 0.75rem 0 0 auto; padding: 0.6rem 1rem; border: 1px solid #bee5eb; border-radius: 0.35rem; background: #d1ecf1; color: #0c5460; font-size: 0.75rem; }
+.regular-enrollment-report__local { margin-top: 1rem; font-size: 0.75rem; }

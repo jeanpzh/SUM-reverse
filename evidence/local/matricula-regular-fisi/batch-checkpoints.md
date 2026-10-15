@@ -1,0 +1,42 @@
+# Checkpoints de bloques
+
+2026-10-12: msg_6fcf15ede093 WAIT-T010 backend recibido y procesado; respuesta pendiente de aceptación T010 cliente. Ambos índices CodeGraph existen. Gate bloquea T011; no se autoriza implementación prematura.
+
+05:12Z: WAIT-T010 msg_6fcf15ede093 y cliente msg_dbe584dd84f4 respondidos APROBADO tras aceptación T010 root. T011 autorizado Luna, cliente espera harness. Casillas10/51 aceptadas;41 restantes. No worker finalizado ni release prematuro.
+
+05:27Z T011 gate aprobado msg_4829064e6a15, harness y clock module copiados a root/frontend. T012 dos capas autorizado simultáneo; cliente nudge directo accepted:true request9ebd8761-5b53-4020-8571-7304ca73c547 sin prueba delivery (provider unsupported), no reenvío. Root backend build/lint y client lint posteriores importación exit0. 11/51 tareas aceptadas;40 restantes.
+
+2026-10-12T05:44Z — T012 Foundation conjunta aceptada (root 37/37 cliente, 12/12 backend y regresión PASS). US1 continúa sin gate entre tests e implementación. Respuesta msg_f807458e78ec: CSV de prematrícula local se verifica cliente/root US1; MAT-10-V09 completo es CSV de reporte accepted, diferido a T042/T044/T046 y no se computa PASS ahora. No nuevo endpoint ni modificación de spec/plan.
+
+2026-10-12T05:46Z — Root diagnosticó infraestructura T014: node strip-types no admite importar TSX; transitive Common→client importa env Vite. Amplió ownership a client/src/data/preEnrollment.ts (helpers únicos consumidos por UI/tests) y checks/t014-ui.mjs (SSR Vite middleware sin browser/puerto). Mensaje msg_6a22434539ee; no cambios a paquetes/config/contratos autorizados. Root conserva click/fullstack T017.
+
+2026-10-12 — Root acepta la extracción ya entregada prematriculaPanel.ts (misma responsabilidad de helpers autorizada, sin duplicar preEnrollment.ts). El worker no entregó SSR: root añade t014-ui.mjs antes de aceptar UI. Correcciones aisladas: quitar US1 del producto, no computar MAT10-V09, evitar .csv.csv porque DownloadButton añade extensión. Informe del worker es unitario: no acredita ACC completo ni UI/integración. Reuso Luna rechazado agent_unconfigured; release retained/user_takeover y cierre exacto terminado autorizado por usuario, ptyKilled true; fresh Luna mismo worktree ctx_537869f68c54, task_1812ec4c627f, term_d93197ae-d833-43d1-8a85-73cd7dee6dde, modelo/effort efectivos gpt-6-luna/high y turn_started.
+
+T017 diagnóstico determinista: fetch nativo guardado en objeto e invocado como input.fetchImpl falla en Chromium con TypeError Illegal invocation, antes de emitir HTTP. Reproducción en página nueva/data: synthetic independiente, sin servidores. Root aplica una reparación aislada: binding del fetch nativo a globalThis en adapter T009; no altera mocks, endpoints ni contrato. Transport sincronizado frontend readonly. Corridas previas T017 diagnosticaron red/error, no PASS; ciclo de reparación de esta causa=1.
+
+2026-10-12: root acepta T019/T021/T022/T024/T026/T027 con integración real US2/US3 ambas escuelas, build/lint0, data48PASS y SSR PASS. 27/51. Backend3 ctx_22a1be8328d9 failed, preserve source, release retained/user_takeover; terminal exacto cerrado ptyKilledtrue. Retry preflight name selector_not_found, sin nuevo Dispatch; descubrir ID exacto.
+
+## 2026-10-13 — siguiente tanda efectiva
+- Codex gpt-6-luna/high: task_b5c81d65d09e / ctx_7f55ce89fcdc, foundation; cuatro correcciones de composición Context diagnosticadas, archivos exclusivos windows/tests, sin navegador.
+- Antigravity gemini-3.8-flash/medium: task_b2c0698933bf / ctx_08053195e697, frontend; cuatro grupos reales US5/US6, único lease navegador y5741/5742. Sin source edits ni conformidad242/170 anticipada.
+Ambos recibos launch.effective y turn_started observados. Terminales anteriores terminados cerrados exactamente con ptyKilled:true. Root comprobó entrega Sonnet: data108/108, build0/lint0, SSR10/10; logs client-*-sonnet-root.log. Conteo aún34/51:17 tareas pendientes de aceptación. Los seis IDs de Sonnet tienen implementación/tests entregados, dependen aceptación backend y foco/integración real.
+
+Codex composición terminó172tests. Reuso inmediato falló agent_unconfigured antes de crear Task (task-list24 confirmó ausencia). Se liberó/cerró exactamente terminal terminado, ptyKilled:true; cierre específico A1 reglasausentes iniciado task_ed6e3228a361/ctx_9be69c4684fa, LunaHigh efectivo/turn_started. Antigravity conserva lease browser. tasks.md muestra estados y IDs vigentes.
+
+Reanudación confirmada: Antigravity ctx30f522959275/taskb2c0698933bf, GeminiFlashMedium; Codex ctxac0b4ac582de/task46a48b00f1a0, LunaHigh. Efectivos/turnstarted comprobados, retry-of últimos intentos, mismasTasks, fuente/draft preservados, máximo2. Causa histórica confirmada operador cierre/reinicio, no resetcontadores. Rootconsumer3/term1469. Antigravitybrowser único; Codexautoría sinservers hastaGO explícito.
+
+Tresworkers efectivos yturn_started: Antigravity ctxccc0b520f319 (GeminiFlashMedium), Codex ctx9fb6bd28d687 (LunaHigh), Claude ctxf3c4395d7150/task2f372cbc8c27 (SonnetHigh), childWT aisladosummrregression. T049 cuatrogrupos/cincolecturas, source+deps+CGconfigproporcionados ySYNCREADYdurable. BrowserleaseúnicoAntigravity, CodexNO GO aún.38/51aceptadas/13pendientes. Límite3 autorizadoexplicitusuario, no cambiosfuncionales spec/plan.
+
+
+### Entrega T049 y relevo T047 — 2026-10-13
+Claude ctx_21ac31c65426 entregó tres archivos asignados y worker_done succeeded válido. Root importó test/regression/report y ejecutó 52/52 (48 regresiones + 4 wire), backend build/lint exit0; logs checks/claude-regression-root*.log. T049 conserva [ ] por dependencias finales de historias. No se ejecutaron snapshots por root. Dos arranques Codex fallaron en terminal_create sin recursos; user confirmó que Codex anterior se detuvo por pérdida de autoridad. Se reutilizó la sesión Sonnet conocida para SAME Task task_46a48b00f1a0, retry-of ctx_8b464aa54c82, nuevo ctx_a740612b1278 en sum-mr-regression con copias de cambios existentes y decisión T047 explícita. No GO ni browser para Sonnet; Antigravity ctx_fb5d8d19bfc9 mantiene lease US5/US6. Solo dos workers actuales, sin duplicación ni cambio de spec/plan/contrato.
+
+
+### US5/US6: verificación raíz y cobertura faltante — 2026-10-13
+Root importó únicamente la prueba asignada y ejecutó 9/9 PASS en48.49s, exit0 (checks/antigravity-us5-us6-root-review.log), sobre factories sintéticas propias, guard loopback y app de test aislada. Puertos5741/5742 libres tras cierre. El reporte Antigravity incluye 9cases pero handoff exige12 y foco wrap/retorno; T039/T046 permanecen pendientes. Antigravity anterior ctx_fb5d8d19bfc9 liberado/cerrado con archivo persistente. Seguimiento específico task_acbe43f93fc0/ctx_d067791ecae4, Gemini3.8Flash/medium efectivo, cuatro grupos disjuntos: SOFT recuperación, foco, identidad/noPOST, reejecución/docs. GO-US56 transferido al nuevo worker; Sonnet T047 continúa sin browser. El diagnóstico tentativo de sufijo CSV-demo se descartó: la prueba actual de nombre exacto pasó realmente; no se cambió producto ni oráculo por hipótesis. Sin aceptación242/170/N3.
+
+
+### Aceptación raíz US5/US6 — 2026-10-13
+Root ejecutó12/12 PASS en46.30s, exit0: checks/antigravity-us5-us6-root-final.log. Se importaron únicamente test/us5/us6/worker-report asignados; código de producto sin cambios en esta entrega. Regresión52/52 y build/lint backend0, cliente108/108/build/lint0/SSR10 y backend184 previos reutilizados. Criterios por ambas escuelas: rejected multicausa→D2/foco/wrap/Escape/registro vacío/cero matrículas-reportes-cupos; accepted/doble clic→commit único/D1 cerrado sin cancelar/foco heading/navegación manual/P1/CSV/reload; pending no modal/Outcome guardado/cero escrituras académicas; pérdida pre/postcommit, exact5keys, mismoUUID manual y reset sinPOST. Resultado: T038/T039/T041/T043/T044/T045/T046 [x]. Total45/51; pendientes T032/T047/T048/T049/T050/T051. T049 ya verificada, espera cerrar historiaUS4. Antigravity ctx_d067791ecae4 liberado/cerrado. No242/170/N3, no conformidad SUM ni A/AA global. Los snapshots comprobados son memoria sintética propia, no datos privados.
+
+2026-10-14: tras aprobación humana de completar equivalencias, T004/T028/T030 reabiertas en tasks.md. Conteo determinista42/51,9pendientes (T004,T028,T030,T032,T047,T048,T049,T050,T051), mismos51IDs. Las demás aceptaciones se conservan; no aceptarV04 por aprobación directa ni66/242 por un turno terminado. Etapa siguiente documental MR-MODEL-3/planr5 antes de implementación. Sin wire nuevo ni datos reales.
