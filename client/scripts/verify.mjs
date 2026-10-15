@@ -12,7 +12,8 @@ const apiMode = process.argv.includes('--api')
 const port = apiMode ? 5182 : 5181
 const root = fileURLToPath(new URL('../../', import.meta.url)).replace(/\/$/, '')
 const clientDir = resolve(root, 'client')
-const evidenceRoot = resolve(root, apiMode ? 'evidence/local-api' : 'evidence/local')
+const evidenceRoot = resolve(root, process.env.SUM_VERIFY_EVIDENCE_DIR ||
+  (apiMode ? 'evidence/local-api' : 'evidence/local'))
 const base = `http://127.0.0.1:${port}`
 const responses = structuredClone(mockResponses)
 if (apiMode) {
@@ -126,11 +127,78 @@ try {
     assert.equal(geometry.header.height, 64)
     assert.equal(geometry.main.x, 280)
     assert.equal(geometry.main.y, 70)
-    if (route.id === 'manuales') assert.equal(geometry.resource.height, 79)
-    if (route.id === 'perfil') assert.ok(await page.getByText(responses.perfil.data.numDocumento, { exact: true }).count())
+    if (route.id === 'tutoria') {
+      assert.deepEqual(await page.locator('table thead th').allTextContents(),
+        ['Docente', 'Cod. Asignatura', 'Resolucion', 'Fecha', 'Observacion', 'Acción'])
+      assert.equal(await page.locator('table tbody tr').count(), 1)
+      assert.equal(await page.getByText('No hay tutorías registradas', { exact: true }).count(), 1)
+      assert.equal(await page.locator('.table-footer').innerText(), 'Mostrando 0 registros')
+    }
+    if (route.id === 'matricula-informacion') {
+      assert.equal(await page.locator('.enrollment-status').count(), 0)
+      assert.equal(await page.locator('.enrollment-article ol > li').count(), 5)
+      assert.deepEqual(await page.locator('.enrollment-article ol h4').allTextContents(), [
+        'Control de Cronograma de Matrícula',
+        'Control de Acceso de Facultad',
+        'Control de Pre-Matrícula',
+        'Control de Deudas Registradas',
+        'Interfaz de Matrícula',
+      ])
+      assert.equal(await page.locator('.enrollment-article button, .enrollment-article form, .enrollment-article table').count(), 0)
+      await page.evaluate(() => window.scrollTo(0, 48))
+      assert.equal(await page.evaluate(() => window.scrollY), 48)
+      const headingPositions = await page.locator('.enrollment-article h3, .enrollment-article ol h4')
+        .evaluateAll((headings) => headings.map((heading) => heading.getBoundingClientRect().y))
+      const expectedPositions = [128, 182, 282, 360, 459, 579]
+      assert.equal(headingPositions.length, expectedPositions.length)
+      headingPositions.forEach((position, index) => assert.ok(Math.abs(position - expectedPositions[index]) <= 2))
+    }
+    if (route.id === 'manuales') {
+      assert.equal(geometry.resource.height, 79)
+      assert.equal(await page.locator('.tutorial-card').count(), 9)
+      assert.deepEqual(await page.locator('.tutorial-card h2').allTextContents(), [
+        'Mi perfil', 'Historial Academico', 'Matricula Via Internet', 'Reporte de Matricula',
+        'Reporte de Prematricula', 'Reporte de Evaluaciones', 'Programacion de Asignaturas',
+        'Mis Asistencias', 'Mis Tutorias',
+      ])
+      assert.equal(await page.locator('.tutorial-card time[datetime="2024-01-29"]').count(), 9)
+      assert.equal(await page.locator('.tutorial-card').evaluateAll((cards) => cards.every((card) =>
+        card.tagName === 'ARTICLE' && !card.hasAttribute('role') && card.tabIndex < 0)), true)
+      const programmingDescription = page.locator('.tutorial-card').nth(6).locator('p')
+      assert.ok(await programmingDescription.evaluate((element) => element.getBoundingClientRect().height <= 21))
+    }
+    if (route.id === 'perfil') {
+      assert.ok((await page.locator('.profile-panel dd').first().textContent()).includes(responses.perfil.data.numDocumento))
+      assert.deepEqual(await page.getByRole('tab').allTextContents(), [
+        'Información Personal', 'Información Académica', 'Cambio de Contraseña',
+      ])
+      assert.equal(await page.getByRole('tab', { name: 'Información Personal' }).getAttribute('aria-selected'), 'true')
+      assert.deepEqual(await page.locator('.profile-panel dt').allTextContents(), [
+        'Documento de Identidad', 'Estado Civil', 'Sexo', 'Fecha de Nacimiento',
+        'Lugar de Nacimiento', 'Teléfono', 'Celular', 'Correo Institucional',
+        'Correo Personal', 'Domicilio', 'Dirección',
+      ])
+      await page.getByRole('tab', { name: 'Información Académica' }).click()
+      assert.equal(await page.getByRole('tab', { name: 'Información Académica' }).getAttribute('aria-selected'), 'true')
+      assert.deepEqual(await page.locator('.profile-panel dt').allTextContents(), [
+        'Año de Ingreso', 'Modalidad de Ingreso', 'Colegio de Procedencia', 'Año / Ciclo de Estudio',
+        'Promedio Ponderado', 'Situación Académica', 'Estado de Permanencia', 'Última Matricula',
+        'Promedio de Última Matricula',
+      ])
+      await page.screenshot({ path: resolve(evidenceRoot, 'perfil', 'academic-candidate.png') })
+      await page.getByRole('tab', { name: 'Información Personal' }).click()
+    }
+    if (route.id === 'historial') {
+      assert.ok(await page.getByRole('heading', { name: 'RESUMEN DEL HISTORIAL ACADÉMICO' }).count())
+      assert.ok(await page.getByRole('heading', { name: 'Promedio Ponderado' }).count())
+      assert.deepEqual(await page.locator('.history-table thead th').allTextContents(), [
+        'Ciclo', 'Plan', 'Tipo', 'Asignatura', 'Calificación', 'Créditos', 'Sección', 'Acta',
+      ])
+      assert.equal(await page.getByLabel('Búsqueda del historial').count(), 1)
+    }
     if (route.id === 'asistencia') assert.equal(await page.locator('tbody tr').count(), 3)
     if (route.id === 'reportes-horarios') assert.equal(await page.locator('.calendar-event').count(), responses.horarios.data.length)
-    if (route.id === 'programacion-asignaturas') assert.equal(await page.locator('tbody tr').count(), responses.programacion.data.programacion.length)
+    if (route.id === 'programacion-asignaturas') assert.equal(await page.locator('.table-card tbody tr').count(), responses.programacion.data.programacion.length)
     if (route.id === 'programacion-asignaturas') {
       const buttons = page.getByRole('button', { name: /Horarios de/ })
       assert.equal(await buttons.count(), responses.programacion.data.programacion.length)
@@ -152,7 +220,7 @@ try {
     }
     if (route.id === 'plan-estudios') assert.equal(await page.locator('tbody tr').count(), responses.plan.data.length)
     if (['asistencia', 'programacion-asignaturas', 'plan-estudios', 'reportes-matricula', 'reportes-prematricula'].includes(route.id)) {
-      assert.ok((await page.locator('tbody').innerText()).includes(expectedCourse))
+      assert.ok((await page.locator('.main-content table:visible tbody').first().innerText()).includes(expectedCourse))
     }
     if (route.id === 'reportes-evaluaciones') assert.ok(await page.getByText('No hay evaluaciones registradas.').count())
     if (route.id === 'reportes-deudas') assert.ok(await page.getByText('No se dispone de datos de deuda verificables.').count())
@@ -162,7 +230,14 @@ try {
   }
   await page.goto(`${base}/`)
   await page.waitForURL('**/alumnoWebSum/v2/inicio')
-  await page.getByRole('button', { name: 'Mi Información', exact: true }).click()
+  const informationMenu = page.getByRole('button', { name: 'Mi Información', exact: true })
+  await informationMenu.click()
+  assert.equal(await informationMenu.getAttribute('aria-expanded'), 'true')
+  assert.deepEqual(await page.locator('.subnav:visible a').allTextContents(), [
+    'Mi Perfil', 'Historial Académico', 'Formulario de Datos', 'Ficha Socioeconómica',
+  ])
+  await mkdir(resolve(evidenceRoot, 'mi-informacion'), { recursive: true })
+  await page.screenshot({ path: resolve(evidenceRoot, 'mi-informacion/menu-candidate.png') })
   await page.locator('.subnav').getByRole('link', { name: 'Mi Perfil', exact: true }).click()
   await page.waitForURL('**/informacion/perfil')
   await page.getByRole('tab', { name: 'Información Personal' }).waitFor()
@@ -172,20 +247,61 @@ try {
   await page.waitForURL('**/inicio')
   await page.goForward()
   await page.waitForURL('**/perfil')
+  const enrollmentMenu = page.getByRole('button', { name: 'Matrícula', exact: true })
+  await enrollmentMenu.click()
+  assert.equal(await enrollmentMenu.getAttribute('aria-expanded'), 'true')
+  const enrollmentSubmenuId = await enrollmentMenu.getAttribute('aria-controls')
+  assert.ok(enrollmentSubmenuId)
+  const enrollmentLinks = page.locator(`#${enrollmentSubmenuId} a`)
+  assert.deepEqual(await enrollmentLinks.allTextContents(), [
+    'Matrícula Vía Internet', 'Programación de Asignaturas',
+  ])
+  await mkdir(resolve(evidenceRoot, 'matricula-menu'), { recursive: true })
+  await page.screenshot({ path: resolve(evidenceRoot, 'matricula-menu/menu-candidate.png') })
+  await page.getByRole('link', { name: 'Matrícula Vía Internet', exact: true }).click()
+  await page.waitForURL('**/matricula/informacion')
+  assert.equal(await page.locator('.enrollment-article ol > li').count(), 5)
+  await page.goto(`${base}/alumnoWebSum/v2/inicio`)
+  await page.getByRole('button', { name: 'Matrícula', exact: true }).click()
+  await page.getByRole('link', { name: 'Programación de Asignaturas', exact: true }).click()
+  await page.waitForURL('**/matricula/programacion')
+  assert.deepEqual(await page.locator('.table-card thead th').allTextContents(), [
+    'Asignatura', 'Créd.', 'Sec.', 'Docente', 'Tope', 'Matriculados', 'Horarios',
+  ])
+  assert.equal(await page.getByRole('button', { name: /Horarios de/ }).count(),
+    responses.programacion.data.programacion.length)
   await page.getByRole('button', { name: 'Reportes', exact: true }).click()
   assert.equal(await page.locator('.subnav a').count(), 5)
   await page.getByRole('link', { name: 'Reporte de Deudas', exact: true }).click()
   await page.waitForURL('**/reportes/deudas')
-  assert.equal(await page.locator('.subnav').count(), 0)
+  assert.equal(await page.locator('.subnav:visible').count(), 0)
   await page.getByRole('button', { name: 'Ocultar menú' }).click()
   assert.equal(await page.locator('.student-app').evaluate((e) => e.classList.contains('sidebar-collapsed')), true)
+  assert.equal(await page.locator('.menu-toggle').getAttribute('aria-controls'), 'student-sidebar')
+  assert.equal(await page.locator('#student-sidebar').getAttribute('aria-hidden'), 'true')
+  assert.equal(await page.locator('#student-sidebar').evaluate((e) => e.hasAttribute('inert')), true)
   await page.getByRole('button', { name: 'Mostrar menú' }).click()
+  assert.equal(await page.locator('#student-sidebar').getAttribute('aria-hidden'), 'false')
+  assert.equal(await page.getByRole('navigation', { name: 'Menú principal' }).count(), 1)
   await visit('/alumnoWebSum/v2/informacion/formularioDatos')
-  assert.equal(await page.locator('input[id="field-0-4"]').inputValue(), responses.perfil.data.numDocumento)
+  assert.equal(await page.locator('input[id="field-0-3"]').inputValue(), responses.perfil.data.numDocumento)
   await page.getByRole('link', { name: 'Salud', exact: true }).click()
   assert.ok((await page.evaluate(() => scrollY)) > 1000)
   assert.equal(await page.locator('form').count(), 8)
+  assert.equal(await page.locator('form input:not(:disabled),form select:not(:disabled)').count(), 1)
+  assert.equal(await page.getByLabel('Especifique el grupo étnico:').isDisabled(), false)
+  assert.deepEqual(await page.locator('.section-nav a').allTextContents(), [
+    'Datos Personales', 'Colegio de Procedencia', 'Dependencia Económica', 'Recursos de Estudio',
+    'Transporte', 'Salud', 'Interés Académico', 'Contacto', 'Descargar Formulario',
+  ])
+  await visit('/alumnoWebSum/v2/informacion/fichaSocioeconomica')
+  assert.equal(await page.locator('form').count(), 13)
   assert.equal(await page.locator('form input:not(:disabled),form select:not(:disabled)').count(), 0)
+  assert.deepEqual(await page.locator('.family-table thead th').allTextContents(), [
+    'Nombre', 'Edad', 'Parentesco', 'Grado', 'Ocupación', 'Condición Laboral', 'Aporte Económico(S/.)',
+    'Enfermedad', 'Tipo Discapacidad', 'Acción',
+  ])
+  assert.equal(await page.locator('.family-table tbody tr').count(), 1)
   await visit('/alumnoWebSum/v2/reportes/prematricula')
   const visibleCells = await page.locator('tbody tr').evaluateAll((rows) => rows.map((row) => [...row.cells].map((cell) => cell.innerText)))
   const downloadPromise = page.waitForEvent('download')
@@ -198,7 +314,8 @@ try {
   assert.equal(errors.length, 0, errors.join('\n'))
   assert.equal(consoleErrors.length, 0, consoleErrors.join('\n'))
   if (apiMode) {
-    assert.equal(new Set(apiCalls).size, 12)
+    assert.equal(new Set(apiCalls).size, 11)
+    assert.equal(apiCalls.includes('matriculaInfo'), false)
     opaqueLists = true
     await visit('/alumnoWebSum/v2/tutoria')
     assert.ok(await page.getByText('Los registros no se pueden mostrar con la información disponible.').count())
@@ -240,8 +357,11 @@ try {
   assert.equal(errors.length, 0, errors.join('\n'))
   const results = { mode: apiMode ? 'api-local' : 'mock', routes: routes.length,
     pageErrors: errors, consoleErrors, remoteRequests: remote, apiCalls,
-    checks: ['16 direct routes', 'loaded identity', 'typed tables', 'form profile fields', 'SPA and history navigation',
-      'read-only forms', 'CSV matches table', 'responsive bento', ...(apiMode ? ['12 intercepted API queries', 'unknown records', 'empty attendance', 'HTTP/HTML error and retry'] : ['no data requests'])] }
+    checks: ['16 direct routes', 'loaded identity', 'typed tables', 'form profile fields',
+      'Mi Información submenu and route order', 'profile personal and academic panels', 'history summary and columns',
+      'personal and socioeconomic sections and observed initial control states', 'Matrícula submenu and both local routes',
+      'SPA and history navigation',
+      'CSV matches table', 'responsive bento', ...(apiMode ? ['11 intercepted API queries', 'static enrollment information', 'unknown records', 'empty attendance', 'HTTP/HTML error and retry'] : ['no data requests'])] }
   await writeFile(`${evidenceRoot}/measurements.json`, JSON.stringify(measurements, null, 2))
   await writeFile(`${evidenceRoot}/check-results.json`, JSON.stringify(results, null, 2))
   console.log(JSON.stringify({ mode: results.mode, routes: routes.length, checks: 'passed', apiQueries: new Set(apiCalls).size }, null, 2))

@@ -11,7 +11,7 @@ Routes and labels were read from links visible on the student home screen. The s
 | Information | Formulario de Datos | `/alumnoWebSum/v2/informacion/formularioDatos` |
 | Information | Ficha Socioeconomica | `/alumnoWebSum/v2/informacion/fichaSocioeconomica` |
 | Enrollment | Matrícula | `#` (group link in initial state) |
-| Enrollment | Información de Matrícula | `/alumnoWebSum/v2/matricula/informacion` |
+| Enrollment | Matrícula Vía Internet | `/alumnoWebSum/v2/matricula/informacion` |
 | Enrollment | Programación de Asignaturas | `/alumnoWebSum/v2/matricula/programacion` |
 | Reports | Reportes | `#` (group link in initial state) |
 | Reports | Reporte Pre-Matrícula | `/alumnoWebSum/v2/reportes/prematricula` |
@@ -25,5 +25,7 @@ Routes and labels were read from links visible on the student home screen. The s
 | Help | Manuales y Tutoriales | `/alumnoWebSum/v2/manuales` |
 
 Attendance, tutoring, study plan, manuals, the four Information routes, two Enrollment routes, and all five Reportes routes were inspected. Report page structure and visible table headers are documented without retaining student-specific row values.
+
+The operator-supplied sidebar capture labels the first Enrollment child “Matrícula Vía Internet”. Its mapping to the already documented information route is a local replica decision; the capture itself does not show a destination.
 
 The home page also offers eight “Ver más...” shortcuts; their destinations were not captured. Do not infer routes from labels.

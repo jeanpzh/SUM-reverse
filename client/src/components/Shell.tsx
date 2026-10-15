@@ -3,9 +3,13 @@ import { useState } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
 import { navigation, routes, routeUrl, routeAt } from '../data/routes'
 import { useShellStudent } from '../data/useShellStudent'
+import { getLocalProfileActivation } from '../data/client'
+import { useLocalProfileSession } from '../data/useLocalProfileSession'
+import { LocalSessionClock, LocalSignOutButton } from './LocalSessionControls'
 import { Icon } from './Common'
 
 export function Shell({ children }: { children: ReactNode }) {
+  const session = useLocalProfileSession()
   const student = useShellStudent()
   const pathname = useLocation({ select: (location) => location.pathname })
   const active = routeAt(pathname) ?? routes[0]
@@ -96,7 +100,9 @@ export function Shell({ children }: { children: ReactNode }) {
           </svg>
         </button>
         <div className="header-right">
-          <span className="session-clock">00:00:00</span>
+          {getLocalProfileActivation() === 'synthetic-actors' && (session.status === 'active' || session.status === 'expired')
+            ? <LocalSessionClock />
+            : <span className="session-clock">00:00:00</span>}
           <div className="account-wrapper">
             {student.status === 'ready' ? (
               <>
@@ -122,21 +128,13 @@ export function Shell({ children }: { children: ReactNode }) {
               <span>{student.status === 'pending' ? 'Cargando alumno…' : 'Información no disponible'}</span>
             )}
           </div>
-          <button
-            className="sign-out"
-            disabled
-            title="La demostración local no utiliza una sesión SUM"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                d="M12 2v10M6 5a9 9 0 1 0 12 0"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              />
-            </svg>{' '}
-            Salir
-          </button>
+          {getLocalProfileActivation() === 'synthetic-actors' ? <LocalSignOutButton /> : (
+            <button className="sign-out" disabled title="La demostración local no utiliza una sesión SUM">
+              <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2v10M6 5a9 9 0 1 0 12 0" fill="none" stroke="currentColor" strokeWidth="2" />
+              </svg>{' '}Salir
+            </button>
+          )}
         </div>
       </header>
       <main key={active.id} className={`main-content screen-${active.id}`}>
@@ -144,4 +142,12 @@ export function Shell({ children }: { children: ReactNode }) {
       </main>
     </div>
   )
+}
+
+export function ProfileAwareShell({ children }: { children: ReactNode }) {
+  const snapshot = useLocalProfileSession()
+  if (getLocalProfileActivation() === 'legacy') return <Shell>{children}</Shell>
+  return snapshot.status === 'active' || snapshot.status === 'expired'
+    ? <Shell>{children}</Shell>
+    : <>{children}</>
 }

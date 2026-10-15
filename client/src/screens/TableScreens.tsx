@@ -7,7 +7,7 @@ import { toPlanRows, toPrematriculaRows, toMatriculaRows, toAttendanceRows,
 import { DataTable, DownloadButton, PageTitle, StudentSummary } from '../components/Common'
 import { CourseScheduleModal } from '../components/CourseScheduleModal'
 import { toHistoryRows, toStudentSummary } from '../data/adapters'
-import { getDataMode } from '../data/client'
+import { getDataMode, getLocalProfileActivation } from '../data/client'
 import { useStudentFormData } from '../data/useStudent'
 import { getPlanEstudiosRepresentation, validatePlanEstudios } from '../data/planEstudios'
 import { downloadCsv } from '../data/download'
@@ -65,7 +65,9 @@ function Attendance({ data }: { data: ApiResponseMap['asistencias']['data'] }) {
                 </td>
               </tr>
             ))}
-            {!rows.length && <tr><td colSpan={12}>No hay registros de asistencia.</td></tr>}
+            {!rows.length && <tr><td colSpan={12}>{getLocalProfileActivation() === 'synthetic-actors'
+              ? 'Sin registros sintéticos en esta demostración. Esto no indica cumplimiento institucional.'
+              : 'No hay registros de asistencia.'}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -157,6 +159,32 @@ function History({ response }: { response?: ApiResponseMap['historial'] | null }
   if (data) {
     const summaryStudent = toStudentSummary(data.alumno)
     const allRows = toHistoryRows(data.asignaturas)
+    if (getLocalProfileActivation() === 'synthetic-actors') {
+      return <>
+        <p className="route-status" role="note">
+          Historial sintético para demostración; no corresponde a un registro académico oficial.
+        </p>
+        <AcademicHistory
+          metadata={[{ label: 'Estudiante', value: summaryStudent.name }, { label: 'Código', value: summaryStudent.code },
+            { label: 'Facultad', value: summaryStudent.faculty }, { label: 'Programa', value: summaryStudent.program },
+            { label: 'Plan de estudios', value: summaryStudent.plan }]}
+          metrics={[
+            { label: 'Créditos aprobados', value: String(data.resumen.creditosAprobados), detail: 'Acumulado de la demostración local' },
+            { label: 'Asignaturas aprobadas', value: String(data.resumen.asignaturasAprobadas), detail: 'Cursos distintos aprobados en el ledger sintético' },
+            { label: 'Promedio ponderado', value: data.resumen.promedioPonderado === null
+              ? 'No registrado' : data.resumen.promedioPonderado.toFixed(2), detail: 'Calculado sobre los intentos sintéticos registrados' },
+          ]}
+          averages={data.periodos.map((period) => ({
+            period: period.periodoAcademico,
+            average: period.promedio,
+            displayAverage: period.promedio.toFixed(2),
+            credits: period.creditos,
+          }))}
+          courses={allRows.map((row, index) => ({ period: data.asignaturas[index]!.periodoAcademico,
+            cells: row.map(String), searchable: `${data.asignaturas[index]!.codAsignatura} ${data.asignaturas[index]!.desAsignatura}` }))}
+          emptyMessage="Sin intentos registrados en esta demostración sintética." />
+      </>
+    }
     return <AcademicHistory
       metadata={[
         { label: 'Estudiante', value: summaryStudent.name }, { label: 'Código', value: summaryStudent.code },
@@ -205,18 +233,21 @@ function LoadedTable({ props }: { props: TableScreenProps }) {
   if (props.id === 'reportes-horarios') return <WeeklySchedule data={props.response.data} />
   if (props.id === 'tutoria') return (
     <DataTable headers={['Docente', 'Cod. Asignatura', 'Resolucion', 'Fecha', 'Observacion', 'Acción']}
-      rows={[]} empty={props.response.data.length ? 'Los registros no se pueden mostrar con la información disponible.' : 'No hay tutorías registradas'}
+      rows={[]} empty={props.response.data.length ? 'Los registros no se pueden mostrar con la información disponible.'
+        : getLocalProfileActivation() === 'synthetic-actors' ? 'Sin registros sintéticos en esta demostración. Esto no confirma que un requisito se haya cumplido.' : 'No hay tutorías registradas'}
       className="tutoring-table" />
   )
   if (props.id === 'reportes-evaluaciones') {
     const rows = toEvaluacionRows(props.response.data)
     return <DataTable className="evaluations-table" headers={['Ciclo', 'Asignatura', 'Tipo Evaluación', 'Calificación', 'Fórmula']}
-      rows={rows} empty="No hay evaluaciones registradas." />
+      rows={rows} empty={getLocalProfileActivation() === 'synthetic-actors'
+        ? 'Sin registros sintéticos en esta demostración.' : 'No hay evaluaciones registradas.'} />
   }
   if (props.id === 'reportes-deudas') {
     const rows = toDeudaRows(props.response.data)
     return <DataTable className="debts-table" headers={['Fecha Registro', 'Periodo Académico', 'Concepto', 'Monto Inicial', 'Monto Final', 'Observación']}
-      rows={rows} empty="No hay deudas registradas." />
+      rows={rows} empty={getLocalProfileActivation() === 'synthetic-actors'
+        ? 'Sin registros sintéticos en esta demostración. Esto no indica que una deuda esté pagada.' : 'No hay deudas registradas.'} />
   }
   let headers: string[]
   let values: (string | number)[][]
