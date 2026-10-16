@@ -31,6 +31,18 @@
 .sum-section-dialog__course strong { color: var(--color-sum-accent); }
 .sum-section-dialog__schedule-toggle { width: 1.2rem; height: 1.2rem; border: 0; border-radius: 50%; background: #28c76f; color: #fff; line-height: 1; }
 .sum-section-dialog__actions { display: flex; justify-content: center; gap: 0.5rem; padding: 1rem; border-top: 1px solid var(--color-sum-border); }
+.course-schedule-dialog.sum-section-dialog[open] { display: flex; flex-direction: column; width: min(740px, calc(100vw - 28px)); overflow: hidden; }
+.sum-section-dialog > header, .sum-section-dialog > footer { flex-shrink: 0; }
+.sum-section-dialog > .course-schedule-dialog__body { min-height: 0; overflow: auto; }
+.sum-section-dialog .sum-section-dialog__course { overflow-wrap: anywhere; }
+.course-schedule-dialog.sum-section-dialog table { min-width: 640px; }
+.course-schedule-dialog.sum-section-dialog th, .course-schedule-dialog.sum-section-dialog td { overflow-wrap: anywhere; white-space: normal; }
+.course-schedule-dialog.sum-section-dialog th:nth-child(1) { width: 8%; }
+.course-schedule-dialog.sum-section-dialog th:nth-child(2) { width: 10%; }
+.course-schedule-dialog.sum-section-dialog th:nth-child(3) { width: 12%; }
+.course-schedule-dialog.sum-section-dialog th:nth-child(4) { width: 32%; }
+.course-schedule-dialog.sum-section-dialog th:nth-child(5) { width: 24%; }
+.course-schedule-dialog.sum-section-dialog th:nth-child(6) { width: 14%; }
 .sum-alert { width: min(22rem, calc(100vw - 2rem)); padding: 1.5rem; border: 0; border-radius: 0.5rem; text-align: center; box-shadow: 0 0.5rem 2rem rgb(0 0 0 / 0.25); }
 .sum-alert::backdrop { background: rgb(0 0 0 / 0.4); }
 .sum-alert__icon { color: #6c757d; }

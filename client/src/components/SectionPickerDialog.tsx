@@ -24,7 +24,7 @@ export function SectionPickerDialog({ course, currentSectionId, onAccept, onCanc
 
   const options = buildSectionOptions(course)
   return (
-    <dialog ref={dialogRef} className="course-schedule-dialog" aria-labelledby="sum-section-dialog-title"
+    <dialog ref={dialogRef} className="course-schedule-dialog sum-section-dialog" aria-labelledby="sum-section-dialog-title"
       onCancel={(event) => { event.preventDefault(); onCancel() }}>
       <header className="course-schedule-dialog__header">
         <h2 id="sum-section-dialog-title">Secciones disponibles</h2>
