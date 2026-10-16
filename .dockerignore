@@ -28,6 +28,7 @@
 !raw-types/*.ts
 # Keep private data, local configuration and generated files excluded.
 datos-reales/
+datos-sinteticos/
 **/.env*
 **/node_modules/
 **/dist/

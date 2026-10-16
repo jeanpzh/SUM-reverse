@@ -1,13 +1,22 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { sumApi } from '../data/client'
+import { getLocalProfileActivation, readLocalProfileRoute, sumApi } from '../data/client'
 import { TableScreen } from '../screens/TableScreens'
+import { LocalAcademicView } from '../screens/LocalAcademicView'
 import { RouteError, RoutePending } from '../components/RouteStatus'
 
 export const Route = createFileRoute('/alumnoWebSum/v2/planEstudios')({
-  loader: ({ abortController }) => sumApi.get('plan', { signal: abortController.signal }),
+  loader: async ({ abortController }) => getLocalProfileActivation() === 'synthetic-actors'
+    ? { mode: 'synthetic-actors' as const,
+      response: await readLocalProfileRoute('plan', undefined, { signal: abortController.signal }) }
+    : { mode: 'legacy' as const, response: await sumApi.get('plan', { signal: abortController.signal }) },
   pendingComponent: RoutePending,
   errorComponent: RouteError,
   component: function RouteComponent() {
-    return <TableScreen id="plan-estudios" response={Route.useLoaderData()} />
+    const loaded = Route.useLoaderData()
+    return loaded.mode === 'synthetic-actors'
+      ? 'data' in loaded.response.data.payload
+        ? <TableScreen id="plan-estudios" response={loaded.response.data.payload} />
+        : <LocalAcademicView kind="plan" response={loaded.response.data.payload} />
+      : <TableScreen id="plan-estudios" response={loaded.response} />
   },
 })

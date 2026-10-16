@@ -1,0 +1,44 @@
+# Operator deployment: agents must not run this with private snapshots.
+name: sum-prod
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      NODE_ENV: production
+      SUM_LOCAL_SCENARIOS: '0'
+      HOST: 0.0.0.0
+      PORT: '3000'
+      ASISTENCIAS_FIXTURE: populated
+      MATRICULA_SNAPSHOT_DIR: /snapshots
+      MI_INFORMACION_SNAPSHOT_DIR: /snapshots
+      PLAN_ESTUDIOS_SNAPSHOT_DIR: /snapshots
+    volumes:
+      - type: bind
+        source: ${SUM_SNAPSHOT_SOURCE_DIR:-./datos-reales}
+        target: /snapshots
+        read_only: true
+        bind:
+          create_host_path: false
+    restart: unless-stopped
+    init: true
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+  frontend:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+      args:
+        SUM_DEVTOOLS: '0'
+    ports:
+      - '127.0.0.1:${SUM_PROD_PORT:-5181}:8080'
+    depends_on:
+      backend:
+        condition: service_healthy

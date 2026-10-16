@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ApiResponseMap } from '../data/contracts'
 import { toScheduleEvents } from '../data/adapters'
+import type { ScheduleDisplayEvent } from '../data/localAcademicView'
 import './WeeklySchedule.css'
 
 const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
@@ -12,13 +13,16 @@ function formatTime(minutes: number) {
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(Math.floor(minutes % 60)).padStart(2, '0')}`
 }
 
-export function WeeklySchedule({ data }: { data: ApiResponseMap['horarios']['data'] }) {
+export function WeeklySchedule({ data, displayEvents }: {
+  data: ApiResponseMap['horarios']['data'] | null
+  displayEvents?: ScheduleDisplayEvent[]
+}) {
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60_000)
     return () => clearInterval(timer)
   }, [])
-  const events = toScheduleEvents(data)
+  const events = displayEvents ?? toScheduleEvents(data ?? [])
   const clock = new Intl.DateTimeFormat('en-GB', {
     timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
   }).format(now)
@@ -36,7 +40,7 @@ export function WeeklySchedule({ data }: { data: ApiResponseMap['horarios']['dat
       <h2>Horario semanal</h2>
       <span>Hoy: {days[currentDay]} · {clock} <small>(Lima)</small></span>
     </header>
-    {!events.length ? <p className="weekly-schedule__empty" role="status">No hay horarios registrados.</p> : <>
+    {!events.length && displayEvents === undefined ? <p className="weekly-schedule__empty" role="status">No hay horarios registrados.</p> : <>
       <div className="weekly-schedule__scroll" tabIndex={0} role="region" aria-label="Calendario semanal con horas; desplázate horizontalmente para ver todos los días">
         <div className="weekly-schedule__week">
           <div className="weekly-schedule__days">

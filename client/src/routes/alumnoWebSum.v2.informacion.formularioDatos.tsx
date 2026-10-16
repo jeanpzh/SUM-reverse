@@ -1,16 +1,17 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { sumApi } from '../data/client'
-import { getDataMode } from '../data/client'
+import { getDataMode, getLocalProfileActivation, sumApi } from '../data/client'
 import { StudentForms } from '../screens/StudentForms'
 import { RouteError, RoutePending } from '../components/RouteStatus'
 
 export const Route = createFileRoute('/alumnoWebSum/v2/informacion/formularioDatos')({
-  loader: ({ abortController }) => getDataMode() === 'local'
-    ? Promise.resolve(null)
-    : sumApi.get('perfil', { signal: abortController.signal }),
+  loader: async ({ abortController }) => getLocalProfileActivation() === 'synthetic-actors'
+    ? { mode: 'synthetic-actors' as const, profile: null }
+    : { mode: 'legacy' as const, profile: getDataMode() === 'local'
+      ? null : await sumApi.get('perfil', { signal: abortController.signal }) },
   pendingComponent: RoutePending,
   errorComponent: RouteError,
   component: function RouteComponent() {
-    return <StudentForms profile={Route.useLoaderData()} />
+    const loaded = Route.useLoaderData()
+    return <StudentForms profile={loaded.profile} />
   },
 })

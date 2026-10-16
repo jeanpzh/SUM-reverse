@@ -4,7 +4,7 @@ import { PageTitle } from '../components/Common'
 import { downloadCsv } from '../data/download'
 import { toProfileRows, toStudentSummary } from '../data/adapters'
 import { getMiRepresentation, toFichaLocalData } from '../data/miInformacion'
-import { getDataMode } from '../data/client'
+import { getDataMode, getLocalProfileActivation } from '../data/client'
 
 type Section = { title: string; fields: string[] }
 type FieldView = { id: string; label: string; value: string | null; control: string }
@@ -106,6 +106,10 @@ export function StudentForms({
   const student = useStudent()
   const formResponse = useStudentFormData()
   const { data } = formResponse
+  if (!isSocioeconomic && getLocalProfileActivation() === 'synthetic-actors') {
+    return <><PageTitle>Formulario de Datos Personales</PageTitle>
+      <p className="route-status" role="status">Datos personales no disponibles para perfiles sintéticos. No se muestran valores personales sin una fuente local válida.</p></>
+  }
   const formRepresentation = getMiRepresentation(formResponse)
   const candidateForm = !isSocioeconomic && formRepresentation === 'candidate-v1'
   const fichaRepresentation = ficha ? getMiRepresentation(ficha) : undefined

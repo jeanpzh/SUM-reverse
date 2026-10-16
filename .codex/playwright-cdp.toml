@@ -1,0 +1,13 @@
+# Merge these tables into .codex/config.toml; this template is not auto-loaded.
+# WSL: requires mirrored networking when the browser runs on Windows.
+[mcp_servers.playwright]
+command = "npx"
+args = ["-y", "@playwright/mcp@latest", "--cdp-endpoint=http://127.0.0.1:9222"]
+startup_timeout_sec = 60
+
+# For native Windows, if npx.cmd cannot be executed directly, replace command/args:
+# command = "cmd"
+# args = ["/c", "npx", "-y", "@playwright/mcp@latest", "--cdp-endpoint=http://127.0.0.1:9222"]
+
+[mcp_servers.playwright.tools.browser_tabs]
+approval_mode = "approve"

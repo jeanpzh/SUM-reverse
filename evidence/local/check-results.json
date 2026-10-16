@@ -1,22 +1,22 @@
 {
+  "mode": "mock",
   "routes": 16,
-  "viewport": [
-    1536,
-    735
-  ],
   "pageErrors": [],
   "consoleErrors": [],
   "remoteRequests": [],
+  "apiCalls": [],
   "checks": [
     "16 direct routes",
-    "index redirect",
-    "typed SPA links",
-    "submenu reset",
-    "browser back/forward",
-    "sidebar toggle",
-    "profile initial state",
-    "read-only form fields",
-    "section anchors",
-    "local fixture download"
+    "loaded identity",
+    "typed tables",
+    "form profile fields",
+    "Mi Información submenu and route order",
+    "profile personal and academic panels",
+    "history summary and columns",
+    "personal and socioeconomic sections and observed initial control states",
+    "SPA and history navigation",
+    "CSV matches table",
+    "responsive bento",
+    "no data requests"
   ]
 }

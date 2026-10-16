@@ -8,6 +8,8 @@ import { MatriculaInformacionModule } from './matricula-informacion/matricula-in
 import { ProgramacionModule } from './programacion/programacion.module.js'
 import { PlanEstudiosModule } from './plan-estudios/plan-estudios.module.js'
 import { TutoriaModule } from './tutoria/tutoria.module.js'
+import { MatriculaRegularModule } from './matricula-regular/matricula-regular.module.js'
+import { LocalProfileDashboardModule } from './local-profile-dashboard/local-profile-dashboard.module.js'
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { TutoriaModule } from './tutoria/tutoria.module.js'
     ProgramacionModule,
     PlanEstudiosModule,
     TutoriaModule,
+    MatriculaRegularModule,
+    LocalProfileDashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

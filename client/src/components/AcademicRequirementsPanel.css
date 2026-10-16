@@ -1,0 +1,191 @@
+.academic-requirements-panel {
+  padding: 20px;
+  background: var(--re-surface, #ffffff);
+  border: 1px solid var(--re-border, #d1d5db);
+  border-radius: var(--radius-panel, 8px);
+  margin-bottom: 24px;
+  font-family: inherit;
+  color: var(--re-text, #1f2937);
+}
+
+.academic-requirements-panel__header {
+  margin-bottom: 16px;
+}
+
+.academic-requirements-panel__title {
+  margin: 0 0 6px;
+  font-size: var(--text-section, 1.125rem);
+  font-weight: 600;
+  color: var(--re-heading, #111827);
+}
+
+.academic-requirements-panel__subtitle {
+  margin: 0;
+  font-size: var(--text-body, 0.875rem);
+  color: var(--re-muted, #4b5563);
+}
+
+.academic-requirements-panel__meta-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background-color: var(--re-surface-muted, #f9fafb);
+  border: 1px solid var(--re-border, #e5e7eb);
+  border-radius: 6px;
+}
+
+.academic-requirements-panel__scope-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  font-size: var(--text-data, 0.8125rem);
+}
+
+.academic-requirements-panel__scope-item strong {
+  color: var(--re-heading, #111827);
+  font-weight: 600;
+}
+
+.academic-requirements-panel__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: var(--text-data, 0.8125rem);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.academic-requirements-panel__badge--eligible {
+  background-color: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.academic-requirements-panel__badge--ineligible {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.academic-requirements-panel__badge--pending {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.academic-requirements-panel__status-description {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: var(--text-body, 0.875rem);
+  line-height: 1.4;
+  background-color: #f3f4f6;
+  border-left: 4px solid var(--re-accent, #1d4ed8);
+}
+
+.academic-requirements-panel__section {
+  margin-top: 18px;
+}
+
+.academic-requirements-panel__section-title {
+  margin: 0 0 8px;
+  font-size: var(--text-body, 0.875rem);
+  font-weight: 600;
+  color: var(--re-heading, #111827);
+}
+
+.academic-requirements-panel__causes-list,
+.academic-requirements-panel__gaps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.academic-requirements-panel__cause-card {
+  padding: 10px 14px;
+  background-color: #fff5f5;
+  border: 1px solid #fed7d7;
+  border-left: 4px solid #e53e3e;
+  border-radius: 4px;
+}
+
+.academic-requirements-panel__gap-card {
+  padding: 10px 14px;
+  background-color: #fffaf0;
+  border: 1px solid #feebc8;
+  border-left: 4px solid #dd6b20;
+  border-radius: 4px;
+}
+
+.academic-requirements-panel__card-title {
+  margin: 0 0 4px;
+  font-size: var(--text-body, 0.875rem);
+  font-weight: 600;
+  color: var(--re-heading, #111827);
+}
+
+.academic-requirements-panel__card-desc {
+  margin: 0;
+  font-size: var(--text-data, 0.8125rem);
+  color: var(--re-text, #2d3748);
+  line-height: 1.4;
+}
+
+.academic-requirements-panel__empty-msg {
+  margin: 0 0 12px;
+  font-size: var(--text-data, 0.8125rem);
+  color: #166534;
+  background-color: #f0fdf4;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid #bbf7d0;
+}
+
+.academic-requirements-panel__table-wrapper {
+  overflow-x: auto;
+  margin-top: 8px;
+  border: 1px solid var(--re-border, #e5e7eb);
+  border-radius: 6px;
+}
+
+.academic-requirements-panel__sources-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-data, 0.8125rem);
+  text-align: left;
+}
+
+.academic-requirements-panel__sources-table th,
+.academic-requirements-panel__sources-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--re-border, #e5e7eb);
+}
+
+.academic-requirements-panel__sources-table th {
+  background-color: var(--re-surface-muted, #f9fafb);
+  color: var(--re-heading, #111827);
+  font-weight: 600;
+}
+
+.academic-requirements-panel__sources-table tr:last-child td {
+  border-bottom: none;
+}
+
+.academic-requirements-panel__disclaimer {
+  margin-top: 16px;
+  padding: 10px 14px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: var(--text-meta, 0.75rem);
+  color: var(--re-muted, #64748b);
+  line-height: 1.4;
+}

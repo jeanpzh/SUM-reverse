@@ -1,10 +1,10 @@
 [
   {
     "id": "home",
-    "viewport": {
-      "width": 1536,
-      "height": 735
-    },
+    "viewport": [
+      1536,
+      735
+    ],
     "sidebar": {
       "x": 0,
       "y": 0,
@@ -21,28 +21,26 @@
       "x": 280,
       "y": 70,
       "width": 1240,
-      "height": 3832
+      "height": 1038
     },
     "title": null,
     "summary": {
-      "x": 300,
-      "y": 315,
-      "width": 1200,
-      "height": 274
+      "x": 710.65625,
+      "y": 90,
+      "width": 789.34375,
+      "height": 164
     },
     "table": null,
     "tableHeaders": [],
     "resource": null,
-    "forms": 0,
-    "textboxes": 0,
-    "comboboxes": 0
+    "forms": 0
   },
   {
     "id": "perfil",
-    "viewport": {
-      "width": 1536,
-      "height": 735
-    },
+    "viewport": [
+      1536,
+      735
+    ],
     "sidebar": {
       "x": 0,
       "y": 0,
@@ -66,16 +64,14 @@
     "table": null,
     "tableHeaders": [],
     "resource": null,
-    "forms": 0,
-    "textboxes": 0,
-    "comboboxes": 0
+    "forms": 0
   },
   {
     "id": "historial",
-    "viewport": {
-      "width": 1536,
-      "height": 735
-    },
+    "viewport": [
+      1536,
+      735
+    ],
     "sidebar": {
       "x": 0,
       "y": 0,
@@ -92,7 +88,7 @@
       "x": 280,
       "y": 70,
       "width": 1240,
-      "height": 840
+      "height": 862
     },
     "title": {
       "x": 300,
@@ -121,16 +117,14 @@
       "Acta"
     ],
     "resource": null,
-    "forms": 0,
-    "textboxes": 0,
-    "comboboxes": 0
+    "forms": 0
   },
   {
     "id": "formulario-datos",
-    "viewport": {
-      "width": 1536,
-      "height": 735
-    },
+    "viewport": [
+      1536,
+      735
+    ],
     "sidebar": {
       "x": 0,
       "y": 0,
@@ -147,7 +141,7 @@
       "x": 280,
       "y": 70,
       "width": 1240,
-      "height": 5588
+      "height": 5836
     },
     "title": {
       "x": 300,
@@ -159,16 +153,14 @@
     "table": null,
     "tableHeaders": [],
     "resource": null,
-    "forms": 8,
-    "textboxes": 46,
-    "comboboxes": 69
+    "forms": 8
   },
   {
     "id": "ficha-socioeconomica",
-    "viewport": {
-      "width": 1536,
-      "height": 735
-    },
+    "viewport": [
+      1536,
+      735
+    ],
     "sidebar": {
       "x": 0,
       "y": 0,
@@ -185,7 +177,7 @@
       "x": 280,
       "y": 70,
       "width": 1240,
-      "height": 9151
+      "height": 10409
     },
     "title": {
       "x": 300,
@@ -196,7 +188,7 @@
     "summary": null,
     "table": {
       "x": 705,
-      "y": 5223,
+      "y": 5521,
       "width": 785,
       "height": 100
     },
@@ -204,25 +196,23 @@
       "Nombre",
       "Edad",
       "Parentesco",
-      "Educación",
+      "Grado",
       "Ocupación",
-      "Empleo",
-      "Aporte",
+      "Condición Laboral",
+      "Aporte Económico(S/.)",
       "Enfermedad",
-      "Discapacidad",
+      "Tipo Discapacidad",
       "Acción"
     ],
     "resource": null,
-    "forms": 12,
-    "textboxes": 74,
-    "comboboxes": 108
+    "forms": 13
   },
   {
     "id": "matricula-informacion",
-    "viewport": {
-      "width": 1536,
-      "height": 735
-    },
+    "viewport": [
+      1536,
+      735
+    ],
     "sidebar": {
       "x": 0,
       "y": 0,
@@ -239,7 +229,7 @@
       "x": 280,
       "y": 70,
       "width": 1240,
-      "height": 665
+      "height": 691
     },
     "title": {
       "x": 300,
@@ -251,16 +241,14 @@
     "table": null,
     "tableHeaders": [],
     "resource": null,
-    "forms": 0,
-    "textboxes": 0,
-    "comboboxes": 0
+    "forms": 0
   },
   {
     "id": "programacion-asignaturas",
-    "viewport": {
-      "width": 1536,
-      "height": 735
-    },
+    "viewport": [
+      1536,
+      735
+    ],
     "sidebar": {
       "x": 0,
       "y": 0,
@@ -277,7 +265,7 @@
       "x": 280,
       "y": 70,
       "width": 1240,
-      "height": 7364.625
+      "height": 917
     },
     "title": {
       "x": 300,
@@ -293,31 +281,33 @@
     },
     "table": {
       "x": 320,
-      "y": 513,
+      "y": 507,
       "width": 1160,
-      "height": 6823.625
+      "height": 382
     },
     "tableHeaders": [
-      "",
       "Asignatura",
       "Créd.",
       "Sec.",
       "Docente",
       "Tope",
       "Matriculados",
-      "Horarios"
+      "Horarios",
+      "Horario",
+      "Día",
+      "Horas de clase",
+      "Aula",
+      "Tipo"
     ],
     "resource": null,
-    "forms": 0,
-    "textboxes": 0,
-    "comboboxes": 0
+    "forms": 0
   },
   {
     "id": "reportes-prematricula",
-    "viewport": {
-      "width": 1536,
-      "height": 735
-    },
+    "viewport": [
+      1536,
+      735
+    ],
     "sidebar": {
       "x": 0,
       "y": 0,
@@ -365,16 +355,14 @@
       "Etapa"
     ],
     "resource": null,
-    "forms": 0,
-    "textboxes": 0,
-    "comboboxes": 0
+    "forms": 0
   },
   {
     "id": "reportes-matricula",
-    "viewport": {
-      "width": 1536,
-      "height": 735
-    },
+    "viewport": [
+      1536,
+      735
+    ],
     "sidebar": {
       "x": 0,
       "y": 0,
@@ -419,16 +407,14 @@
       "Docente Asignado"
     ],
     "resource": null,
-    "forms": 0,
-    "textboxes": 0,
-    "comboboxes": 0
+    "forms": 0
   },
   {
     "id": "reportes-horarios",
-    "viewport": {
-      "width": 1536,
-      "height": 735
-    },
+    "viewport": [
+      1536,
+      735
+    ],
     "sidebar": {
       "x": 0,
       "y": 0,
@@ -462,16 +448,14 @@
     "table": null,
     "tableHeaders": [],
     "resource": null,
-    "forms": 0,
-    "textboxes": 0,
-    "comboboxes": 0
+    "forms": 0
   },
   {
     "id": "reportes-evaluaciones",
-    "viewport": {
-      "width": 1536,
-      "height": 735
-    },
+    "viewport": [
+      1536,
+      735
+    ],
     "sidebar": {
       "x": 0,
       "y": 0,
@@ -488,7 +472,7 @@
       "x": 280,
       "y": 70,
       "width": 1256,
-      "height": 604
+      "height": 602
     },
     "title": {
       "x": 300,
@@ -506,7 +490,7 @@
       "x": 320,
       "y": 513,
       "width": 1176,
-      "height": 67
+      "height": 65
     },
     "tableHeaders": [
       "Ciclo",
@@ -516,16 +500,14 @@
       "Fórmula"
     ],
     "resource": null,
-    "forms": 0,
-    "textboxes": 0,
-    "comboboxes": 0
+    "forms": 0
   },
   {
     "id": "reportes-deudas",
-    "viewport": {
-      "width": 1536,
-      "height": 735
-    },
+    "viewport": [
+      1536,
+      735
+    ],
     "sidebar": {
       "x": 0,
       "y": 0,
@@ -571,16 +553,14 @@
       "Observación"
     ],
     "resource": null,
-    "forms": 0,
-    "textboxes": 0,
-    "comboboxes": 0
+    "forms": 0
   },
   {
     "id": "asistencia",
-    "viewport": {
-      "width": 1536,
-      "height": 735
-    },
+    "viewport": [
+      1536,
+      735
+    ],
     "sidebar": {
       "x": 0,
       "y": 0,
@@ -636,16 +616,14 @@
       "(%)"
     ],
     "resource": null,
-    "forms": 0,
-    "textboxes": 0,
-    "comboboxes": 0
+    "forms": 0
   },
   {
     "id": "tutoria",
-    "viewport": {
-      "width": 1536,
-      "height": 735
-    },
+    "viewport": [
+      1536,
+      735
+    ],
     "sidebar": {
       "x": 0,
       "y": 0,
@@ -691,16 +669,14 @@
       "Acción"
     ],
     "resource": null,
-    "forms": 0,
-    "textboxes": 0,
-    "comboboxes": 0
+    "forms": 0
   },
   {
     "id": "plan-estudios",
-    "viewport": {
-      "width": 1536,
-      "height": 735
-    },
+    "viewport": [
+      1536,
+      735
+    ],
     "sidebar": {
       "x": 0,
       "y": 0,
@@ -717,7 +693,7 @@
       "x": 280,
       "y": 70,
       "width": 1240,
-      "height": 4006.625
+      "height": 840
     },
     "title": {
       "x": 300,
@@ -735,7 +711,7 @@
       "x": 320,
       "y": 445,
       "width": 1160,
-      "height": 3533.625
+      "height": 367
     },
     "tableHeaders": [
       "Esp.",
@@ -747,16 +723,14 @@
       "Grupo"
     ],
     "resource": null,
-    "forms": 0,
-    "textboxes": 0,
-    "comboboxes": 0
+    "forms": 0
   },
   {
     "id": "manuales",
-    "viewport": {
-      "width": 1536,
-      "height": 735
-    },
+    "viewport": [
+      1536,
+      735
+    ],
     "sidebar": {
       "x": 0,
       "y": 0,
@@ -785,8 +759,6 @@
       "width": 533,
       "height": 79
     },
-    "forms": 0,
-    "textboxes": 0,
-    "comboboxes": 0
+    "forms": 0
   }
 ]
