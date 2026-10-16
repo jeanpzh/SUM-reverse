@@ -1,3 +1,7 @@
+import type { PlanEstudiosWireEnvelope } from '../../../shared/plan-estudios-wire.mjs'
+import type { ProgramacionRow } from '../programacion/programacion.types.js'
+import type { PerfilAlumno } from '../mi-informacion/mi-informacion.types.js'
+
 export type School = 'SISTEMAS' | 'SOFTWARE'
 
 export type KnowledgeState = 'known' | 'unknown' | 'not-applicable'
@@ -98,7 +102,7 @@ export type AcademicCatalogCourse = Omit<OfferedCourse, 'sections'>
 
 export type AcademicAttempt = {
   courseId: string
-  period: '2025-1' | '2025-2' | '2026-1'
+  period: `${number}-${0 | 1 | 2}`
   sectionNumber: 1 | 2
   grade: number
   result: 'approved' | 'failed'
@@ -138,6 +142,12 @@ export type ActorProfile = {
   }>
   ponderado: number | null
   rules: RuleKnowledge[]
+  scenarioData?: {
+    plan: PlanEstudiosWireEnvelope
+    programming: ProgramacionRow[]
+    profile: PerfilAlumno
+    courseCodes: Record<string, string>
+  }
   academic?: SyntheticAcademicRecord
 }
 

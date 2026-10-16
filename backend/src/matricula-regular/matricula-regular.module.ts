@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common'
-import { createSystemClock } from './clock.js'
+import { createSwitchableClock, createSystemClock } from './clock.js'
 import { ContextService, MATRICULA_REGULAR_CLOCK } from './context.service.js'
 import { MatriculaRegularController } from './matricula-regular.controller.js'
 import { MatriculaRegularRepository } from './matricula-regular.repository.js'
@@ -21,8 +21,8 @@ export { MATRICULA_REGULAR_CLOCK } from './context.service.js'
     ResultService,
     ReportService,
     MatriculaRegularSubmissionPipe,
-    { provide: MATRICULA_REGULAR_CLOCK, useFactory: createSystemClock },
+    { provide: MATRICULA_REGULAR_CLOCK, useFactory: () => createSwitchableClock(createSystemClock()) },
   ],
-  exports: [MatriculaRegularRepository, ContextService, SessionService, MatriculaRegularService, ResultService, ReportService],
+  exports: [MatriculaRegularRepository, ContextService, SessionService, MatriculaRegularService, ResultService, ReportService, MATRICULA_REGULAR_CLOCK],
 })
 export class MatriculaRegularModule {}

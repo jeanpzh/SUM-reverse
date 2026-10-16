@@ -45,9 +45,38 @@ export interface ProfileCatalog {
   profiles: ProfileChoice[]
 }
 
+export declare const scenarioIds: readonly ['regular', 'repitencia', 'tutoria', 'prerrequisito', 'cruce', 'cupo', 'deuda', 'gap-horario', 'prioridad']
+export type ScenarioId = (typeof scenarioIds)[number]
+export interface ScenarioProfile {
+  actorId: ActorId
+  summary: string
+  recommendedCourseIds: string[]
+  expectedResult: string
+}
+export interface ScenarioChoice {
+  scenarioId: ScenarioId
+  label: string
+  description: string
+  profiles: ScenarioProfile[]
+}
+export interface ScenarioCatalog {
+  serverNow: string
+  currentScenarioId: ScenarioId | null
+  scenarios: ScenarioChoice[]
+}
+export interface ScenarioSelectionRequest {
+  runId: MatriculaRegularUuid
+  scenarioId: ScenarioId
+}
+export declare function validateScenarioId(value: unknown): asserts value is ScenarioId
+export declare function validateScenarioSelectionRequest(value: unknown): asserts value is ScenarioSelectionRequest
+export declare function validateScenarioCatalogResponse(value: unknown): asserts value is MatriculaRegularEnvelope<ScenarioCatalog>
+
 export type DashboardPayloadMap<LegacyMap> = Omit<LegacyMap, AcademicKey | ReportKey | 'perfil'> & {
-  perfil: null
-} & Record<AcademicKey, MatriculaRegularContext> &
+  perfil: (LegacyMap extends { perfil: infer P } ? P : never) | null
+  plan: (LegacyMap extends { plan: infer P } ? P : never) | MatriculaRegularContext
+  programacion: (LegacyMap extends { programacion: infer P } ? P : never) | MatriculaRegularContext
+} & Record<Exclude<AcademicKey, 'plan' | 'programacion'>, MatriculaRegularContext> &
   Record<ReportKey, MatriculaRegularEnrollmentReport | null>
 
 export interface DashboardRead<K extends DashboardKey, P> {

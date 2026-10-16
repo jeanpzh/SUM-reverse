@@ -4,6 +4,20 @@ export interface ServerClock {
   now(): Date
 }
 
+export interface SwitchableServerClock extends ServerClock {
+  use(clock: ServerClock): void
+}
+
+export function createSwitchableClock(initial: ServerClock = createSystemClock()): SwitchableServerClock {
+  let current = initial
+  return {
+    now: () => current.now(),
+    use(clock) {
+      current = clock
+    },
+  }
+}
+
 export function createSystemClock(): ServerClock {
   return { now: () => new Date() }
 }

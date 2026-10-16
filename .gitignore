@@ -20,3 +20,6 @@ dist-ssr/
 
 # Operator snapshots: never version or discover through normal file search.
 datos-reales/
+
+# Keep original synthetic inputs local; the generated scenario seed is versioned.
+/datos-sinteticos/

@@ -635,3 +635,12 @@ test('visibility_renewal: only a return to a visible tab renews; disposal remove
   dispose()
   assert.equal(listeners.size, 0)
 })
+
+test('scenario entry refuses a changed run before creating a student session', async () => {
+  const h = harness()
+  h.hooks.run = nextRunId
+  await h.store.enter('SYN-SIS-A', { expectedRunId: runId })
+  assert.equal(h.counts.create, 0)
+  const state = h.store.getSnapshot()
+  assert.ok(state.status === 'error' && state.message.includes('La prueba cambió'))
+})

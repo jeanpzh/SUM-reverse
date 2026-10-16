@@ -5,6 +5,7 @@ import type {
   FichaSocioeconomica,
   FormularioExtendido,
   HistorialAcademico,
+  PerfilAlumno,
 } from '../mi-informacion/mi-informacion.types.js'
 import type {
   AlumnoFixture,
@@ -33,7 +34,7 @@ export type LocalFormularioData = Omit<FormularioExtendido,
 }
 
 export type CompatiblePayloadMap = {
-  perfil: null
+  perfil: ApiEnvelope<PerfilAlumno> | null
   formulario: LocalFormularioData
   historial: HistorialAcademico
   fichaSocioeconomica: FichaSocioeconomica

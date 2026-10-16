@@ -23,6 +23,9 @@ export const dashboardKeys = Object.freeze([
 ])
 
 const actorIds = Object.freeze(['SYN-SIS-A', 'SYN-SIS-B', 'SYN-SOFT-A', 'SYN-SOFT-B'])
+export const scenarioIds = Object.freeze([
+  'regular', 'repitencia', 'tutoria', 'prerrequisito', 'cruce', 'cupo', 'deuda', 'gap-horario', 'prioridad',
+])
 const objectPrototype = Object.prototype
 
 function fail(path, expected) {
@@ -126,6 +129,66 @@ export function validateProfileCatalogResponse(value) {
     runId: string,
     data: validateCatalog,
   }, 'profileCatalogResponse')
+  validateSessionRequest({ runId: envelope.runId, actorId: actorIds[0] })
+}
+
+export function validateScenarioId(value) {
+  if (!scenarioIds.includes(value)) fail('scenarioId', 'escenario sintético permitido')
+}
+
+export function validateScenarioSelectionRequest(value) {
+  const request = exact(value, { runId: string, scenarioId: validateScenarioId }, 'scenarioSelectionRequest')
+  validateSessionRequest({ runId: request.runId, actorId: actorIds[0] })
+}
+
+export function validateScenarioCatalogResponse(value) {
+  const envelope = exact(value, {
+    runId: string,
+    data: (data) => {
+      const catalog = exact(data, {
+        serverNow: canonicalInstant,
+        currentScenarioId: (id) => { if (id !== null) validateScenarioId(id) },
+        scenarios: (items, path) => {
+          if (!Array.isArray(items) || (items.length !== 0 && items.length !== scenarioIds.length)) {
+            fail(path, 'catálogo vacío o nueve escenarios')
+          }
+          items.forEach((item, index) => {
+            exact(item, {
+              scenarioId: (id) => {
+                validateScenarioId(id)
+                if (id !== scenarioIds[index]) fail(`${path}.${index}.scenarioId`, 'orden fijo de escenarios')
+              },
+              label: nonEmpty,
+              description: nonEmpty,
+              profiles: (profiles, profilePath) => {
+                if (!Array.isArray(profiles) || profiles.length !== actorIds.length) fail(profilePath, 'cuatro perfiles')
+                profiles.forEach((profile, profileIndex) => {
+                  exact(profile, {
+                    actorId: (id) => {
+                      if (id !== actorIds[profileIndex]) fail(`${profilePath}.${profileIndex}.actorId`, 'orden fijo de perfiles')
+                    },
+                    summary: nonEmpty,
+                    recommendedCourseIds: (ids, idsPath) => {
+                      if (!Array.isArray(ids) || ids.length === 0 || new Set(ids).size !== ids.length) fail(idsPath, 'cursos únicos')
+                      const prefix = actorIds[profileIndex].startsWith('SYN-SIS-') ? 'SYN-SIS-C' : 'SYN-SOFT-C'
+                      for (const id of ids) {
+                        validateActorId(id)
+                        if (!id.startsWith(prefix)) fail(idsPath, 'cursos del mismo programa')
+                      }
+                    },
+                    expectedResult: nonEmpty,
+                  }, `${profilePath}.${profileIndex}`)
+                })
+              },
+            }, `${path}.${index}`)
+          })
+        },
+      }, 'scenarioCatalogResponse.data')
+      if ((catalog.scenarios.length === 0) !== (catalog.currentScenarioId === null)) {
+        fail('scenarioCatalogResponse.data.currentScenarioId', 'escenario activo correlacionado con catálogo')
+      }
+    },
+  }, 'scenarioCatalogResponse')
   validateSessionRequest({ runId: envelope.runId, actorId: actorIds[0] })
 }
 

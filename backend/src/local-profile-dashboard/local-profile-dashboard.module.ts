@@ -3,11 +3,13 @@ import { MatriculaRegularModule } from '../matricula-regular/matricula-regular.m
 import { LocalProfileDashboardController } from './local-profile-dashboard.controller.js'
 import { LocalProfileDashboardService } from './local-profile-dashboard.service.js'
 import { LocalProfileSessionService } from './local-profile-session.service.js'
+import { LocalScenariosController } from './local-scenarios.controller.js'
+import { LocalScenariosService } from './local-scenarios.service.js'
 
 @Module({
   imports: [MatriculaRegularModule],
-  controllers: [LocalProfileDashboardController],
-  providers: [LocalProfileSessionService, LocalProfileDashboardService],
-  exports: [LocalProfileSessionService, LocalProfileDashboardService],
+  controllers: [LocalProfileDashboardController, LocalScenariosController],
+  providers: [LocalProfileSessionService, LocalProfileDashboardService, LocalScenariosService],
+  exports: [LocalProfileSessionService, LocalProfileDashboardService, LocalScenariosService],
 })
 export class LocalProfileDashboardModule {}

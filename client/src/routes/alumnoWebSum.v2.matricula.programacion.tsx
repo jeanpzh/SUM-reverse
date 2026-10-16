@@ -14,7 +14,9 @@ export const Route = createFileRoute('/alumnoWebSum/v2/matricula/programacion')(
   component: function RouteComponent() {
     const loaded = Route.useLoaderData()
     return loaded.mode === 'synthetic-actors'
-      ? <LocalAcademicView kind="programacion" response={loaded.response.data.payload} />
+      ? 'data' in loaded.response.data.payload
+        ? <TableScreen id="programacion-asignaturas" response={loaded.response.data.payload} />
+        : <LocalAcademicView kind="programacion" response={loaded.response.data.payload} />
       : <TableScreen id="programacion-asignaturas" response={loaded.response} />
   },
 })

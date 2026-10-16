@@ -1,6 +1,6 @@
 import type { ActorProfile, SyntheticAcademicRecord } from './profile.types.js'
 
-const periods = ['2025-1', '2025-2', '2026-1'] as const
+type AcademicPeriod = SyntheticAcademicRecord['attempts'][number]['period']
 
 export class SyntheticAcademicRecordError extends Error {
   readonly field: string
@@ -20,8 +20,8 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function isAcademicPeriod(value: unknown): value is typeof periods[number] {
-  return typeof value === 'string' && periods.some((period) => period === value)
+function isAcademicPeriod(value: unknown): value is AcademicPeriod {
+  return typeof value === 'string' && /^20\d{2}-[012]$/.test(value)
 }
 
 function courseNumber(courseId: string): number {
@@ -84,7 +84,7 @@ export function validateSyntheticAcademicRecord(
   }
   for (const courseId of courses.keys()) visit(courseId)
 
-  const actaPattern = new RegExp(`^SYN-ACTA-${expectedPrefix}-${suffix}-(0[1-9])$`)
+  const actaPattern = new RegExp(`^SYN-ACTA-${expectedPrefix}-${suffix}-([0-9]{2,4})$`)
   const seenCoursePeriod = new Set<string>()
   const seenRecordIds = new Set<string>()
   let previousOrder = -1
@@ -105,9 +105,9 @@ export function validateSyntheticAcademicRecord(
     seenCoursePeriod.add(pair)
     seenRecordIds.add(rawAttempt.recordId)
 
-    const periodIndex = periods.indexOf(rawAttempt.period)
-    const currentPeriodIndex = periods.indexOf(actor.scope.period as typeof periods[number])
-    if (currentPeriodIndex >= 0 && periodIndex >= currentPeriodIndex) invalid(`${path}.period`)
+    const periodIndex = Number(rawAttempt.period.replace('-', ''))
+    const currentPeriod = actor.scope.period.replace('-II', '-2').replace('-I', '-1')
+    if (periodIndex >= Number(currentPeriod.replace('-', ''))) invalid(`${path}.period`)
     const order = periodIndex * 100 + courseNumber(rawAttempt.courseId)
     if (order < previousOrder) invalid(`${path}`)
     previousOrder = order

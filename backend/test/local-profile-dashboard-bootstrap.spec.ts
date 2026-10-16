@@ -85,7 +85,9 @@ it('composition_provenance mounts only the dashboard module and its single enrol
     .filter((wrapper) => wrapper.metatype === MatriculaRegularRepository)
 
   expect(moduleNames).toEqual(['InternalCoreModule', 'LocalProfileDashboardModule', 'MatriculaRegularModule', 'RootTestModule'])
-  expect(controllers.sort((left, right) => left.localeCompare(right))).toEqual(['LocalProfileDashboardController', 'MatriculaRegularController'])
+  expect(controllers.sort((left, right) => left.localeCompare(right))).toEqual([
+    'LocalProfileDashboardController', 'LocalScenariosController', 'MatriculaRegularController',
+  ])
   expect(repositoryProviders).toHaveLength(1)
   expect(app.get(MatriculaRegularRepository)).toBe(repository)
 })

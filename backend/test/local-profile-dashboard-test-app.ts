@@ -21,6 +21,8 @@ import { Test } from '@nestjs/testing'
 import type { INestApplication } from '@nestjs/common'
 import type { ServerClock } from '../dist/matricula-regular/clock.js'
 import type { MatriculaRegularRepository } from '../dist/matricula-regular/matricula-regular.repository.js'
+import type { SyntheticFixture } from '../src/matricula-regular/profile.types.js'
+import type { EnrollmentScenarioBundle } from '../src/matricula-regular/enrollment-scenarios.js'
 
 export const LOCAL_PROFILE_DASHBOARD_HOST = '127.0.0.1'
 
@@ -29,6 +31,8 @@ const BUILD_HINT = 'ejecuta `pnpm --dir backend build` antes de usar el runtime 
 
 export type LocalProfileDashboardTestAppOptions = {
   clock?: ServerClock
+  fixtures?: readonly SyntheticFixture[]
+  scenarios?: readonly EnrollmentScenarioBundle[]
 }
 
 export type LocalProfileDashboardTestApp = {
@@ -79,6 +83,7 @@ async function loadCompiledRuntime() {
     MATRICULA_REGULAR_CLOCK: enrollment.MATRICULA_REGULAR_CLOCK,
     MatriculaRegularRepository: repository.MatriculaRegularRepository,
     createAdvancingSyntheticClock: clock.createAdvancingSyntheticClock,
+    createSwitchableClock: clock.createSwitchableClock,
     createSyntheticAcademicDemoFixture: academicFixtures.createSyntheticAcademicDemoFixture,
   }
 }
@@ -105,10 +110,11 @@ export async function createLocalProfileDashboardTestApp(
   const runtime = await loadCompiledRuntime()
   const clock = options.clock ?? runtime.createAdvancingSyntheticClock()
   assertClock(clock)
+  const activeClock = options.scenarios === undefined ? clock : runtime.createSwitchableClock(clock)
 
   const testingModule = await Test.createTestingModule({ imports: [runtime.LocalProfileDashboardModule] })
     .overrideProvider(runtime.MATRICULA_REGULAR_CLOCK)
-    .useValue(clock)
+    .useValue(activeClock)
     .compile()
   const app = testingModule.createNestApplication({ logger: false })
   let closing: Promise<void> | undefined
@@ -120,11 +126,17 @@ export async function createLocalProfileDashboardTestApp(
     throw error
   }
   const repository = app.get(runtime.MatriculaRegularRepository)
-  const reset = () => repository.resetForTests([
+  const defaultFixtures = [
     runtime.createSyntheticAcademicDemoFixture('SISTEMAS'),
     runtime.createSyntheticAcademicDemoFixture('SOFTWARE'),
-  ])
+  ]
+  const seedFixtures = structuredClone(options.fixtures ?? defaultFixtures)
+  const reset = () => repository.resetForTests(structuredClone(seedFixtures))
   reset()
+  if (options.scenarios !== undefined) {
+    const scenarios = await import('../dist/local-profile-dashboard/local-scenarios.service.js')
+    app.get(scenarios.LocalScenariosService).configure(options.scenarios)
+  }
   let listening: { requested: number; origin: Promise<string> } | undefined
 
   async function bind(port: number): Promise<string> {
@@ -148,7 +160,7 @@ export async function createLocalProfileDashboardTestApp(
   return {
     app,
     repository,
-    clock,
+    clock: activeClock,
     listen(port = 0) {
       if (closing !== undefined) return Promise.reject(new Error('La aplicación sintética ya está cerrada'))
       try {

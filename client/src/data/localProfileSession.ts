@@ -180,7 +180,7 @@ export function createLocalProfileSessionStore(options: {
       if (snapshot.status === 'active') scheduleExpiry()
     }
   }
-  async function enter(actorId: Identity['actorId']): Promise<void> {
+  async function enter(actorId: Identity['actorId'], entryOptions: { expectedRunId?: string } = {}): Promise<void> {
     if (entryPromise) return entryPromise
     if (snapshot.status === 'active' && snapshot.actorId === actorId) return
     if (snapshot.status === 'expired') clearActive('logout')
@@ -190,6 +190,10 @@ export function createLocalProfileSessionStore(options: {
       try {
         const catalog = await options.dashboardApi.catalog()
         if (requestRevision !== entryRevision) return
+        if (entryOptions.expectedRunId !== undefined && catalog.runId !== entryOptions.expectedRunId) {
+          throw new LocalProfileApiError({ kind: 'http', operation: 'catalog', code: 'RUN_CHANGED',
+            message: 'La prueba cambió antes de ingresar. Vuelve a elegir escenario y perfil.' })
+        }
         const profile = catalog.data.profiles.find((candidate) => candidate.actorId === actorId)
         if (!profile) throw new LocalProfileApiError({ kind: 'protocol', operation: 'catalog', message: 'El perfil no pertenece al catálogo sintético.' })
         const session = await options.enrollmentApi.createSession({ runId: catalog.runId, actorId })

@@ -5,6 +5,7 @@ import { createLocalProfileDashboardApi, LocalProfileApiError, readLocalProfileA
 import type { AcademicKey, DashboardKey, Identity } from './localProfileDashboard.ts'
 import { createLocalProfileSessionStore, activeProfileIdentity } from './localProfileSession.ts'
 import { createMatriculaRegularApi } from './matriculaRegular.ts'
+import { localModeStorage, readLocalDevMode } from './localDevMode.ts'
 
 type LocalMiKey = 'perfil' | 'historial' | 'formulario' | 'fichaSocioeconomica'
 
@@ -14,6 +15,9 @@ export function getDataMode() {
 }
 
 export function getLocalProfileActivation() {
+  if (import.meta.env.VITE_SUM_DATA_MODE === 'local' && import.meta.env.VITE_SUM_DEVTOOLS === '1') {
+    return readLocalDevMode(localModeStorage()) === 'SIM' ? 'synthetic-actors' : 'legacy'
+  }
   return readLocalProfileActivation({ mode: import.meta.env.VITE_SUM_DATA_MODE,
     profile: import.meta.env.VITE_SUM_LOCAL_PROFILE })
 }

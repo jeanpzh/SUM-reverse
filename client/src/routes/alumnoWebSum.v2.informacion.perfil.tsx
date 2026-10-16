@@ -22,7 +22,9 @@ export const Route = createFileRoute('/alumnoWebSum/v2/informacion/perfil')({
   errorComponent: RouteError,
   component: function RouteComponent() {
     const loaded = Route.useLoaderData()
-    if (loaded.mode === 'synthetic-actors') return <LocalAcademicView kind="perfil" response={loaded.response.data.payload} />
+    if (loaded.mode === 'synthetic-actors') return loaded.response.data.payload
+      ? <Profile response={loaded.response.data.payload} local representation="local-v1" />
+      : <LocalAcademicView kind="perfil" response={null} />
     return <Profile response={loaded.response} local={loaded.local} representation={loaded.representation} />
   },
 })

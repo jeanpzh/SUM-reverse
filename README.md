@@ -3,6 +3,55 @@
 Réplica independiente con React y NestJS. La aplicación Docker no conecta con
 SUM. El exportador separado lo ejecuta el operador en su equipo con su sesión.
 
+Si ya tienes tus JSON y quieres ver la réplica con tus datos reales, usa
+[Usar los JSON locales del operador](#usar-los-json-locales-del-operador).
+Ese modo los carga directamente, sin generar fixtures derivados.
+
+## Arranque: dos archivos independientes
+
+- `compose.local.yaml`: escenarios y perfiles sintéticos incorporados, puerto **5180**.
+- `compose.prod.yaml`: despliegue de la réplica con JSON del operador, puerto **5181**, sin consola de simulación.
+
+Si aún tienes el arranque anterior abierto, detenlo con `Ctrl+C` antes de iniciar el nuevo local.
+
+Cada archivo arranca por sí solo. No se combinan archivos ni se usan overrides.
+Los proyectos `sum-local` y `sum-prod` mantienen contenedores e imágenes separados.
+
+### Local y escenarios de matrícula
+
+Desde la raíz del proyecto:
+
+```sh
+docker compose -f compose.local.yaml up --build
+```
+
+Abre **http://localhost:5180**. No necesitas Node, pnpm, exportar datos ni elegir
+un escenario desde la terminal. El arranque predeterminado usa fixtures
+sintéticos incorporados; no monta snapshots del operador.
+
+`datos-sinteticos/` no se versiona ni se necesita para compilar o arrancar el modo local.
+La semilla generada se conserva en `backend/src/matricula-regular/scenario-reference.seed.ts`;
+los nueve escenarios, perfiles e historiales se construyen a partir de ella.
+`node scripts/generate-enrollment-scenarios.mjs` puede regenerar los paquetes de
+verificación después de compilar el backend, sin los archivos originales.
+
+Elige escenario y perfil directamente al abrir la página. Opcionalmente, en la consola del navegador (F12 → Consola), cambia de modo:
+
+```js
+MODE = SIM // Acceso con los nueve escenarios y sus perfiles de Sistemas/Software
+MODE = DEV // Vistas SUM existentes, sin selector de simulación
+```
+
+El modo predeterminado es `SIM`: el selector aparece al abrir la aplicación. El cambio se aplica y conserva en esa pestaña,
+sin reiniciar Docker. En `SIM`, elige escenario y estudiante y pulsa **Iniciar
+prueba**. La pantalla explica las asignaturas sugeridas y el resultado esperado.
+Cada inicio reinicia la prueba activa de ese servidor local, incluidas otras
+pestañas; conserva las interfaces SUM del dashboard. El modo `DEV` muestra la
+réplica local, no conecta con producción SUM.
+
+Para detener el entorno usa `Ctrl+C` y `docker compose -f compose.local.yaml down`. Para elegir otro
+puerto: `SUM_PORT=5182 docker compose -f compose.local.yaml up --build`.
+
 ## Flujo: sesión SUM → exportar → generar fixtures → Docker
 
 ### 1. Preparar el equipo
@@ -77,25 +126,25 @@ la cantidad de filas, duraciones y patrones estructurales pueden seguir siendo
 reconocibles. Ambas carpetas se excluyen de Git. Revisa la salida localmente antes
 de compartirla; no se publican automáticamente fixtures ni tablas de equivalencias.
 
-### 4. Levantar los fixtures generados con Docker
+### 4. Consultar los JSON generados con el despliegue de la réplica
 
 ```sh
-docker compose -f compose.yaml -f compose.synthetic.yaml up --build
+SUM_SNAPSHOT_SOURCE_DIR=./datos-sinteticos docker compose -f compose.prod.yaml up --build
 ```
 
-Abre **http://localhost:5180**. Solo monta `datos-sinteticos/` en modo lectura;
+Abre **http://localhost:5181**. Solo monta `datos-sinteticos/` en modo lectura;
 la aplicación no recibe `datos-reales/` ni la sesión SUM. Para repetir el flujo,
 exporta, genera y reinicia el backend; los snapshots se cargan al arrancar.
 Si los contenedores ya estaban ejecutándose, aplica el nuevo conjunto con:
 
 ```sh
-docker compose -f compose.yaml -f compose.synthetic.yaml restart backend
+SUM_SNAPSHOT_SOURCE_DIR=./datos-sinteticos docker compose -f compose.prod.yaml restart backend
 ```
 
 Para detener este modo:
 
 ```sh
-docker compose -f compose.yaml -f compose.synthetic.yaml down
+SUM_SNAPSHOT_SOURCE_DIR=./datos-sinteticos docker compose -f compose.prod.yaml down
 ```
 
 Asistencias, Evaluaciones y Deudas conservan los fixtures de la aplicación:
@@ -202,12 +251,12 @@ de aprobación de una herramienta no aísla los datos de la sesión del navegado
 Validación realizada: sintaxis JavaScript y TOML; no se abrió una instancia
 Windows ni se conectó a CDP o a una sesión SUM durante esta implementación.
 
-## Alternativa: fixtures básicos, sin sesión ni exportación
+## Operar el entorno local
 
 Instala Docker con Docker Compose y, desde la raíz, ejecuta:
 
 ```sh
-docker compose up --build
+docker compose -f compose.local.yaml up --build
 ```
 
 Abre **http://localhost:5180**. El comando instala las dependencias dentro de las
@@ -217,35 +266,64 @@ de iniciar el frontend. No necesitas instalar Node ni pnpm en el equipo.
 Para dejarlo en segundo plano:
 
 ```sh
-docker compose up --build -d
+docker compose -f compose.local.yaml up --build -d
 ```
 
 Para detenerlo y eliminar los contenedores:
 
 ```sh
-docker compose down
+docker compose -f compose.local.yaml down
 ```
 
-Los logs se consultan con `docker compose logs -f`. Si el puerto está ocupado,
-cambia `SUM_PORT` en un archivo `.env` local (por ejemplo, `SUM_PORT=5181`).
+Los logs se consultan con `docker compose -f compose.local.yaml logs -f`. Si el puerto está ocupado,
+cambia `SUM_PORT` en un archivo `.env` local (por ejemplo, `SUM_PORT=5182`).
 
 El frontend compilado se sirve con Nginx; `/api` redirige a NestJS por la red
 interna. Solo el frontend publica un puerto, limitado al equipo local.
-Para aplicar cambios de código, vuelve a ejecutar `docker compose up --build`.
+Si habías seleccionado DEV en la misma pestaña, ejecuta `MODE = SIM` para volver al selector.
+Para aplicar cambios de código, vuelve a ejecutar `docker compose -f compose.local.yaml up --build`.
 
 ## Usar los JSON locales del operador
 
-El operador puede ejecutar este comando desde la raíz:
+El archivo `compose.prod.yaml` despliega la réplica con los JSON del operador. Si ya los tienes en `datos-reales/`, ejecuta desde la raíz:
 
 ```sh
-docker compose -f compose.yaml -f compose.snapshots.yaml up --build
+docker compose -f compose.prod.yaml up --build
 ```
 
-Abre **http://localhost:5180**. Esta configuración monta `./datos-reales` en
+Abre **http://localhost:5181**. Esta configuración monta `./datos-reales` en
 `/snapshots` solo para lectura y activa los cargadores de Matrícula, Mi Información
-y Plan de Estudios. También elimina las variables de fixtures incompatibles.
+y Plan de Estudios. No activa escenarios ni las variables de fixtures incompatibles.
 Los JSON permanecen fuera de las imágenes y de Git; la carpeta debe existir
-en el equipo donde corre Docker. Este modo requiere Compose compatible con `!reset`.
+en el equipo donde corre Docker. El archivo es independiente y no usa etiquetas `!reset`.
+
+Para usar otra carpeta, indica su ruta absoluta (también admite espacios):
+
+```sh
+SUM_SNAPSHOT_SOURCE_DIR='/ruta/a/mis datos SUM' \
+  docker compose -f compose.prod.yaml up --build
+```
+
+También puedes guardar `SUM_SNAPSHOT_SOURCE_DIR=/ruta/a/mis datos SUM` en el
+archivo `.env` local de la raíz. Mantén esa carpeta privada fuera del repositorio.
+Sin la variable, se sigue usando `./datos-reales`.
+
+Los nombres y esquemas deben corresponder a los cargadores existentes:
+
+```text
+mi-perfil.json
+formulario-datos-matricula.json
+historial-academico.json
+matricula-info.json
+programacion-asignaturas.json
+reporte-pre-matricula.json
+reporte-matricula.json
+reporte-horario.json
+plan-estudios.json
+```
+
+Se reutilizan las pantallas y navegación actuales. Los archivos se consultan en
+modo lectura. La simulación y los comandos MODE están desactivados en este despliegue.
 
 El backend valida los esquemas al arrancar y debe reiniciarse si cambian los JSON.
 Los módulos sin soporte de snapshots (Asistencias, Evaluaciones y Deudas)
@@ -255,7 +333,7 @@ sus datos; solo el operador lo inicia y consulta localmente.
 Para detener este modo:
 
 ```sh
-docker compose -f compose.yaml -f compose.snapshots.yaml down
+docker compose -f compose.prod.yaml down
 ```
 
 ## Desarrollo con recarga automática

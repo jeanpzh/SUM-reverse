@@ -1,3 +1,8 @@
+import { validatePlanEstudiosWire } from '../../../shared/plan-estudios-wire.mjs'
+import type { PlanEstudiosWireEnvelope } from '../../../shared/plan-estudios-wire.mjs'
+import { validateMatriculaWire } from '../../../shared/matricula-wire.mjs'
+import type { ProgramacionEnvelope } from '../programacion/programacion.types.js'
+import { projectScenarioProgramming } from './scenario-reference-projection.js'
 import { Injectable } from '@nestjs/common'
 import {
   validateContextResponse,
@@ -32,7 +37,8 @@ type MiKey = 'formulario' | 'historial' | 'fichaSocioeconomica'
 
 export type LocalDashboardPayloadMap = Omit<CompatiblePayloadMap, MiKey> &
   { [Key in MiKey]: ApiEnvelope<CompatiblePayloadMap[Key]> } &
-  Record<AcademicKey, MatriculaRegularContext> &
+  Record<Exclude<AcademicKey, 'plan' | 'programacion'>, MatriculaRegularContext> &
+  { plan: MatriculaRegularContext | PlanEstudiosWireEnvelope; programacion: MatriculaRegularContext | ProgramacionEnvelope } &
   Record<'matricula' | 'horarios', MatriculaRegularEnrollmentReport | null>
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -80,7 +86,7 @@ export class LocalProfileDashboardService {
         historial: () => ({ message: null, codError: null, data: projectProfileRead('historial', actor) }),
         fichaSocioeconomica: () => ({ message: null, codError: null, data: projectProfileRead('fichaSocioeconomica', actor) }),
         matriculaInfo: () => projectAcademicRead('matriculaInfo', snapshot, actorId, now),
-        programacion: () => projectAcademicRead('programacion', snapshot, actorId, now),
+        programacion: () => actor.scenarioData ? projectScenarioProgramming(actor, snapshot) : projectAcademicRead('programacion', snapshot, actorId, now),
         prematricula: () => projectAcademicRead('prematricula', snapshot, actorId, now),
         matricula: () => projectCommittedReport(snapshot, actorId),
         horarios: () => projectCommittedReport(snapshot, actorId),
@@ -88,7 +94,7 @@ export class LocalProfileDashboardService {
         deudas: () => projectProfileRead('deudas', actor),
         asistencias: () => projectProfileRead('asistencias', actor),
         tutoria: () => projectProfileRead('tutoria', actor),
-        plan: () => projectAcademicRead('plan', snapshot, actorId, now),
+        plan: () => actor.scenarioData ? structuredClone(actor.scenarioData.plan) : projectAcademicRead('plan', snapshot, actorId, now),
       }
       const payload = projectors[key]()
       const response = {
@@ -103,13 +109,17 @@ export class LocalProfileDashboardService {
       }
       validateDashboardReadResponse(response, { ...identity, key }, (value: unknown): asserts value is LocalDashboardPayloadMap[K] => {
         if (key === 'perfil') {
-          if (value !== null) throw new TypeError('Perfil sintético no disponible')
+          if (value !== null) validateMiInformacionWire('perfil', value, 'local-v1')
         } else if (key === 'formulario') {
           validateMiInformacionWire('formularioDatos', value, 'local-v1')
         } else if (key === 'historial') {
           validateMiInformacionWire('historial', value, 'local-v1')
         } else if (key === 'fichaSocioeconomica') {
           validateMiInformacionWire('fichaSocioeconomica', value, 'local-v1')
+        } else if (key === 'plan' && isRecord(value) && 'data' in value) {
+          validatePlanEstudiosWire(value)
+        } else if (key === 'programacion' && isRecord(value) && 'data' in value) {
+          validateMatriculaWire('programacion', value)
         } else if (key === 'matriculaInfo' || key === 'programacion' || key === 'prematricula' || key === 'plan') {
           validateContextResponse({ runId: snapshot.runId, data: value }, snapshot.runId, actorId)
         } else if (key === 'matricula' || key === 'horarios') {

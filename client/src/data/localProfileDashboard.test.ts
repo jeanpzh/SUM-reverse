@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { scenarioIds } from '../../../shared/local-profile-dashboard.mjs'
 import { test } from 'node:test'
 import {
   createLocalProfileDashboardApi,
@@ -25,6 +26,16 @@ const profiles = [
   { actorId: 'SYN-SOFT-B', name: 'Estudiante sintético B', scope: scope('SOFTWARE') },
 ]
 const catalogBody = () => ({ runId, data: { serverNow, profiles: structuredClone(profiles) } })
+const scenariosBody = () => ({ runId, data: {
+  serverNow, currentScenarioId: 'regular',
+  scenarios: scenarioIds.map((scenarioId) => ({
+    scenarioId, label: scenarioId, description: 'Escenario local sintético',
+    profiles: profiles.map((profile) => ({
+      actorId: profile.actorId, summary: 'Historial sintético', expectedResult: 'Resultado de referencia',
+      recommendedCourseIds: [profile.actorId.startsWith('SYN-SIS-') ? 'SYN-SIS-C09' : 'SYN-SOFT-C09'],
+    })),
+  })),
+} })
 const context = (actorId = 'SYN-SIS-A') => ({
   actorId, scope: scope('SISTEMAS'), profileRevision: 'MR-SYN-SIS-1', serverNow,
   preEnrollmentEnabled: false, preEnrollmentComplete: true, preEnrollment: [], offerKnown: true, offer: [],
@@ -86,6 +97,34 @@ test('catalog is one credential-free GET without query or body and is validated 
     error instanceof LocalProfileApiError && error.kind === 'protocol' && error.operation === 'catalog')
 })
 
+test('scenario catalog validates all nine cases and rejects duplicated or cross-school recommendations', async () => {
+  const { calls, api } = recorder(() => jsonResponse(scenariosBody()))
+  const response = await api.scenarios()
+  assert.equal(calls[0]!.url, '/api/local/perfiles/v1/escenarios')
+  assert.equal(response.data.scenarios.length, 9)
+  const malformed = scenariosBody()
+  malformed.data.scenarios[0]!.profiles[0]!.recommendedCourseIds = ['SYN-SOFT-C09']
+  await assert.rejects(recorder(() => jsonResponse(malformed)).api.scenarios(), /no cumple el contrato/)
+  const duplicate = scenariosBody()
+  duplicate.data.scenarios[1]!.scenarioId = 'regular'
+  await assert.rejects(recorder(() => jsonResponse(duplicate)).api.scenarios(), /no cumple el contrato/)
+})
+
+test('starting a scenario sends one explicit POST, validates a new run and exposes stale-run errors', async () => {
+  const newRunId = '10000000-0000-4000-8000-000000000099'
+  const { calls, api } = recorder(() => jsonResponse({ ...catalogBody(), runId: newRunId }))
+  const command = { runId, scenarioId: 'tutoria' as const }
+  assert.equal((await api.selectScenario(command)).runId, newRunId)
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0]!.url, '/api/local/perfiles/v1/escenarios/seleccion')
+  assert.equal(calls[0]!.init?.method, 'POST')
+  assert.equal(calls[0]!.init?.credentials, 'omit')
+  assert.deepEqual(JSON.parse(String(calls[0]!.init?.body)), command)
+  await assert.rejects(recorder(() => jsonResponse(catalogBody())).api.selectScenario(command), /ejecución nueva/)
+  await assert.rejects(recorder(() => jsonResponse({ runId: newRunId, error: { code: 'RUN_CHANGED', fields: [] } }, 409))
+    .api.selectScenario(command), (error) => error instanceof LocalProfileApiError && error.code === 'RUN_CHANGED')
+})
+
 test('read sends exactly runId, actorId and sessionId and returns the validated academic payload', async () => {
   const { calls, api } = recorder(() => jsonResponse(readBody('matriculaInfo', context())))
   const response = await api.read('matriculaInfo', identity)
@@ -124,19 +163,21 @@ test('wrong_identity_response_fails: a response for another run, actor, session 
   }
 })
 
-test('payload validation is per key: perfil is exactly null, reports may be null, academic keys reject legacy shapes', async () => {
+test('payload validation accepts full reference views and rejects malformed profile/report payloads', async () => {
   const ok = async (key: 'perfil' | 'matricula' | 'horarios', payload: unknown) =>
     recorder(() => jsonResponse(readBody(key, payload))).api.read(key, identity)
   assert.equal((await ok('perfil', null)).data.payload, null)
   assert.equal((await ok('matricula', null)).data.payload, null)
   assert.equal((await ok('horarios', null)).data.payload, null)
 
-  for (const payload of [{}, [], mockResponses.perfil]) {
+  for (const payload of [{}, []]) {
     await assert.rejects(ok('perfil', payload), (error) => error instanceof LocalProfileApiError && error.kind === 'protocol')
   }
   await assert.rejects(ok('matricula', {}), (error) => error instanceof LocalProfileApiError && error.kind === 'protocol')
-  await assert.rejects(
-    recorder(() => jsonResponse(readBody('programacion', mockResponses.programacion))).api.read('programacion', identity),
+  assert.deepEqual((await ok('perfil', mockResponses.perfil)).data.payload, mockResponses.perfil)
+  const programming = await recorder(() => jsonResponse(readBody('programacion', mockResponses.programacion))).api.read('programacion', identity)
+  assert.deepEqual(programming.data.payload, mockResponses.programacion)
+  await assert.rejects(recorder(() => jsonResponse(readBody('programacion', { data: {} }))).api.read('programacion', identity),
     (error) => error instanceof LocalProfileApiError && error.kind === 'protocol')
 })
 

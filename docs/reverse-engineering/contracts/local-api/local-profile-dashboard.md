@@ -1,4 +1,29 @@
+## Extensión de escenarios completos — 2026-10-16
+
+Decisión local solicitada: los escenarios Docker incorporan los dos conjuntos académicos que el operador confirmó íntegramente sintéticos. Conservan los archivos originales y la interfaz SUM. El plan contiene 97 filas/85 cursos; la programación 165 filas/56 cursos. Software usa esta misma base con escuela adaptada, no un plan oficial verificado. Los horarios/cupos de la primera sección de ocho cursos son variantes explícitas del escenario; el resto conserva los datos fuente.
+
+Se reutilizan contratos existentes: `plan` admite contexto PS-1 o envelope validado por `validatePlanEstudiosWire`; `programacion`, contexto PS-1 o envelope de programación existente; `perfil`, null PS-1 o perfil local-v1. No cambian endpoints, identidad, sesiones ni envelope exterior. El cliente valida cada representación y reutiliza TableScreen y Profile. Los valores vacíos del contrato PS-1 siguen vigentes para ese fixture reducido; los actores enriquecidos incluyen datos personales ficticios, formulario y ficha con valores sintéticos, historial y ponderados calculados. El ledger admite periodos 20xx-0/1/2 anteriores al periodo activo y actas sintéticas únicas de hasta cuatro dígitos.
+
+Cada actor enriquecido tiene 64/65 intentos, nueve periodos, 60/58 aprobadas y ocho cursos válidos en prematrícula. Las repitencias resueltas no son pendientes. Recomendación A: C09,C10,C11,C12 (12 créditos); B: C07,C08,C09,C10 (13 créditos). Prioridad B: C08,C09,C10,C14 omite C07. C13 requiere C09 y permanece fuera de prematrícula; su caso negativo usa C10,C11,C12,C13. Las secciones y los prerrequisitos proceden del catálogo completo. El resultado esperado de los 36 casos no cambia.
+
+Validación y límites: `evidence/local/scenario-access/expanded-data.md`.
+
 # Local profile dashboard API
+
+## Unified local scenario entry (user-requested direct implementation)
+
+Only `/local/login` may change its layout. It lists all nine existing synthetic scenarios and four existing student profiles, with summaries, recommended selections and expected results. All other SUM screens/components/navigation remain unchanged. `prerrequisito` must explain that C13 is excluded before selection; its forged HTTP-only submission is not a UI instruction.
+
+Own API additions, reusing this namespace and existing MR error envelope:
+
+- `GET /local/perfiles/v1/escenarios`, no query/body, returns `{runId,data:{serverNow,currentScenarioId,scenarios}}` validated by `validateScenarioCatalogResponse`; exact shared types `ScenarioCatalog/ScenarioChoice/ScenarioProfile`. Without configured scenario seeds: `scenarios:[]`, `currentScenarioId:null`, preserving legacy four-profile behavior. Configured: all nine in shared `scenarioIds` order, four profiles in existing actor order.
+- `POST /local/perfiles/v1/escenarios/seleccion`, exact JSON `{runId,scenarioId}`, no query, HTTP200 returns the existing `ProfileCatalog` envelope with a fresh runId. Validate body with `validateScenarioSelectionRequest`; invalid paths/query/fields/scenario return 400 INVALID_REQUEST. Mismatched runId returns 409 RUN_CHANGED without effects. The operation queues on the existing repository, starts the chosen synthetic fixture from scratch and clears sessions/requests/enrollments/reports. One active test per local server; starting a new one invalidates other local tabs, which retain existing RUN_CHANGED handling. The access UI states that starting a test restarts the active scenario. No production authentication or endpoint is involved.
+
+The client then enters its selected actor using the existing session flow, guarded by the new runId returned from selection, so a concurrent scenario change cannot silently enter another scenario. Transport/runtime checks remain in the client data layer. No automatic enrollment submission, lost-response replay or modification of recovery intents.
+
+Local browser console: `MODE = DEV` selects the existing development views without the scenario chooser; `MODE = SIM` selects the synthetic entry. Expose `DEV='DEV'`, `SIM='SIM'`, and a validated `MODE` accessor only with local data mode and `VITE_SUM_DEVTOOLS=1`. Assignment persists the mode in the tab's sessionStorage (`sum:mode`) and automatically navigates/reloads (`/` for DEV, `/local/login` for SIM); no process/container restart. Clear only saved local profile session on a real mode change; preserve MR pending-intent records. Assigning the current mode has no effects. Invalid values throw without effects. Default SIM in the Compose local configuration: a fresh tab opens the scenario chooser immediately. No panel. This toggles local presentation/data adapters, not access to production SUM.
+
+Default startup becomes `docker compose -f compose.local.yaml up --build`, with all scenarios bundled into the app; no dataset mount or export/generation command is required. The independent `compose.prod.yaml` remains operator-owned and must not be launched by agents with private data. No overlay files remain. Local Compose must use independently synthetic built-in data. No new dependencies.
 
 **Revision: LPD-CONTRACT-1, 2026-10-14. Status: READY (frozen), reconciled with [LPD-DEC-1](../../plans/local-profile-dashboard-decisions.md); all additions local-only.**
 Authority for the existing enrollment wire remains [MR-CONTRACT-2](matricula-regular.md). This frozen contract adds profile discovery and actor-scoped dashboard reads (logout is client-only, LPD-DEC-1 D3); it does not rename or enlarge MR2 requests, responses, error enums or recovery storage. No production authentication is implemented.
@@ -75,6 +100,14 @@ Run restart/reset creates a new run and removes all sessions/results. `consultas
 | matriculaInfo, programacion, prematricula, plan | Existing Context from same actor/profile/offer and sampled now; reuse ContextService evaluator through extracted snapshot projection, not a second gate evaluator. Plan/prematrícula show known course documents/offer and gaps; no official complete-plan claim. |
 | matricula, horarios | Report copy from snapshot.reports associated with snapshot.enrollments[actorId], or null when no enrollment exists. Association must match actor/scope/revision/enrollment/request; inconsistency500, never seed/null to hide corruption. Rows/totals/schedule exactly committed report. |
 | evaluaciones, deudas, asistencias, tutoria | Existing valid empty envelopes. Show “Sin registros sintéticos en esta demostración”; empty debt/attendance/tutoring does not imply institutional requirements met or fulfilled. Enrollment eligibility still uses actor.institutional, labeled synthetic. |
+
+### PEM-1 opt-in enrollment scenarios (local-only semantic extension)
+
+The explicit `--scenario` launcher option may supply one of the nine fixture bundles defined in [PEM-1](../../plans/perfiles-escenarios-matricula.md). Each bundle keeps the existing four actor IDs, scopes, profile revisions, HTTP schemas and projections. It derives academic state from the synthetic ledger and provides controlled offer, pre-enrollment, capacity, schedules and institutional/tutoring requirements for reproducible local cases. It starts with no enrollment or report; only an accepted submission creates them. This option does not change the default PS-1 bootstrap or authorize UI changes.
+
+The operator explicitly confirmed that `datos-sinteticos/` is entirely synthetic. Only the allowlisted academic fields from its plan file inform Systems course vocabulary, cycles, credits and types; no identity or personal record is imported. Software vocabulary and all scenario rules and schedules remain local design choices. Empty debt/tutoring read envelopes keep their existing meaning and do not establish that the corresponding enrollment requirements are met. Exported expected outcomes are test cases, not observations of SUM. See PEM-1 for precise seeds, provenance and acceptance.
+
+PEM-1b correction: the scenario seed derives pre-enrollment from not-yet-approved offered courses whose prerequisites are explicitly approved in its synthetic history. The same pre-enrollment feeds both dashboard reads and the existing enrollment selector. In these seeds A exposes C09–C12, B exposes C07–C10, and C13 is absent. The `prerrequisito` negative HTTP case deliberately bypasses the selector and must be rejected; it does not authorize displaying an academically unavailable course. This coherence requirement comes from user testimony and local simulation design, without new production observation or wire changes.
 
 ### PS-1 synthetic academic profiles (local-only semantic extension)
 

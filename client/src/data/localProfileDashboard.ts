@@ -3,6 +3,8 @@ import {
   validateDashboardKey,
   validateDashboardReadResponse,
   validateProfileCatalogResponse,
+  validateScenarioCatalogResponse,
+  validateScenarioSelectionRequest,
 } from '../../../shared/local-profile-dashboard.mjs'
 import type {
   AcademicKey,
@@ -12,6 +14,8 @@ import type {
   Identity,
   ProfileCatalog,
   ReportKey,
+  ScenarioCatalog,
+  ScenarioSelectionRequest,
 } from '../../../shared/local-profile-dashboard.mjs'
 import { validateContextResponse, validateEnrollmentReportResponse, validateErrorResponse } from '../../../shared/matricula-regular.mjs'
 import type { MatriculaRegularContext, MatriculaRegularEnrollmentReport, MatriculaRegularEnvelope, MatriculaRegularErrorResponse } from '../../../shared/matricula-regular.mjs'
@@ -23,7 +27,7 @@ export type LocalProfilePayloadMap = DashboardPayloadMap<ApiResponseMap>
 export type LocalProfileCatalogResponse = MatriculaRegularEnvelope<ProfileCatalog>
 export type LocalProfileRead<K extends DashboardKey> = MatriculaRegularEnvelope<DashboardRead<K, LocalProfilePayloadMap[K]>>
 
-export type LocalProfileOperation = 'catalog' | 'read'
+export type LocalProfileOperation = 'catalog' | 'read' | 'scenarios' | 'select-scenario'
 export type LocalProfileApiErrorKind = 'network' | 'aborted' | 'http' | 'protocol' | 'stale' | 'inactive' | 'configuration'
 
 export class LocalProfileApiError extends Error {
@@ -111,7 +115,11 @@ function parseHttpError(value: unknown, operation: LocalProfileOperation, status
 
 function validatePayload<K extends DashboardKey>(key: K, payload: unknown, runId: string, actorId: MatriculaRegularId): asserts payload is LocalProfilePayloadMap[K] {
   if (key === 'perfil') {
-    if (payload !== null) throw new TypeError('perfil: se esperaba null')
+    if (payload !== null) parseResponse('perfil', payload, true, 'local-v1')
+    return
+  }
+  if ((key === 'plan' || key === 'programacion') && payload && typeof payload === 'object' && 'data' in payload) {
+    parseResponse(key, payload, true, undefined, key === 'plan' ? 'candidate-v1' : undefined)
     return
   }
   if (academicKeys.has(key)) {
@@ -144,12 +152,16 @@ export function createLocalProfileDashboardApi(options: { fetchImpl?: typeof fet
   const fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis)
 
   async function request<T>(operation: LocalProfileOperation, path: string, signal?: AbortSignal,
-    validate?: (value: unknown) => asserts value is T, expectedRunId?: string): Promise<T> {
+    validate?: (value: unknown) => asserts value is T, expectedRunId?: string,
+    command?: ScenarioSelectionRequest): Promise<T> {
     if (signal?.aborted) throw errorFor(operation, 'aborted', 'La consulta local fue cancelada.')
     let response: Response
     try {
       response = await fetchImpl(`${prefix}${path}`, {
-        method: 'GET', headers: { Accept: 'application/json' }, credentials: 'omit', signal,
+        method: command ? 'POST' : 'GET',
+        headers: command ? { Accept: 'application/json', 'Content-Type': 'application/json' } : { Accept: 'application/json' },
+        ...(command ? { body: JSON.stringify(command) } : {}),
+        credentials: 'omit', signal,
       })
     } catch (cause) {
       if (signal?.aborted || (cause instanceof DOMException && cause.name === 'AbortError')) {
@@ -174,6 +186,24 @@ export function createLocalProfileDashboardApi(options: { fetchImpl?: typeof fet
       return request('catalog', '/perfiles', requestOptions.signal, validateProfileCatalogResponse)
     },
 
+    scenarios(requestOptions: RequestOptions = {}): Promise<MatriculaRegularEnvelope<ScenarioCatalog>> {
+      return request('scenarios', '/escenarios', requestOptions.signal, validateScenarioCatalogResponse)
+    },
+
+    async selectScenario(command: ScenarioSelectionRequest, requestOptions: RequestOptions = {}): Promise<LocalProfileCatalogResponse> {
+      try {
+        validateScenarioSelectionRequest(command)
+      } catch {
+        throw errorFor('select-scenario', 'protocol', 'La selección de escenario no es válida.')
+      }
+      const response = await request<LocalProfileCatalogResponse>('select-scenario', '/escenarios/seleccion',
+        requestOptions.signal, validateProfileCatalogResponse, command.runId, command)
+      if (response.runId === command.runId) {
+        throw errorFor('select-scenario', 'protocol', 'La prueba no se inició en una ejecución nueva.')
+      }
+      return response
+    },
+
     read<K extends DashboardKey>(key: K, identity: Identity, requestOptions: RequestOptions = {}): Promise<LocalProfileRead<K>> {
       try {
         validateDashboardKey(key)
@@ -189,4 +219,4 @@ export function createLocalProfileDashboardApi(options: { fetchImpl?: typeof fet
   }
 }
 
-export type { AcademicKey, DashboardKey, Identity, ProfileCatalog, ReportKey, MatriculaRegularContext }
+export type { AcademicKey, DashboardKey, Identity, ProfileCatalog, ReportKey, MatriculaRegularContext, ScenarioCatalog }
