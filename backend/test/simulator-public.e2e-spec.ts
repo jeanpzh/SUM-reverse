@@ -5,7 +5,7 @@ import type { INestApplication } from '@nestjs/common'
 import type { MatriculaRegularSubmission } from '../../shared/matricula-regular.mjs'
 import { PostgresEnrollmentStore } from '../src/persistence/postgres-enrollment.store.js'
 
-type Manifest = { campaignId: string; runId: string; contention: 'shared' | 'distributed'; expectedAccepted: number; actors: Array<{ actorId: string; credential: string; selection?: Array<{ courseId: string; sectionId: string }> }>; selection?: Array<{ courseId: string; sectionId: string }> }
+type Manifest = { campaignId: string; runId: string; contention: 'shared' | 'distributed'; expectedAccepted: number; initialEnrollments?: number; actors: Array<{ actorId: string; credential: string; selection?: Array<{ courseId: string; sectionId: string }> }>; selection?: Array<{ courseId: string; sectionId: string }> }
 
 const databaseUrl = process.env.SIMULATOR_TEST_DATABASE_URL
 const campaignId = process.env.SIMULATOR_TEST_CAMPAIGN_ID
@@ -40,7 +40,7 @@ describe.skipIf(!enabled)('public simulator PostgreSQL integration', () => {
     const parsed = new URL(databaseUrl!)
     if (parsed.pathname !== '/sum_simulator_synthetic') throw new Error('Public e2e tests are restricted to the named synthetic database')
     manifest = JSON.parse(await readFile(manifestPath!, 'utf8')) as Manifest
-    if (manifest.campaignId !== campaignId || manifest.actors.length !== 100) throw new Error('Expected the matching 100-actor synthetic seed manifest')
+    if (manifest.campaignId !== campaignId || manifest.actors.length < 2 || manifest.actors.length > 1000) throw new Error('Expected a matching 2..1000 actor synthetic seed manifest')
     process.env.DATABASE_URL = databaseUrl
     process.env.SIMULATOR_DEPLOYMENT = 'public'
     process.env.SIMULATOR_STORAGE = 'postgres'
@@ -48,7 +48,7 @@ describe.skipIf(!enabled)('public simulator PostgreSQL integration', () => {
     process.env.SIMULATOR_PUBLIC_ORIGIN = origin
     process.env.SIMULATOR_INSECURE_COOKIE = '1'
     process.env.SIMULATOR_METRICS_TOKEN = 'synthetic-e2e-metrics-token'
-    process.env.SIMULATOR_LOGIN_IP_LIMIT = '400'
+    process.env.SIMULATOR_LOGIN_IP_LIMIT = String(manifest.actors.length + 20)
     process.env.NODE_ENV = 'test'
     pool = new Pool({ connectionString: databaseUrl, application_name: 'sum-simulator-e2e-admin' })
     const { NestFactory } = await import('@nestjs/core')
@@ -180,7 +180,7 @@ describe.skipIf(!enabled)('public simulator PostgreSQL integration', () => {
     await pool.query('DELETE FROM simulator_campaigns WHERE campaign_id=$1', [rollbackCampaignId])
   }, 30000)
 
-  it('admits exactly ten of one hundred competitors across two instances and preserves replay, identity, and reports', async () => {
+  it('admits the declared cohort across two instances and preserves replay, identity, and reports', async () => {
     const badOrigin = await call(baseA, '/simulator/auth/v1/login', { method: 'POST', headers: { Origin: 'http://evil.invalid' }, body: JSON.stringify({ credential: manifest.actors[0]!.credential }) })
     expect(badOrigin.status).toBe(403)
     const invalidLogin = await call(baseA, '/simulator/auth/v1/login', { method: 'POST', headers: { Origin: origin }, body: JSON.stringify({ credential: manifest.actors[0]!.credential, unexpected: true }) })
@@ -233,7 +233,7 @@ describe.skipIf(!enabled)('public simulator PostgreSQL integration', () => {
     const accepted = outcomes.filter((item) => item.state === 'accepted')
     const full = outcomes.filter((item) => item.causes.some((cause) => cause.code === 'SECTION_FULL'))
     expect(accepted).toHaveLength(manifest.expectedAccepted)
-    expect(full).toHaveLength(100 - manifest.expectedAccepted)
+    expect(full).toHaveLength(manifest.actors.length - manifest.expectedAccepted)
 
     const firstAcceptedIndex = outcomes.findIndex((item) => item.state === 'accepted')
     const replay = await call(baseB, '/local/matricula-regular/v1/solicitudes', { method: 'POST', headers: { Origin: origin, Cookie: authenticated[firstAcceptedIndex]!.cookie }, body: JSON.stringify(submissions[firstAcceptedIndex]) })
@@ -244,7 +244,7 @@ describe.skipIf(!enabled)('public simulator PostgreSQL integration', () => {
     expect(conflict.status).toBe(409)
 
     const acceptedEnrollmentIds = accepted.map((item) => item.enrollmentId!)
-    const foreignReport = await call(baseB, `/local/matricula-regular/v1/reportes/${acceptedEnrollmentIds[0]}?runId=${manifest.runId}&actorId=${manifest.actors[(firstAcceptedIndex + 1) % 100]!.actorId}`, { headers: { Cookie: authenticated[(firstAcceptedIndex + 1) % 100]!.cookie } })
+    const foreignReport = await call(baseB, `/local/matricula-regular/v1/reportes/${acceptedEnrollmentIds[0]}?runId=${manifest.runId}&actorId=${manifest.actors[(firstAcceptedIndex + 1) % manifest.actors.length]!.actorId}`, { headers: { Cookie: authenticated[(firstAcceptedIndex + 1) % manifest.actors.length]!.cookie } })
     expect([403, 404]).toContain(foreignReport.status)
 
     const read = await call(baseB, `/local/perfiles/v1/consultas/perfil?runId=${manifest.runId}&actorId=${manifest.actors[firstAcceptedIndex]!.actorId}&sessionId=${created[firstAcceptedIndex]}`, { headers: { Cookie: authenticated[firstAcceptedIndex]!.cookie } })
@@ -271,7 +271,8 @@ describe.skipIf(!enabled)('public simulator PostgreSQL integration', () => {
       (SELECT sum(occupied) FROM simulator_sections WHERE campaign_id=$1)::text occupied,
       (SELECT count(*) FROM simulator_enrollment_items WHERE campaign_id=$1)::text details,
       (SELECT count(*) FROM simulator_reports WHERE campaign_id=$1)::text reports`, [manifest.campaignId])
-    expect(Object.values(totals.rows[0]!).map(Number)).toEqual([manifest.expectedAccepted, manifest.expectedAccepted * 3, manifest.expectedAccepted * 3, manifest.expectedAccepted])
+    const totalAccepted = manifest.expectedAccepted + (manifest.initialEnrollments ?? 0)
+    expect(Object.values(totals.rows[0]!).map(Number)).toEqual([totalAccepted, totalAccepted * 3, totalAccepted * 3, totalAccepted])
 
     await appA.close()
     const recoveredLogin = await login(manifest.actors[firstAcceptedIndex]!.credential, baseB)

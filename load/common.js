@@ -1,6 +1,22 @@
 import http from 'k6/http'
 import { check } from 'k6'
 import { randomBytes } from 'k6/crypto'
+import { Counter, Gauge } from 'k6/metrics'
+import { validateManifest } from './profile-config.mjs'
+
+const population = new Gauge('scenario_actor_count')
+const accessRefreshes = new Counter('session_access_refreshes')
+const academicRenewals = new Counter('session_academic_renewals')
+const AUTH_TTL_MS = 15 * 60 * 1000
+const RENEW_BEFORE_MS = 90 * 1000
+
+export function safeJson(response) {
+  try {
+    return response && typeof response.json === 'function' ? response.json() : null
+  } catch {
+    return null
+  }
+}
 
 export function runtimeConfig() {
   const base = (__ENV.SIMULATOR_BASE_URL || 'http://web').replace(/\/$/, '')
@@ -11,31 +27,58 @@ export function runtimeConfig() {
   const origin = __ENV.SIMULATOR_ORIGIN || expectedOrigin
   if (origin !== expectedOrigin) throw new Error('SIMULATOR_ORIGIN must be the configured simulator UI origin')
   const file = __ENV.SIMULATOR_MANIFEST || '/runtime/manifest.json'
-  const manifest = JSON.parse(open(file))
-  if (!manifest || !Array.isArray(manifest.actors) || manifest.actors.length !== 100 || typeof manifest.runId !== 'string' || typeof manifest.campaignId !== 'string') throw new Error('Synthetic seed manifest has an invalid shape')
-  const contention = manifest.contention || 'shared'
-  if (contention !== 'shared' && contention !== 'distributed') throw new Error('Synthetic seed contention mode is invalid')
-  const validSelection = (items) => Array.isArray(items) && items.length > 0 && items.every((item) => item && typeof item.courseId === 'string' && typeof item.sectionId === 'string')
-  if (contention === 'shared' && !validSelection(manifest.selection)) throw new Error('Shared synthetic seed selection is invalid')
-  if (contention === 'distributed' && manifest.selection !== undefined) throw new Error('Distributed synthetic seed must use per-actor selections')
-  for (const actor of manifest.actors) {
-    if (!/^SYN-[A-Z0-9-]+$/.test(actor.actorId) || !/^[A-Za-z0-9_-]{43}$/.test(actor.credential)) throw new Error('Synthetic manifest actor credential is invalid')
-    if (contention === 'distributed' && !validSelection(actor.selection)) throw new Error('Distributed synthetic actor selection is invalid')
-    if (contention === 'shared' && actor.selection !== undefined && !validSelection(actor.selection)) throw new Error('Synthetic actor selection is invalid')
-  }
-  const expectedAccepted = manifest.expectedAccepted ?? (contention === 'distributed' ? manifest.actors.length : 10)
-  if (!Number.isSafeInteger(expectedAccepted) || expectedAccepted < 0 || expectedAccepted > manifest.actors.length) throw new Error('Synthetic seed expectedAccepted is outside actor bounds')
-  if (expectedAccepted !== (contention === 'distributed' ? manifest.actors.length : 10)) throw new Error('Synthetic seed accepted count does not match contention mode')
-  return { base, origin, manifest: { ...manifest, contention, expectedAccepted } }
+  const manifest = validateManifest(JSON.parse(open(file)))
+  return { base, origin, manifest }
 }
 
-export function loginAndSession(config, actor) {
-  const headers = { 'Content-Type': 'application/json', Origin: config.origin }
-  const login = http.post(`${config.base}/api/simulator/auth/v1/login`, JSON.stringify({ credential: actor.credential }), { headers, tags: { operation: 'auth', name: 'auth-login' } })
-  if (!check(login, { 'synthetic login succeeds': (r) => r.status === 200 && !!r.json('data.actorId') })) return null
-  const session = http.post(`${config.base}/api/local/matricula-regular/v1/sesiones`, JSON.stringify({ runId: config.manifest.runId, actorId: actor.actorId }), { headers, tags: { operation: 'session', name: 'academic-session' } })
-  if (!check(session, { 'academic session succeeds': (r) => r.status === 200 && !!r.json('data.sessionId') })) return null
-  return { sessionId: session.json('data.sessionId') }
+function headers(config) {
+  return { 'Content-Type': 'application/json', Origin: config.origin }
+}
+
+export function requestTags(config, scenario, operation, name, extra = {}) {
+  return { operation, name, profile: config.manifest.scenarioProfile, actor_count: String(config.manifest.actorCount), load_scenario: __ENV.SCENARIO_NAME || scenario, ...extra }
+}
+
+function expiresAt(value) {
+  const parsed = Date.parse(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+export function loginAndSession(config, actor, scenario = 'shared') {
+  population.add(config.manifest.actorCount)
+  const login = http.post(`${config.base}/api/simulator/auth/v1/login`, JSON.stringify({ credential: actor.credential }), { headers: headers(config), tags: requestTags(config, scenario, 'auth', 'auth-login') })
+  const loginBody = safeJson(login)
+  const loginOk = check(login, { 'synthetic login succeeds': () => login.status === 200 && loginBody?.data?.actorId === actor.actorId && loginBody.data.campaignId === config.manifest.campaignId && loginBody.data.runId === config.manifest.runId && expiresAt(loginBody.data.expiresAt) > Date.now() && expiresAt(loginBody.data.expiresAt) <= Date.now() + AUTH_TTL_MS + 30000 })
+  if (!loginOk) return null
+
+  const session = http.post(`${config.base}/api/local/matricula-regular/v1/sesiones`, JSON.stringify({ runId: config.manifest.runId, actorId: actor.actorId }), { headers: headers(config), tags: requestTags(config, scenario, 'session', 'academic-session') })
+  const sessionBody = safeJson(session)
+  const sessionOk = check(session, { 'academic session succeeds': () => session.status === 200 && sessionBody?.data?.actorId === actor.actorId && sessionBody.data.runId === config.manifest.runId && typeof sessionBody.data.sessionId === 'string' && expiresAt(sessionBody.data.expiresAt) > Date.now() })
+  if (!sessionOk) return null
+  return { sessionId: sessionBody.data.sessionId, sessionExpiresAt: expiresAt(sessionBody.data.expiresAt), accessExpiresAt: expiresAt(loginBody.data.expiresAt) }
+}
+
+export function maintainSession(config, actor, identity, scenario = 'shared') {
+  if (!identity) return false
+  if (identity.accessExpiresAt - Date.now() <= RENEW_BEFORE_MS) {
+    const login = http.post(`${config.base}/api/simulator/auth/v1/login`, JSON.stringify({ credential: actor.credential }), { headers: headers(config), tags: requestTags(config, scenario, 'auth', 'auth-refresh') })
+    const body = safeJson(login)
+    const ok = check(login, { 'access session refresh succeeds before expiry': () => login.status === 200 && body?.data?.actorId === actor.actorId && body.data.campaignId === config.manifest.campaignId && body.data.runId === config.manifest.runId && expiresAt(body.data.expiresAt) > Date.now() && expiresAt(body.data.expiresAt) <= Date.now() + AUTH_TTL_MS + 30000 })
+    if (!ok) return false
+    identity.accessExpiresAt = expiresAt(body.data.expiresAt)
+    accessRefreshes.add(1)
+  }
+
+  if (identity.sessionExpiresAt - Date.now() <= RENEW_BEFORE_MS) {
+    const renewal = http.post(`${config.base}/api/local/matricula-regular/v1/sesiones/${encodeURIComponent(identity.sessionId)}/renovar`, JSON.stringify({ runId: config.manifest.runId, actorId: actor.actorId }), { headers: headers(config), tags: requestTags(config, scenario, 'session', 'academic-session-renew') })
+    const body = safeJson(renewal)
+    const ok = check(renewal, { 'academic session renews before expiry': () => renewal.status === 200 && body?.data?.sessionId === identity.sessionId && body.data.actorId === actor.actorId && body.data.runId === config.manifest.runId && expiresAt(body.data.expiresAt) > Date.now() })
+    if (!ok) return false
+    identity.sessionExpiresAt = expiresAt(body.data.expiresAt)
+    academicRenewals.add(1)
+  }
+
+  return true
 }
 
 export function errorFor(response) {

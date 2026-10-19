@@ -2,12 +2,16 @@
 import assert from 'node:assert/strict'
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
+import { openSync, closeSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import pg from '../backend/node_modules/pg/lib/index.js'
 
 assert.equal(process.env.SIMULATOR_CRASH_TEST, 'independently-synthetic', 'Explicit synthetic crash-test acknowledgement required')
-const compose = ['compose', '--env-file', 'infra/simulator/.env', '-f', 'compose.simulator.yaml']
+const suiteLock = openSync('infra/simulator/runtime/scenarios.lock', 'a', 0o600)
+const lockResult = spawnSync('flock', ['-n', '3'], { stdio: ['ignore', 'pipe', 'pipe', suiteLock] })
+assert.equal(lockResult.status, 0, 'Another scenario suite owns the campaign; do not inject faults concurrently')
+const compose = ['compose']
 const docker = (args) => execFileSync('sudo', ['-n', 'docker', ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
 function serviceIp(service) {
   const id = docker([...compose, 'ps', '-q', service])
@@ -16,19 +20,21 @@ function serviceIp(service) {
   assert.match(ip, /^172\.\d+\.\d+\.\d+$/)
   return ip
 }
-const values = Object.fromEntries((await readFile('infra/simulator/.env', 'utf8')).split('\n').filter((line) => line.includes('=')).map((line) => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]))
+const values = Object.fromEntries((await readFile('infra/simulator/runtime/config.env', 'utf8')).split('\n').filter((line) => line.includes('=')).map((line) => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]))
 const manifest = JSON.parse(await readFile('infra/simulator/runtime/manifest.json', 'utf8'))
 assert.equal(manifest.contention, 'shared')
 const actor = manifest.actors[0]
 const apiA = serviceIp('api-a')
 const apiB = serviceIp('api-b')
 const pool = new pg.Pool({ host: serviceIp('postgres'), port: 5432, user: 'simulator', password: values.SIMULATOR_DB_PASSWORD, database: 'sum_simulator_synthetic', connectionTimeoutMillis: 3000, max: 3, application_name: 'sum-simulator-crash-acceptance' })
-const origin = 'http://127.0.0.1:5189'
-const headers = { Origin: origin, Host: '127.0.0.1:5189', 'Content-Type': 'application/json' }
+const authority = `127.0.0.1:${process.env.SIMULATOR_HTTP_PORT ?? '5189'}`
+const origin = `http://${authority}`
+const headers = { Origin: origin, Host: authority, 'Content-Type': 'application/json' }
 const requestId = randomUUID()
 let locker
 let blockerOpen = false
 let interrupted = null
+let apiKilled = false
 async function call(ip, path, cookie, body) {
   return fetch(`http://${ip}:3000${path}`, { method: body === undefined ? 'GET' : 'POST', headers: { ...headers, ...(cookie ? { Cookie: cookie } : {}) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(15000) })
 }
@@ -65,6 +71,7 @@ try {
   }
   assert.equal(observedMidWrite, true, 'Must observe a blocked detail INSERT after request/enrollment writes')
   docker([...compose, 'kill', '-s', 'SIGKILL', 'api-a'])
+  apiKilled = true
   await interrupted
   await locker.query('ROLLBACK')
   blockerOpen = false
@@ -78,6 +85,7 @@ try {
   docker([...compose, 'start', 'api-a'])
   docker([...compose, 'restart', 'api-b'])
   await Promise.all([ready(apiA), ready(apiB)])
+  apiKilled = false
   const recovered = await call(apiB, `/local/matricula-regular/v1/solicitudes/${requestId}?runId=${manifest.runId}&actorId=${actor.actorId}`, cookie)
   assert.equal((await recovered.json()).data.state, 'unknown')
   const retry = await call(apiB, '/local/matricula-regular/v1/solicitudes', cookie, submission)
@@ -110,5 +118,7 @@ try {
 } finally {
   if (blockerOpen && locker) await locker.query('ROLLBACK').catch(() => undefined)
   if (locker) locker.release()
+  if (apiKilled) docker([...compose, 'start', 'api-a'])
   await pool.end()
+  closeSync(suiteLock)
 }

@@ -5,10 +5,12 @@ import { runtimeConfig } from './common.js'
 
 const config = runtimeConfig()
 const browserVus = Number(__ENV.BROWSER_VUS || 2)
+if (!Number.isSafeInteger(browserVus) || browserVus < 1 || browserVus > config.manifest.actorCount) throw new Error('BROWSER_VUS must use distinct actors available in the synthetic manifest')
 const browserCompleted = new Counter('browser_iterations_completed')
 const browserFailed = new Counter('browser_iterations_failed')
 export const options = {
   systemTags: ['status', 'method', 'scenario', 'group', 'check', 'expected_response'],
+  tags: { profile: config.manifest.scenarioProfile, actor_count: String(config.manifest.actorCount), load_scenario: 'browser' },
   scenarios: { ui_smoke: { executor: 'per-vu-iterations', vus: browserVus, iterations: 1, maxDuration: '2m', options: { browser: { type: 'chromium' } } } },
   thresholds: {
     checks: ['rate==1'],
@@ -22,7 +24,7 @@ export const options = {
 const ready = new Trend('browser_ready_ms')
 
 export default async function () {
-  const actor = config.manifest.actors[(__VU - 1) % config.manifest.actors.length]
+  const actor = config.manifest.actors[__VU - 1]
   let page
   try {
     page = await browser.newPage()

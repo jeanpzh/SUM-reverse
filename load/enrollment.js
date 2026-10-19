@@ -2,7 +2,7 @@ import http from 'k6/http'
 import { check, sleep } from 'k6'
 import { Counter } from 'k6/metrics'
 import { Trend } from 'k6/metrics'
-import { runtimeConfig, loginAndSession, uuidV4 } from './common.js'
+import { runtimeConfig, loginAndSession, requestTags, safeJson, uuidV4 } from './common.js'
 
 const config = runtimeConfig()
 const accepted = new Counter('enrollments_accepted')
@@ -12,7 +12,7 @@ const completed = new Counter('enrollment_iterations_completed')
 const startOffset = new Trend('submit_start_offset_ms')
 const actors = config.manifest.actors
 const expectedAccepted = Number(config.manifest.expectedAccepted)
-const expectedRejected = actors.length - expectedAccepted
+const expectedRejected = Number(config.manifest.expectedRejected)
 const barrierDelay = Number(__ENV.BARRIER_DELAY_MS || 60000)
 const barrierTolerance = Number(__ENV.BARRIER_TOLERANCE_MS || 1000)
 
@@ -28,6 +28,7 @@ const thresholds = {
 if (expectedRejected > 0) thresholds.enrollments_section_full = [`count==${expectedRejected}`]
 
 export const options = {
+  noCookiesReset: true,
   systemTags: ['status', 'method', 'scenario', 'name', 'group', 'check', 'expected_response'],
   scenarios: { hot_section: { executor: 'per-vu-iterations', vus: actors.length, iterations: 1, maxDuration: __ENV.MAX_DURATION || '5m', exec: 'enrollOnce' } },
   thresholds,
@@ -39,16 +40,17 @@ export function setup() {
 
 export function enrollOnce(barrier) {
   const actor = actors[__VU - 1]
-  const identity = loginAndSession(config, actor)
+  const identity = loginAndSession(config, actor, 'enrollment')
   if (!identity) { unexpected.add(1); return }
-  const context = http.get(`${config.base}/api/local/matricula-regular/v1/contextos/${encodeURIComponent(actor.actorId)}`, { tags: { operation: 'prepare', name: 'enrollment-context' } })
-  if (!check(context, { 'enrollment context prepared': (r) => r.status === 200 && !!r.json('data.profileRevision') })) { unexpected.add(1); return }
-  const profileRevision = context.json('data.profileRevision')
+  const context = http.get(`${config.base}/api/local/matricula-regular/v1/contextos/${encodeURIComponent(actor.actorId)}`, { tags: requestTags(config, 'enrollment', 'prepare', 'enrollment-context') })
+  const contextBody = safeJson(context)
+  if (!check(context, { 'enrollment context prepared': () => context.status === 200 && typeof contextBody?.data?.profileRevision === 'string' })) { unexpected.add(1); return }
+  const profileRevision = contextBody.data.profileRevision
   while (Date.now() < barrier.notBefore) sleep(0.1)
   const delay = Math.max(0, Date.now() - barrier.notBefore)
   startOffset.add(delay)
-  if (delay >= barrierTolerance) unexpected.add(1)
-  check(delay, { 'submission is within synchronization tolerance': (value) => value < barrierTolerance })
+  const withinTolerance = check(delay, { 'submission is within synchronization tolerance': (value) => value < barrierTolerance })
+  if (!withinTolerance) { unexpected.add(1); return }
   const requestId = uuidV4()
   const body = {
     runId: config.manifest.runId,
@@ -60,16 +62,17 @@ export function enrollOnce(barrier) {
   }
   const response = http.post(`${config.base}/api/local/matricula-regular/v1/solicitudes`, JSON.stringify(body), {
     headers: { 'Content-Type': 'application/json', Origin: config.origin },
-    tags: { operation: 'submit', name: 'enrollment' },
+    tags: requestTags(config, 'enrollment', 'submit', 'enrollment'),
   })
-  const state = response.json('data.state')
-  if (!check(response, { 'submission has a known terminal outcome': (r) => r.status === 200 && ['accepted', 'rejected'].includes(r.json('data.state')) && r.json('data.requestId') === requestId })) {
+  const responseBody = safeJson(response)
+  const state = responseBody?.data?.state
+  if (!check(response, { 'submission has a known terminal outcome': () => response.status === 200 && ['accepted', 'rejected'].includes(state) && responseBody.data.requestId === requestId })) {
     unexpected.add(1)
     return
   }
   if (state === 'accepted') accepted.add(1)
   else {
-    const causes = response.json('data.causes') || []
+    const causes = responseBody.data.causes || []
     const hasSectionFull = causes.some((cause) => cause.code === 'SECTION_FULL')
     if (hasSectionFull) capacityRejected.add(1)
     else unexpected.add(1)

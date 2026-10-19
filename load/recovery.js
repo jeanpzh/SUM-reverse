@@ -1,7 +1,7 @@
 import http from 'k6/http'
 import { check } from 'k6'
 import { Counter } from 'k6/metrics'
-import { runtimeConfig, loginAndSession, uuidV4 } from './common.js'
+import { runtimeConfig, loginAndSession, requestTags, safeJson, uuidV4 } from './common.js'
 
 const config = runtimeConfig()
 const initialAccepted = new Counter('recovery_initial_accepted')
@@ -35,43 +35,50 @@ export const options = {
 export default function () {
   try {
     const actor = config.manifest.actors[0]
-    const identity = loginAndSession(config, actor)
+    const identity = loginAndSession(config, actor, 'recovery')
     if (!identity) { unexpected.add(1); return }
-    const context = http.get(`${config.base}/api/local/matricula-regular/v1/contextos/${encodeURIComponent(actor.actorId)}`, { tags: { operation: 'prepare', name: 'context' } })
-    if (!check(context, { 'context read succeeds': (r) => r.status === 200 })) { unexpected.add(1); return }
+    const context = http.get(`${config.base}/api/local/matricula-regular/v1/contextos/${encodeURIComponent(actor.actorId)}`, { tags: requestTags(config, 'recovery', 'prepare', 'context') })
+    const contextBody = safeJson(context)
+    if (!check(context, { 'context read succeeds': () => context.status === 200 && typeof contextBody?.data?.profileRevision === 'string' })) { unexpected.add(1); return }
     const requestId = uuidV4()
     const body = {
       runId: config.manifest.runId,
       actorId: actor.actorId,
       sessionId: identity.sessionId,
       requestId,
-      profileRevision: context.json('data.profileRevision'),
+      profileRevision: contextBody.data.profileRevision,
       selection: actor.selection || config.manifest.selection,
     }
     const submitUrl = `${config.base}/api/local/matricula-regular/v1/solicitudes`
-    const submitParams = { headers: { 'Content-Type': 'application/json', Origin: config.origin }, tags: { operation: 'recovery', name: 'enrollment' } }
+    const submitParams = { headers: { 'Content-Type': 'application/json', Origin: config.origin }, tags: requestTags(config, 'recovery', 'submit', 'enrollment') }
     const first = http.post(submitUrl, JSON.stringify(body), submitParams)
-    const firstOk = check(first, { 'initial request accepted': (r) => r.status === 200 && r.json('data.state') === 'accepted' })
-    if (firstOk) initialAccepted.add(1)
-    const expected = JSON.stringify(canonical(first.json()))
-    const replayResponses = http.batch(Array.from({ length: 20 }, () => ({ method: 'POST', url: submitUrl, body: JSON.stringify(body), params: submitParams })))
+    const firstBody = safeJson(first)
+    const firstOk = check(first, { 'initial request accepted': () => first.status === 200 && firstBody?.data?.state === 'accepted' })
+    if (!firstOk) { unexpected.add(1); return }
+    initialAccepted.add(1)
+    const expected = JSON.stringify(canonical(firstBody))
+    const replayParams = { ...submitParams, tags: requestTags(config, 'recovery', 'replay', 'same-request-id') }
+    const replayResponses = http.batch(Array.from({ length: 20 }, () => ({ method: 'POST', url: submitUrl, body: JSON.stringify(body), params: replayParams })))
     for (const response of replayResponses) {
-      const replayOk = check(response, { 'same request id replays complete original outcome': (r) => r.status === 200 && JSON.stringify(canonical(r.json())) === expected })
+      const responseBody = safeJson(response)
+      const replayOk = check(response, { 'same request id replays complete original outcome': () => response.status === 200 && JSON.stringify(canonical(responseBody)) === expected })
       if (replayOk) replays.add(1)
     }
     const mismatch = http.post(`${config.base}/api/local/matricula-regular/v1/solicitudes`, JSON.stringify({ ...body, selection: body.selection.slice(1) }), {
       headers: { 'Content-Type': 'application/json', Origin: config.origin },
       responseCallback: http.expectedStatuses(200, 409),
-      tags: { operation: 'recovery', name: 'payload-conflict' },
+      tags: requestTags(config, 'recovery', 'conflict', 'changed-payload'),
     })
-    const conflictOk = check(mismatch, { 'same id with changed payload conflicts': (r) => r.status === 409 && r.json('error.code') === 'REQUEST_CONFLICT' })
+    const mismatchBody = safeJson(mismatch)
+    const conflictOk = check(mismatch, { 'same id with changed payload conflicts': () => mismatch.status === 409 && mismatchBody?.error?.code === 'REQUEST_CONFLICT' })
     if (conflictOk) payloadConflicts.add(1)
     const newId = http.post(`${config.base}/api/local/matricula-regular/v1/solicitudes`, JSON.stringify({ ...body, requestId: uuidV4() }), {
-      headers: { 'Content-Type': 'application/json', Origin: config.origin }, tags: { operation: 'recovery', name: 'new-request' },
+      headers: { 'Content-Type': 'application/json', Origin: config.origin }, tags: requestTags(config, 'recovery', 'submit', 'new-request'),
     })
-    const duplicateOk = check(newId, { 'new id for enrolled actor is rejected as already enrolled': (r) => r.status === 200 && r.json('data.state') === 'rejected' && (r.json('data.causes') || []).some((cause) => cause.code === 'ALREADY_ENROLLED') })
+    const newIdBody = safeJson(newId)
+    const duplicateOk = check(newId, { 'new id for enrolled actor is rejected as already enrolled': () => newId.status === 200 && newIdBody?.data?.state === 'rejected' && (newIdBody.data.causes || []).some((cause) => cause.code === 'ALREADY_ENROLLED') })
     if (duplicateOk) alreadyEnrolled.add(1)
-    if (!firstOk || !conflictOk || !duplicateOk) unexpected.add(1)
+    if (!conflictOk || !duplicateOk) unexpected.add(1)
   } catch (error) {
     unexpected.add(1)
     throw error
