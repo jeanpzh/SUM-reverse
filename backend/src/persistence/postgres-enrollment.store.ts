@@ -28,22 +28,24 @@ export class PostgresEnrollmentStore implements EnrollmentStore, OnModuleInit {
   }
 
   async readSnapshot(principal: PublicPrincipal): Promise<EnrollmentReadSnapshot> {
-    const client = await this.pool.connect()
+    let client: PoolClient | undefined
     try {
+      client = await this.pool.connect()
       await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY')
       const snapshot = await this.loadSnapshot(client, principal)
       await client.query('COMMIT')
       return snapshot
     } catch (error) {
-      await client.query('ROLLBACK').catch(() => undefined)
+      if (client) await client.query('ROLLBACK').catch(() => undefined)
       if (error instanceof MatriculaRegularError) throw error
       throw new MatriculaRegularError(503, principal.runId, 'STORAGE_UNAVAILABLE')
-    } finally { client.release() }
+    } finally { client?.release() }
   }
 
   async readDashboardSnapshot(principal: PublicPrincipal, academicSessionId: string): Promise<RunSnapshot> {
-    const client = await this.pool.connect()
+    let client: PoolClient | undefined
     try {
+      client = await this.pool.connect()
       await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY')
       const session = await client.query('SELECT 1 FROM simulator_academic_sessions WHERE campaign_id=$1 AND actor_id=$2 AND session_id=$3 AND expires_at>now()', [principal.campaignId, principal.actorId, academicSessionId])
       if (!session.rowCount) throw new MatriculaRegularError(403, principal.runId, 'SESSION_CONTEXT_MISMATCH')
@@ -53,10 +55,10 @@ export class PostgresEnrollmentStore implements EnrollmentStore, OnModuleInit {
       await client.query('COMMIT')
       return { ...state, requests: [...state.requests.entries()], enrollments: [...state.enrollments.entries()], reports: [...state.reports.entries()] }
     } catch (error) {
-      await client.query('ROLLBACK').catch(() => undefined)
+      if (client) await client.query('ROLLBACK').catch(() => undefined)
       if (error instanceof MatriculaRegularError) throw error
       throw new MatriculaRegularError(503, principal.runId, 'STORAGE_UNAVAILABLE')
-    } finally { client.release() }
+    } finally { client?.release() }
   }
 
   async createAcademicSession(principal: PublicPrincipal) {
