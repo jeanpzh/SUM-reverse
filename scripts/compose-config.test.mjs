@@ -50,7 +50,8 @@ test('default Compose starts the complete synthetic stack without environment bo
   assert.equal(simulator.services.k6.environment.SIMULATOR_HTTP_PORT, '5189')
   assert.equal(simulator.services.postgres.ports, undefined)
   assert.deepEqual(simulator.services.postgres.command, ['postgres'])
-  assert.equal(simulator.services.prometheus.ports, undefined)
+  assert.equal(simulator.services.prometheus.ports[0].host_ip, '127.0.0.1')
+  assert.equal(simulator.services.prometheus.ports[0].published, '9090')
   assert.equal(simulator.services.postgres.depends_on['simulator-init'].condition, 'service_completed_successfully')
   assert.equal(simulator.services['api-a'].depends_on.seed.condition, 'service_completed_successfully')
   for (const service of Object.values(simulator.services)) {
@@ -62,4 +63,11 @@ test('default Compose starts the complete synthetic stack without environment bo
     }
   }
   assert.ok(simulator.services.k6.profiles.includes('load'))
+  const exporter = simulator.services['metrics-exporter']
+  assert.ok(exporter)
+  assert.equal(exporter.ports, undefined)
+  assert.equal(exporter.user, '1000:1000')
+  assert.equal(exporter.volumes.every(mount => mount.read_only), true)
+  assert.equal(exporter.depends_on['api-a'].condition, 'service_healthy')
+  assert.equal(exporter.depends_on['api-b'].condition, 'service_healthy')
 })

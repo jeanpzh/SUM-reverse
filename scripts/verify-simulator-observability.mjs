@@ -28,7 +28,7 @@ assert.equal(provisioned.meta.provisioned, true)
 assert.equal(dashboard.uid, 'sum-simulator-k6')
 assert.ok(dashboard.templating.list.some((variable) => variable.name === 'testid'))
 assert.ok(dashboard.panels.length >= 8)
-const expected = { accepted: Number(process.env.EXPECTED_ACCEPTED ?? 10), sectionFull: Number(process.env.EXPECTED_SECTION_FULL ?? 90), completed: 100 }
+const expected = { accepted: Number(process.env.EXPECTED_ACCEPTED ?? 10), sectionFull: Number(process.env.EXPECTED_SECTION_FULL ?? 90), completed: Number(process.env.EXPECTED_COMPLETED ?? 100) }
 const expressions = {
   accepted: `sum(max_over_time(k6_enrollments_accepted_total{testid="${testid}"}[24h]))`,
   sectionFull: `sum(max_over_time(k6_enrollments_section_full_total{testid="${testid}"}[24h]))`,
@@ -105,8 +105,8 @@ if (process.env.OBSERVABILITY_SKIP_BROWSER !== '1') {
     assert.ok(!visibleText.includes('Dashboard not found'))
     assert.match(visibleText, /Accepted/)
     assert.match(visibleText, /Section full/)
-    assert.match(visibleText, /\b10\b/)
-    assert.match(visibleText, /\b90\b/)
+    assert.ok(new RegExp(`\\b${expected.accepted}\\b`).test(visibleText))
+    assert.ok(new RegExp(`\\b${expected.sectionFull}\\b`).test(visibleText))
     await page.screenshot({ path: resolve(output, 'grafana-dashboard.png'), fullPage: true })
     await writeFile(resolve(output, 'browser-result.json'), JSON.stringify({ passed: true, testid, externalRequests: 0, pageErrors: errors, datasourceErrors: dataErrors, viewport: { width: 1536, height: 1000 } }, null, 2))
   } finally {
@@ -115,4 +115,4 @@ if (process.env.OBSERVABILITY_SKIP_BROWSER !== '1') {
   }
 }
 await writeFile(resolve(output, process.env.OBSERVABILITY_SKIP_BROWSER === '1' ? 'persistence-result.json' : 'metrics-result.json'), JSON.stringify({ passed: true, testid, values, submissionP95Ms, seriesCount: series.data.length, noIdentityLabels: true, dashboardUid: dashboard.uid, panelQueriesChecked }, null, 2))
-console.log('PASS: Grafana → Prometheus → actual k6 metrics; exact100 completed10 accepted90 full0 unexpected; no identity labels')
+console.log(`PASS: Grafana → Prometheus → actual k6 metrics; ${expected.completed} completed, ${expected.accepted} accepted, ${expected.sectionFull} full, 0 unexpected; no identity labels`)

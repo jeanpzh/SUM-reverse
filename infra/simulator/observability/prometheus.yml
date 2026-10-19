@@ -2,6 +2,10 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
-# k6 pushes metrics through the enabled remote-write receiver. The simulator
-# itself is intentionally not scraped, so no identity-bearing labels are added.
-scrape_configs: []
+# k6 pushes its results; this internal collector exposes only bounded operational
+# labels, never actor, session, credential, raw URL, or academic data.
+scrape_configs:
+  - job_name: simulator-operations
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['metrics-exporter:9100']

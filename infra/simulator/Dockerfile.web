@@ -14,6 +14,9 @@ RUN pnpm build
 
 FROM nginx:1.29.5-alpine@sha256:1eff5a5f3fcf8431a0abb7eddf5471fec24e5e1905a2581aeacdb07a4479b92b
 ENV SIMULATOR_HTTP_PORT=5189
+ENV SIMULATOR_TAILNET_ORIGIN=disabled
+ENV SIMULATOR_TAILNET_AUTHORITY=disabled.invalid
+ENV SIMULATOR_TAILNET_HOST=disabled.invalid
 COPY infra/simulator/nginx.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/client/dist /usr/share/nginx/html
 EXPOSE 80

@@ -37,6 +37,7 @@ services:
     command: ["node", "dist/scripts/migrate-simulator.js"]
     volumes: &api-volumes
       - ./infra/simulator/runtime:/runtime
+      - ./infra/simulator/scenario-results.mjs:/opt/simulator/scenario-results.mjs:ro
       - ./infra/simulator/load-runtime-env.sh:/opt/simulator/load-runtime-env.sh:ro
       - ./infra/simulator/run-api.sh:/opt/simulator/run-api.sh:ro
     depends_on:
@@ -118,6 +119,9 @@ services:
         VITE_SUM_SIMULATOR: "1"
         VITE_SUM_DATA_MODE: local
         VITE_SUM_API_BASE_URL: /api
+    env_file:
+      - path: ./infra/simulator/runtime/tailscale.env
+        required: false
     environment:
       SIMULATOR_HTTP_PORT: ${SIMULATOR_HTTP_PORT:-5189}
     ports:
@@ -149,6 +153,7 @@ services:
       K6_PROMETHEUS_RW_SERVER_URL: http://prometheus:9090/api/v1/write
       K6_PROMETHEUS_RW_PUSH_INTERVAL: 5s
       K6_PROMETHEUS_RW_TREND_STATS: p(95),p(99),avg,max
+      K6_SUMMARY_TREND_STATS: avg,min,med,max,p(90),p(95),p(99)
     volumes:
       - ./infra/simulator/runtime/manifest.json:/runtime/manifest.json:ro
       - ./load:/load:ro
@@ -179,6 +184,7 @@ services:
       K6_PROMETHEUS_RW_SERVER_URL: http://prometheus:9090/api/v1/write
       K6_PROMETHEUS_RW_PUSH_INTERVAL: 5s
       K6_PROMETHEUS_RW_TREND_STATS: p(95),p(99),avg,max
+      K6_SUMMARY_TREND_STATS: avg,min,med,max,p(90),p(95),p(99)
     volumes:
       - ./infra/simulator/runtime/manifest.json:/runtime/manifest.json:ro
       - ./load:/load:ro
@@ -206,6 +212,20 @@ services:
       seed:
         condition: service_completed_successfully
 
+  metrics-exporter:
+    image: node:24.22.0-bookworm-slim@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5
+    user: "1000:1000"
+    command: ["node", "/opt/simulator/metrics-exporter.mjs"]
+    volumes:
+      - ./infra/simulator/metrics-exporter.mjs:/opt/simulator/metrics-exporter.mjs:ro
+      - ./infra/simulator/runtime/config.env:/runtime/config.env:ro
+    depends_on:
+      api-a:
+        condition: service_healthy
+      api-b:
+        condition: service_healthy
+    restart: unless-stopped
+
   prometheus:
     image: prom/prometheus:v3.13.4@sha256:87861b8cf91579109319ebc300f3f1060e6da9c05d6ae8ad15a20c879e84e32e
     command:
@@ -217,6 +237,8 @@ services:
     volumes:
       - ./infra/simulator/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - simulator_prometheus_data:/prometheus
+    ports:
+      - "127.0.0.1:${SIMULATOR_PROMETHEUS_PORT:-9090}:9090"
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:9090/-/ready >/dev/null"]
       interval: 10s
