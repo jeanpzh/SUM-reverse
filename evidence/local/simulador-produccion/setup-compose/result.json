@@ -1,0 +1,273 @@
+{
+  "date": "2026-10-19",
+  "source": "owned Docker stacks with independently constructed synthetic fixtures",
+  "compose_version": "2.40.3",
+  "fresh_start_exit": 0,
+  "fresh_start": {
+    "fresh_without_legacy_env": true,
+    "mode_runtime": "0o700",
+    "mode_results": "0o700",
+    "mode_config.env": "0o600",
+    "mode_manifest.json": "0o600",
+    "api": {
+      "status": "ok",
+      "dataSource": "independently-synthetic",
+      "storage": "postgres"
+    },
+    "grafana": {
+      "database": "ok",
+      "version": "13.2.4",
+      "commit": "0e79aef9d91abf3bdadae9af15763029072fb45b"
+    },
+    "render_contains_no_generated_secrets": true
+  },
+  "runs": [
+    {
+      "testid": "c3021cba-0fc5-454f-88b5-26a5fd73c531",
+      "outcomes": {
+        "enrollments_accepted": 10,
+        "enrollments_section_full": 90,
+        "enrollments_unexpected": 0,
+        "enrollment_iterations_completed": 100,
+        "dropped_iterations": 0
+      },
+      "submission_p95_ms": 1098.0132557499999
+    },
+    {
+      "testid": "5527ee09-d210-4573-8b78-a0bd3a033ea0",
+      "outcomes": {
+        "enrollments_accepted": 10,
+        "enrollments_section_full": 90,
+        "enrollments_unexpected": 0,
+        "enrollment_iterations_completed": 100,
+        "dropped_iterations": 0
+      },
+      "submission_p95_ms": 1018.88105615
+    }
+  ],
+  "sql_first": {
+    "campaignStatus": "open",
+    "totals": {
+      "actors": "100",
+      "sections": "3",
+      "capacity": "210",
+      "occupied": "30",
+      "requests": "100",
+      "enrollments": "10",
+      "reports": "10"
+    },
+    "checks": [
+      {
+        "name": "capacity_bounds",
+        "violations": "0"
+      },
+      {
+        "name": "occupied_matches_items",
+        "violations": "0"
+      },
+      {
+        "name": "enrollment_details_nonempty",
+        "violations": "0"
+      },
+      {
+        "name": "report_per_enrollment",
+        "violations": "0"
+      },
+      {
+        "name": "accepted_request_per_enrollment",
+        "violations": "0"
+      },
+      {
+        "name": "enrollment_request_report_links",
+        "violations": "0"
+      },
+      {
+        "name": "rejected_requests_have_no_effects",
+        "violations": "0"
+      },
+      {
+        "name": "details_match_outcome_selection",
+        "violations": "0"
+      }
+    ],
+    "passed": true
+  },
+  "sql_after_fresh_rotation": {
+    "campaignStatus": "open",
+    "totals": {
+      "actors": "100",
+      "sections": "3",
+      "capacity": "210",
+      "occupied": "0",
+      "requests": "0",
+      "enrollments": "0",
+      "reports": "0"
+    },
+    "checks": [
+      {
+        "name": "capacity_bounds",
+        "violations": "0"
+      },
+      {
+        "name": "occupied_matches_items",
+        "violations": "0"
+      },
+      {
+        "name": "enrollment_details_nonempty",
+        "violations": "0"
+      },
+      {
+        "name": "report_per_enrollment",
+        "violations": "0"
+      },
+      {
+        "name": "accepted_request_per_enrollment",
+        "violations": "0"
+      },
+      {
+        "name": "enrollment_request_report_links",
+        "violations": "0"
+      },
+      {
+        "name": "rejected_requests_have_no_effects",
+        "violations": "0"
+      },
+      {
+        "name": "details_match_outcome_selection",
+        "violations": "0"
+      }
+    ],
+    "passed": true
+  },
+  "sql_second": {
+    "campaignStatus": "open",
+    "totals": {
+      "actors": "100",
+      "sections": "3",
+      "capacity": "210",
+      "occupied": "30",
+      "requests": "100",
+      "enrollments": "10",
+      "reports": "10"
+    },
+    "checks": [
+      {
+        "name": "capacity_bounds",
+        "violations": "0"
+      },
+      {
+        "name": "occupied_matches_items",
+        "violations": "0"
+      },
+      {
+        "name": "enrollment_details_nonempty",
+        "violations": "0"
+      },
+      {
+        "name": "report_per_enrollment",
+        "violations": "0"
+      },
+      {
+        "name": "accepted_request_per_enrollment",
+        "violations": "0"
+      },
+      {
+        "name": "enrollment_request_report_links",
+        "violations": "0"
+      },
+      {
+        "name": "rejected_requests_have_no_effects",
+        "violations": "0"
+      },
+      {
+        "name": "details_match_outcome_selection",
+        "violations": "0"
+      }
+    ],
+    "passed": true
+  },
+  "restart": {
+    "same_campaign_and_secrets": true,
+    "same_manifest": true,
+    "same_metrics_after_restart": true
+  },
+  "legacy_upgrade": {
+    "legacy_environment_preserved": true,
+    "legacy_manifest_preserved": true,
+    "legacy_grafana_history_preserved": true
+  },
+  "wrapper_negative_checks": {
+    "threshold_failure": 99,
+    "remote_write_failure": 1
+  },
+  "negative_sql_audit_exit": 1,
+  "ui_origin_checks": {
+    "login": 200,
+    "logout": 204,
+    "external_origin": 403
+  },
+  "browser": {
+    "exit": 0,
+    "completed": 2,
+    "failed": 0,
+    "http_requests": 50,
+    "http_failed": 0
+  },
+  "main_ready_audit": {
+    "campaignStatus": "open",
+    "totals": {
+      "actors": "100",
+      "sections": "3",
+      "capacity": "210",
+      "occupied": "0",
+      "requests": "0",
+      "enrollments": "0",
+      "reports": "0"
+    },
+    "checks": [
+      {
+        "name": "capacity_bounds",
+        "violations": "0"
+      },
+      {
+        "name": "occupied_matches_items",
+        "violations": "0"
+      },
+      {
+        "name": "enrollment_details_nonempty",
+        "violations": "0"
+      },
+      {
+        "name": "report_per_enrollment",
+        "violations": "0"
+      },
+      {
+        "name": "accepted_request_per_enrollment",
+        "violations": "0"
+      },
+      {
+        "name": "enrollment_request_report_links",
+        "violations": "0"
+      },
+      {
+        "name": "rejected_requests_have_no_effects",
+        "violations": "0"
+      },
+      {
+        "name": "details_match_outcome_selection",
+        "violations": "0"
+      }
+    ],
+    "passed": true
+  },
+  "failed_attempts_excluded": [
+    "PostgreSQL wrapper omitted postgres command",
+    "k6 initialization rejected test port",
+    "proxy fixed Origin rejected preparatory login"
+  ],
+  "scope_limits": [
+    "Local synthetic deployment only",
+    "Browser smoke checks dashboard login and shell; no new visual parity claim",
+    "Enrollment load must use a fresh campaign"
+  ]
+}

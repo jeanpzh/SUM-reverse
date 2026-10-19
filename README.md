@@ -7,15 +7,43 @@ Si ya tienes tus JSON y quieres ver la réplica con tus datos reales, usa
 [Usar los JSON locales del operador](#usar-los-json-locales-del-operador).
 Ese modo los carga directamente, sin generar fixtures derivados.
 
-## Arranque: dos archivos independientes
+## Simulador PostgreSQL y Grafana: un comando
+
+Desde la raíz, con Docker Compose 2.24 o posterior:
+
+```sh
+docker compose up --build -d
+```
+
+Abre la web en **http://127.0.0.1:5189** y Grafana en
+**http://127.0.0.1:5190/d/sum-simulator-k6**. Docker prepara automáticamente
+los secretos locales, la base sintética, los 100 alumnos, las dos API y el dashboard.
+No requiere instalar Node ni ejecutar scripts de setup en el host.
+
+Para correr la prueba de cupos sobre la campaña recién creada:
+
+```sh
+docker compose run --rm k6
+```
+
+El resultado esperado es 10 aceptaciones y 90 rechazos por cupo. Selecciona el
+`testid` de la ejecución en Grafana. La carga se inicia únicamente con ese
+comando; una segunda carrera necesita una campaña nueva porque los cupos ya
+estarán ocupados. Reiniciar el stack conserva la campaña y los resultados.
+
+Para detenerlo conservando los datos: `docker compose down`.
+Consulta [la guía del simulador](infra/simulator/README.md) para lecturas,
+auditorías y rotación de campañas.
+
+## Otros modos de arranque
 
 - `compose.local.yaml`: escenarios y perfiles sintéticos incorporados, puerto **5180**.
 - `compose.prod.yaml`: despliegue de la réplica con JSON del operador, puerto **5181**, sin consola de simulación.
 
 Si aún tienes el arranque anterior abierto, detenlo con `Ctrl+C` antes de iniciar el nuevo local.
 
-Cada archivo arranca por sí solo. No se combinan archivos ni se usan overrides.
-Los proyectos `sum-local` y `sum-prod` mantienen contenedores e imágenes separados.
+Estos dos archivos arrancan por sí solos y se seleccionan explícitamente.
+Los proyectos `sum-local`, `sum-prod` y `sum-simulator` mantienen contenedores y datos separados.
 
 ### Local y escenarios de matrícula
 
