@@ -13,6 +13,7 @@ ENV VITE_SUM_SIMULATOR=${VITE_SUM_SIMULATOR} VITE_SUM_DATA_MODE=${VITE_SUM_DATA_
 RUN pnpm build
 
 FROM nginx:1.29.5-alpine@sha256:1eff5a5f3fcf8431a0abb7eddf5471fec24e5e1905a2581aeacdb07a4479b92b
-COPY infra/simulator/nginx.conf /etc/nginx/conf.d/default.conf
+ENV SIMULATOR_HTTP_PORT=5189
+COPY infra/simulator/nginx.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/client/dist /usr/share/nginx/html
 EXPOSE 80

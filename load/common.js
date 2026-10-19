@@ -5,8 +5,11 @@ import { randomBytes } from 'k6/crypto'
 export function runtimeConfig() {
   const base = (__ENV.SIMULATOR_BASE_URL || 'http://web').replace(/\/$/, '')
   if (!/^http:\/\/(?:web|localhost(?::\d+)?|127\.0\.0\.1(?::\d+)?|\[::1\](?::\d+)?)$/.test(base)) throw new Error('SIMULATOR_BASE_URL must target the owned web service or loopback')
-  const origin = __ENV.SIMULATOR_ORIGIN || 'http://127.0.0.1:5189'
-  if (origin !== 'http://127.0.0.1:5189') throw new Error('SIMULATOR_ORIGIN must be the configured simulator UI origin')
+  const port = Number(__ENV.SIMULATOR_HTTP_PORT || '5189')
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('SIMULATOR_HTTP_PORT must be a valid local port')
+  const expectedOrigin = `http://127.0.0.1:${port}`
+  const origin = __ENV.SIMULATOR_ORIGIN || expectedOrigin
+  if (origin !== expectedOrigin) throw new Error('SIMULATOR_ORIGIN must be the configured simulator UI origin')
   const file = __ENV.SIMULATOR_MANIFEST || '/runtime/manifest.json'
   const manifest = JSON.parse(open(file))
   if (!manifest || !Array.isArray(manifest.actors) || manifest.actors.length !== 100 || typeof manifest.runId !== 'string' || typeof manifest.campaignId !== 'string') throw new Error('Synthetic seed manifest has an invalid shape')

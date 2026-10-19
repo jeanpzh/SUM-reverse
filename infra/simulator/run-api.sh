@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+. /opt/simulator/load-runtime-env.sh
+export SIMULATOR_CAMPAIGN_ID SIMULATOR_RUN_ID SIMULATOR_METRICS_TOKEN SIMULATOR_CONTENTION
+export SIMULATOR_DATA_PROVENANCE=independently-synthetic SIMULATOR_ARTIFACTS_DIR=/runtime SIMULATOR_MANIFEST_NAME=manifest.json
+export SIMULATOR_PUBLIC_ORIGIN="http://127.0.0.1:${SIMULATOR_HTTP_PORT:-5189}"
+export SIMULATOR_INSECURE_COOKIE=1 SIMULATOR_LOGIN_IP_LIMIT=2000
+export SIMULATOR_STORAGE=postgres SIMULATOR_DEPLOYMENT=public
+export DATABASE_URL="postgres://simulator:${SIMULATOR_DB_PASSWORD}@postgres:5432/sum_simulator_synthetic"
+export NODE_ENV=test HOST=${HOST:-0.0.0.0} PORT=${PORT:-3000}
+exec "$@"

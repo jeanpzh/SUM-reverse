@@ -22,6 +22,7 @@
 !client/tsconfig*.json
 !client/vite.config.ts
 !client/index.html
+!client/nginx.conf
 !client/src/
 !client/src/**
 !client/public/

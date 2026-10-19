@@ -1,14 +1,27 @@
 name: sum-simulator
 
 services:
+  simulator-init:
+    image: node:24.22.0-bookworm-slim@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5
+    user: "0:0"
+    entrypoint: ["node", "/opt/simulator/init-runtime.mjs"]
+    volumes:
+      - ./infra/simulator:/legacy:ro
+      - ./infra/simulator/runtime:/runtime
+      - ./infra/simulator/init-runtime.mjs:/opt/simulator/init-runtime.mjs:ro
+
   postgres:
     image: postgres:18.6@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
-    environment:
-      POSTGRES_DB: sum_simulator_synthetic
-      POSTGRES_USER: simulator
-      POSTGRES_PASSWORD: ${SIMULATOR_DB_PASSWORD:?Run infra/simulator/bootstrap.sh first}
+    entrypoint: ["/bin/sh", "/opt/simulator/postgres-entrypoint.sh"]
+    command: ["postgres"]
     volumes:
       - simulator_pgdata:/var/lib/postgresql
+      - ./infra/simulator/runtime/config.env:/runtime/config.env:ro
+      - ./infra/simulator/load-runtime-env.sh:/opt/simulator/load-runtime-env.sh:ro
+      - ./infra/simulator/postgres-entrypoint.sh:/opt/simulator/postgres-entrypoint.sh:ro
+    depends_on:
+      simulator-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U simulator -d sum_simulator_synthetic"]
       interval: 2s
@@ -20,22 +33,15 @@ services:
     build:
       context: .
       dockerfile: infra/simulator/Dockerfile.api
+    entrypoint: ["/bin/sh", "/opt/simulator/run-api.sh"]
     command: ["node", "dist/scripts/migrate-simulator.js"]
-    environment: &api-env
-      NODE_ENV: test
-      HOST: 0.0.0.0
-      PORT: 3000
-      SIMULATOR_DEPLOYMENT: public
-      SIMULATOR_STORAGE: postgres
-      SIMULATOR_DATA_PROVENANCE: independently-synthetic
-      DATABASE_URL: postgres://simulator:${SIMULATOR_DB_PASSWORD}@postgres:5432/sum_simulator_synthetic
-      SIMULATOR_CAMPAIGN_ID: ${SIMULATOR_CAMPAIGN_ID:?Run infra/simulator/bootstrap.sh first}
-      SIMULATOR_RUN_ID: ${SIMULATOR_RUN_ID:?Run infra/simulator/bootstrap.sh first}
-      SIMULATOR_PUBLIC_ORIGIN: http://127.0.0.1:5189
-      SIMULATOR_METRICS_TOKEN: ${SIMULATOR_METRICS_TOKEN:?Run infra/simulator/bootstrap.sh first}
-      SIMULATOR_INSECURE_COOKIE: "1"
-      SIMULATOR_LOGIN_IP_LIMIT: "2000"
+    volumes: &api-volumes
+      - ./infra/simulator/runtime:/runtime
+      - ./infra/simulator/load-runtime-env.sh:/opt/simulator/load-runtime-env.sh:ro
+      - ./infra/simulator/run-api.sh:/opt/simulator/run-api.sh:ro
     depends_on:
+      simulator-init:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
     restart: "no"
@@ -44,16 +50,15 @@ services:
     build:
       context: .
       dockerfile: infra/simulator/Dockerfile.api
-    entrypoint: ["/bin/sh", "/opt/simulator/seed-once.sh"]
+    entrypoint: ["/bin/sh", "/opt/simulator/run-api.sh"]
+    command: ["/bin/sh", "/opt/simulator/seed-once.sh"]
     volumes:
       - ./infra/simulator/runtime:/runtime
+      - ./infra/simulator/load-runtime-env.sh:/opt/simulator/load-runtime-env.sh:ro
+      - ./infra/simulator/run-api.sh:/opt/simulator/run-api.sh:ro
       - ./infra/simulator/seed-once.sh:/opt/simulator/seed-once.sh:ro
-    user: "${SIMULATOR_UID:-1000}:${SIMULATOR_GID:-1000}"
-    environment:
-      <<: *api-env
-      SIMULATOR_ARTIFACTS_DIR: /runtime
-      SIMULATOR_MANIFEST_NAME: manifest.json
-      SIMULATOR_CONTENTION: ${SIMULATOR_CONTENTION:-shared}
+    user: "1000:1000"
+    environment: {}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -63,7 +68,15 @@ services:
     build:
       context: .
       dockerfile: infra/simulator/Dockerfile.api
-    environment: *api-env
+    entrypoint: ["/bin/sh", "/opt/simulator/run-api.sh"]
+    command: ["node", "dist/main.js"]
+    volumes: *api-volumes
+    user: "1000:1000"
+    environment:
+      SIMULATOR_HTTP_PORT: ${SIMULATOR_HTTP_PORT:-5189}
+      NODE_ENV: test
+      HOST: 0.0.0.0
+      PORT: 3000
     depends_on:
       seed:
         condition: service_completed_successfully
@@ -78,7 +91,15 @@ services:
     build:
       context: .
       dockerfile: infra/simulator/Dockerfile.api
-    environment: *api-env
+    entrypoint: ["/bin/sh", "/opt/simulator/run-api.sh"]
+    command: ["node", "dist/main.js"]
+    volumes: *api-volumes
+    user: "1000:1000"
+    environment:
+      SIMULATOR_HTTP_PORT: ${SIMULATOR_HTTP_PORT:-5189}
+      NODE_ENV: test
+      HOST: 0.0.0.0
+      PORT: 3000
     depends_on:
       seed:
         condition: service_completed_successfully
@@ -97,65 +118,157 @@ services:
         VITE_SUM_SIMULATOR: "1"
         VITE_SUM_DATA_MODE: local
         VITE_SUM_API_BASE_URL: /api
+    environment:
+      SIMULATOR_HTTP_PORT: ${SIMULATOR_HTTP_PORT:-5189}
     ports:
-      - "127.0.0.1:5189:80"
+      - "127.0.0.1:${SIMULATOR_HTTP_PORT:-5189}:80"
     depends_on:
       api-a:
         condition: service_healthy
       api-b:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
 
   k6:
     image: grafana/k6:2.3.0@sha256:9c2dee7f8ed74d317e4027c06a10f169b625638189de8d4555d0b3486a5aeb34
     profiles: [load]
-    entrypoint: ["k6"]
-    user: "${SIMULATOR_UID:-1000}:${SIMULATOR_GID:-1000}"
+    entrypoint: ["/bin/sh", "/opt/simulator/k6-entrypoint.sh"]
+    user: "1000:1000"
     environment:
       SIMULATOR_BASE_URL: http://web
-      SIMULATOR_ORIGIN: http://127.0.0.1:5189
+      SIMULATOR_HTTP_PORT: ${SIMULATOR_HTTP_PORT:-5189}
+      SIMULATOR_ORIGIN: http://127.0.0.1:${SIMULATOR_HTTP_PORT:-5189}
       SIMULATOR_MANIFEST: /runtime/manifest.json
-      SIMULATOR_METRICS_TOKEN: ${SIMULATOR_METRICS_TOKEN:?Run infra/simulator/bootstrap.sh first}
+      SIMULATOR_GRAFANA_PORT: ${SIMULATOR_GRAFANA_PORT:-5190}
+      K6_NO_USAGE_REPORT: "true"
+      K6_PROMETHEUS_RW_SERVER_URL: http://prometheus:9090/api/v1/write
+      K6_PROMETHEUS_RW_PUSH_INTERVAL: 5s
+      K6_PROMETHEUS_RW_TREND_STATS: p(95),p(99),avg,max
     volumes:
-      - ./infra/simulator/runtime:/runtime:ro
+      - ./infra/simulator/runtime/manifest.json:/runtime/manifest.json:ro
       - ./load:/load:ro
       - ./infra/simulator/runtime/results:/results
+      - ./infra/simulator/k6-entrypoint.sh:/opt/simulator/k6-entrypoint.sh:ro
     depends_on:
       web:
         condition: service_started
+      simulator-init:
+        condition: service_completed_successfully
+      prometheus:
+        condition: service_healthy
 
   k6-browser:
     image: grafana/k6:2.3.0-with-browser@sha256:fd3bc5d244f87e7d05152ede97b99813a381a83b639a4e43e1939b56460544ee
     profiles: [browser]
-    entrypoint: ["k6"]
-    user: "${SIMULATOR_UID:-1000}:${SIMULATOR_GID:-1000}"
+    entrypoint: ["/bin/sh", "/opt/simulator/load-k6-env.sh"]
+    user: "1000:1000"
     environment:
       SIMULATOR_BASE_URL: http://web
-      SIMULATOR_ORIGIN: http://127.0.0.1:5189
+      SIMULATOR_HTTP_PORT: ${SIMULATOR_HTTP_PORT:-5189}
+      SIMULATOR_ORIGIN: http://127.0.0.1:${SIMULATOR_HTTP_PORT:-5189}
       SIMULATOR_MANIFEST: /runtime/manifest.json
+      SIMULATOR_GRAFANA_PORT: ${SIMULATOR_GRAFANA_PORT:-5190}
       HOME: /tmp
       K6_BROWSER_ARGS: no-sandbox,disable-dev-shm-usage
+      K6_NO_USAGE_REPORT: "true"
+      K6_PROMETHEUS_RW_SERVER_URL: http://prometheus:9090/api/v1/write
+      K6_PROMETHEUS_RW_PUSH_INTERVAL: 5s
+      K6_PROMETHEUS_RW_TREND_STATS: p(95),p(99),avg,max
     volumes:
-      - ./infra/simulator/runtime:/runtime:ro
+      - ./infra/simulator/runtime/manifest.json:/runtime/manifest.json:ro
       - ./load:/load:ro
       - ./infra/simulator/runtime/results:/results
+      - ./infra/simulator/load-k6-env.sh:/opt/simulator/load-k6-env.sh:ro
     depends_on:
       web:
         condition: service_started
+      prometheus:
+        condition: service_healthy
 
   audit:
     build:
       context: .
       dockerfile: infra/simulator/Dockerfile.api
     profiles: [audit]
+    entrypoint: ["/bin/sh", "/opt/simulator/run-api.sh"]
     command: ["node", "dist/scripts/audit-simulator.js"]
+    volumes: *api-volumes
+    user: "1000:1000"
     environment:
-      <<: *api-env
       EXPECTED_ENROLLMENTS: ${EXPECTED_ENROLLMENTS:-0}
       EXPECTED_REQUESTS: ${EXPECTED_REQUESTS:-0}
     depends_on:
       seed:
         condition: service_completed_successfully
 
+  prometheus:
+    image: prom/prometheus:v3.13.4@sha256:87861b8cf91579109319ebc300f3f1060e6da9c05d6ae8ad15a20c879e84e32e
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --storage.tsdb.retention.size=1GB
+      - --web.enable-remote-write-receiver
+    volumes:
+      - ./infra/simulator/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - simulator_prometheus_data:/prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:9090/-/ready >/dev/null"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  grafana-init:
+    image: grafana/grafana:13.2.4@sha256:dbbc38ea21103cefb50396340cd88afec779c7e070b0a7bf5a75b4ce46651d3f
+    user: "0:0"
+    entrypoint: ["/bin/sh", "/opt/simulator/init-grafana.sh"]
+    volumes:
+      - simulator_grafana_data:/var/lib/grafana
+      - ./infra/simulator/init-grafana.sh:/opt/simulator/init-grafana.sh:ro
+
+  grafana:
+    image: grafana/grafana:13.2.4@sha256:dbbc38ea21103cefb50396340cd88afec779c7e070b0a7bf5a75b4ce46651d3f
+    user: "1000:1000"
+    entrypoint: ["/bin/sh", "/opt/simulator/grafana-entrypoint.sh"]
+    ports:
+      - "127.0.0.1:${SIMULATOR_GRAFANA_PORT:-5190}:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_NAME: Main Org.
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_AUTH_DISABLE_LOGIN_FORM: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_PLUGINS_PREINSTALL: ""
+      GF_INSTALL_PLUGINS: ""
+    volumes:
+      - simulator_grafana_data:/var/lib/grafana
+      - ./infra/simulator/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/simulator/runtime/config.env:/runtime/config.env:ro
+      - ./infra/simulator/load-runtime-env.sh:/opt/simulator/load-runtime-env.sh:ro
+      - ./infra/simulator/grafana-entrypoint.sh:/opt/simulator/grafana-entrypoint.sh:ro
+    depends_on:
+      simulator-init:
+        condition: service_completed_successfully
+      grafana-init:
+        condition: service_completed_successfully
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
 volumes:
   simulator_pgdata:
+  simulator_prometheus_data:
+  simulator_grafana_data:
