@@ -12,6 +12,8 @@ const allowed = new Set([
   'SIMULATOR_METRICS_TOKEN',
   'GRAFANA_ADMIN_PASSWORD',
   'SIMULATOR_CONTENTION',
+  'SIMULATOR_ACTOR_COUNT',
+  'SIMULATOR_SCENARIO_PROFILE',
   'SIMULATOR_UID',
   'SIMULATOR_GID'
 ])
@@ -60,7 +62,9 @@ const config = {
   SIMULATOR_DB_PASSWORD: value('SIMULATOR_DB_PASSWORD', randomBytes(32).toString('hex')),
   SIMULATOR_METRICS_TOKEN: value('SIMULATOR_METRICS_TOKEN', randomBytes(32).toString('hex')),
   GRAFANA_ADMIN_PASSWORD: value('GRAFANA_ADMIN_PASSWORD', randomBytes(32).toString('hex')),
-  SIMULATOR_CONTENTION: value('SIMULATOR_CONTENTION', 'shared')
+  SIMULATOR_CONTENTION: value('SIMULATOR_CONTENTION', 'shared'),
+  SIMULATOR_ACTOR_COUNT: value('SIMULATOR_ACTOR_COUNT', '100'),
+  SIMULATOR_SCENARIO_PROFILE: value('SIMULATOR_SCENARIO_PROFILE', value('SIMULATOR_CONTENTION', 'shared'))
 }
 
 if (!uuidPattern.test(config.SIMULATOR_CAMPAIGN_ID) || !uuidPattern.test(config.SIMULATOR_RUN_ID)) {
@@ -71,6 +75,12 @@ for (const key of ['SIMULATOR_DB_PASSWORD', 'SIMULATOR_METRICS_TOKEN', 'GRAFANA_
 }
 if (!['shared', 'distributed'].includes(config.SIMULATOR_CONTENTION)) {
   throw new Error('Legacy SIMULATOR_CONTENTION must be shared or distributed')
+}
+if (!/^[1-9][0-9]{0,3}$/.test(config.SIMULATOR_ACTOR_COUNT) || Number(config.SIMULATOR_ACTOR_COUNT) > 1000) {
+  throw new Error('SIMULATOR_ACTOR_COUNT must be an integer from 1 to 1000')
+}
+if (!['shared', 'ample', 'last-seat', 'multi-uniform', 'multi-hotspot', 'distributed'].includes(config.SIMULATOR_SCENARIO_PROFILE)) {
+  throw new Error('SIMULATOR_SCENARIO_PROFILE is invalid')
 }
 
 await chmod(runtimePath, 0o700)
