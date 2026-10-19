@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "testid": "reads-20261019-graficas-01",
+  "realSamplesPerRoute": [
+    16,
+    16
+  ],
+  "positiveRatePoints": 15,
+  "latencySeries": 2,
+  "canvasCount": 7,
+  "datasourceFramesWithMultiplePoints": 22,
+  "pageErrors": [],
+  "datasourceErrors": []
+}

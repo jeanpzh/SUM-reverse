@@ -1,0 +1,1430 @@
+{
+  "source": "observed independently-synthetic local-only",
+  "date": "2026-10-19",
+  "resources": {
+    "cpus": 2,
+    "memoryMiB": 7775,
+    "generatorSharesServerHost": true
+  },
+  "longSoakExecuted": false,
+  "runs": [
+    {
+      "scenario": "login",
+      "testid": "1aee274f-6813-4c6c-a05d-40f2a1a1f2ba",
+      "mode": "quick",
+      "actors": 400,
+      "profile": "shared",
+      "startedAtMs": 1792389413835,
+      "endedAtMs": 1792389422324,
+      "k6Exit": 0,
+      "integrity": true,
+      "invariantsPassed": true,
+      "correctnessPassed": true,
+      "performancePassed": null,
+      "failedThresholds": [],
+      "expected": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "actual": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "passed": true,
+      "errors": [],
+      "observedMetrics": {
+        "http_req_duration": {
+          "med": 1181.870387,
+          "max": 2207.047797,
+          "p(90)": 1853.1926636,
+          "p(95)": 1971.9790031,
+          "p(99)": 2134.9614650500002,
+          "avg": 1281.0561061874996,
+          "min": 60.736705
+        },
+        "http_reqs": {
+          "count": 1200,
+          "rate": 249.77838293288806
+        },
+        "login_iterations_completed": {
+          "count": 400,
+          "rate": 83.25946097762936,
+          "thresholds": {
+            "count==400": false
+          }
+        },
+        "http_req_failed": {
+          "passes": 0,
+          "fails": 1200,
+          "value": 0
+        },
+        "scenario_actor_count": {
+          "value": 400,
+          "min": 400,
+          "max": 400
+        }
+      },
+      "audit": {
+        "campaignStatus": "open",
+        "totals": {
+          "actors": "400",
+          "sections": "3",
+          "capacity": "810",
+          "occupied": "0",
+          "requests": "0",
+          "enrollments": "0",
+          "reports": "0"
+        },
+        "checks": [
+          {
+            "name": "capacity_bounds",
+            "violations": "0"
+          },
+          {
+            "name": "occupied_matches_items",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_details_nonempty",
+            "violations": "0"
+          },
+          {
+            "name": "report_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "accepted_request_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_request_report_links",
+            "violations": "0"
+          },
+          {
+            "name": "rejected_requests_have_no_effects",
+            "violations": "0"
+          },
+          {
+            "name": "details_match_outcome_selection",
+            "violations": "0"
+          }
+        ],
+        "passed": true
+      },
+      "dashboardRange": {
+        "from": 1792389398835,
+        "to": 1792389437324
+      },
+      "grafanaPath": "/d/sum-simulator-k6?var-testid=1aee274f-6813-4c6c-a05d-40f2a1a1f2ba&from=1792389398835&to=1792389437324"
+    },
+    {
+      "scenario": "race",
+      "testid": "f8983bf2-d899-478c-a643-e17c48a713a4",
+      "mode": "quick",
+      "actors": 400,
+      "profile": "shared",
+      "k6Exit": 99,
+      "integrity": true,
+      "invariantsPassed": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        }
+      ],
+      "expected": {
+        "enrollments": 10,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 10,
+        "requests": 400
+      },
+      "passed": false,
+      "errors": [
+        "k6 exited 99; inspect threshold results"
+      ],
+      "observedMetrics": {
+        "http_reqs": {
+          "count": 1600,
+          "rate": 67.63050057866963
+        },
+        "http_req_duration": {
+          "p(90)": 2338.183407000001,
+          "p(95)": 2864.5363755,
+          "p(99)": 3313.8553623,
+          "avg": 1434.2912831068752,
+          "min": 71.919426,
+          "med": 1278.2595715,
+          "max": 3531.797895
+        },
+        "http_req_failed": {
+          "passes": 0,
+          "fails": 1600,
+          "value": 0
+        },
+        "http_req_duration{operation:submit}": {
+          "p(90)": 3167.350651,
+          "p(95)": 3294.26825325,
+          "p(99)": 3379.9390401799997,
+          "avg": 2080.2061992875015,
+          "min": 135.312477,
+          "med": 2102.65836,
+          "max": 3531.797895,
+          "thresholds": {
+            "p(99)<5000": false,
+            "p(95)<2000": true
+          }
+        },
+        "scenario_actor_count": {
+          "value": 400,
+          "min": 400,
+          "max": 400
+        }
+      },
+      "audit": {
+        "campaignStatus": "open",
+        "totals": {
+          "actors": "400",
+          "sections": "3",
+          "capacity": "810",
+          "occupied": "30",
+          "requests": "400",
+          "enrollments": "10",
+          "reports": "10"
+        },
+        "checks": [
+          {
+            "name": "capacity_bounds",
+            "violations": "0"
+          },
+          {
+            "name": "occupied_matches_items",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_details_nonempty",
+            "violations": "0"
+          },
+          {
+            "name": "report_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "accepted_request_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_request_report_links",
+            "violations": "0"
+          },
+          {
+            "name": "rejected_requests_have_no_effects",
+            "violations": "0"
+          },
+          {
+            "name": "details_match_outcome_selection",
+            "violations": "0"
+          }
+        ],
+        "passed": true
+      },
+      "dashboardRange": {
+        "from": 1792389245389,
+        "to": 1792389299047
+      },
+      "grafanaPath": "/d/sum-simulator-k6?var-testid=f8983bf2-d899-478c-a643-e17c48a713a4&from=1792389245389&to=1792389299047"
+    },
+    {
+      "scenario": "last-seat",
+      "testid": "9c3fd455-40d7-4da8-a2d6-90717cf9b60d",
+      "mode": "quick",
+      "actors": 400,
+      "profile": "last-seat",
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        }
+      ],
+      "expected": {
+        "enrollments": 10,
+        "requests": 409
+      },
+      "actual": {
+        "enrollments": 10,
+        "requests": 409
+      },
+      "passed": false,
+      "errors": [
+        "k6 exited 99; inspect threshold results"
+      ],
+      "observedMetrics": {
+        "http_req_duration{operation:submit}": {
+          "max": 3673.059102,
+          "p(90)": 3056.778123,
+          "p(95)": 3144.11610845,
+          "avg": 2197.1186823325015,
+          "min": 175.381923,
+          "med": 2337.744098,
+          "thresholds": {
+            "p(95)<2000": true,
+            "p(99)<5000": false
+          }
+        },
+        "http_req_failed": {
+          "passes": 0,
+          "fails": 1600,
+          "value": 0
+        },
+        "http_reqs": {
+          "count": 1600,
+          "rate": 67.05899990562654
+        },
+        "http_req_duration": {
+          "p(90)": 2512.1732612000005,
+          "p(95)": 2909.24732915,
+          "avg": 1455.0830747537507,
+          "min": 175.381923,
+          "med": 1377.2049085,
+          "max": 3673.059102
+        }
+      },
+      "audit": {
+        "campaignStatus": "open",
+        "totals": {
+          "actors": "409",
+          "sections": "3",
+          "capacity": "828",
+          "occupied": "30",
+          "requests": "409",
+          "enrollments": "10",
+          "reports": "10"
+        },
+        "checks": [
+          {
+            "name": "capacity_bounds",
+            "violations": "0"
+          },
+          {
+            "name": "occupied_matches_items",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_details_nonempty",
+            "violations": "0"
+          },
+          {
+            "name": "report_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "accepted_request_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_request_report_links",
+            "violations": "0"
+          },
+          {
+            "name": "rejected_requests_have_no_effects",
+            "violations": "0"
+          },
+          {
+            "name": "details_match_outcome_selection",
+            "violations": "0"
+          }
+        ],
+        "passed": true
+      },
+      "invariantsPassed": true,
+      "dashboardRange": {
+        "from": 1792388001383,
+        "to": 1792388055243
+      },
+      "grafanaPath": "/d/sum-simulator-k6?var-testid=9c3fd455-40d7-4da8-a2d6-90717cf9b60d&from=1792388001383&to=1792388055243"
+    },
+    {
+      "scenario": "ample",
+      "testid": "af1b709b-ffde-4d87-b1cf-5c69b60cf7f0",
+      "mode": "quick",
+      "actors": 400,
+      "profile": "ample",
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        }
+      ],
+      "expected": {
+        "enrollments": 400,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 400,
+        "requests": 400
+      },
+      "passed": false,
+      "errors": [
+        "k6 exited 99; inspect threshold results"
+      ],
+      "observedMetrics": {
+        "http_req_failed": {
+          "passes": 0,
+          "fails": 1600,
+          "value": 0
+        },
+        "http_reqs": {
+          "count": 1600,
+          "rate": 64.08365741587723
+        },
+        "http_req_duration{operation:submit}": {
+          "med": 2738.8200150000002,
+          "max": 4784.979345,
+          "p(90)": 4287.4279174,
+          "p(95)": 4467.37144465,
+          "avg": 2725.179292795001,
+          "min": 178.850267,
+          "thresholds": {
+            "p(95)<2000": true,
+            "p(99)<5000": false
+          }
+        },
+        "http_req_duration": {
+          "avg": 1621.1075830675018,
+          "min": 159.546536,
+          "med": 1299.436526,
+          "max": 4784.979345,
+          "p(90)": 3182.597366000001,
+          "p(95)": 3924.8066649999996
+        }
+      },
+      "audit": {
+        "campaignStatus": "open",
+        "totals": {
+          "actors": "400",
+          "sections": "3",
+          "capacity": "1200",
+          "occupied": "1200",
+          "requests": "400",
+          "enrollments": "400",
+          "reports": "400"
+        },
+        "checks": [
+          {
+            "name": "capacity_bounds",
+            "violations": "0"
+          },
+          {
+            "name": "occupied_matches_items",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_details_nonempty",
+            "violations": "0"
+          },
+          {
+            "name": "report_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "accepted_request_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_request_report_links",
+            "violations": "0"
+          },
+          {
+            "name": "rejected_requests_have_no_effects",
+            "violations": "0"
+          },
+          {
+            "name": "details_match_outcome_selection",
+            "violations": "0"
+          }
+        ],
+        "passed": true
+      },
+      "invariantsPassed": true,
+      "dashboardRange": {
+        "from": 1792388056819,
+        "to": 1792388111787
+      },
+      "grafanaPath": "/d/sum-simulator-k6?var-testid=af1b709b-ffde-4d87-b1cf-5c69b60cf7f0&from=1792388056819&to=1792388111787"
+    },
+    {
+      "scenario": "mixed",
+      "testid": "fef1429d-beea-4f15-9ec9-38ffe03d704e",
+      "mode": "quick",
+      "actors": 400,
+      "profile": "ample",
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(99)<5000"
+        }
+      ],
+      "expected": {
+        "enrollments": 400,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 400,
+        "requests": 400
+      },
+      "passed": false,
+      "errors": [
+        "k6 exited 99; inspect threshold results"
+      ],
+      "observedMetrics": {
+        "http_req_duration{operation:submit}": {
+          "min": 1201.598665,
+          "med": 2575.9816334999996,
+          "max": 7709.218525,
+          "p(90)": 3809.3090562,
+          "p(95)": 4531.331914949998,
+          "avg": 2741.377901059997,
+          "thresholds": {
+            "p(95)<2000": true,
+            "p(99)<5000": true
+          }
+        },
+        "http_req_failed": {
+          "passes": 0,
+          "fails": 6231,
+          "value": 0
+        },
+        "http_reqs": {
+          "count": 6231,
+          "rate": 196.81947795404375
+        },
+        "http_req_duration": {
+          "p(95)": 2310.769505,
+          "avg": 1697.5358157133753,
+          "min": 110.709175,
+          "med": 1697.179947,
+          "max": 7709.218525,
+          "p(90)": 2184.192721
+        },
+        "mixed_iterations_completed": {
+          "count": 5031,
+          "rate": 158.91490829510417,
+          "thresholds": {
+            "count>0": false
+          }
+        }
+      },
+      "audit": {
+        "campaignStatus": "open",
+        "totals": {
+          "actors": "400",
+          "sections": "3",
+          "capacity": "1200",
+          "occupied": "1200",
+          "requests": "400",
+          "enrollments": "400",
+          "reports": "400"
+        },
+        "checks": [
+          {
+            "name": "capacity_bounds",
+            "violations": "0"
+          },
+          {
+            "name": "occupied_matches_items",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_details_nonempty",
+            "violations": "0"
+          },
+          {
+            "name": "report_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "accepted_request_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_request_report_links",
+            "violations": "0"
+          },
+          {
+            "name": "rejected_requests_have_no_effects",
+            "violations": "0"
+          },
+          {
+            "name": "details_match_outcome_selection",
+            "violations": "0"
+          }
+        ],
+        "passed": true
+      },
+      "invariantsPassed": true,
+      "dashboardRange": {
+        "from": 1792388113116,
+        "to": 1792388174775
+      },
+      "grafanaPath": "/d/sum-simulator-k6?var-testid=fef1429d-beea-4f15-9ec9-38ffe03d704e&from=1792388113116&to=1792388174775"
+    },
+    {
+      "scenario": "multi-uniform",
+      "testid": "c9445c28-b288-4b98-b614-96e51c007fc5",
+      "mode": "quick",
+      "actors": 400,
+      "profile": "multi-uniform",
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        }
+      ],
+      "expected": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "passed": false,
+      "errors": [
+        "k6 exited 99; inspect threshold results"
+      ],
+      "observedMetrics": {
+        "http_reqs": {
+          "count": 1600,
+          "rate": 69.57046388147381
+        },
+        "http_req_failed": {
+          "passes": 0,
+          "fails": 1600,
+          "value": 0
+        },
+        "http_req_duration{operation:submit}": {
+          "avg": 1685.1013886,
+          "min": 225.53421,
+          "med": 1828.4954195,
+          "max": 2716.922679,
+          "p(90)": 2476.3551225,
+          "p(95)": 2571.956147,
+          "thresholds": {
+            "p(95)<2000": true,
+            "p(99)<5000": false
+          }
+        },
+        "http_req_duration": {
+          "p(90)": 2158.3084954,
+          "p(95)": 2293.7755709,
+          "avg": 1393.1464669537495,
+          "min": 172.386805,
+          "med": 1253.738105,
+          "max": 2716.922679
+        }
+      },
+      "audit": {
+        "campaignStatus": "open",
+        "totals": {
+          "actors": "400",
+          "sections": "15",
+          "capacity": "4100",
+          "occupied": "300",
+          "requests": "400",
+          "enrollments": "100",
+          "reports": "100"
+        },
+        "checks": [
+          {
+            "name": "capacity_bounds",
+            "violations": "0"
+          },
+          {
+            "name": "occupied_matches_items",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_details_nonempty",
+            "violations": "0"
+          },
+          {
+            "name": "report_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "accepted_request_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_request_report_links",
+            "violations": "0"
+          },
+          {
+            "name": "rejected_requests_have_no_effects",
+            "violations": "0"
+          },
+          {
+            "name": "details_match_outcome_selection",
+            "violations": "0"
+          }
+        ],
+        "passed": true
+      },
+      "invariantsPassed": true,
+      "dashboardRange": {
+        "from": 1792388183909,
+        "to": 1792388236908
+      },
+      "grafanaPath": "/d/sum-simulator-k6?var-testid=c9445c28-b288-4b98-b614-96e51c007fc5&from=1792388183909&to=1792388236908"
+    },
+    {
+      "scenario": "multi-hotspot",
+      "testid": "2f9cc978-c8b7-4f2b-9e74-b6071fdc4a72",
+      "mode": "quick",
+      "actors": 400,
+      "profile": "multi-hotspot",
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        }
+      ],
+      "expected": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "passed": false,
+      "errors": [
+        "k6 exited 99; inspect threshold results"
+      ],
+      "observedMetrics": {
+        "http_req_failed": {
+          "passes": 0,
+          "fails": 1600,
+          "value": 0
+        },
+        "http_reqs": {
+          "count": 1600,
+          "rate": 66.75572551623723
+        },
+        "http_req_duration{operation:submit}": {
+          "avg": 2057.0903090050006,
+          "min": 218.252156,
+          "med": 2003.216923,
+          "max": 3843.29091,
+          "p(90)": 3377.8594126000003,
+          "p(95)": 3594.2987998,
+          "thresholds": {
+            "p(95)<2000": true,
+            "p(99)<5000": false
+          }
+        },
+        "http_req_duration": {
+          "max": 3843.29091,
+          "p(90)": 2531.7562521,
+          "p(95)": 2999.3189371,
+          "avg": 1380.390290964998,
+          "min": 90.202518,
+          "med": 1139.680267
+        }
+      },
+      "audit": {
+        "campaignStatus": "open",
+        "totals": {
+          "actors": "400",
+          "sections": "15",
+          "capacity": "4100",
+          "occupied": "300",
+          "requests": "400",
+          "enrollments": "100",
+          "reports": "100"
+        },
+        "checks": [
+          {
+            "name": "capacity_bounds",
+            "violations": "0"
+          },
+          {
+            "name": "occupied_matches_items",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_details_nonempty",
+            "violations": "0"
+          },
+          {
+            "name": "report_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "accepted_request_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_request_report_links",
+            "violations": "0"
+          },
+          {
+            "name": "rejected_requests_have_no_effects",
+            "violations": "0"
+          },
+          {
+            "name": "details_match_outcome_selection",
+            "violations": "0"
+          }
+        ],
+        "passed": true
+      },
+      "invariantsPassed": true,
+      "dashboardRange": {
+        "from": 1792388243098,
+        "to": 1792388297066
+      },
+      "grafanaPath": "/d/sum-simulator-k6?var-testid=2f9cc978-c8b7-4f2b-9e74-b6071fdc4a72&from=1792388243098&to=1792388297066"
+    },
+    {
+      "scenario": "retry",
+      "testid": "4dc7c68f-68c6-40a5-839d-26df7c757b86",
+      "mode": "quick",
+      "actors": 400,
+      "profile": "ample",
+      "k6Exit": 0,
+      "integrity": true,
+      "invariantsPassed": true,
+      "correctnessPassed": true,
+      "performancePassed": null,
+      "failedThresholds": [],
+      "expected": {
+        "enrollments": 400,
+        "requests": 800
+      },
+      "actual": {
+        "enrollments": 400,
+        "requests": 800
+      },
+      "passed": true,
+      "errors": [],
+      "observedMetrics": {
+        "retry_transient_responses": {
+          "count": 662,
+          "rate": 17.99623761310378
+        },
+        "http_req_failed": {
+          "passes": 662,
+          "fails": 4000,
+          "value": 0.141999141999142
+        },
+        "scenario_actor_count": {
+          "value": 400,
+          "min": 400,
+          "max": 400
+        },
+        "http_reqs": {
+          "rate": 126.73483346267346,
+          "count": 4662
+        },
+        "http_req_duration": {
+          "avg": 3747.720399312102,
+          "min": 1.925263,
+          "med": 2572.0766750000003,
+          "max": 14878.229443,
+          "p(90)": 8783.262438400001,
+          "p(95)": 10675.784248049997
+        }
+      },
+      "audit": {
+        "campaignStatus": "open",
+        "totals": {
+          "actors": "400",
+          "sections": "3",
+          "capacity": "1200",
+          "occupied": "1200",
+          "requests": "800",
+          "enrollments": "400",
+          "reports": "400"
+        },
+        "checks": [
+          {
+            "name": "capacity_bounds",
+            "violations": "0"
+          },
+          {
+            "name": "occupied_matches_items",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_details_nonempty",
+            "violations": "0"
+          },
+          {
+            "name": "report_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "accepted_request_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_request_report_links",
+            "violations": "0"
+          },
+          {
+            "name": "rejected_requests_have_no_effects",
+            "violations": "0"
+          },
+          {
+            "name": "details_match_outcome_selection",
+            "violations": "0"
+          }
+        ],
+        "passed": true
+      },
+      "dashboardRange": {
+        "from": 1792388751270,
+        "to": 1792388818056
+      },
+      "grafanaPath": "/d/sum-simulator-k6?var-testid=4dc7c68f-68c6-40a5-839d-26df7c757b86&from=1792388751270&to=1792388818056"
+    },
+    {
+      "scenario": "resilience",
+      "testid": "fe6ec138-7180-4795-9d15-d5bb87eedd1c",
+      "mode": "quick",
+      "actors": 400,
+      "profile": "shared",
+      "k6Exit": 0,
+      "integrity": true,
+      "invariantsPassed": true,
+      "correctnessPassed": true,
+      "performancePassed": null,
+      "failedThresholds": [],
+      "expected": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "actual": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "passed": true,
+      "errors": [],
+      "observedMetrics": {
+        "resilience_recovery_transient_failures": {
+          "count": 6,
+          "rate": 0.09753354526597002
+        },
+        "resilience_db_transient_failures": {
+          "count": 3511,
+          "rate": 57.07337957147013,
+          "thresholds": {
+            "count>0": false
+          }
+        },
+        "http_req_failed": {
+          "passes": 3636,
+          "fails": 11390,
+          "value": 0.24198056701717024
+        },
+        "http_reqs": {
+          "count": 15026,
+          "rate": 244.25650852774427
+        },
+        "resilience_recovery_ms": {
+          "avg": 1273.32,
+          "min": 501,
+          "med": 1242.5,
+          "max": 2967,
+          "p(90)": 1968.1,
+          "p(95)": 2092,
+          "thresholds": {
+            "max<60000": false
+          }
+        },
+        "resilience_api_transient_failures": {
+          "rate": 1.9344153144417389,
+          "count": 119,
+          "thresholds": {
+            "count>0": false
+          }
+        },
+        "resilience_sessions_ready": {
+          "count": 400,
+          "rate": 6.502236351064668,
+          "thresholds": {
+            "count==400": false
+          }
+        },
+        "scenario_actor_count": {
+          "value": 400,
+          "min": 400,
+          "max": 400
+        },
+        "resilience_recovered": {
+          "count": 400,
+          "rate": 6.502236351064668,
+          "thresholds": {
+            "count==400": false
+          }
+        },
+        "http_req_duration": {
+          "p(95)": 1713.22423975,
+          "avg": 692.9286229545453,
+          "min": 0.052035,
+          "med": 673.086487,
+          "max": 3003.926362,
+          "p(90)": 1406.398643
+        }
+      },
+      "audit": {
+        "campaignStatus": "open",
+        "totals": {
+          "actors": "400",
+          "sections": "3",
+          "capacity": "810",
+          "occupied": "0",
+          "requests": "0",
+          "enrollments": "0",
+          "reports": "0"
+        },
+        "checks": [
+          {
+            "name": "capacity_bounds",
+            "violations": "0"
+          },
+          {
+            "name": "occupied_matches_items",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_details_nonempty",
+            "violations": "0"
+          },
+          {
+            "name": "report_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "accepted_request_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_request_report_links",
+            "violations": "0"
+          },
+          {
+            "name": "rejected_requests_have_no_effects",
+            "violations": "0"
+          },
+          {
+            "name": "details_match_outcome_selection",
+            "violations": "0"
+          }
+        ],
+        "passed": true
+      },
+      "dashboardRange": {
+        "from": 1792388819928,
+        "to": 1792388911446
+      },
+      "grafanaPath": "/d/sum-simulator-k6?var-testid=fe6ec138-7180-4795-9d15-d5bb87eedd1c&from=1792388819928&to=1792388911446"
+    },
+    {
+      "scenario": "stress",
+      "testid": "cfe71157-b023-434c-a3a7-31828cf974c1",
+      "mode": "quick",
+      "actors": 400,
+      "profile": "shared",
+      "k6Exit": 0,
+      "integrity": true,
+      "invariantsPassed": true,
+      "correctnessPassed": true,
+      "performancePassed": true,
+      "failedThresholds": [],
+      "expected": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "actual": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "passed": true,
+      "errors": [],
+      "observedMetrics": {
+        "http_req_duration{operation:read}": {
+          "avg": 1097.0834993297162,
+          "min": 4.814068,
+          "med": 1295.393773,
+          "max": 1997.467758,
+          "p(90)": 1599.6353457999999,
+          "p(95)": 1670.6013408,
+          "thresholds": {
+            "p(99)<5000": false,
+            "p(95)<2000": false
+          }
+        },
+        "scenario_actor_count": {
+          "value": 400,
+          "min": 400,
+          "max": 400
+        },
+        "sessions_iterations_completed": {
+          "count": 10057,
+          "rate": 194.24243305980315,
+          "thresholds": {
+            "count>0": false
+          }
+        },
+        "sessions_ready": {
+          "count": 400,
+          "rate": 7.725661054382148,
+          "thresholds": {
+            "count==400": false
+          }
+        },
+        "http_req_failed": {
+          "passes": 0,
+          "fails": 10857,
+          "value": 0
+        },
+        "http_req_duration": {
+          "med": 1285.376939,
+          "max": 2109.089926,
+          "p(90)": 1597.4328698,
+          "p(95)": 1671.1294707999998,
+          "avg": 1070.2190113212612,
+          "min": 4.056001
+        },
+        "http_reqs": {
+          "count": 10857,
+          "rate": 209.69375516856746
+        }
+      },
+      "audit": {
+        "campaignStatus": "open",
+        "totals": {
+          "actors": "400",
+          "sections": "3",
+          "capacity": "810",
+          "occupied": "0",
+          "requests": "0",
+          "enrollments": "0",
+          "reports": "0"
+        },
+        "checks": [
+          {
+            "name": "capacity_bounds",
+            "violations": "0"
+          },
+          {
+            "name": "occupied_matches_items",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_details_nonempty",
+            "violations": "0"
+          },
+          {
+            "name": "report_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "accepted_request_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_request_report_links",
+            "violations": "0"
+          },
+          {
+            "name": "rejected_requests_have_no_effects",
+            "violations": "0"
+          },
+          {
+            "name": "details_match_outcome_selection",
+            "violations": "0"
+          }
+        ],
+        "passed": true
+      },
+      "dashboardRange": {
+        "from": 1792388914521,
+        "to": 1792388996297
+      },
+      "grafanaPath": "/d/sum-simulator-k6?var-testid=cfe71157-b023-434c-a3a7-31828cf974c1&from=1792388914521&to=1792388996297"
+    },
+    {
+      "scenario": "soak",
+      "testid": "5020d5ad-cfd0-4870-9da8-437d0f87f557",
+      "mode": "quick",
+      "actors": 400,
+      "profile": "shared",
+      "k6Exit": 0,
+      "integrity": true,
+      "invariantsPassed": true,
+      "correctnessPassed": true,
+      "performancePassed": true,
+      "failedThresholds": [],
+      "expected": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "actual": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "passed": true,
+      "errors": [],
+      "observedMetrics": {
+        "http_req_duration{operation:read}": {
+          "avg": 1064.2536670950053,
+          "min": 5.123139,
+          "med": 1238.490919,
+          "max": 1866.478421,
+          "p(90)": 1533.7664286000002,
+          "p(95)": 1609.3791104999998,
+          "thresholds": {
+            "p(95)<2000": false,
+            "p(99)<5000": false
+          }
+        },
+        "sessions_iterations_completed": {
+          "count": 10263,
+          "rate": 198.72965625320074,
+          "thresholds": {
+            "count>0": false
+          }
+        },
+        "scenario_actor_count": {
+          "max": 400,
+          "value": 400,
+          "min": 400
+        },
+        "http_req_duration": {
+          "med": 1227.927906,
+          "max": 1866.478421,
+          "p(90)": 1531.6265076000002,
+          "p(95)": 1608.6967038,
+          "avg": 1038.3485619559826,
+          "min": 3.298692
+        },
+        "http_req_failed": {
+          "passes": 0,
+          "fails": 11063,
+          "value": 0
+        },
+        "sessions_ready": {
+          "count": 400,
+          "rate": 7.745480122895868,
+          "thresholds": {
+            "count==400": false
+          }
+        },
+        "http_reqs": {
+          "count": 11063,
+          "rate": 214.22061649899248
+        }
+      },
+      "audit": {
+        "campaignStatus": "open",
+        "totals": {
+          "actors": "400",
+          "sections": "3",
+          "capacity": "810",
+          "occupied": "0",
+          "requests": "0",
+          "enrollments": "0",
+          "reports": "0"
+        },
+        "checks": [
+          {
+            "name": "capacity_bounds",
+            "violations": "0"
+          },
+          {
+            "name": "occupied_matches_items",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_details_nonempty",
+            "violations": "0"
+          },
+          {
+            "name": "report_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "accepted_request_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_request_report_links",
+            "violations": "0"
+          },
+          {
+            "name": "rejected_requests_have_no_effects",
+            "violations": "0"
+          },
+          {
+            "name": "details_match_outcome_selection",
+            "violations": "0"
+          }
+        ],
+        "passed": true
+      },
+      "dashboardRange": {
+        "from": 1792388997813,
+        "to": 1792389079457
+      },
+      "grafanaPath": "/d/sum-simulator-k6?var-testid=5020d5ad-cfd0-4870-9da8-437d0f87f557&from=1792388997813&to=1792389079457"
+    },
+    {
+      "scenario": "reads",
+      "testid": "8c36cc09-af37-4472-ad85-dfaeeef371b0",
+      "mode": "quick",
+      "actors": 400,
+      "profile": "shared",
+      "k6Exit": 0,
+      "integrity": true,
+      "invariantsPassed": true,
+      "correctnessPassed": true,
+      "performancePassed": true,
+      "failedThresholds": [],
+      "expected": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "actual": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "passed": true,
+      "errors": [],
+      "observedMetrics": {
+        "http_req_failed": {
+          "passes": 0,
+          "fails": 2624,
+          "value": 0
+        },
+        "http_reqs": {
+          "count": 2624,
+          "rate": 65.59533116867001
+        },
+        "http_req_duration{operation:read}": {
+          "p(90)": 13.298318200000008,
+          "p(95)": 18.551634849999996,
+          "avg": 7.856912335974639,
+          "min": 4.436442,
+          "med": 5.8929045,
+          "max": 44.440068,
+          "thresholds": {
+            "p(95)<2000": false,
+            "p(99)<5000": false
+          }
+        },
+        "scenario_actor_count": {
+          "value": 400,
+          "min": 400,
+          "max": 400
+        },
+        "read_iterations_completed": {
+          "count": 1262,
+          "rate": 31.54775454834663,
+          "thresholds": {
+            "count>0": false
+          }
+        },
+        "http_req_duration": {
+          "p(90)": 13.400852100000009,
+          "p(95)": 18.73973035,
+          "avg": 7.93020155335365,
+          "min": 3.947747,
+          "med": 5.9275465,
+          "max": 59.049885
+        }
+      },
+      "audit": {
+        "campaignStatus": "open",
+        "totals": {
+          "actors": "400",
+          "sections": "3",
+          "capacity": "810",
+          "occupied": "0",
+          "requests": "0",
+          "enrollments": "0",
+          "reports": "0"
+        },
+        "checks": [
+          {
+            "name": "capacity_bounds",
+            "violations": "0"
+          },
+          {
+            "name": "occupied_matches_items",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_details_nonempty",
+            "violations": "0"
+          },
+          {
+            "name": "report_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "accepted_request_per_enrollment",
+            "violations": "0"
+          },
+          {
+            "name": "enrollment_request_report_links",
+            "violations": "0"
+          },
+          {
+            "name": "rejected_requests_have_no_effects",
+            "violations": "0"
+          },
+          {
+            "name": "details_match_outcome_selection",
+            "violations": "0"
+          }
+        ],
+        "passed": true
+      },
+      "dashboardRange": {
+        "from": 1792389077048,
+        "to": 1792389147051
+      },
+      "grafanaPath": "/d/sum-simulator-k6?var-testid=8c36cc09-af37-4472-ad85-dfaeeef371b0&from=1792389077048&to=1792389147051"
+    }
+  ]
+}

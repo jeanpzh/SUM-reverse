@@ -1,0 +1,80 @@
+{
+  "passed": true,
+  "values": {
+    "availability": [
+      {
+        "replica": "api-a",
+        "value": 1
+      },
+      {
+        "replica": "api-b",
+        "value": 1
+      }
+    ],
+    "memory": [
+      {
+        "replica": "api-a",
+        "value": 111362048
+      },
+      {
+        "replica": "api-b",
+        "value": 110870528
+      }
+    ],
+    "cpu": [
+      {
+        "replica": "api-a",
+        "value": 0.005116909090909096
+      },
+      {
+        "replica": "api-b",
+        "value": 0.0048733636363636245
+      }
+    ],
+    "queue": [
+      {
+        "replica": "api-a",
+        "value": 200
+      },
+      {
+        "replica": "api-b",
+        "value": 199
+      }
+    ],
+    "eventLoop": [
+      {
+        "replica": "api-a",
+        "value": 0.021217279000000002
+      },
+      {
+        "replica": "api-b",
+        "value": 0.021200895
+      }
+    ],
+    "databaseWaits": [
+      {
+        "replica": "api-a",
+        "value": 1
+      },
+      {
+        "replica": "api-b",
+        "value": 1
+      },
+      {
+        "replica": "api-a",
+        "value": 2
+      },
+      {
+        "replica": "api-b",
+        "value": 1
+      },
+      {
+        "replica": "api-b",
+        "value": 1
+      }
+    ]
+  },
+  "pageErrors": [],
+  "source": "protected own synthetic API -> collector -> Prometheus -> Grafana",
+  "notFilteredByTestid": true
+}

@@ -1,0 +1,47 @@
+{
+  "campaignStatus": "open",
+  "totals": {
+    "actors": "400",
+    "sections": "3",
+    "capacity": "810",
+    "occupied": "0",
+    "requests": "0",
+    "enrollments": "0",
+    "reports": "0"
+  },
+  "checks": [
+    {
+      "name": "capacity_bounds",
+      "violations": "0"
+    },
+    {
+      "name": "occupied_matches_items",
+      "violations": "0"
+    },
+    {
+      "name": "enrollment_details_nonempty",
+      "violations": "0"
+    },
+    {
+      "name": "report_per_enrollment",
+      "violations": "0"
+    },
+    {
+      "name": "accepted_request_per_enrollment",
+      "violations": "0"
+    },
+    {
+      "name": "enrollment_request_report_links",
+      "violations": "0"
+    },
+    {
+      "name": "rejected_requests_have_no_effects",
+      "violations": "0"
+    },
+    {
+      "name": "details_match_outcome_selection",
+      "violations": "0"
+    }
+  ],
+  "passed": true
+}

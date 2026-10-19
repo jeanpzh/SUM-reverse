@@ -1,0 +1,32 @@
+{
+  "description": "Working-tree source hashes after implementation and final acceptance, before logical commits",
+  "sha256": {
+    "backend/scripts/seed-simulator.ts": "48bfd5d1164eeae11787ad37f9cf053b1eebf3b04bd4246bdf40cee3384303c6",
+    "backend/scripts/synthetic-load-profile.ts": "2ddf5f7c6bf8697b13b8b85b1cf166503fe1bbb8f54e6214795bfbf4f8f8813b",
+    "backend/src/persistence/postgres-enrollment.store.ts": "0dfbd0bb39c67f7f10f9613409208bb880e76e146f09bbc6cedf7998dc5dc016",
+    "compose.simulator.yaml": "06f9a778ca05f866ae4859f42de5cd8083f2c322a33df5422607cb982834f986",
+    "infra/simulator/init-runtime.mjs": "0a52e09afd9f938a1443ec4a511e4fa2e273148dadf9ceefafc03b0cc3fd9b9f",
+    "infra/simulator/run-api.sh": "5678fa0e630ae080effcd3be49b75448833b8e8dcfe9d636a1604d64acf3b84f",
+    "infra/simulator/rotate-campaign.sh": "5dd279c9ea0593119815a8b0391a194a898c75d1bc490b56148d3603db2b119f",
+    "infra/simulator/metrics-exporter.mjs": "6865bb0cc08a9b156b981779dd4644366e5ea8c88407d97a14472f0e297632f5",
+    "infra/simulator/scenario-results.mjs": "e95f6b128f7b41d977c79065d6cf24b3570b330b82aa30a9f8b8278e27ff0c40",
+    "infra/simulator/nginx.conf": "c51b31e02e46509334699c318db10fb7fb4c40e97b1146ae645a176d62c4f89f",
+    "infra/simulator/Dockerfile.web": "05827d9bc86e4f2cf42ee46032c631103b92b785ba983d0a78044ec8ec940813",
+    "infra/simulator/observability/prometheus.yml": "940f76b014ae936a336251ec490da21a0fca29b6e3c2859ee18cb98140761135",
+    "infra/simulator/observability/grafana/provisioning/dashboards/sum-simulator-k6.json": "1296114b113f47535085a6f4021493a33a7a08bfcdf484a34a656530624f373d",
+    "scripts/verify-simulator-crash.mjs": "8b632d13708c30161ea530b272a62bd61353c3971b8d34d118779a42404a3113",
+    "scripts/verify-simulator-observability.mjs": "538a1a9dfcb8932208922f2e1bbe846794d294474231a504163f79485471d517",
+    "load/common.js": "451c091c0d3ed95f31c788bd3fc9d34a8dd5091d62ee0e643b8945f360a3bf0b",
+    "load/profile-config.mjs": "31cb82af6e8e5345fb55370067117445077f1d68e126b0da363909ba2f60a301",
+    "load/enrollment.js": "87c6425a3a8535f6e262d9904befb4d3965ce652ea6caad832c91ceec4ff45dc",
+    "load/login.js": "7a8319900d43c8014ee76be26da962a697c4f32b0d75333fc6c01c6e56549c33",
+    "load/mixed.js": "7b97a92936ab847010228c82b8ea930592a3594f473ab8e0317044b9f7cbe917",
+    "load/retry.js": "985489ac4b4a371d5d96a6097a6b092aad51facdc0b805f8a5005f17b558f59f",
+    "load/resilience.js": "7f2543206141e261cdd1be2074cc3362bd787066d3518eb4f098815bf0f18b7f",
+    "load/sessions.js": "7c4d5300c0586260350eabd1858fcbfe04a0555996037d0310dc2f37aa23494b",
+    "load/reads.js": "064f679233b447e1dc3a994fb490ea59911dbd464817153dcdec383edbd6010f",
+    "load/recovery.js": "329e84c6f64bb7bd6eb90021d621269008a6b9ea44df43508e0a8e304abea5fb",
+    "load/browser.js": "8e8ee4bbeac8933b29b5fe149ebeb047508f0812060e26494596a1ff6b5e8703",
+    "load/scenarios.sh": "7eb842112ee09a28c762920c7d7685bd22749b953f45e3db2549e8f987ef91b0"
+  }
+}

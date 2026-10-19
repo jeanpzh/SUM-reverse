@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "testid": "f8983bf2-d899-478c-a643-e17c48a713a4",
+  "values": {
+    "accepted": 10,
+    "sectionFull": 390,
+    "completed": 400,
+    "unexpected": 0
+  },
+  "submissionP95Ms": 3294.26825325,
+  "seriesCount": 145,
+  "noIdentityLabels": true,
+  "dashboardUid": "sum-simulator-k6",
+  "panelQueriesChecked": 24
+}

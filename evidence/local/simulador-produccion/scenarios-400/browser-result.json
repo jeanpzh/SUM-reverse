@@ -1,0 +1,36 @@
+{
+  "passed": true,
+  "population": 400,
+  "browserVus": 2,
+  "testid": "ui-400-final-20261019",
+  "metrics": {
+    "browser_iterations_failed": {
+      "count": 0,
+      "rate": 0,
+      "thresholds": {
+        "count==0": false
+      }
+    },
+    "browser_ready_ms": {
+      "p(90)": 2308.6,
+      "p(95)": 2310.8,
+      "p(99)": 2312.56,
+      "avg": 2291,
+      "min": 2269,
+      "med": 2291,
+      "max": 2313,
+      "thresholds": {
+        "p(95)<10000": false
+      }
+    },
+    "browser_iterations_completed": {
+      "count": 2,
+      "rate": 0.44121912859442275,
+      "thresholds": {
+        "count==2": false
+      }
+    }
+  },
+  "forbiddenIdentityLabels": 0,
+  "observedBrowserSeries": 90
+}
