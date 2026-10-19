@@ -120,7 +120,6 @@ export function validateDashboardIdentity(value) {
   }, 'dashboardIdentity')
   validateSessionRequest({ runId: identity.runId, actorId: identity.actorId })
   validateActorId(identity.actorId)
-  if (!actorIds.includes(identity.actorId)) fail('dashboardIdentity.actorId', 'actor sintético permitido')
   validateSessionId(identity.sessionId)
 }
 

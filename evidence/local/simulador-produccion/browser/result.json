@@ -1,0 +1,94 @@
+{
+  "passed": true,
+  "cases": [
+    "login",
+    "dashboard geometry",
+    "reload",
+    "selection",
+    "commit",
+    "report",
+    "logout revocation",
+    "stable relogin",
+    "durable result"
+  ],
+  "responses": [
+    {
+      "path": "/api/simulator/auth/v1/login",
+      "status": 200
+    },
+    {
+      "path": "/api/simulator/auth/v1/session",
+      "status": 200
+    },
+    {
+      "path": "/api/local/matricula-regular/v1/sesiones",
+      "status": 200
+    },
+    {
+      "path": "/api/local/perfiles/v1/consultas/formulario",
+      "status": 200
+    },
+    {
+      "path": "/api/simulator/auth/v1/session",
+      "status": 200
+    },
+    {
+      "path": "/api/local/matricula-regular/v1/sesiones/:id/renovar",
+      "status": 200
+    },
+    {
+      "path": "/api/local/perfiles/v1/consultas/formulario",
+      "status": 200
+    },
+    {
+      "path": "/api/simulator/auth/v1/session",
+      "status": 200
+    },
+    {
+      "path": "/api/local/matricula-regular/v1/sesiones/:id/renovar",
+      "status": 200
+    },
+    {
+      "path": "/api/local/perfiles/v1/consultas/formulario",
+      "status": 200
+    },
+    {
+      "path": "/api/local/perfiles/v1/consultas/matriculaInfo",
+      "status": 200
+    },
+    {
+      "path": "/api/local/matricula-regular/v1/solicitudes",
+      "status": 200
+    },
+    {
+      "path": "/api/local/matricula-regular/v1/sesiones/:id/renovar",
+      "status": 200
+    },
+    {
+      "path": "/api/local/matricula-regular/v1/reportes/:id",
+      "status": 200
+    },
+    {
+      "path": "/api/simulator/auth/v1/logout",
+      "status": 204
+    },
+    {
+      "path": "/api/simulator/auth/v1/login",
+      "status": 200
+    },
+    {
+      "path": "/api/simulator/auth/v1/session",
+      "status": 200
+    },
+    {
+      "path": "/api/local/matricula-regular/v1/sesiones",
+      "status": 200
+    },
+    {
+      "path": "/api/local/perfiles/v1/consultas/formulario",
+      "status": 200
+    }
+  ],
+  "externalRequests": 0,
+  "pageErrors": []
+}

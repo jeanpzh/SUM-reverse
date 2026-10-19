@@ -19,15 +19,13 @@ concurrencia, seguridad). Registrar los tres e indicar evidencia de la clasifica
 | Implementación React o NestJS especificada, tarea repetible | `sum-implementer` | GPT-6 Luna High | Reutilizar especificación/plan |
 | Ejecución compleja con decisiones ya fijadas | `sum-executor` | GPT-6 Luna High | Reutilizar/actualizar estado |
 | Verificación rutinaria | Checks directos; `sum-verifier` solo si aporta valor | GPT-6 Luna Low | Registrar resultados |
-| Planificación de funcionalidades solicitada; arquitectura/incertidumbre/impacto altos | `sum-planner` | GPT-6.1 Sol High | Reutilizar si suficiente; crear/completar solo brechas |
-| Revisión crítica de decisiones/invariantes de alto impacto | `sum-reviewer` | GPT-6.1 Sol High | Después de checks deterministas pertinentes |
+| Planificación de funcionalidades solicitada; arquitectura/incertidumbre/impacto altos | Principal (sin delegar) | Modelo activo del principal | Reutilizar si suficiente; crear/completar solo brechas |
+| Revisión crítica de decisiones/invariantes de alto impacto | Principal | Modelo activo del principal | Después de checks deterministas pertinentes |
 | Investigación bloqueada | Principal registra bloqueo | Sin despacho | No replanificar para evadir |
 
-Por preferencia explícita del usuario, toda nueva funcionalidad o ampliación funcional pasa primero por `sum-planner` (GPT-6.1 Sol High). Debe fijar un plan persistente con especificaciones exactas, contratos, archivos exclusivos, dependencias, skills de cada carpeta y criterios de aceptación para Luna High. Reutilizar un plan suficiente ya producido por esta etapa; completar solo brechas, sin rehacerlo. El principal coordina fuentes y alcance; una especificación informal escrita únicamente por el principal no sustituye este handoff.
+Por preferencia explícita del usuario (2026-10-19), el principal realiza toda planificación, incluida la arquitectónica, sin agentes planificadores. Define plan persistente, contratos precisos, archivos exclusivos, dependencias y aceptación. No delegar planificación a un rol con otro nombre. La revisión de decisiones del plan corresponde también al principal.
 
-Despachar `sum-implementer`/`sum-executor` (Luna High) una vez que el plan esté listo. Registrar modelo/rol real y archivos del plan; no sustituir planificación por un texto que solo diga “High”. La complejidad orienta cuánto detalle necesita el plan, no permite saltar la etapa pedida. Correcciones triviales aisladas y documentación pueden seguir con el principal. Sol no crea evidencia inexistente ni convierte decisiones locales en comportamiento SUM.
-
-Para `backend/` cargar su `AGENTS.md` y `backend/.agents/skills/sum-nestjs-implement/SKILL.md`; para `client/`, su `AGENTS.md` y `client/.agents/skills/sum-react-implement/SKILL.md`. Verificación de cada capa usa sus skills locales; `sum-fullstack-verify` coordina integración en la raíz. No hace falta otro modelo ni rol duplicado para backend: reutilizar `sum-implementer`/`sum-executor`. El planner puede diseñar el backend propio y sus invariantes; no deducir arquitectura privada SUM. Roles modificados se aplican a nuevas instancias; un hilo activo conserva sus instrucciones cargadas.
+Despachar implementación únicamente con handoff listo: `sum-implementer` o `sum-executor`, ambos GPT-6 Luna High. Backend carga `backend/AGENTS.md` y `backend/.agents/skills/sum-nestjs-implement/SKILL.md`; frontend carga `client/AGENTS.md` y `client/.agents/skills/sum-react-implement/SKILL.md`; el principal coordina integración con `sum-fullstack-verify`. Registrar selección efectiva sin fingir cambios del modelo principal.
 
 Implementadores `sum-implementer` y `sum-executor`: ambos `gpt-6-luna` con `model_reasoning_effort = "high"`, por instrucción del solicitante del 2026-10-08. No despachar implementación en Medium. Si el rol expuesto por un harness conserva Medium de una configuración cargada previamente, usar el fallback autorizado con `agent_type="default"`, `model="gpt-6-luna"`, `reasoning_effort="high"`, `fork_turns="none"` y las instrucciones TOML/locales, o iniciar sesión nueva; no afirmar que un rol ya cargado cambió.
 
@@ -35,7 +33,7 @@ Implementadores `sum-implementer` y `sum-executor`: ambos `gpt-6-luna` con `mode
 
 Antes de configurar o usar una combinación nueva, verificar `model/list` del app-server
 local y `supportedReasoningEfforts`; no sustituir modelos silenciosamente. Para
-revalidar configuración y catálogo ejecutar `python .agents/skills/sum-workflow/scripts/validate_routing.py`.
+revalidar configuración y catálogo ejecutar `python3 .agents/skills/sum-workflow/scripts/validate_routing.py`.
 El principal de nuevas sesiones del proyecto usa Luna Medium. Una sesión ya abierta
 o con selección explícita puede seguir usando otro modelo: registrar el modelo real
 y arrancar una sesión nueva para aplicar el valor del proyecto; no afirmar un cambio
@@ -69,22 +67,19 @@ objetivo, restricciones y por tarea:
 | Verificación | Comando/criterio, resultado real, archivo de evidencia |
 | Reparaciones / escalamiento | 0 o 1; motivo, origen/destino y decisión |
 
-No crear planner para un cambio de padding. Un plan Sol High ya listo puede ser
-suficiente para Tutoría: reutilizar su especificación y ejecutar, sin generar otro diseño.
+No delegar planificación. Un plan existente puede bastar para Tutoría: reutilizar su especificación y ejecutar, sin generar otro diseño.
 Consultar registros previos antes de volver a planificar o repetir checks.
 
 ## Escalamiento y verificación
 
-Escalar solo por arquitectura, decisión de alto impacto, requisitos ambiguos que
-requieren diseño o fallo persistente que exige replantear. Registrar disparador,
-evidencia, checks/reparación ya realizados, pregunta concreta y modelo origen/destino.
-Un fallo de infraestructura o permiso se registra como bloqueo, no como motivo para Sol.
+El principal replantea ante arquitectura, decisiones de alto impacto, requisitos ambiguos o fallos persistentes. Registrar disparador,
+evidencia, checks/reparación ya realizados, pregunta concreta y responsable.
+Un fallo de infraestructura o permiso se registra como bloqueo, sin delegar planificación.
 Tras resolver la decisión, devolver las tareas definidas a Luna y registrar la razón;
 no cambiar de modelo dentro de un hilo existente para fingir continuidad.
 
-Build/lint y checks locales pertinentes preceden revisión de otro modelo. Sol no es
-revisor obligatorio de cambios delimitados. Para concurrencia de matrícula, fijar
-primero el contrato de la réplica NestJS independiente: el proyecto autoriza backend propio, no inspección/reconstrucción de internos privados SUM. Sol
+Build/lint y checks locales pertinentes preceden revisión de otro modelo. La revisión corresponde al principal. Para concurrencia de matrícula, fijar
+primero el contrato de la réplica NestJS independiente: el proyecto autoriza backend propio, no inspección/reconstrucción de internos privados SUM. El principal
 planifica y revisa invariantes como exclusión, capacidad, idempotencia, atomicidad,
 recuperación y consistencia, con escenarios deterministas antes de revisión crítica.
 La simulación propone esos checks y no los ejecuta ni declara aprobados.

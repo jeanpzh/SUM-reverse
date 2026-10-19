@@ -14,6 +14,7 @@ import type { IdentityStorage, LocalProfileSnapshot } from './localProfileSessio
 import { LocalProfileApiError } from './localProfileDashboard.ts'
 import type { ApiResponseMap } from './contracts.ts'
 import { MatriculaRegularApiError } from './matriculaRegular.ts'
+import type { AccessProvider } from './accessProvider.ts'
 
 const BASE = Date.parse('2026-08-11T14:00:00.000Z')
 const runId = '10000000-0000-4000-8000-000000000001'
@@ -145,6 +146,34 @@ test('entry for each of the four actors uses catalog -> one create -> formulario
     assert.deepEqual(h.createdFor, [actorId])
     assert.equal(h.counts.read, 1)
   }
+})
+
+test('public simulator entry uses the authenticated actor, skips catalog and caps academic expiry at access expiry', async () => {
+  const h = harness()
+  const principal = { actorId: 'SYN-SIS-A', campaignId: runId, runId,
+    expiresAt: new Date(Date.now() + 600_000).toISOString() }
+  let logouts = 0
+  const accessProvider = {
+    getSnapshot: () => principal,
+    getLogoutErrorSnapshot: () => null,
+    subscribe: () => () => undefined,
+    current: async () => principal,
+    login: async () => principal,
+    logout: async () => { logouts += 1 },
+    invalidate() {},
+  } as AccessProvider
+  const store = createLocalProfileSessionStore({ dashboardApi: h.dashboardApi, enrollmentApi: h.enrollmentApi,
+    monotonicNow: () => h.clock.t, scheduler: h.scheduler, accessProvider, publicAccess: true })
+  await store.enter()
+  const snapshot = asActive(store.getSnapshot())
+  assert.equal(snapshot.status, 'active')
+  assert.equal(snapshot.actorId, principal.actorId)
+  assert.equal(h.counts.catalog, 0)
+  assert.deepEqual(h.createdFor, [principal.actorId])
+  assert.ok(snapshot.deadlineMono <= 600_000)
+  store.logout()
+  await tick()
+  assert.equal(logouts, 1)
 })
 
 test('reload_new_store_anonymous: a fresh store never restores a session and nothing is written to browser storage', async () => {

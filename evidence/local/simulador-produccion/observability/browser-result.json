@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "testid": "cupos-20261019-grafana-02",
+  "externalRequests": 0,
+  "pageErrors": [],
+  "datasourceErrors": [],
+  "viewport": {
+    "width": 1536,
+    "height": 1000
+  }
+}

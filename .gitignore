@@ -23,3 +23,6 @@ datos-reales/
 
 # Keep original synthetic inputs local; the generated scenario seed is versioned.
 /datos-sinteticos/
+
+# Generated simulator manifests, cookies and load-test runtime output
+/infra/simulator/runtime/

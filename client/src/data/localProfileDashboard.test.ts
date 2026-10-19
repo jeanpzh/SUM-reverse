@@ -141,7 +141,7 @@ test('read sends exactly runId, actorId and sessionId and returns the validated 
 test('read rejects an invalid key or identity before any request', async () => {
   const { calls, api } = recorder(() => jsonResponse({}))
   await assert.rejects(api.read('nope' as never, identity), (error) => error instanceof LocalProfileApiError && error.kind === 'protocol')
-  await assert.rejects(api.read('matriculaInfo', { ...identity, actorId: 'SYN-OTHER' } as never),
+  await assert.rejects(api.read('matriculaInfo', { ...identity, actorId: 'INVALID-ACTOR' } as never),
     (error) => error instanceof LocalProfileApiError && error.kind === 'protocol')
   await assert.rejects(api.read('matriculaInfo', { ...identity, sessionId: 'x' }),
     (error) => error instanceof LocalProfileApiError && error.kind === 'protocol')

@@ -1,0 +1,161 @@
+name: sum-simulator
+
+services:
+  postgres:
+    image: postgres:18.6@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
+    environment:
+      POSTGRES_DB: sum_simulator_synthetic
+      POSTGRES_USER: simulator
+      POSTGRES_PASSWORD: ${SIMULATOR_DB_PASSWORD:?Run infra/simulator/bootstrap.sh first}
+    volumes:
+      - simulator_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U simulator -d sum_simulator_synthetic"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      dockerfile: infra/simulator/Dockerfile.api
+    command: ["node", "dist/scripts/migrate-simulator.js"]
+    environment: &api-env
+      NODE_ENV: test
+      HOST: 0.0.0.0
+      PORT: 3000
+      SIMULATOR_DEPLOYMENT: public
+      SIMULATOR_STORAGE: postgres
+      SIMULATOR_DATA_PROVENANCE: independently-synthetic
+      DATABASE_URL: postgres://simulator:${SIMULATOR_DB_PASSWORD}@postgres:5432/sum_simulator_synthetic
+      SIMULATOR_CAMPAIGN_ID: ${SIMULATOR_CAMPAIGN_ID:?Run infra/simulator/bootstrap.sh first}
+      SIMULATOR_RUN_ID: ${SIMULATOR_RUN_ID:?Run infra/simulator/bootstrap.sh first}
+      SIMULATOR_PUBLIC_ORIGIN: http://127.0.0.1:5189
+      SIMULATOR_METRICS_TOKEN: ${SIMULATOR_METRICS_TOKEN:?Run infra/simulator/bootstrap.sh first}
+      SIMULATOR_INSECURE_COOKIE: "1"
+      SIMULATOR_LOGIN_IP_LIMIT: "2000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  seed:
+    build:
+      context: .
+      dockerfile: infra/simulator/Dockerfile.api
+    entrypoint: ["/bin/sh", "/opt/simulator/seed-once.sh"]
+    volumes:
+      - ./infra/simulator/runtime:/runtime
+      - ./infra/simulator/seed-once.sh:/opt/simulator/seed-once.sh:ro
+    user: "${SIMULATOR_UID:-1000}:${SIMULATOR_GID:-1000}"
+    environment:
+      <<: *api-env
+      SIMULATOR_ARTIFACTS_DIR: /runtime
+      SIMULATOR_MANIFEST_NAME: manifest.json
+      SIMULATOR_CONTENTION: ${SIMULATOR_CONTENTION:-shared}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+
+  api-a:
+    build:
+      context: .
+      dockerfile: infra/simulator/Dockerfile.api
+    environment: *api-env
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/simulator/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api-b:
+    build:
+      context: .
+      dockerfile: infra/simulator/Dockerfile.api
+    environment: *api-env
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/simulator/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/simulator/Dockerfile.web
+      args:
+        VITE_SUM_SIMULATOR: "1"
+        VITE_SUM_DATA_MODE: local
+        VITE_SUM_API_BASE_URL: /api
+    ports:
+      - "127.0.0.1:5189:80"
+    depends_on:
+      api-a:
+        condition: service_healthy
+      api-b:
+        condition: service_healthy
+    restart: unless-stopped
+
+  k6:
+    image: grafana/k6:2.3.0@sha256:9c2dee7f8ed74d317e4027c06a10f169b625638189de8d4555d0b3486a5aeb34
+    profiles: [load]
+    entrypoint: ["k6"]
+    user: "${SIMULATOR_UID:-1000}:${SIMULATOR_GID:-1000}"
+    environment:
+      SIMULATOR_BASE_URL: http://web
+      SIMULATOR_ORIGIN: http://127.0.0.1:5189
+      SIMULATOR_MANIFEST: /runtime/manifest.json
+      SIMULATOR_METRICS_TOKEN: ${SIMULATOR_METRICS_TOKEN:?Run infra/simulator/bootstrap.sh first}
+    volumes:
+      - ./infra/simulator/runtime:/runtime:ro
+      - ./load:/load:ro
+      - ./infra/simulator/runtime/results:/results
+    depends_on:
+      web:
+        condition: service_started
+
+  k6-browser:
+    image: grafana/k6:2.3.0-with-browser@sha256:fd3bc5d244f87e7d05152ede97b99813a381a83b639a4e43e1939b56460544ee
+    profiles: [browser]
+    entrypoint: ["k6"]
+    user: "${SIMULATOR_UID:-1000}:${SIMULATOR_GID:-1000}"
+    environment:
+      SIMULATOR_BASE_URL: http://web
+      SIMULATOR_ORIGIN: http://127.0.0.1:5189
+      SIMULATOR_MANIFEST: /runtime/manifest.json
+      HOME: /tmp
+      K6_BROWSER_ARGS: no-sandbox,disable-dev-shm-usage
+    volumes:
+      - ./infra/simulator/runtime:/runtime:ro
+      - ./load:/load:ro
+      - ./infra/simulator/runtime/results:/results
+    depends_on:
+      web:
+        condition: service_started
+
+  audit:
+    build:
+      context: .
+      dockerfile: infra/simulator/Dockerfile.api
+    profiles: [audit]
+    command: ["node", "dist/scripts/audit-simulator.js"]
+    environment:
+      <<: *api-env
+      EXPECTED_ENROLLMENTS: ${EXPECTED_ENROLLMENTS:-0}
+      EXPECTED_REQUESTS: ${EXPECTED_REQUESTS:-0}
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+
+volumes:
+  simulator_pgdata:

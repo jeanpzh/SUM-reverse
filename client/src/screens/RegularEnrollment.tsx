@@ -135,7 +135,7 @@ function LocalProfileEnrollmentScreen() {
   const [pickerCourseId, setPickerCourseId] = useState<MatriculaRegularId | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [storage] = useState(browserStorage)
-  const [flow] = useState(() => createSubmissionFlow({ api: createMatriculaRegularApi({ mode: 'local' }), storage }))
+  const [flow] = useState(() => createSubmissionFlow({ api: createMatriculaRegularApi({ mode: 'local', publicAccess: import.meta.env.VITE_SUM_SIMULATOR === '1' }), storage }))
   const navigate = useNavigate()
   const submitControllerRef = useRef<AbortController | null>(null)
   const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -254,6 +254,7 @@ function LocalProfileEnrollmentScreen() {
       updateUncertain(null)
       setNotice({ tone: 'warning', message: DEFINITIVE_HANDLING[attempt.result.code]?.message ?? `La API local respondió ${attempt.result.code}.` })
       if (attempt.result.code === 'SESSION_EXPIRED') localProfileSessionStore.markExpired()
+      if (attempt.result.status === 401 || attempt.result.status === 403) localProfileSessionStore.markAccessExpired()
     } else {
       updateUncertain({ intent: attempt.intent, reason: attempt.result.kind === 'conflict' ? 'conflict' : attempt.result.reason,
         lookup: 'none', persisted: attempt.persisted })
@@ -422,7 +423,7 @@ export function RegularEnrollmentScreen() {
   const [resultOutcome, setResultOutcome] = useState<MatriculaRegularOutcome | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [storage] = useState(browserStorage)
-  const [flow] = useState(() => createSubmissionFlow({ api: createMatriculaRegularApi({ mode: 'local' }), storage }))
+  const [flow] = useState(() => createSubmissionFlow({ api: createMatriculaRegularApi({ mode: 'local', publicAccess: import.meta.env.VITE_SUM_SIMULATOR === '1' }), storage }))
   const navigate = useNavigate()
   const sessionRef = useRef<MatriculaRegularSession | null>(null)
   const sessionControllerRef = useRef<AbortController | null>(null)
@@ -476,7 +477,7 @@ export function RegularEnrollmentScreen() {
     setLoading(true)
     setError(null)
 
-    const api = createMatriculaRegularApi({ mode: 'local' })
+    const api = createMatriculaRegularApi({ mode: 'local', publicAccess: import.meta.env.VITE_SUM_SIMULATOR === '1' })
     api.getContext(actorId, { signal: controller.signal })
       .then((envelope) => {
         if (controller.signal.aborted) return
@@ -487,6 +488,7 @@ export function RegularEnrollmentScreen() {
         if (controller.signal.aborted) return
         setLoading(false)
         if (err instanceof MatriculaRegularApiError) {
+          if (err.status === 401 || err.status === 403) localProfileSessionStore.markAccessExpired()
           setError(err.message)
         } else if (err instanceof Error) {
           setError(err.message)
@@ -501,7 +503,7 @@ export function RegularEnrollmentScreen() {
     const controller = new AbortController()
     activeControllerRef.current = controller
 
-    const api = createMatriculaRegularApi({ mode: 'local' })
+    const api = createMatriculaRegularApi({ mode: 'local', publicAccess: import.meta.env.VITE_SUM_SIMULATOR === '1' })
     api.getContext(selectedActorId, { signal: controller.signal })
       .then((envelope) => {
         if (controller.signal.aborted) return
@@ -512,6 +514,7 @@ export function RegularEnrollmentScreen() {
         if (controller.signal.aborted) return
         setLoading(false)
         if (err instanceof MatriculaRegularApiError) {
+          if (err.status === 401 || err.status === 403) localProfileSessionStore.markAccessExpired()
           setError(err.message)
         } else if (err instanceof Error) {
           setError(err.message)
@@ -564,7 +567,7 @@ export function RegularEnrollmentScreen() {
     const identity = { runId: contextEnvelope.runId, actorId: selectedActorId }
     const current = sessionRef.current
     try {
-      const api = createMatriculaRegularApi({ mode: 'local' })
+      const api = createMatriculaRegularApi({ mode: 'local', publicAccess: import.meta.env.VITE_SUM_SIMULATOR === '1' })
       const next = renew && current
         ? await api.renewSession(current.sessionId, identity, { signal: controller.signal })
         : await api.createSession(identity, { signal: controller.signal })
@@ -577,6 +580,7 @@ export function RegularEnrollmentScreen() {
         updateSession(null)
         setSelectedChoices([])
       }
+      if (failure instanceof MatriculaRegularApiError && (failure.status === 401 || failure.status === 403)) localProfileSessionStore.markAccessExpired()
       setSessionNotice(failure instanceof Error ? failure.message : 'No se pudo iniciar o renovar la sesión local.')
     } finally {
       if (!controller.signal.aborted) setSessionBusy(false)

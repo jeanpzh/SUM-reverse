@@ -131,6 +131,9 @@ export function classifySubmitError(error: unknown): SubmitResult {
   if (error.kind === 'aborted') return { kind: 'uncertain', reason: 'aborted' }
   if (error.kind !== 'http') return { kind: 'uncertain', reason: 'protocol' }
   const code = error.code ?? ''
+  if (error.status === 401 || error.status === 403) {
+    return { kind: 'definitive', code: 'SESSION_EXPIRED', status: error.status, fields: error.fields }
+  }
   if (code === 'RUN_CHANGED') return { kind: 'run-changed' }
   if (code === 'REQUEST_CONFLICT') return { kind: 'conflict' }
   if (code === 'LOCAL_FAILURE') return { kind: 'uncertain', reason: 'local-failure' }

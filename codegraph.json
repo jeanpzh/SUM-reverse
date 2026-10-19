@@ -1,6 +1,28 @@
 {
   "exclude": [
     "datos-reales/",
-    "**/datos-reales/**"
+    "**/datos-reales/**",
+    "**/node_modules/**",
+    "**/.git/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.env",
+    "**/.env.*",
+    "**/*secret*",
+    "**/*credential*",
+    "**/*.pem",
+    "**/*.key",
+    "**/*.p12",
+    "**/*.pfx",
+    "**/.cache/**",
+    "**/coverage/**",
+    "**/.codegraph/**",
+    "/tmp/**",
+    "infra/simulator/runtime/",
+    "**/runtime/**",
+    "**/datos-sinteticos/**",
+    "**/*.log",
+    "**/exports/**",
+    "**/snapshots/**"
   ]
 }

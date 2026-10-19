@@ -196,6 +196,15 @@ function commit(state: RunState, request: MatriculaRegularSubmission, clockNow: 
   return response
 }
 
+/** Applies the established local admission rules to a transaction-scoped snapshot. */
+export function evaluateAndCommitSubmission(
+  state: RunState,
+  request: MatriculaRegularSubmission,
+  clockNow: Date,
+): MatriculaRegularEnvelope<MatriculaRegularOutcome> {
+  return commit(state, request, clockNow)
+}
+
 @Injectable()
 export class MatriculaRegularService {
   constructor(

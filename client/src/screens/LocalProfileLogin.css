@@ -29,6 +29,9 @@
 .local-profile-login-description { margin: 0.75rem 0 1.5rem; color: #53677d; line-height: 1.5; }
 .local-profile-login-card fieldset { display: grid; gap: 0.5rem; margin: 0; padding: 0; border: 0; }
 .local-profile-login-card legend { margin-bottom: 0.65rem; color: #243b53; font-weight: 700; }
+.local-profile-login-card form > label { display: block; margin-bottom: 0.45rem; color: #243b53; font-weight: 700; }
+.local-profile-login-card form > input { box-sizing: border-box; width: 100%; padding: 0.7rem 0.75rem; border: 1px solid #aab7c4; border-radius: 0.4rem; font: inherit; }
+.local-profile-login-card form > input:focus { outline: 2px solid #1769aa; outline-offset: 2px; }
 .local-profile-choice { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.85rem; border: 1px solid #d9e0e8; border-radius: 0.5rem; cursor: pointer; }
 .local-profile-choice:has(input:checked) { border-color: #1769aa; background: #f1f7fc; }
 .local-profile-choice input { margin-top: 0.2rem; }

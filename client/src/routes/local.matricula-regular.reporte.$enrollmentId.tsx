@@ -1,6 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { RouteError, RoutePending } from '../components/RouteStatus'
 import { createMatriculaRegularApi } from '../data/matriculaRegular'
+import { MatriculaRegularApiError } from '../data/matriculaRegular'
 import { parseReportSearch } from '../data/regularEnrollmentReport'
 import { RegularEnrollmentReportView } from '../screens/RegularEnrollmentReport'
 import { getLocalProfileActivation } from '../data/client'
@@ -17,8 +18,16 @@ export const Route = createFileRoute('/local/matricula-regular/reporte/$enrollme
     if (!identity || identity.runId !== deps.runId || identity.actorId !== deps.actorId) {
       throw redirect({ to: '/alumnoWebSum/v2/reportes/matricula' })
     }
-    return { mode: 'synthetic-actors' as const, report: await createMatriculaRegularApi({ mode: 'local' })
-      .getReport({ ...deps, enrollmentId: params.enrollmentId }, { signal: abortController.signal }) }
+    try {
+      return { mode: 'synthetic-actors' as const, report: await createMatriculaRegularApi({ mode: 'local', publicAccess: import.meta.env.VITE_SUM_SIMULATOR === '1' })
+        .getReport({ ...deps, enrollmentId: params.enrollmentId }, { signal: abortController.signal }) }
+    } catch (error) {
+      if (error instanceof MatriculaRegularApiError && (error.status === 401 || error.status === 403)) {
+        localProfileSessionStore.markAccessExpired()
+        throw redirect({ to: '/local/login' })
+      }
+      throw error
+    }
   },
   pendingComponent: RoutePending,
   errorComponent: RouteError,

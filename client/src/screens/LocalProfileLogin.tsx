@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { FormEvent } from 'react'
-import { localProfileDashboardApi, localProfileSessionStore } from '../data/client'
+import { accessProvider, localProfileDashboardApi, localProfileSessionStore } from '../data/client'
 import type { ProfileCatalog, ScenarioCatalog } from '../data/localProfileDashboard'
 import './LocalProfileLogin.css'
 
 export function LocalProfileLogin() {
+  return import.meta.env.VITE_SUM_SIMULATOR === '1' ? <PublicSimulatorLogin /> : <LocalProfileChooser />
+}
+
+function LocalProfileChooser() {
   const [catalog, setCatalog] = useState<ProfileCatalog | null>(null)
   const [selectedActorId, setSelectedActorId] = useState('')
   const [scenarios, setScenarios] = useState<ScenarioCatalog | null>(null)
@@ -141,6 +145,96 @@ export function LocalProfileLogin() {
             </button>
           </form>
         )}
+      </section>
+    </main>
+  )
+}
+
+function PublicSimulatorLogin() {
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  const credentialRef = useRef<HTMLInputElement>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [retryingRevocation, setRetryingRevocation] = useState(false)
+  const revocationError = useSyncExternalStore(
+    accessProvider.subscribe,
+    accessProvider.getLogoutErrorSnapshot,
+    accessProvider.getLogoutErrorSnapshot,
+  )
+
+  useEffect(() => { headingRef.current?.focus() }, [])
+
+  async function enter(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (loading) return
+    const credential = credentialRef.current?.value ?? ''
+    if (credentialRef.current) credentialRef.current.value = ''
+    setLoading(true)
+    setError(null)
+    try {
+      const loggedIn = await accessProvider.login(credential)
+      const current = await accessProvider.current()
+      if (loggedIn.actorId !== current.actorId || loggedIn.campaignId !== current.campaignId
+        || loggedIn.runId !== current.runId || loggedIn.expiresAt !== current.expiresAt) {
+        throw new Error('La sesión de acceso cambió durante el ingreso. Inténtalo de nuevo.')
+      }
+      await localProfileSessionStore.enter()
+      const result = localProfileSessionStore.getSnapshot()
+      if (result.status === 'error') throw new Error(result.message)
+    } catch (cause) {
+      const loginError = cause instanceof Error ? cause.message : 'No se pudo ingresar al simulador.'
+      if (accessProvider.getLogoutErrorSnapshot()) {
+        setError(loginError)
+      } else {
+        try {
+          await accessProvider.logout()
+          setError(loginError)
+        } catch (logoutCause) {
+          setError(logoutCause instanceof Error ? logoutCause.message : 'No se pudo confirmar el cierre de sesión.')
+        }
+      }
+    } finally {
+      setLoading(false)
+      if (credentialRef.current) credentialRef.current.value = ''
+    }
+  }
+
+  async function retryLogout() {
+    if (retryingRevocation) return
+    setRetryingRevocation(true)
+    try {
+      await accessProvider.logout()
+      setError(null)
+    } catch {
+      // The provider publishes the failure for this screen to display.
+    } finally {
+      setRetryingRevocation(false)
+    }
+  }
+
+  return (
+    <main className="local-profile-login">
+      <section className="local-profile-login-card" aria-labelledby="local-profile-login-heading">
+        <p className="local-profile-login-eyebrow">Acceso</p>
+        <h1 id="local-profile-login-heading" ref={headingRef} tabIndex={-1}>Ingresar al simulador</h1>
+        <p className="local-profile-login-description">Simulador de matrícula · datos sintéticos</p>
+        {revocationError && (
+          <div className="local-profile-login-error" role="alert">
+            <p>{revocationError.message}</p>
+            <button type="button" onClick={retryLogout} disabled={retryingRevocation}>
+              {retryingRevocation ? 'Confirmando cierre…' : 'Reintentar cierre de sesión'}
+            </button>
+          </div>
+        )}
+        <form onSubmit={enter} aria-busy={loading}>
+          <label htmlFor="simulator-credential">Código de acceso</label>
+          <input ref={credentialRef} id="simulator-credential" name="credential" type="password"
+            autoComplete="off" required disabled={loading} />
+          {error && !revocationError && <p className="local-profile-login-error" role="alert">{error}</p>}
+          <button className="local-profile-login-submit" type="submit" disabled={loading || retryingRevocation || Boolean(revocationError)}>
+            {loading ? 'Ingresando…' : 'Ingresar'}
+          </button>
+        </form>
       </section>
     </main>
   )

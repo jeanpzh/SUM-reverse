@@ -1,0 +1,46 @@
+{
+  "passed": true,
+  "runs": [
+    {
+      "testid": "lecturas-20261019-grafana-01",
+      "k6ExitCode": 0,
+      "completed": 1024,
+      "checksPassed": true,
+      "unexpected": 0,
+      "dropped": 0,
+      "readLatency": {
+        "max": 72.139406,
+        "p(90)": 13.711570499999999,
+        "p(95)": 19.11714834999993,
+        "p(99)": 33.40026513999999,
+        "avg": 8.043746892089844,
+        "min": 4.333178,
+        "med": 5.913282499999999,
+        "thresholds": {
+          "p(95)<2000": false,
+          "p(99)<5000": false
+        }
+      }
+    },
+    {
+      "testid": "control-20261019-grafana-01",
+      "k6ExitCode": 99,
+      "completed": 62,
+      "checksPassed": true,
+      "unexpected": 0,
+      "dropped": 0,
+      "readLatency": {
+        "avg": 7.860667782258066,
+        "min": 4.869998,
+        "med": 5.960819,
+        "max": 30.973187,
+        "p(90)": 12.589319300000001,
+        "p(95)": 17.56184175,
+        "thresholds": {
+          "p(95)<0.0001": true,
+          "p(99)<5000": false
+        }
+      }
+    }
+  ]
+}

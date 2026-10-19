@@ -83,6 +83,16 @@ test('identity_correlation validates MR2 identity and read correlation before pa
   }
 })
 
+test('campaign identities extend the local catalog without permitting malformed IDs or free catalog entries', () => {
+  assert.doesNotThrow(() => validateDashboardIdentity({ ...identity, actorId: 'SYN-SIS-U0100' }))
+  for (const actorId of ['ADMIN', 'SYN-', 'SYN-student', 'SYN-A/B']) {
+    assert.throws(() => validateDashboardIdentity({ ...identity, actorId }))
+  }
+  const changed = catalogResponse()
+  changed.data.profiles[0].actorId = 'SYN-SIS-U0100'
+  assert.throws(() => validateProfileCatalogResponse(changed))
+})
+
 test('extra_keys_rejected at identity, catalog, and dashboard read boundaries', () => {
   assert.throws(() => validateDashboardIdentity({ ...identity, extra: true }), /clave permitida/)
   const extraCatalog = catalogResponse()

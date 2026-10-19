@@ -10,9 +10,16 @@ import { PlanEstudiosModule } from './plan-estudios/plan-estudios.module.js'
 import { TutoriaModule } from './tutoria/tutoria.module.js'
 import { MatriculaRegularModule } from './matricula-regular/matricula-regular.module.js'
 import { LocalProfileDashboardModule } from './local-profile-dashboard/local-profile-dashboard.module.js'
+import { PublicSimulatorPersistenceModule } from './persistence/public-simulator.module.js'
+
+const publicDeployment = process.env.SIMULATOR_DEPLOYMENT === 'public'
+if (publicDeployment) {
+  if (process.env.SIMULATOR_STORAGE !== 'postgres') throw new Error('Public simulator requires SIMULATOR_STORAGE=postgres')
+  if (!process.env.DATABASE_URL || !process.env.SIMULATOR_CAMPAIGN_ID || !process.env.SIMULATOR_PUBLIC_ORIGIN || !process.env.SIMULATOR_METRICS_TOKEN) throw new Error('Public simulator requires DATABASE_URL, SIMULATOR_CAMPAIGN_ID, SIMULATOR_PUBLIC_ORIGIN, and SIMULATOR_METRICS_TOKEN')
+}
 
 @Module({
-  imports: [
+  imports: publicDeployment ? [PublicSimulatorPersistenceModule] : [
     ReportesModule,
     MiInformacionModule,
     AsistenciasModule,

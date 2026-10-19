@@ -6,6 +6,7 @@ import type { AcademicKey, DashboardKey, Identity } from './localProfileDashboar
 import { createLocalProfileSessionStore, activeProfileIdentity } from './localProfileSession.ts'
 import { createMatriculaRegularApi } from './matriculaRegular.ts'
 import { localModeStorage, readLocalDevMode } from './localDevMode.ts'
+import { createAccessProvider } from './accessProvider.ts'
 
 type LocalMiKey = 'perfil' | 'historial' | 'formulario' | 'fichaSocioeconomica'
 
@@ -15,6 +16,13 @@ export function getDataMode() {
 }
 
 export function getLocalProfileActivation() {
+  if (import.meta.env.VITE_SUM_SIMULATOR === '1') {
+    if (import.meta.env.VITE_SUM_DATA_MODE !== 'local' || import.meta.env.VITE_SUM_API_BASE_URL !== '/api') {
+      throw new LocalProfileApiError({ kind: 'configuration', operation: 'catalog',
+        message: 'El simulador público requiere VITE_SUM_DATA_MODE=local y VITE_SUM_API_BASE_URL=/api.' })
+    }
+    return 'synthetic-actors'
+  }
   if (import.meta.env.VITE_SUM_DATA_MODE === 'local' && import.meta.env.VITE_SUM_DEVTOOLS === '1') {
     return readLocalDevMode(localModeStorage()) === 'SIM' ? 'synthetic-actors' : 'legacy'
   }
@@ -22,7 +30,8 @@ export function getLocalProfileActivation() {
     profile: import.meta.env.VITE_SUM_LOCAL_PROFILE })
 }
 
-export const localProfileDashboardApi = createLocalProfileDashboardApi()
+export const localProfileDashboardApi = createLocalProfileDashboardApi({ publicAccess: import.meta.env.VITE_SUM_SIMULATOR === '1' })
+export const accessProvider = createAccessProvider({ baseUrl: import.meta.env.VITE_SUM_API_BASE_URL || '/api' })
 function tabSessionStorage() {
   try {
     return globalThis.sessionStorage ?? null
@@ -33,8 +42,10 @@ function tabSessionStorage() {
 
 export const localProfileSessionStore = createLocalProfileSessionStore({
   dashboardApi: localProfileDashboardApi,
-  enrollmentApi: createMatriculaRegularApi({ mode: 'local' }),
+  enrollmentApi: createMatriculaRegularApi({ mode: 'local', publicAccess: import.meta.env.VITE_SUM_SIMULATOR === '1' }),
   identityStorage: tabSessionStorage(),
+  accessProvider,
+  publicAccess: import.meta.env.VITE_SUM_SIMULATOR === '1',
 })
 
 /** L-07: resolves once the tab's stored profile session was renewed or discarded; the root guard waits for it. */

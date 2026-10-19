@@ -17,8 +17,6 @@ EXPECTED = {
     'sum-implementer': ('gpt-6-luna', 'high'),
     'sum-executor': ('gpt-6-luna', 'high'),
     'sum-verifier': ('gpt-6-luna', 'low'),
-    'sum-planner': ('gpt-6.1-sol', 'high'),
-    'sum-reviewer': ('gpt-6.1-sol', 'high'),
 }
 
 

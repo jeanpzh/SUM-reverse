@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "observedUncommittedDetailInsert": true,
+  "forcedApiProcessCrash": true,
+  "rolledBackRequests": true,
+  "countersUnchanged": true,
+  "bothApisRestarted": true,
+  "discardedResponseRecoveredFromDatabase": true,
+  "sameRequestRecoveredExactlyOnce": true,
+  "distinctConcurrentDuplicateRequestsRejected": 20
+}

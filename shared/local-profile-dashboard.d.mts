@@ -23,7 +23,7 @@ export declare const dashboardKeys: readonly [
   'plan',
 ]
 
-export type ActorId = 'SYN-SIS-A' | 'SYN-SIS-B' | 'SYN-SOFT-A' | 'SYN-SOFT-B'
+export type ActorId = `SYN-${string}`
 export type DashboardKey = (typeof dashboardKeys)[number]
 export type AcademicKey = 'matriculaInfo' | 'programacion' | 'prematricula' | 'plan'
 export type ReportKey = 'matricula' | 'horarios'

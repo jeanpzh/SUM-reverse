@@ -67,6 +67,7 @@ export class MatriculaRegularApiError extends Error {
 export type MatriculaRegularApiOptions = {
   mode: string
   fetchImpl?: typeof fetch
+  publicAccess?: boolean
 }
 
 type RequestOptions = { signal?: AbortSignal }
@@ -116,6 +117,7 @@ async function request<T>(input: {
   signal?: AbortSignal
   validateSuccess: (value: unknown) => asserts value is T
   expectedRunId?: string
+  credentials: RequestCredentials
 }): Promise<T> {
   input.signal?.throwIfAborted()
   let response: Response
@@ -126,7 +128,7 @@ async function request<T>(input: {
         ? { Accept: 'application/json', 'Content-Type': 'application/json' }
         : { Accept: 'application/json' },
       ...(input.method === 'POST' ? { body: JSON.stringify(input.body) } : {}),
-      credentials: 'omit',
+      credentials: input.credentials,
       signal: input.signal,
     })
   } catch (error) {
@@ -145,6 +147,13 @@ async function request<T>(input: {
 
   if (!response.ok) {
     const value = await readJson(response, input.operation)
+    if (response.status === 401 || response.status === 403) {
+      const error = value && typeof value === 'object' && 'error' in value ? (value as { error: unknown }).error : null
+      const code = error && typeof error === 'object' && 'code' in error && typeof (error as { code: unknown }).code === 'string'
+        ? (error as { code: string }).code : 'UNAUTHENTICATED'
+      throw new MatriculaRegularApiError({ kind: 'http', operation: input.operation, status: response.status, code,
+        message: 'La sesión de acceso al simulador venció o no está autorizada.' })
+    }
     const errorResponse = parseErrorResponse(value, input.operation, response.status)
     if (input.expectedRunId !== undefined && errorResponse.runId !== input.expectedRunId && errorResponse.error.code !== 'RUN_CHANGED') {
       throw malformed(input.operation, response.status)
@@ -185,6 +194,7 @@ export function createMatriculaRegularApi(options: MatriculaRegularApiOptions) {
         fetchImpl, operation: 'context', method: 'GET',
         path: `/contextos/${encodeURIComponent(actorId)}`,
         signal: requestOptions.signal,
+        credentials: options.publicAccess ? 'include' : 'omit',
         expectedRunId: requestOptions.expectedRunId,
         validateSuccess: (value) => validateContextResponse(value, identity?.runId, actorId),
       })
@@ -207,6 +217,7 @@ export function createMatriculaRegularApi(options: MatriculaRegularApiOptions) {
       return request<MatriculaRegularEnvelope<MatriculaRegularOutcome>>({
         fetchImpl, operation: 'submit', method: 'POST', path: '/solicitudes', body: submission,
         signal: requestOptions.signal, expectedRunId: submission.runId,
+        credentials: options.publicAccess ? 'include' : 'omit',
         validateSuccess: (value) => validateOutcomeResponse(value, expectedIdentity),
       }).then((value) => value.data)
     },
@@ -221,6 +232,7 @@ export function createMatriculaRegularApi(options: MatriculaRegularApiOptions) {
         fetchImpl, operation: 'result', method: 'GET',
         path: `/solicitudes/${encodeURIComponent(identity.requestId)}?${query}`,
         signal: requestOptions.signal, expectedRunId: identity.runId,
+        credentials: options.publicAccess ? 'include' : 'omit',
         validateSuccess: (value) => validateLookupResponse(value, identity),
       }).then((value) => value.data)
     },
@@ -235,6 +247,7 @@ export function createMatriculaRegularApi(options: MatriculaRegularApiOptions) {
         fetchImpl, operation: 'report', method: 'GET',
         path: `/reportes/${encodeURIComponent(identity.enrollmentId)}?${query}`,
         signal: requestOptions.signal, expectedRunId: identity.runId,
+        credentials: options.publicAccess ? 'include' : 'omit',
         validateSuccess: (value) => validateEnrollmentReportResponse(value, identity),
       }).then((value) => value.data)
     },
@@ -247,6 +260,7 @@ export function createMatriculaRegularApi(options: MatriculaRegularApiOptions) {
     return request<MatriculaRegularEnvelope<MatriculaRegularSession>>({
       fetchImpl, operation, method: 'POST', path, body,
       signal: requestOptions.signal, expectedRunId: runId,
+      credentials: options.publicAccess ? 'include' : 'omit',
       validateSuccess: (value) => validateSessionResponse(value, expectedIdentity),
     }).then((value) => value.data)
   }

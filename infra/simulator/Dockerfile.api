@@ -1,0 +1,25 @@
+FROM node:24.22.0-bookworm-slim@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5 AS build
+RUN npm install --global pnpm@10.34.7
+WORKDIR /app/backend
+COPY backend/package.json backend/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY backend/nest-cli.json backend/tsconfig.json backend/tsconfig.build.json backend/tsconfig.scripts.json ./
+COPY backend/src ./src
+COPY backend/scripts ./scripts
+COPY backend/migrations ./migrations
+COPY shared /app/shared
+RUN pnpm build && pnpm exec tsc -p tsconfig.scripts.json && pnpm prune --prod
+
+FROM node:24.22.0-bookworm-slim@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5 AS runtime
+ENV NODE_ENV=production HOST=0.0.0.0 PORT=3000
+WORKDIR /app/backend
+COPY --from=build --chown=node:node /app/backend/package.json ./package.json
+COPY --from=build --chown=node:node /app/backend/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/backend/dist ./dist
+COPY --from=build --chown=node:node /app/backend/migrations ./dist/migrations
+# Compiled imports resolve ../../../shared from /app/backend/dist/src.
+COPY --from=build --chown=node:node /app/shared /app/shared
+COPY --from=build --chown=node:node /app/shared /app/backend/shared
+USER node
+EXPOSE 3000
+CMD ["node", "dist/main.js"]

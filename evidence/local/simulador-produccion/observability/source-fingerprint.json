@@ -1,0 +1,14 @@
+{
+  "compose.observability.yaml": "820e456301dc622c0a1b23774146690e868ba9d35657746bde4eb46c798bfd71",
+  "infra/simulator/setup-observability.sh": "73ead7887f66a12a7434dc5d56ff3badad8ef59586eb5b625cf91becae326f4c",
+  "infra/simulator/README.md": "4199d713aa5438edebd9dc3336baab91236f54b7132498c805961e56b13506d6",
+  "load/run-observed.sh": "ba467a9b5a80a807bd824b07f47dae510d60488bb4627bda3a922628c4fe8cf9",
+  "load/common.js": "75a1f57735f7ddb8169887c26dd60c49bb39c388b596d3c86834d7af46d1bb47",
+  "load/enrollment.js": "6781175bc31c6f3294b687f98608b5284839cf0715efb1a047de3cf252457ea9",
+  "scripts/verify-simulator-observability.mjs": "1b0884cc6b6b28340fdbc730ed953f6a9cf1eefe77e80d8245e99f662fae9c9b",
+  "codegraph.json": "5c428e284f2d9d8ea456b76075f6b2abae41b3495a423c3296a71e372e4d0447",
+  "infra/simulator/observability/prometheus.yml": "c88682f999ed1fb559eacb7b6a523d47851c13d1d494ea37891d4d488670e2c1",
+  "infra/simulator/observability/grafana/provisioning/dashboards/dashboards.yml": "77d5741007ee62cb9518785aa5a4d24125eb5a511afe4175dbbf6a183bb59f37",
+  "infra/simulator/observability/grafana/provisioning/datasources/prometheus.yml": "b1a87519c41c25d58e123548810f3bcc4a0afc7549111b8431751c7d2b077d5d",
+  "infra/simulator/observability/grafana/provisioning/dashboards/sum-simulator-k6.json": "72dfdca9f438c2b97c85b4c01da79ccba4208be64cf7b8c5449d73393a52e45c"
+}

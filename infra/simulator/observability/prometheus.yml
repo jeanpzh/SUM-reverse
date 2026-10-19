@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# k6 pushes metrics through the enabled remote-write receiver. The simulator
+# itself is intentionally not scraped, so no identity-bearing labels are added.
+scrape_configs: []

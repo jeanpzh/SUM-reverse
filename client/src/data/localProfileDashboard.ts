@@ -97,6 +97,16 @@ async function json(response: Response, operation: LocalProfileOperation): Promi
 }
 
 function parseHttpError(value: unknown, operation: LocalProfileOperation, status: number, expectedRunId?: string): never {
+  if (status === 401 || status === 403) {
+    const error = value && typeof value === 'object' && 'error' in value ? (value as { error: unknown }).error : null
+    if (!error || typeof error !== 'object' || !('code' in error) || !('fields' in error)
+      || !Array.isArray((error as { fields: unknown }).fields)
+      || !(error as { fields: unknown[] }).fields.every((field) => typeof field === 'string')) {
+      throw errorFor(operation, 'protocol', 'La respuesta de acceso local no cumple el contrato.', { status })
+    }
+    const code = typeof (error as { code: unknown }).code === 'string' ? (error as { code: string }).code : 'UNAUTHENTICATED'
+    throw errorFor(operation, 'http', `La API local respondió ${code}.`, { status, code })
+  }
   try {
     const assertErrorResponse: (response: unknown) => asserts response is MatriculaRegularErrorResponse = validateErrorResponse
     assertErrorResponse(value)
@@ -148,7 +158,7 @@ function isCompatibleKey(key: DashboardKey): key is Extract<DashboardKey,
   return compatibleKeys.has(key)
 }
 
-export function createLocalProfileDashboardApi(options: { fetchImpl?: typeof fetch } = {}) {
+export function createLocalProfileDashboardApi(options: { fetchImpl?: typeof fetch; publicAccess?: boolean } = {}) {
   const fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis)
 
   async function request<T>(operation: LocalProfileOperation, path: string, signal?: AbortSignal,
@@ -161,7 +171,7 @@ export function createLocalProfileDashboardApi(options: { fetchImpl?: typeof fet
         method: command ? 'POST' : 'GET',
         headers: command ? { Accept: 'application/json', 'Content-Type': 'application/json' } : { Accept: 'application/json' },
         ...(command ? { body: JSON.stringify(command) } : {}),
-        credentials: 'omit', signal,
+        credentials: options.publicAccess ? 'include' : 'omit', signal,
       })
     } catch (cause) {
       if (signal?.aborted || (cause instanceof DOMException && cause.name === 'AbortError')) {

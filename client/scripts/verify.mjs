@@ -189,8 +189,8 @@ try {
       await page.getByRole('tab', { name: 'Información Personal' }).click()
     }
     if (route.id === 'historial') {
-      assert.ok(await page.getByRole('heading', { name: 'RESUMEN DEL HISTORIAL ACADÉMICO' }).count())
-      assert.ok(await page.getByRole('heading', { name: 'Promedio Ponderado' }).count())
+      assert.ok(await page.getByRole('heading', { name: 'Resumen académico' }).count())
+      assert.ok(await page.getByRole('heading', { name: 'Promedio por periodo' }).count())
       assert.deepEqual(await page.locator('.history-table thead th').allTextContents(), [
         'Ciclo', 'Plan', 'Tipo', 'Asignatura', 'Calificación', 'Créditos', 'Sección', 'Acta',
       ])

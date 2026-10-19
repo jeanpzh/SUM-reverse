@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "testid": "cupos-20261019-grafana-02",
+  "values": {
+    "accepted": 10,
+    "sectionFull": 90,
+    "completed": 100,
+    "unexpected": 0
+  },
+  "submissionP95Ms": 733.25767225,
+  "seriesCount": 144,
+  "noIdentityLabels": true,
+  "dashboardUid": "sum-simulator-k6",
+  "panelQueriesChecked": 15
+}

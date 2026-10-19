@@ -1,0 +1,788 @@
+{
+  "id": null,
+  "uid": "sum-simulator-k6",
+  "title": "SUM Simulator \u00b7 k6 observability",
+  "description": "Local-only observability for synthetic k6 runs. Every panel filters one explicit testid. Trend statistics are interval gauges, not run-wide recomputations. Business counters show the latest cumulative value per series within the selected time range.",
+  "tags": [
+    "simulator",
+    "k6"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m"
+    ]
+  },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "HTTP requests / second",
+      "description": "Request throughput from k6. A short run can produce only one sample per route, which is insufficient for rate(); use the cumulative request panel for short runs.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 8,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(k6_http_reqs_total{testid=~\"$testid\"}[$__rate_interval]))",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "{{operation}}"
+        }
+      ],
+      "id": 1
+    },
+    {
+      "type": "timeseries",
+      "title": "Highest HTTP failure rate by route (%)",
+      "description": "Worst per-route HTTP failure rate reported by k6 as an interval gauge. It is not an overall weighted failure rate.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 4,
+        "w": 8,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (operation, name) (k6_http_req_failed_rate{testid=~\"$testid\",operation!=\"\"}) * 100",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "{{operation}}"
+        }
+      ],
+      "id": 2
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP duration p95",
+      "description": "Per-operation and static route-name interval gauge from k6, not a test-wide recomputation. Values are converted from seconds to milliseconds. Each line remains separate; do not aggregate percentiles across series.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 11,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "1000 * k6_http_req_duration_p95{testid=~\"$testid\",operation!=\"\"}",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "{{operation}} / {{name}}"
+        }
+      ],
+      "id": 3
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP duration p99",
+      "description": "Per-operation and static route-name interval gauge from k6, not a test-wide recomputation. Values are converted from seconds to milliseconds. Each line remains separate; do not aggregate percentiles across series.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 11,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "1000 * k6_http_req_duration_p99{testid=~\"$testid\",operation!=\"\"}",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "{{operation}} / {{name}}"
+        }
+      ],
+      "id": 4
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP duration avg",
+      "description": "Per-operation and static route-name interval gauge from k6, not a test-wide recomputation. Values are converted from seconds to milliseconds. Each line remains separate; do not aggregate percentiles across series.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "1000 * k6_http_req_duration_avg{testid=~\"$testid\",operation!=\"\"}",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "{{operation}} / {{name}}"
+        }
+      ],
+      "id": 5
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP duration max",
+      "description": "Per-operation and static route-name interval gauge from k6, not a test-wide recomputation. Values are converted from seconds to milliseconds. Each line remains separate; do not aggregate percentiles across series.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 18,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "1000 * k6_http_req_duration_max{testid=~\"$testid\",operation!=\"\"}",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "{{operation}} / {{name}}"
+        }
+      ],
+      "id": 6
+    },
+    {
+      "type": "timeseries",
+      "title": "Active virtual users",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 25,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(k6_vus{testid=~\"$testid\"})",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "{{operation}}"
+        }
+      ],
+      "id": 7
+    },
+    {
+      "type": "timeseries",
+      "title": "Lowest check pass rate",
+      "description": "Lowest rate across individual k6 checks; no check label is exposed beyond its static script-defined name.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 25,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "min(k6_checks_rate{testid=~\"$testid\"}) * 100",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "{{operation}}"
+        }
+      ],
+      "id": 8
+    },
+    {
+      "type": "stat",
+      "title": "Accepted",
+      "description": "Monotonic counter: show the last sample per series in the selected dashboard range, never the sum of cumulative samples. A zero is returned only when a run with this testid has a k6_iterations_total sample.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(last_over_time(k6_enrollments_accepted_total{testid=~\"$testid\"}[$__range])) or on() (0 * sum(last_over_time(k6_iterations_total{testid=~\"$testid\"}[$__range]))))",
+          "range": false,
+          "instant": true,
+          "editorMode": "code",
+          "legendFormat": "{{operation}}"
+        }
+      ],
+      "id": 9
+    },
+    {
+      "type": "stat",
+      "title": "Section full",
+      "description": "Monotonic counter: show the last sample per series in the selected dashboard range, never the sum of cumulative samples. A zero is returned only when a run with this testid has a k6_iterations_total sample.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(last_over_time(k6_enrollments_section_full_total{testid=~\"$testid\"}[$__range])) or on() (0 * sum(last_over_time(k6_iterations_total{testid=~\"$testid\"}[$__range]))))",
+          "range": false,
+          "instant": true,
+          "editorMode": "code",
+          "legendFormat": "{{operation}}"
+        }
+      ],
+      "id": 10
+    },
+    {
+      "type": "stat",
+      "title": "Unexpected",
+      "description": "Monotonic counter: show the last sample per series in the selected dashboard range, never the sum of cumulative samples. A zero is returned only when a run with this testid has a k6_iterations_total sample.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(last_over_time(k6_enrollments_unexpected_total{testid=~\"$testid\"}[$__range])) or on() (0 * sum(last_over_time(k6_iterations_total{testid=~\"$testid\"}[$__range]))))",
+          "range": false,
+          "instant": true,
+          "editorMode": "code",
+          "legendFormat": "{{operation}}"
+        }
+      ],
+      "id": 11
+    },
+    {
+      "type": "stat",
+      "title": "Completed",
+      "description": "Monotonic counter: show the last sample per series in the selected dashboard range, never the sum of cumulative samples. A zero is returned only when a run with this testid has a k6_iterations_total sample.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 100
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(last_over_time(k6_enrollment_iterations_completed_total{testid=~\"$testid\"}[$__range])) or on() (0 * sum(last_over_time(k6_iterations_total{testid=~\"$testid\"}[$__range]))))",
+          "range": false,
+          "instant": true,
+          "editorMode": "code",
+          "legendFormat": "{{operation}}"
+        }
+      ],
+      "id": 12
+    },
+    {
+      "type": "stat",
+      "title": "Dropped iterations",
+      "description": "Monotonic counter: show the last sample per series in the selected dashboard range, never the sum of cumulative samples. A zero is returned only when a run with this testid has a k6_iterations_total sample.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 12,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(last_over_time(k6_dropped_iterations_total{testid=~\"$testid\"}[$__range])) or on() (0 * sum(last_over_time(k6_iterations_total{testid=~\"$testid\"}[$__range]))))",
+          "range": false,
+          "instant": true,
+          "editorMode": "code",
+          "legendFormat": "{{operation}}"
+        }
+      ],
+      "id": 13
+    },
+    {
+      "type": "stat",
+      "title": "Run summary",
+      "description": "Counters are monotonic totals per test run; use the latest sample in the selected dashboard window, not a sum of their cumulative samples.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 32,
+        "w": 12,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(last_over_time(k6_iterations_total{testid=~\"$testid\"}[$__range]))",
+          "range": false,
+          "instant": true,
+          "editorMode": "code",
+          "legendFormat": "{{operation}}"
+        }
+      ],
+      "id": 14
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "HTTP requests (cumulative)",
+      "description": "Cumulative requests for the selected testid. Useful for short runs that emit too few samples per route to calculate rate().",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 4,
+        "w": 8,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(k6_http_reqs_total{testid=~\"$testid\"})",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "all routes"
+        }
+      ]
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "testid",
+        "label": "Test run",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "simulator-prometheus"
+        },
+        "definition": "label_values(k6_http_reqs_total, testid)",
+        "query": {
+          "query": "label_values(k6_http_reqs_total, testid)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
+        "sort": 3,
+        "multi": false,
+        "includeAll": false,
+        "hide": 0,
+        "current": {
+          "selected": false,
+          "text": "",
+          "value": ""
+        },
+        "options": [],
+        "regex": "",
+        "skipUrlSync": false
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [],
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "liveNow": false,
+  "weekStart": ""
+}

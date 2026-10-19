@@ -4,6 +4,7 @@ import type { LocalProfilePayloadMap } from './localProfileDashboard.ts'
 import type { DashboardKey, Identity } from '../../../shared/local-profile-dashboard.mjs'
 import { validateDashboardIdentity } from '../../../shared/local-profile-dashboard.mjs'
 import type { MatriculaRegularSession, MatriculaRegularUuid } from '../../../shared/matricula-regular.mjs'
+import type { AccessPrincipal, AccessProvider } from './accessProvider.ts'
 
 export const SESSION_DURATION_MS = 900_000
 export const remainingSeconds = (deadlineMono: number, monotonicNow: number) => Math.max(0, Math.ceil((deadlineMono - monotonicNow) / 1000))
@@ -49,6 +50,7 @@ type ActiveProfile = {
   expiresAt: string
   deadlineMono: number
   formulario: Formulario
+  accessExpiresAt?: string
 }
 
 type ReadResult<K extends DashboardKey> = { runId: string; data: { serverNow: string; payload: LocalProfilePayloadMap[K] } }
@@ -71,6 +73,8 @@ export function createLocalProfileSessionStore(options: {
   monotonicNow?: () => number
   scheduler?: TimerScheduler
   identityStorage?: IdentityStorage | null
+  accessProvider?: AccessProvider
+  publicAccess?: boolean
 }) {
   const now = options.monotonicNow ?? (() => performance.now())
   const scheduler = options.scheduler ?? {
@@ -180,43 +184,51 @@ export function createLocalProfileSessionStore(options: {
       if (snapshot.status === 'active') scheduleExpiry()
     }
   }
-  async function enter(actorId: Identity['actorId'], entryOptions: { expectedRunId?: string } = {}): Promise<void> {
+  async function enter(actorId?: Identity['actorId'], entryOptions: { expectedRunId?: string } = {}): Promise<void> {
     if (entryPromise) return entryPromise
-    if (snapshot.status === 'active' && snapshot.actorId === actorId) return
+    if (snapshot.status === 'active' && (snapshot.actorId === actorId
+      || (options.publicAccess && snapshot.actorId === options.accessProvider?.getSnapshot()?.actorId))) return
     if (snapshot.status === 'expired') clearActive('logout')
     const entryRevision = requestRevision
     publish({ status: 'entering', generation })
     const work = (async () => {
       try {
-        const catalog = await options.dashboardApi.catalog()
+        const access = options.publicAccess ? options.accessProvider?.getSnapshot() ?? null : null
+        const principal: AccessPrincipal | null = options.publicAccess ? access : null
+        const localCatalog = options.publicAccess ? null : await options.dashboardApi.catalog()
+        const activeActorId = principal?.actorId ?? actorId
+        const runId = principal?.runId ?? localCatalog?.runId
         if (requestRevision !== entryRevision) return
-        if (entryOptions.expectedRunId !== undefined && catalog.runId !== entryOptions.expectedRunId) {
+        if (!activeActorId || !runId) throw new Error('Inicia sesión con tu código de acceso.')
+        if (!options.publicAccess && entryOptions.expectedRunId !== undefined && localCatalog?.runId !== entryOptions.expectedRunId) {
           throw new LocalProfileApiError({ kind: 'http', operation: 'catalog', code: 'RUN_CHANGED',
             message: 'La prueba cambió antes de ingresar. Vuelve a elegir escenario y perfil.' })
         }
-        const profile = catalog.data.profiles.find((candidate) => candidate.actorId === actorId)
-        if (!profile) throw new LocalProfileApiError({ kind: 'protocol', operation: 'catalog', message: 'El perfil no pertenece al catálogo sintético.' })
-        const session = await options.enrollmentApi.createSession({ runId: catalog.runId, actorId })
+        const profile = localCatalog?.data.profiles.find((candidate) => candidate.actorId === activeActorId)
+        if (!options.publicAccess && !profile) throw new LocalProfileApiError({ kind: 'protocol', operation: 'catalog', message: 'El perfil no pertenece al catálogo sintético.' })
+        const session = await options.enrollmentApi.createSession({ runId, actorId: activeActorId })
         if (requestRevision !== entryRevision) return
-        const identity = { runId: session.runId, actorId, sessionId: session.sessionId }
-        if (session.runId !== catalog.runId || session.actorId !== actorId || Date.parse(session.expiresAt) <= Date.parse(session.startedAt)) {
+        const identity: Identity = { runId: session.runId, actorId: activeActorId, sessionId: session.sessionId }
+        if (session.runId !== runId || session.actorId !== activeActorId || Date.parse(session.expiresAt) <= Date.parse(session.startedAt)) {
           throw new LocalProfileApiError({ kind: 'protocol', operation: 'catalog', message: 'La sesión local no corresponde al perfil elegido.' })
         }
         const formResponse = await options.dashboardApi.read('formulario', identity)
         if (requestRevision !== entryRevision) return
-        if (formResponse.runId !== identity.runId || formResponse.data.actorId !== actorId
-          || formResponse.data.sessionId !== identity.sessionId || formResponse.data.payload.data.alumno.codAlumno !== actorId) {
+        if (formResponse.runId !== identity.runId || formResponse.data.actorId !== activeActorId
+          || formResponse.data.sessionId !== identity.sessionId || formResponse.data.payload.data.alumno.codAlumno !== activeActorId) {
           throw new LocalProfileApiError({ kind: 'protocol', operation: 'read', message: 'El formulario no corresponde al perfil elegido.' })
         }
         const receivedAt = now()
         const serverAnchor = Date.parse(session.startedAt)
         const expiration = Date.parse(session.expiresAt)
-        const deadlineMono = receivedAt + Math.max(0, expiration - serverAnchor)
+        const academicDeadline = receivedAt + Math.max(0, expiration - serverAnchor)
+        const authDeadline = principal ? receivedAt + Math.max(0, Date.parse(principal.expiresAt) - Date.now()) : Number.POSITIVE_INFINITY
+        const deadlineMono = Math.min(academicDeadline, authDeadline)
         identityChanged('enter')
         const enteredGeneration = generation
-        publish({ status: 'active', runId: session.runId, actorId, sessionId: session.sessionId,
+        publish({ status: 'active', runId: session.runId, actorId: activeActorId, sessionId: session.sessionId,
           startedAt: session.startedAt, expiresAt: session.expiresAt, deadlineMono,
-          formulario: formResponse.data.payload, renewing: false, renewError: null, generation: enteredGeneration })
+          formulario: formResponse.data.payload, accessExpiresAt: principal?.expiresAt, renewing: false, renewError: null, generation: enteredGeneration })
         scheduleExpiry()
         storeIdentity(identity)
       } catch (error) {
@@ -227,7 +239,7 @@ export function createLocalProfileSessionStore(options: {
     entryPromise = wrapped
     await wrapped
   }
-  /** L-07: on reload, renew the tab's stored session before routing; any failure clears it. Never creates a session. */
+  /** On reload, restore the authenticated actor first; never creates a new actor or academic session. */
   async function resume(): Promise<void> {
     if (snapshot.status !== 'anonymous' || entryPromise) return
     const stored = readStoredIdentity()
@@ -236,6 +248,10 @@ export function createLocalProfileSessionStore(options: {
     publish({ status: 'entering', generation })
     const work = (async () => {
       try {
+        const principal = options.publicAccess ? await options.accessProvider?.current() : null
+        if (options.publicAccess && (!principal || principal.actorId !== stored.actorId || principal.runId !== stored.runId)) {
+          throw new Error('La identidad autenticada no coincide con la sesión académica guardada.')
+        }
         const session = await options.enrollmentApi.renewSession(stored.sessionId, { runId: stored.runId, actorId: stored.actorId })
         if (requestRevision !== entryRevision) return
         if (session.runId !== stored.runId || session.actorId !== stored.actorId || session.sessionId !== stored.sessionId) {
@@ -247,11 +263,12 @@ export function createLocalProfileSessionStore(options: {
           || formResponse.data.sessionId !== stored.sessionId || formResponse.data.payload.data.alumno.codAlumno !== stored.actorId) {
           throw new LocalProfileApiError({ kind: 'protocol', operation: 'read', message: 'El formulario no corresponde a la identidad guardada.' })
         }
-        const deadlineMono = now() + SESSION_DURATION_MS
+        const authDeadline = principal ? now() + Math.max(0, Date.parse(principal.expiresAt) - Date.now()) : Number.POSITIVE_INFINITY
+        const deadlineMono = Math.min(now() + SESSION_DURATION_MS, authDeadline)
         identityChanged('enter')
         publish({ status: 'active', runId: session.runId, actorId: stored.actorId, sessionId: session.sessionId,
           startedAt: session.startedAt, expiresAt: session.expiresAt, deadlineMono,
-          formulario: formResponse.data.payload, renewing: false, renewError: null, generation })
+          formulario: formResponse.data.payload, accessExpiresAt: principal?.expiresAt, renewing: false, renewError: null, generation })
         scheduleExpiry()
       } catch (error) {
         storeIdentity(null)
@@ -276,7 +293,9 @@ export function createLocalProfileSessionStore(options: {
         || session.startedAt !== previous.startedAt) throw new Error('La renovación local cambió la identidad de sesión.')
       const receivedAt = now()
       const serverNow = Date.parse(session.expiresAt) - SESSION_DURATION_MS
-      const deadlineMono = receivedAt + Math.max(0, Date.parse(session.expiresAt) - serverNow)
+      const academicDeadline = receivedAt + Math.max(0, Date.parse(session.expiresAt) - serverNow)
+      const authDeadline = previous.accessExpiresAt ? now() + Math.max(0, Date.parse(previous.accessExpiresAt) - Date.now()) : Number.POSITIVE_INFINITY
+      const deadlineMono = Math.min(academicDeadline, authDeadline)
       publish({ ...previous, expiresAt: session.expiresAt, deadlineMono, renewing: false, renewError: null, generation })
       scheduleExpiry()
     } catch (error) {
@@ -294,6 +313,8 @@ export function createLocalProfileSessionStore(options: {
     }
   }
   function logout() {
+    options.accessProvider?.invalidate()
+    if (options.publicAccess) void options.accessProvider?.logout().catch(() => undefined)
     clearActive('logout')
     storeIdentity(null)
     if (snapshot.status === 'entering') {
@@ -304,6 +325,7 @@ export function createLocalProfileSessionStore(options: {
       publish({ status: 'anonymous', notice: null, generation })
     }
   }
+  function markAccessExpired() { logout() }
   function markRunChanged() { clearActive('run-changed', 'reset') }
 
   async function read<K extends DashboardKey>(key: K, requestOptions: { signal?: AbortSignal } = {}): Promise<ReadResult<K>> {
@@ -325,6 +347,7 @@ export function createLocalProfileSessionStore(options: {
     } catch (error) {
       if (requestOperationRevision !== requestRevision) throw new LocalProfileApiError({ kind: 'stale', operation: 'read', message: 'La respuesta pertenece a una identidad anterior.' })
       if (error instanceof LocalProfileApiError && error.code === 'SESSION_EXPIRED') markExpired()
+      if (error instanceof LocalProfileApiError && (error.status === 401 || error.status === 403)) markAccessExpired()
       if (error instanceof LocalProfileApiError && error.code === 'RUN_CHANGED') markRunChanged()
       throw error
     } finally {
@@ -333,7 +356,7 @@ export function createLocalProfileSessionStore(options: {
     }
   }
 
-  return { getSnapshot, subscribe, onIdentityChange, enter, resume, renew, logout, observe, markExpired, markRunChanged, read }
+  return { getSnapshot, subscribe, onIdentityChange, enter, resume, renew, logout, observe, markExpired, markAccessExpired, markRunChanged, read }
 }
 
 export type LocalProfileSessionStore = ReturnType<typeof createLocalProfileSessionStore>
