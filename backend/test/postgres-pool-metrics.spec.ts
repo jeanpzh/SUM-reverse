@@ -111,7 +111,7 @@ describe('histogram buckets', () => {
   })
 
   it('uses the shared bounds so a 26 s duration lands in the 30000 bucket, not +Inf', () => {
-    expect(DURATION_BUCKETS_MS).toEqual([0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 30000])
+    expect(DURATION_BUCKETS_MS).toEqual([0.5, 1, 2, 5, 10, 20, 50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 8000, 10000, 20000, 30000])
     const histogram = new LabeledHistogram(['route'])
     histogram.observe(['/slow'], 26000)
     const buckets = histogram.snapshot()[0]?.buckets as number[]

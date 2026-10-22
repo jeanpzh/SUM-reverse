@@ -14,7 +14,7 @@ export type SubmitRoute = (typeof SUBMIT_ROUTES)[number]
 export type StorageErrorCause = (typeof STORAGE_ERROR_CAUSES)[number]
 export type SubmitRetryCode = (typeof SUBMIT_RETRY_CODES)[number]
 
-export const DURATION_BUCKETS_MS = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 30000] as const
+export const DURATION_BUCKETS_MS = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 8000, 10000, 20000, 30000] as const
 export const STATEMENT_BUCKETS = [5, 8, 10, 12, 15, 20, 30, 50, 100] as const
 
 export type HistogramSnapshot = { count: number; sum: number; buckets: number[] }

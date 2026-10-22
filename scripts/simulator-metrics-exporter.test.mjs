@@ -20,7 +20,7 @@ test('rejects arbitrary replica labels and omits malformed metrics', () => {
   assert.doesNotMatch(renderMetrics({ 'api-a': { data: { process: { rssBytes: NaN }, pool: {} } } }), /NaN|undefined/)
 })
 
-const bounds = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 30000]
+const bounds = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 8000, 10000, 20000, 30000]
 const zeros = () => Array.from({ length: bounds.length + 1 }, () => 0)
 const histogram = (counts, sum) => {
   const buckets = zeros()
@@ -37,7 +37,7 @@ function syntheticSnapshot() {
     phases[phase] = {}
     for (const route of ['accepted', 'rejected', 'replay', 'failed']) phases[phase][route] = histogram({}, 0)
   }
-  phases.commit.accepted = histogram({ 0: 1, 3: 2, 16: 1 }, 40000)
+  phases.commit.accepted = histogram({ 0: 1, 3: 2, [bounds.length]: 1 }, 40000)
   return { data: {
     process: {
       cpuUserMicros: 1e6, cpuSystemMicros: 0, rssBytes: 1, eventLoopP95Ms: 1, droppedMetricSamples: 0,
