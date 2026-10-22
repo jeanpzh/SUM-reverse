@@ -2,6 +2,7 @@ import http from 'k6/http'
 import { check } from 'k6'
 import { randomBytes } from 'k6/crypto'
 import { Counter, Gauge } from 'k6/metrics'
+import { SharedArray } from 'k6/data'
 import { validateManifest } from './profile-config.mjs'
 
 const population = new Gauge('scenario_actor_count')
@@ -27,8 +28,15 @@ export function runtimeConfig() {
   const origin = __ENV.SIMULATOR_ORIGIN || expectedOrigin
   if (origin !== expectedOrigin) throw new Error('SIMULATOR_ORIGIN must be the configured simulator UI origin')
   const file = __ENV.SIMULATOR_MANIFEST || '/runtime/manifest.json'
-  const manifest = validateManifest(JSON.parse(open(file)))
-  return { base, origin, manifest }
+  // Parsed once and shared read-only across VUs: a per-VU copy of a 1422-actor manifest exhausts ENV-H memory.
+  let parsed
+  const load = () => (parsed ??= validateManifest(JSON.parse(open(file))))
+  const header = new SharedArray(`manifest-header:${file}`, () => {
+    const { actors, ...rest } = load()
+    return [rest]
+  })[0]
+  const actors = new SharedArray(`manifest-actors:${file}`, () => load().actors)
+  return { base, origin, manifest: { ...header, actors } }
 }
 
 function headers(config) {

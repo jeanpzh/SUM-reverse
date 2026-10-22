@@ -2,6 +2,7 @@ import http from 'k6/http'
 import { check, sleep } from 'k6'
 import exec from 'k6/execution'
 import { Counter, Trend } from 'k6/metrics'
+import { SharedArray } from 'k6/data'
 import { runtimeConfig, loginAndSession, requestTags, safeJson, uuidV4 } from './common.js'
 import { waveOffsets } from './wave-schedule.mjs'
 
@@ -9,11 +10,15 @@ const config = runtimeConfig()
 const actors = config.manifest.actors
 const expectedAccepted = Number(config.manifest.expectedAccepted)
 const expectedRejected = Number(config.manifest.expectedRejected)
-if (config.manifest.scenarioProfile !== 'fisi-schools' || config.manifest.fisi?.mode !== 'jornada' || !actors.every((actor) => Number.isSafeInteger(actor.wave))) throw new Error('jornada requires a fisi-schools manifest prepared with SIMULATOR_FISI_FRANJA=jornada (actors with wave 1..9)')
 const waveInterval = Number(__ENV.WAVE_INTERVAL || 60)
 const frontload = Number(__ENV.WAVE_FRONTLOAD ?? 1)
 const startDelay = Number(__ENV.START_DELAY_MS || 10000)
-const offsets = waveOffsets(actors, { intervalMs: waveInterval * 1000, delayMs: startDelay, frontload })
+// Validated and scheduled once in init, then shared: iterating the shared actors per VU would deserialize all of them in every VU.
+const offsets = new SharedArray('jornada-offsets', () => {
+  const plain = Array.from(actors)
+  if (config.manifest.scenarioProfile !== 'fisi-schools' || config.manifest.fisi?.mode !== 'jornada' || !plain.every((actor) => Number.isSafeInteger(actor.wave))) throw new Error('jornada requires a fisi-schools manifest prepared with SIMULATOR_FISI_FRANJA=jornada (actors with wave 1..9)')
+  return waveOffsets(plain, { intervalMs: waveInterval * 1000, delayMs: startDelay, frontload })
+})
 const accepted = new Counter('jornada_accepted')
 const rejected = new Counter('jornada_rejected')
 const unexpected = new Counter('jornada_unexpected')

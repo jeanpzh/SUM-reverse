@@ -139,6 +139,8 @@ test('runner validates SCENARIO_ENV and SCENARIO_REP before touching Docker and 
   assert.match(source, /helper run-meta /)
   assert.match(source, /load\/resource-sampler\.sh/)
   assert.match(source, /load\/check-generator-guard\.mjs/)
+  assert.match(source, /enrollment\|login\|retry\|jornada\) connection_model=per-vu/)
+  assert.match(source, /--connection-model "\$connection_model"/)
   assert.match(source, /"guard-\$testid\.json" \|\| check_status/)
   assert.match(source, /cleanup\(\) \{\n  stop_sampler/)
 })
