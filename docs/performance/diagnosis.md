@@ -164,3 +164,18 @@ Después de mergear el índice de `simulator_academic_sessions` (PR #32), se mid
 - **El SLO sigue sin cumplirse en race 400** (p95 ≈ 2,4 s frente a 2 s), pero queda a ≈ 20 % del límite.
 - **Revisa las comparaciones de este informe:** las cifras de los bloques A–G se midieron con ≈ 120–135 campañas y sin el índice, es decir, con parte de la deriva incluida. La deriva entre bloques que se reportó (≈ 18 %) no se debía a azar sino, al menos en parte, a este efecto.
 - **Límites:** n = 2 válidas sin índice; un solo escenario (race 400); el índice recién creado en B no tiene bloat y el brazo A lleva el de la tabla; mismo host de 2 vCPU con k6 compartido.
+
+## 10. Estado de cierre y pendientes (2026-10-22)
+
+**Cerrado por decisión del operador:** P0, P1 (diagnóstico P1-06) y **P2-02** (índice de sesiones académicas, medido en el stack: §9). El resto del plan queda **pendiente**; no se ha iniciado nada de ello.
+
+| Pendiente | Qué falta | Nota |
+| --- | --- | --- |
+| Decisión sobre la puerta de P1 | H1, H2 y H6 `inconclusive`; p95 sin cubrir al 90 % en ample (§6) | Corresponde al operador antes de activar más tareas P2 |
+| P2-00 | Arnés de equivalencia del envío (`simulator-submit-equivalence.e2e-spec.ts`) | Prerrequisito de P2-01, P2-04 y P2-05; no cambia comportamiento. Estimado 1–2 h |
+| P2-01, P2-04, P2-05 | Replay antes de bloquear; quitar `config`; acortar el tiempo bajo bloqueo | Cambian el camino crítico de cupos. Estimado conjunto 5–7 h, con A/B por tarea |
+| Limpieza de campañas retenidas | Política de retención/limpieza en el simulador | Candidata barata junto con el índice; sin A/B todavía |
+| P2-03, P2-06 a P2-09 | Menos checkouts, lecturas, pool, métricas, PostgreSQL | No se esperan efecto en el p95 de race (P2-03); ver §7 |
+| Medición del índice con más rigor | n = 2 sin índice, un solo escenario (race 400), 2 vCPU compartidas | Repetir con ABBA completo y más escenarios |
+| Experimentos no ejecutados | E14 stress; 3.ª repetición de mixed con pool 40; E10 mixed rápido (inválido); E12 login (inválido) | Véase §8 |
+| P3 | Validación final de la matriz en un host de 8 o más vCPU (ENV-C) | Requiere el entorno, que aporta el operador |
