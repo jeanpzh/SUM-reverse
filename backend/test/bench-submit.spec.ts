@@ -11,7 +11,7 @@ describe('bench-submit options', () => {
   })
 
   it.each([
-    [['--actors', '0']], [['--actors', '1001']], [['--actors', 'abc']], [['--pools', '5']], [['--pools', '0']],
+    [['--actors', '0']], [['--actors', '2001']], [['--actors', 'abc']], [['--pools', '5']], [['--pools', '0']],
     [['--budget-ms', '-1']], [['--pool-max', '1.5']], [['--profile', 'last-seat']], [['--profile', 'nope']],
     [['--bogus', '1']], [['--actors']], [['--actors', '10', '--actors', '20']],
   ])('rejects %j', (argv) => {

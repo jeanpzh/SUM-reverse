@@ -21,7 +21,7 @@ const SLO_P95_MS = 2000
 const SLO_QUANTILE = 0.95
 const benchProfiles = ['shared', 'ample', 'multi-uniform', 'multi-hotspot', 'distributed']
 const flags = ['--actors', '--profile', '--budget-ms', '--pools', '--pool-max', '--out']
-const usage = 'Usage: bench-submit --actors <1..1000> --profile <shared|ample|multi-uniform|multi-hotspot|distributed> [--budget-ms <int>] [--pools <1..4>] [--pool-max <int>] [--out <path>]'
+const usage = 'Usage: bench-submit --actors <int, same range as SIMULATOR_ACTOR_COUNT> --profile <shared|ample|multi-uniform|multi-hotspot|distributed> [--budget-ms <int>] [--pools <1..4>] [--pool-max <int>] [--out <path>]'
 
 function integerOption(name: string, value: string | undefined, min: number, max: number): number {
   const parsed = value !== undefined && /^\d+$/.test(value) ? Number(value) : NaN
