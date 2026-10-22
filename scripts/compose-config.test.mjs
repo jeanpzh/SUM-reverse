@@ -6,10 +6,10 @@ import test from 'node:test'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 
-function config(file) {
+function config(...files) {
   // Render configuration only: never start or read operator snapshots.
-  const result = spawnSync('docker', ['compose', '--env-file', '/dev/null', '--profile', '*', '-f', file,
-    'config', '--no-path-resolution', '--format', 'json'], {
+  const result = spawnSync('docker', ['compose', '--env-file', '/dev/null', '--profile', '*',
+    ...files.flatMap((file) => ['-f', file]), 'config', '--no-path-resolution', '--format', 'json'], {
     cwd: root, env: { PATH: process.env.PATH, HOME: process.env.HOME }, encoding: 'utf8',
   })
   assert.equal(result.status, 0, result.stderr)
@@ -18,7 +18,7 @@ function config(file) {
 
 test('Compose entrypoints isolate scenario, simulator, and operator deployment', () => {
   assert.deepEqual(readdirSync(root).filter((name) => /^(docker-)?compose.*\.ya?ml$/.test(name)).sort(),
-    ['compose.local.yaml', 'compose.observability.yaml', 'compose.prod.yaml', 'compose.simulator.yaml', 'compose.yaml'])
+    ['compose.local.yaml', 'compose.observability.yaml', 'compose.perf.yaml', 'compose.prod.yaml', 'compose.simulator.yaml', 'compose.yaml'])
   const local = config('compose.local.yaml')
   const prod = config('compose.prod.yaml')
   assert.equal(local.name, 'sum-local')
@@ -70,4 +70,22 @@ test('default Compose starts the complete synthetic stack without environment bo
   assert.equal(exporter.volumes.every(mount => mount.read_only), true)
   assert.equal(exporter.depends_on['api-a'].condition, 'service_healthy')
   assert.equal(exporter.depends_on['api-b'].condition, 'service_healthy')
+})
+
+test('performance override pins CPUs and enables diagnostics only when applied', () => {
+  const base = config('compose.simulator.yaml')
+  const perf = config('compose.simulator.yaml', 'compose.perf.yaml')
+  for (const service of Object.values(base.services)) assert.equal(service.cpuset, undefined)
+  assert.deepEqual(base.services.postgres.command, ['postgres'])
+  assert.equal(perf.services.k6.cpuset, '0')
+  for (const name of ['postgres', 'api-a', 'api-b', 'web']) assert.equal(perf.services[name].cpuset, '1')
+  for (const name of ['api-a', 'api-b']) assert.equal(perf.services[name].environment.SIMULATOR_DB_POOL_MAX, '12')
+  const command = perf.services.postgres.command.join(' ')
+  for (const flag of ['shared_preload_libraries=pg_stat_statements', 'track_io_timing=on', 'track_wal_io_timing=on']) {
+    assert.ok(command.includes(`-c ${flag}`), `missing ${flag}`)
+  }
+  for (const service of Object.values(perf.services)) {
+    assert.equal(service.environment?.MATRICULA_SNAPSHOT_DIR, undefined)
+    for (const mount of service.volumes ?? []) assert.doesNotMatch(mount.source, /datos-reales|snapshots/)
+  }
 })

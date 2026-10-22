@@ -1,0 +1,43 @@
+# Override de diagnostico de rendimiento (P0-01 de docs/performance/plan.md).
+#
+# Uso (solo experimento E4 en ENV-H, o corridas en ENV-C):
+#   docker compose -f compose.simulator.yaml -f compose.perf.yaml up -d
+#
+# Las corridas normales en ENV-H (2 vCPU) NO usan este archivo: fijar cpusets
+# deja al SUT con una sola CPU. En ENV-H los valores por defecto aplican SOLO al
+# experimento E4 (k6 en la CPU 0; postgres, api-a, api-b y web en la CPU 1).
+#
+# Mapeo opcional para ENV-C (host con 8 vCPU o mas), via variables de entorno:
+#   PERF_CPUSET_K6=0-1 PERF_CPUSET_POSTGRES=2-3 PERF_CPUSET_API_A=4
+#   PERF_CPUSET_API_B=5 PERF_CPUSET_WEB=6-7
+#
+# Parametros de PostgreSQL: solo diagnostico. No crea la extension
+# pg_stat_statements (CREATE EXTENSION corresponde a una tarea posterior).
+
+services:
+  postgres:
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - track_io_timing=on
+      - -c
+      - track_wal_io_timing=on
+    cpuset: "${PERF_CPUSET_POSTGRES:-1}"
+
+  api-a:
+    cpuset: "${PERF_CPUSET_API_A:-1}"
+    environment:
+      SIMULATOR_DB_POOL_MAX: "${SIMULATOR_DB_POOL_MAX:-12}"
+
+  api-b:
+    cpuset: "${PERF_CPUSET_API_B:-1}"
+    environment:
+      SIMULATOR_DB_POOL_MAX: "${SIMULATOR_DB_POOL_MAX:-12}"
+
+  web:
+    cpuset: "${PERF_CPUSET_WEB:-1}"
+
+  k6:
+    cpuset: "${PERF_CPUSET_K6:-0}"
