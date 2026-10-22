@@ -17,8 +17,38 @@ if ! [[ "$EXPECTED_ENROLLMENTS" =~ ^[0-9]+$ && "$EXPECTED_REQUESTS" =~ ^[0-9]+$ 
   echo 'Provide numeric current enrollment and request counts, then shared or distributed for the next campaign.' >&2
   exit 2
 fi
-if ! [[ "$NEXT_ACTOR_COUNT" =~ ^[1-9][0-9]{0,3}$ ]] || (( NEXT_ACTOR_COUNT > 1000 )) || ! [[ "$NEXT_PROFILE" =~ ^(shared|distributed|ample|last-seat|multi-uniform|multi-hotspot)$ ]]; then
-  echo 'Next actor count must be 1..1000 and profile must be a supported synthetic profile.' >&2
+if ! [[ "$NEXT_ACTOR_COUNT" =~ ^[1-9][0-9]{0,3}$ ]] || (( NEXT_ACTOR_COUNT > 2000 )) || ! [[ "$NEXT_PROFILE" =~ ^(shared|distributed|ample|last-seat|multi-uniform|multi-hotspot|fisi-schools)$ ]]; then
+  echo 'Next actor count must be 1..2000 and profile must be a supported synthetic profile.' >&2
+  exit 2
+fi
+# SIMULATOR_FISI_* come from the environment (not positional args) and only apply to the fisi-schools profile.
+# They are validated with the same rules as the backend parser, before any docker call.
+fisi_franja=${SIMULATOR_FISI_FRANJA-}
+fisi_ia=${SIMULATOR_FISI_IA_ACTORS-}
+fisi_capacity=${SIMULATOR_FISI_CAPACITY-}
+fisi_ratio=${SIMULATOR_FISI_SCARCE_RATIO-}
+if [[ "$NEXT_PROFILE" != fisi-schools ]]; then
+  if [[ -n "${SIMULATOR_FISI_FRANJA+x}${SIMULATOR_FISI_IA_ACTORS+x}${SIMULATOR_FISI_CAPACITY+x}${SIMULATOR_FISI_SCARCE_RATIO+x}" ]]; then
+    echo 'SIMULATOR_FISI_* variables require the fisi-schools profile.' >&2
+    exit 2
+  fi
+else
+  if [[ -n "${SIMULATOR_FISI_FRANJA+x}" && ! "$fisi_franja" =~ ^([1-9]|jornada)$ ]]; then echo 'SIMULATOR_FISI_FRANJA must be 1..9 or jornada.' >&2; exit 2; fi
+  if [[ -n "${SIMULATOR_FISI_IA_ACTORS+x}" ]] && { ! [[ "$fisi_ia" =~ ^[0-9]{1,4}$ ]] || (( 10#$fisi_ia > NEXT_ACTOR_COUNT )); }; then echo 'SIMULATOR_FISI_IA_ACTORS must be an integer from 0 to the actor count.' >&2; exit 2; fi
+  if [[ -n "${SIMULATOR_FISI_CAPACITY+x}" && "$fisi_capacity" != ample && "$fisi_capacity" != scarce ]]; then echo 'SIMULATOR_FISI_CAPACITY must be ample or scarce.' >&2; exit 2; fi
+  if [[ -n "${SIMULATOR_FISI_SCARCE_RATIO+x}" ]]; then
+    if [[ "${fisi_capacity:-ample}" != scarce ]]; then echo 'SIMULATOR_FISI_SCARCE_RATIO requires SIMULATOR_FISI_CAPACITY=scarce.' >&2; exit 2; fi
+    if ! [[ "$fisi_ratio" =~ ^0?\.[0-9]{1,6}$ && "$fisi_ratio" =~ [1-9] ]]; then echo 'SIMULATOR_FISI_SCARCE_RATIO must be a decimal greater than 0 and lower than 1.' >&2; exit 2; fi
+  fi
+fi
+# SIMULATOR_RECREATE: full (default) recreates the whole stack; app keeps postgres and the observability services running.
+RECREATE=${SIMULATOR_RECREATE:-full}
+if [[ "$RECREATE" != full && "$RECREATE" != app ]]; then
+  echo 'SIMULATOR_RECREATE must be full or app.' >&2
+  exit 2
+fi
+if [[ "$RECREATE" == app && "${SIMULATOR_REBUILD-}" == 1 ]]; then
+  echo 'SIMULATOR_RECREATE=app does not rebuild images; build first (SCENARIO_BUILD=1 or docker compose build) and leave SIMULATOR_REBUILD unset or 0.' >&2
   exit 2
 fi
 if [[ ! -f "$ENV_FILE" || -L "$ENV_FILE" || ! -d "$RUNTIME" || -L "$RUNTIME" || ! -f "$RUNTIME/manifest.json" ]]; then
@@ -48,19 +78,28 @@ if [[ -e "$next_env" ]]; then
   echo 'A pending private environment file already exists; inspect the prior rotation state before retrying.' >&2
   exit 1
 fi
-awk -F= -v campaign="$next_campaign" -v run="$next_run" -v contention="$NEXT_CONTENTION" -v actors="$NEXT_ACTOR_COUNT" -v profile="$NEXT_PROFILE" '
+awk -F= -v campaign="$next_campaign" -v run="$next_run" -v contention="$NEXT_CONTENTION" -v actors="$NEXT_ACTOR_COUNT" -v profile="$NEXT_PROFILE" \
+  -v fisi_franja="$fisi_franja" -v fisi_ia="$fisi_ia" -v fisi_capacity="$fisi_capacity" -v fisi_ratio="$fisi_ratio" '
   BEGIN { have_campaign=0; have_run=0; have_contention=0; have_actors=0; have_profile=0 }
   $1 == "SIMULATOR_CAMPAIGN_ID" { print "SIMULATOR_CAMPAIGN_ID=" campaign; have_campaign=1; next }
   $1 == "SIMULATOR_RUN_ID" { print "SIMULATOR_RUN_ID=" run; have_run=1; next }
   $1 == "SIMULATOR_CONTENTION" { print "SIMULATOR_CONTENTION=" contention; have_contention=1; next }
   $1 == "SIMULATOR_ACTOR_COUNT" { print "SIMULATOR_ACTOR_COUNT=" actors; have_actors=1; next }
   $1 == "SIMULATOR_SCENARIO_PROFILE" { print "SIMULATOR_SCENARIO_PROFILE=" profile; have_profile=1; next }
+  $1 ~ /^SIMULATOR_FISI_/ { next }
   { print }
   END {
     if (!have_campaign || !have_run) exit 3
     if (!have_contention) print "SIMULATOR_CONTENTION=" contention
     if (!have_actors) print "SIMULATOR_ACTOR_COUNT=" actors
     if (!have_profile) print "SIMULATOR_SCENARIO_PROFILE=" profile
+    # Stale FISI lines were dropped above; write only the ones requested for this fisi-schools campaign.
+    if (profile == "fisi-schools") {
+      if (fisi_franja != "") print "SIMULATOR_FISI_FRANJA=" fisi_franja
+      if (fisi_ia != "") print "SIMULATOR_FISI_IA_ACTORS=" fisi_ia
+      if (fisi_capacity != "") print "SIMULATOR_FISI_CAPACITY=" fisi_capacity
+      if (fisi_ratio != "") print "SIMULATOR_FISI_SCARCE_RATIO=" fisi_ratio
+    }
   }
 ' "$ENV_FILE" > "$next_env"
 chmod 600 "$next_env"
@@ -74,7 +113,14 @@ mv "$RUNTIME/manifest.json" "$old_manifest"
 mv "$next_env" "$ENV_FILE"
 chmod 600 "$ENV_FILE"
 echo 'Closed and preserved the prior synthetic campaign; starting the next campaign.'
-if [[ ${SIMULATOR_REBUILD:-1} == 1 ]]; then
+if [[ "$RECREATE" == app ]]; then
+  # The new config.env is already in place. migrate/seed run against the unchanged PostgreSQL and create the new campaign row
+  # (a bare API restart would fail in onModuleInit); simulator-init is not needed because config.env already exists.
+  # api-a/api-b/web are recreated because they read config.env and web stays bound to the campaign. No rebuild happens in this mode.
+  docker compose run --rm --no-deps migrate
+  docker compose run --rm --no-deps seed
+  docker compose up -d --wait --no-deps --force-recreate api-a api-b web
+elif [[ ${SIMULATOR_REBUILD:-1} == 1 ]]; then
   docker compose up --build --force-recreate -d --wait
 else
   docker compose up --force-recreate -d --wait

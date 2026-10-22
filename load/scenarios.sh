@@ -6,8 +6,62 @@ cd "$ROOT"
 scenario=${1:-all}
 ACTORS=${SCENARIO_ACTORS:-400}
 QUICK=${SCENARIO_QUICK:-0}
-if ! [[ "$ACTORS" =~ ^[1-9][0-9]{0,3}$ ]] || (( ACTORS > 1000 )); then echo 'SCENARIO_ACTORS must be 1..1000' >&2; exit 2; fi
-case "$scenario" in all|login|race|last-seat|ample|mixed|multi-uniform|multi-hotspot|retry|resilience|stress|soak|reads) ;; *) echo 'Usage: bash load/scenarios.sh all|login|race|last-seat|ample|mixed|multi-uniform|multi-hotspot|retry|resilience|stress|soak|reads' >&2; exit 2 ;; esac
+if ! [[ "$ACTORS" =~ ^[1-9][0-9]{0,3}$ ]] || (( ACTORS > 2000 )); then echo 'SCENARIO_ACTORS must be 1..2000' >&2; exit 2; fi
+ENV_LABEL=${SCENARIO_ENV:-H}
+REP=${SCENARIO_REP:-1}
+REPEATS=${SCENARIO_REPEATS:-1}
+WARMUP=${SCENARIO_WARMUP:-0}
+ORDER=${SCENARIO_ORDER:-fixed}
+SEED=${SCENARIO_SEED:-}
+if [[ "$ENV_LABEL" != H && "$ENV_LABEL" != C ]]; then echo 'SCENARIO_ENV must be H or C' >&2; exit 2; fi
+if ! [[ "$REP" =~ ^[1-9][0-9]{0,5}$ ]]; then echo 'SCENARIO_REP must be a positive integer' >&2; exit 2; fi
+if ! [[ "$REPEATS" =~ ^[1-9][0-9]{0,2}$ ]]; then echo 'SCENARIO_REPEATS must be a positive integer (1..999)' >&2; exit 2; fi
+if [[ "$REPEATS" != 1 && -n "${SCENARIO_REP:-}" ]]; then echo 'SCENARIO_REP cannot be combined with SCENARIO_REPEATS>1; repetition r of n runs with rep=r' >&2; exit 2; fi
+if [[ "$WARMUP" != 0 && "$WARMUP" != 1 ]]; then echo 'SCENARIO_WARMUP must be 0 or 1' >&2; exit 2; fi
+if [[ "$ORDER" != fixed && "$ORDER" != shuffle ]]; then echo 'SCENARIO_ORDER must be fixed or shuffle' >&2; exit 2; fi
+if [[ -n "$SEED" ]] && ! [[ "$SEED" =~ ^[0-9]{1,9}$ ]]; then echo 'SCENARIO_SEED must be an integer with at most 9 digits' >&2; exit 2; fi
+if [[ "${SIMULATOR_RECREATE:-full}" != full && "${SIMULATOR_RECREATE:-full}" != app ]]; then echo 'SIMULATOR_RECREATE must be full or app' >&2; exit 2; fi
+case "$scenario" in all|login|race|last-seat|ample|mixed|multi-uniform|multi-hotspot|fisi-franja|jornada|enrollment-open|retry|resilience|stress|soak|reads) ;; *) echo 'Usage: bash load/scenarios.sh all|login|race|last-seat|ample|mixed|multi-uniform|multi-hotspot|fisi-franja|jornada|enrollment-open|retry|resilience|stress|soak|reads' >&2; exit 2 ;; esac
+# fisi-franja: one FISI franja (1..9) as a single burst; the full day (jornada) belongs to a separate k6 script.
+FISI_FRANJA=${SCENARIO_FISI_FRANJA:-4}
+fisi_env=()
+if [[ "$scenario" == fisi-franja ]]; then
+  if ! [[ "$FISI_FRANJA" =~ ^[1-9]$ ]]; then echo 'SCENARIO_FISI_FRANJA must be 1..9' >&2; exit 2; fi
+  # Real FISI new-student totals per franja (FISI-RANKING-2026-I); the default population when SCENARIO_ACTORS is unset.
+  fisi_totals=(24 113 293 507 313 117 31 13 11)
+  if [[ -z "${SCENARIO_ACTORS:-}" ]]; then ACTORS=${fisi_totals[FISI_FRANJA-1]}; fi
+  fisi_env=(SIMULATOR_FISI_FRANJA="$FISI_FRANJA")
+  if [[ -n "${SCENARIO_FISI_CAPACITY:-}" ]]; then fisi_env+=(SIMULATOR_FISI_CAPACITY="$SCENARIO_FISI_CAPACITY"); fi
+  if [[ -n "${SCENARIO_FISI_SCARCE_RATIO:-}" ]]; then fisi_env+=(SIMULATOR_FISI_SCARCE_RATIO="$SCENARIO_FISI_SCARCE_RATIO"); fi
+  if [[ -n "${SCENARIO_FISI_IA_ACTORS:-}" ]]; then fisi_env+=(SIMULATOR_FISI_IA_ACTORS="$SCENARIO_FISI_IA_ACTORS"); fi
+fi
+# jornada: the whole FISI day (9 waves) compressed in time; enrollment-open: sustained submit arrival rate over an ample campaign.
+jornada_args=()
+if [[ "$scenario" == jornada ]]; then
+  if [[ -z "${SCENARIO_ACTORS:-}" ]]; then ACTORS=1422; fi
+  fisi_env=(SIMULATOR_FISI_FRANJA=jornada)
+  if [[ -n "${SCENARIO_FISI_CAPACITY:-}" ]]; then fisi_env+=(SIMULATOR_FISI_CAPACITY="$SCENARIO_FISI_CAPACITY"); fi
+  if [[ -n "${SCENARIO_FISI_SCARCE_RATIO:-}" ]]; then fisi_env+=(SIMULATOR_FISI_SCARCE_RATIO="$SCENARIO_FISI_SCARCE_RATIO"); fi
+  if [[ -n "${SCENARIO_FISI_IA_ACTORS:-}" ]]; then fisi_env+=(SIMULATOR_FISI_IA_ACTORS="$SCENARIO_FISI_IA_ACTORS"); fi
+  if [[ -n "${WAVE_INTERVAL:-}" ]] && { ! [[ "$WAVE_INTERVAL" =~ ^[1-9][0-9]{0,3}$ ]] || (( WAVE_INTERVAL > 3600 )); }; then echo 'WAVE_INTERVAL must be an integer of seconds 1..3600' >&2; exit 2; fi
+  if [[ -n "${WAVE_FRONTLOAD:-}" ]] && ! [[ "$WAVE_FRONTLOAD" =~ ^(0|1|0?\.[0-9]{1,6}|1\.0{1,6}|0\.0{1,6})$ ]]; then echo 'WAVE_FRONTLOAD must be a decimal between 0 and 1' >&2; exit 2; fi
+  if [[ -n "${START_DELAY_MS:-}" ]] && { ! [[ "$START_DELAY_MS" =~ ^[0-9]{1,6}$ ]] || (( 10#$START_DELAY_MS > 600000 )); }; then echo 'START_DELAY_MS must be an integer of milliseconds 0..600000' >&2; exit 2; fi
+  if [[ -n "${WAVE_INTERVAL:-}" ]]; then jornada_args+=(-e WAVE_INTERVAL="$WAVE_INTERVAL"); elif [[ "${SCENARIO_QUICK:-0}" == 1 ]]; then jornada_args+=(-e WAVE_INTERVAL=10); fi
+  if [[ -n "${WAVE_FRONTLOAD:-}" ]]; then jornada_args+=(-e WAVE_FRONTLOAD="$WAVE_FRONTLOAD"); fi
+  if [[ -n "${START_DELAY_MS:-}" ]]; then jornada_args+=(-e START_DELAY_MS="$START_DELAY_MS"); fi
+fi
+if [[ "$scenario" == enrollment-open ]]; then
+  if [[ -z "${SCENARIO_ACTORS:-}" ]]; then ACTORS=400; fi
+  if [[ -n "${RATE:-}" ]] && { ! [[ "$RATE" =~ ^[1-9][0-9]{0,3}$ ]] || (( RATE > 1000 )); }; then echo 'RATE must be an integer of submits per second 1..1000' >&2; exit 2; fi
+  if [[ -n "${RATE:-}" ]]; then jornada_args+=(-e RATE="$RATE"); fi
+  # An actor never submits twice: RATE x DURATION must fit in the population (default 10/s x 30s = 300 of 400).
+  open_duration=${SCENARIO_DURATION:-$([[ "$QUICK" == 1 ]] && echo 15s || echo 30s)}
+  if [[ "$open_duration" =~ ^([0-9]+)([sm])$ ]]; then
+    open_seconds=$(( 10#${BASH_REMATCH[1]} ))
+    if [[ ${BASH_REMATCH[2]} == m ]]; then open_seconds=$(( open_seconds * 60 )); fi
+    if (( ${RATE:-10} * open_seconds > ACTORS )); then echo 'RATE x DURATION must not exceed the actor population (SCENARIO_ACTORS)' >&2; exit 2; fi
+  fi
+fi
 if [[ "$QUICK" != 0 && "$QUICK" != 1 ]]; then echo 'SCENARIO_QUICK must be 0 or 1' >&2; exit 2; fi
 if [[ ! -f infra/simulator/runtime/config.env ]]; then docker compose up --build -d --wait; fi
 exec 9>infra/simulator/runtime/scenarios.lock
@@ -17,9 +71,21 @@ RESULTS=infra/simulator/runtime/results
 helper() { docker compose run --rm --no-deps migrate node /opt/simulator/scenario-results.mjs "$@"; }
 audit() { docker compose run --rm --no-deps audit env -u EXPECTED_ENROLLMENTS -u EXPECTED_REQUESTS node dist/scripts/audit-simulator.js; }
 restore() { docker compose up -d --wait --no-deps postgres api-a api-b >/dev/null; }
+export DOCKER_CMD=${DOCKER_CMD:-docker}
+PROJECT=${COMPOSE_PROJECT_NAME:-sum-simulator}
 fault_pid=''
 container=''
+sampler_pid=''
+stop_sampler() {
+  if [[ -n "$sampler_pid" ]]; then kill -TERM "$sampler_pid" 2>/dev/null || true; wait "$sampler_pid" 2>/dev/null || true; sampler_pid=''; fi
+}
+cpuset_lines() {
+  local ids
+  ids=$(docker compose ps -q 2>/dev/null) || return 0
+  if [[ -n "$ids" ]]; then docker inspect --format '{{.Name}} {{.HostConfig.CpusetCpus}}' $ids 2>/dev/null | sed 's#^/##' || true; fi
+}
 cleanup() {
+  stop_sampler
   if [[ -n "$fault_pid" ]]; then kill "$fault_pid" 2>/dev/null || true; wait "$fault_pid" 2>/dev/null || true; fi
   if [[ -n "$container" ]]; then docker stop -t 1 "$container" >/dev/null 2>&1 || true; fi
   if [[ "$scenario" == resilience || "$scenario" == all ]]; then restore || true; fi
@@ -36,18 +102,29 @@ fault_sequence() {
   sleep 3
   docker compose up -d --wait --no-deps postgres >/dev/null || return 1
 }
+meta_patch() {
+  # Host-side minimal merge into the run metadata written by `run-meta`; metadata is informative, so a failure only warns.
+  node -e "const fs=require('node:fs');const f=process.argv[1];const m=JSON.parse(fs.readFileSync(f,'utf8'));fs.writeFileSync(f,JSON.stringify({...m,...JSON.parse(process.argv[2])},null,2)+'\n')" "$1" "$2" || echo "Warning: could not update $1" >&2
+}
+shuffle_items() {
+  node -e "let a=Number(process.argv[1])>>>0;const r=()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296};const x=process.argv.slice(2);for(let i=x.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[x[i],x[j]]=[x[j],x[i]]}console.log(x.join('\n'))" "$@"
+}
 run_one() {
-  local item=$1 profile=shared script=enrollment duration='' stage='30s' mode=normal testid status=0 check_status=0
+  local item=$1 profile=shared script=enrollment duration='' stage='30s' mode=normal testid status=0 check_status=0 guard_status=0
   local current_enrollments current_requests
-  local started_ms ended_ms
+  local started_ms ended_ms warmup_status=0
   testid=$(docker compose run --rm --no-deps migrate node -e "process.stdout.write(require('node:crypto').randomUUID())") || return 1
   audit > "$RESULTS/preflight-$testid.json" || return 1
   read -r current_enrollments current_requests < <(helper audit-counts "preflight-$testid.json") || return 1
   case "$item" in
-    ample|retry|mixed) profile=ample ;;
+    ample|retry|mixed|enrollment-open) profile=ample ;;
     last-seat|multi-uniform|multi-hotspot) profile=$item ;;
+    fisi-franja|jornada) profile=fisi-schools ;;
   esac
-  if ! SIMULATOR_REBUILD=0 bash infra/simulator/rotate-campaign.sh "$current_enrollments" "$current_requests" shared "$ACTORS" "$profile" > "$RESULTS/prepare-$testid.log" 2>&1; then
+  # FISI values reach the rotation only for fisi-franja; inherited SIMULATOR_FISI_* never leak into other scenarios.
+  local -a rotate_env=(-u SIMULATOR_FISI_FRANJA -u SIMULATOR_FISI_IA_ACTORS -u SIMULATOR_FISI_CAPACITY -u SIMULATOR_FISI_SCARCE_RATIO)
+  if [[ "$item" == fisi-franja || "$item" == jornada ]]; then rotate_env+=("${fisi_env[@]}"); fi
+  if ! env "${rotate_env[@]}" SIMULATOR_REBUILD=0 bash infra/simulator/rotate-campaign.sh "$current_enrollments" "$current_requests" shared "$ACTORS" "$profile" > "$RESULTS/prepare-$testid.log" 2>&1; then
     echo "Campaign preparation failed. Inspect $RESULTS/prepare-$testid.log; no load was started."
     return 1
   fi
@@ -59,24 +136,50 @@ run_one() {
     stress) script=sessions; duration=10m ;;
     soak) script=sessions; duration=30m ;;
     reads) script=reads; duration=2m ;;
+    jornada) script=jornada ;;
+    enrollment-open) script=enrollment-open; duration=30s ;;
   esac
   if [[ "$QUICK" == 1 ]]; then
     mode=quick; stage=5s
-    case "$item" in mixed|stress|soak|reads) duration=30s ;; resilience) duration=60s ;; esac
+    case "$item" in mixed|stress|soak|reads) duration=30s ;; enrollment-open) duration=15s ;; resilience) duration=60s ;; esac
   fi
   duration=${SCENARIO_DURATION:-$duration}
   local -a args=(-e SCENARIO_NAME="$item" -e SCENARIO_RUN_MODE="$mode" -e LOAD_MODE="$mode" -e BARRIER_DELAY_MS="${SCENARIO_BARRIER_MS:-20000}" -e STAGE_DURATION="$stage")
   if [[ -n "$duration" ]]; then args+=(-e DURATION="$duration"); fi
   if [[ "$QUICK" == 1 ]]; then args+=(-e RAMP_10_DURATION=5s -e RAMP_25_DURATION=5s -e THINK_MIN_SECONDS=0.2 -e THINK_MAX_SECONDS=0.5); fi
+  if [[ "$item" == jornada || "$item" == enrollment-open ]]; then args+=("${jornada_args[@]}"); fi
   if [[ "$item" == resilience ]]; then args+=(-e RESILIENCE_API_DOWN_START_SECONDS=13 -e RESILIENCE_API_DOWN_DURATION_SECONDS=15 -e RESILIENCE_DB_DOWN_START_SECONDS=28 -e RESILIENCE_DB_DOWN_DURATION_SECONDS=20); fi
   container="sum-load-$testid"
+  helper run-meta "$testid" "$ENV_LABEL" "$REP" "$(git rev-parse HEAD 2>/dev/null || echo unknown)" "$(cpuset_lines)" > /dev/null || return 1
+  if (( REPEATS > 1 )) || [[ "$ORDER" == shuffle || "$WARMUP" == 1 ]]; then
+    meta_patch "$RESULTS/run-meta-$testid.json" "{\"repeats\":$REPEATS,\"order\":\"$ORDER\",\"orderSeed\":${ORDER_SEED:-null},\"scenarioSeed\":${SEED:-null},\"warmup\":$([[ "$WARMUP" == 1 ]] && echo true || echo false)}"
+  fi
+  if [[ "$WARMUP" == 1 ]]; then
+    # Separate k6 run against the already prepared campaign: its summary and exit status never reach `check`.
+    # Closest faithful use of the existing reads.js knobs: RATE=10 it/s for 30s, with 1s ramps instead of the default 30s ones.
+    # It is not sent to Prometheus, so dashboards filtered by testid only show the measured run.
+    container="sum-load-$testid-warmup"
+    printf 'Warm-up: reads at 10 it/s for 30s (phase=warmup, excluded from thresholds and pass/fail)\n'
+    docker compose run --rm --no-deps --name "$container" -e SCENARIO_NAME=warmup -e SCENARIO_RUN_MODE=warmup -e RATE=10 -e DURATION=30s -e RAMP_10_DURATION=1s -e RAMP_25_DURATION=1s k6 run \
+      --tag "testid=$testid" --tag "load_scenario=$item" --tag "population=$ACTORS" --tag "run_mode=$mode" --tag "env=$ENV_LABEL" --tag "rep=$REP" --tag "phase=warmup" \
+      --summary-export "/results/warmup-$testid-summary.json" /load/reads.js > "$RESULTS/warmup-$testid.log" 2>&1 || warmup_status=$?
+    container="sum-load-$testid"
+    chmod 600 "$RESULTS/warmup-$testid.log" "$RESULTS/warmup-$testid-summary.json" 2>/dev/null || true
+    meta_patch "$RESULTS/run-meta-$testid.json" "{\"warmupExitCode\":$warmup_status}"
+    if [[ "$warmup_status" != 0 && "$warmup_status" != 99 ]]; then
+      echo "Warm-up failed hard (exit $warmup_status). Inspect $RESULTS/warmup-$testid.log; the measured run was not started."
+      return 1
+    fi
+  fi
   printf '\nScenario=%s actors=%s profile=%s mode=%s testid=%s\n' "$item" "$ACTORS" "$profile" "$mode" "$testid"
   started_ms=$(date +%s%3N)
+  bash load/resource-sampler.sh --project "$PROJECT" --duration "${SCENARIO_SAMPLER_MAX_SECONDS:-14400}" --out "$RESULTS/resources-$testid.csv" > /dev/null 2>&1 & sampler_pid=$!
   if [[ "$item" == resilience ]]; then fault_sequence & fault_pid=$!; fi
   docker compose run --rm --no-deps --name "$container" "${args[@]}" k6 run \
-    --tag "testid=$testid" --tag "load_scenario=$item" --tag "population=$ACTORS" --tag "run_mode=$mode" \
+    --tag "testid=$testid" --tag "load_scenario=$item" --tag "population=$ACTORS" --tag "run_mode=$mode" --tag "env=$ENV_LABEL" --tag "rep=$REP" \
     --out experimental-prometheus-rw --summary-export "/results/$item-$testid-summary.json" "/load/$script.js" > "$RESULTS/$item-$testid.log" 2>&1 || status=$?
   ended_ms=$(date +%s%3N)
+  stop_sampler
   container=''
   if [[ -n "$fault_pid" ]]; then
     wait "$fault_pid" || { echo 'Fault injection failed; this is not an accepted resilience run.'; status=1; }
@@ -85,17 +188,31 @@ run_one() {
   chmod 600 "$RESULTS/$item-$testid.log" "$RESULTS/$item-$testid-summary.json" 2>/dev/null || true
   if grep -Fq 'Failed to send the time series data to the endpoint' "$RESULTS/$item-$testid.log"; then status=1; fi
   tail -n 48 "$RESULTS/$item-$testid.log"
+  # Informative validity of the load generator; it never changes the k6 or check exit status.
+  node load/check-generator-guard.mjs --resources "$RESULTS/resources-$testid.csv" --summary "$RESULTS/$item-$testid-summary.json" --log "$RESULTS/$item-$testid.log" > "$RESULTS/guard-$testid.json" 2>/dev/null || guard_status=$?
+  if [[ "$guard_status" != 0 && "$guard_status" != 3 ]] || ! node -e "const g=JSON.parse(require('node:fs').readFileSync(process.argv[1],'utf8'));if(typeof g.valid!=='boolean')process.exit(1)" "$RESULTS/guard-$testid.json" 2>/dev/null; then
+    printf '{"valid":false,"reasons":["GUARD_FAILED: el validador del generador no produjo resultado (exit %s)"]}\n' "$guard_status" > "$RESULTS/guard-$testid.json"
+  fi
+  chmod 600 "$RESULTS/guard-$testid.json" "$RESULTS/resources-$testid.csv" 2>/dev/null || true
   audit > "$RESULTS/audit-$testid.json" || return 1
-  helper check "audit-$testid.json" "$item" "$testid" "$status" "$mode" "$started_ms" "$ended_ms" || check_status=$?
+  helper check "audit-$testid.json" "$item" "$testid" "$status" "$mode" "$started_ms" "$ended_ms" "guard-$testid.json" || check_status=$?
   printf 'Grafana: http://127.0.0.1:%s/d/sum-simulator-k6?var-testid=%s&from=%s&to=%s\n' "${SIMULATOR_GRAFANA_PORT:-5190}" "$testid" "$((started_ms - 15000))" "$((ended_ms + 15000))"
   if [[ "$status" != 0 || "$check_status" != 0 ]]; then return 1; fi
 }
 status=0
-if [[ "$scenario" == all ]]; then
-  for item in login race last-seat ample mixed multi-uniform multi-hotspot retry resilience stress soak reads; do
+items_all=(login race last-seat ample mixed multi-uniform multi-hotspot retry resilience stress soak reads)
+if [[ "$ORDER" == shuffle && -z "$SEED" ]]; then SEED=$(( ((RANDOM << 15) | RANDOM) % 900000000 )); fi
+ORDER_SEED=''
+for (( rep_index = 1; rep_index <= REPEATS; rep_index++ )); do
+  if (( REPEATS > 1 )); then REP=$rep_index; fi
+  if [[ "$scenario" == all ]]; then items=("${items_all[@]}"); else items=("$scenario"); fi
+  if [[ "$ORDER" == shuffle && ${#items[@]} -gt 1 ]]; then
+    ORDER_SEED=$(( SEED + rep_index - 1 ))
+    mapfile -t items < <(shuffle_items "$ORDER_SEED" "${items[@]}")
+    printf 'Order=shuffle seed=%s rep=%s: %s\n' "$ORDER_SEED" "$REP" "${items[*]}"
+  fi
+  for item in "${items[@]}"; do
     run_one "$item" || status=1
   done
-else
-  run_one "$scenario" || status=1
-fi
+done
 exit "$status"
