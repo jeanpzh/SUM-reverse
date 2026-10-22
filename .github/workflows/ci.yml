@@ -41,13 +41,37 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-          cache-dependency-path: |
-            backend/pnpm-lock.yaml
-            client/pnpm-lock.yaml
-      # Some backend integration specs drive the client with Playwright.
-      - run: pnpm --dir client install --frozen-lockfile
-      - run: pnpm --dir client exec playwright install --with-deps chromium
+          cache-dependency-path: backend/pnpm-lock.yaml
       - run: pnpm --dir backend install --frozen-lockfile
       - run: pnpm --dir backend build
       - run: pnpm --dir backend lint
-      - run: pnpm --dir backend test
+      - run: >-
+          pnpm --dir backend test
+          --exclude 'test/matricula-regular-us1*'
+          --exclude 'test/matricula-regular-us2-us3*'
+          --exclude 'test/matricula-regular-us5-us6*'
+
+  # These specs drive the client with Playwright and share fixed local ports,
+  # so they run in their own job, one file at a time.
+  backend-browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.10.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: |
+            backend/pnpm-lock.yaml
+            client/pnpm-lock.yaml
+      - run: pnpm --dir client install --frozen-lockfile
+      - run: pnpm --dir client exec playwright install --with-deps chromium
+      - run: pnpm --dir backend install --frozen-lockfile
+      - run: >-
+          pnpm --dir backend test --no-file-parallelism
+          test/matricula-regular-us1
+          test/matricula-regular-us2-us3
+          test/matricula-regular-us5-us6
