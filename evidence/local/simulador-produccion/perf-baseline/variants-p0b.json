@@ -1,0 +1,4 @@
+[
+  { "scenario": "jornada", "label": "WAVE_FRONTLOAD=1", "fromIso": "2026-10-22T12:35:36Z", "toIso": "2026-10-22T12:44:40Z" },
+  { "scenario": "jornada", "label": "WAVE_FRONTLOAD=0", "fromIso": "2026-10-22T12:44:40Z", "toIso": "2026-10-22T12:54:40Z" }
+]

@@ -1,0 +1,6156 @@
+{
+  "generatedAt": "2026-10-22T12:57:53.569Z",
+  "gitShaPrefix": "c29b9d5",
+  "mode": "normal",
+  "runs": [
+    {
+      "scenario": "race",
+      "variant": null,
+      "rep": 1,
+      "actors": 400,
+      "profile": "shared",
+      "startedAtMs": 1792637325997,
+      "wallMs": 27344,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_BLOCKED: http_req_blocked p(95)=100.59419675 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=33.2363277 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        }
+      ],
+      "expected": {
+        "enrollments": 10,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 10,
+        "requests": 400
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1600,
+        "rate": 70.19026459054274
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 400,
+        "rate": 17.547566147635685
+      },
+      "httpReqBlocked": {
+        "p95": 100.59419675,
+        "p99": 117.8497059,
+        "med": 0.0042395,
+        "max": 132.114937,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 0,
+      "cpu": {
+        "web": {
+          "mean": 2,
+          "p90": 3
+        },
+        "api-b": {
+          "mean": 8,
+          "p90": 35
+        },
+        "api-a": {
+          "mean": 9,
+          "p90": 21
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 16,
+          "p90": 58
+        },
+        "prometheus": {
+          "mean": 1,
+          "p90": 3
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 21,
+          "p90": 32
+        },
+        "k6": {
+          "mean": 25,
+          "p90": 32
+        }
+      },
+      "durations": {
+        "http_req_duration{expected_response:true}": {
+          "p95": 2140.1421909499995,
+          "p99": 2445.47027605,
+          "med": 980.546835,
+          "max": 2578.325697,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 2140.1421909499995,
+          "p99": 2445.47027605,
+          "med": 980.546835,
+          "max": 2578.325697,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{operation:submit}": {
+          "p95": 2426.0793224499994,
+          "p99": 2500.07757053,
+          "med": 1330.7788605,
+          "max": 2578.325697,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 10272,
+        "simulator_actors": 12318,
+        "simulator_campaigns": 48,
+        "simulator_credentials": 12300,
+        "simulator_enrollment_items": 6450,
+        "simulator_enrollments": 2150,
+        "simulator_http_metrics": 1012,
+        "simulator_profiles": 48,
+        "simulator_rate_limits": 10284,
+        "simulator_reports": 2150,
+        "simulator_requests": 6837,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 471,
+        "simulator_sessions": 10258
+      },
+      "campaigns": 48
+    },
+    {
+      "scenario": "race",
+      "variant": null,
+      "rep": 2,
+      "actors": 400,
+      "profile": "shared",
+      "startedAtMs": 1792637404741,
+      "wallMs": 27531,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_CONNECTING: http_req_connecting p(95)=46.895651599999994 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        }
+      ],
+      "expected": {
+        "enrollments": 10,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 10,
+        "requests": 400
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1600,
+        "rate": 69.52310897018785
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 400,
+        "rate": 17.380777242546962
+      },
+      "httpReqBlocked": {
+        "p95": 47.07668165,
+        "p99": 59.412135189999994,
+        "med": 0.0039515,
+        "max": 71.792166,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 0,
+      "cpu": {
+        "web": {
+          "mean": 2,
+          "p90": 3
+        },
+        "api-b": {
+          "mean": 11,
+          "p90": 25
+        },
+        "api-a": {
+          "mean": 11,
+          "p90": 25
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 15,
+          "p90": 52
+        },
+        "prometheus": {
+          "mean": 0,
+          "p90": 0
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 19,
+          "p90": 30
+        },
+        "k6": {
+          "mean": 24,
+          "p90": 32
+        }
+      },
+      "durations": {
+        "http_req_duration": {
+          "p95": 2321.5797753499996,
+          "p99": 2686.02493118,
+          "med": 988.797725,
+          "max": 2778.174197,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{operation:submit}": {
+          "p95": 2665.1595687999998,
+          "p99": 2738.41382697,
+          "med": 1533.3113990000002,
+          "max": 2778.174197,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 2321.5797753499996,
+          "p99": 2686.02493118,
+          "med": 988.797725,
+          "max": 2778.174197,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 10692,
+        "simulator_actors": 12718,
+        "simulator_campaigns": 49,
+        "simulator_credentials": 12700,
+        "simulator_enrollment_items": 6480,
+        "simulator_enrollments": 2160,
+        "simulator_http_metrics": 1019,
+        "simulator_profiles": 49,
+        "simulator_rate_limits": 10685,
+        "simulator_reports": 2160,
+        "simulator_requests": 7237,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 474,
+        "simulator_sessions": 10678
+      },
+      "campaigns": 49
+    },
+    {
+      "scenario": "race",
+      "variant": null,
+      "rep": 3,
+      "actors": 400,
+      "profile": "shared",
+      "startedAtMs": 1792637483670,
+      "wallMs": 27238,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_BLOCKED: http_req_blocked p(95)=102.25812590000001 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=99.98269499999999 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        }
+      ],
+      "expected": {
+        "enrollments": 10,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 10,
+        "requests": 400
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1600,
+        "rate": 69.93622051805585
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 400,
+        "rate": 17.484055129513962
+      },
+      "httpReqBlocked": {
+        "p95": 102.25812590000001,
+        "p99": 109.00794292999994,
+        "med": 0.0040245,
+        "max": 177.570235,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 0,
+      "cpu": {
+        "web": {
+          "mean": 2,
+          "p90": 6
+        },
+        "api-b": {
+          "mean": 12,
+          "p90": 33
+        },
+        "api-a": {
+          "mean": 11,
+          "p90": 32
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 16,
+          "p90": 55
+        },
+        "prometheus": {
+          "mean": 1,
+          "p90": 3
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 19,
+          "p90": 31
+        },
+        "k6": {
+          "mean": 25,
+          "p90": 32
+        }
+      },
+      "durations": {
+        "http_req_duration": {
+          "p95": 2160.80800935,
+          "p99": 2542.5517717899997,
+          "med": 1009.31287,
+          "max": 2712.554087,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 2160.80800935,
+          "p99": 2542.5517717899997,
+          "med": 1009.31287,
+          "max": 2712.554087,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{operation:submit}": {
+          "p95": 2520.9531636999995,
+          "p99": 2605.66708304,
+          "med": 1441.711662,
+          "max": 2712.554087,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 11112,
+        "simulator_actors": 13118,
+        "simulator_campaigns": 50,
+        "simulator_credentials": 13100,
+        "simulator_enrollment_items": 6510,
+        "simulator_enrollments": 2170,
+        "simulator_http_metrics": 1030,
+        "simulator_profiles": 50,
+        "simulator_rate_limits": 11107,
+        "simulator_reports": 2170,
+        "simulator_requests": 7637,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 477,
+        "simulator_sessions": 11098
+      },
+      "campaigns": 50
+    },
+    {
+      "scenario": "race",
+      "variant": null,
+      "rep": 4,
+      "actors": 400,
+      "profile": "shared",
+      "startedAtMs": 1792637562353,
+      "wallMs": 27554,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_BLOCKED: http_req_blocked p(95)=66.57589885 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=38.68443125 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        }
+      ],
+      "expected": {
+        "enrollments": 10,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 10,
+        "requests": 400
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1600,
+        "rate": 69.4616605019257
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 400,
+        "rate": 17.365415125481427
+      },
+      "httpReqBlocked": {
+        "p95": 66.57589885,
+        "p99": 71.71716613,
+        "med": 0.004392,
+        "max": 94.364023,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 0,
+      "cpu": {
+        "web": {
+          "mean": 2,
+          "p90": 4
+        },
+        "api-b": {
+          "mean": 10,
+          "p90": 33
+        },
+        "api-a": {
+          "mean": 11,
+          "p90": 34
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 17,
+          "p90": 60
+        },
+        "prometheus": {
+          "mean": 1,
+          "p90": 3
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 19,
+          "p90": 29
+        },
+        "k6": {
+          "mean": 24,
+          "p90": 35
+        }
+      },
+      "durations": {
+        "http_req_duration{operation:submit}": {
+          "p95": 2632.7355568,
+          "p99": 2711.4910245,
+          "med": 1430.380373,
+          "max": 2739.975594,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 2249.4702171999998,
+          "p99": 2654.09000936,
+          "med": 953.2840145,
+          "max": 2739.975594,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 2249.4702171999998,
+          "p99": 2654.09000936,
+          "med": 953.2840145,
+          "max": 2739.975594,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 11532,
+        "simulator_actors": 13518,
+        "simulator_campaigns": 51,
+        "simulator_credentials": 13500,
+        "simulator_enrollment_items": 6540,
+        "simulator_enrollments": 2180,
+        "simulator_http_metrics": 1039,
+        "simulator_profiles": 51,
+        "simulator_rate_limits": 11528,
+        "simulator_reports": 2180,
+        "simulator_requests": 8037,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 480,
+        "simulator_sessions": 11518
+      },
+      "campaigns": 51
+    },
+    {
+      "scenario": "race",
+      "variant": null,
+      "rep": 5,
+      "actors": 400,
+      "profile": "shared",
+      "startedAtMs": 1792637642201,
+      "wallMs": 27490,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_BLOCKED: http_req_blocked p(95)=124.62973174999999 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=75.9973289 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        }
+      ],
+      "expected": {
+        "enrollments": 10,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 10,
+        "requests": 400
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1600,
+        "rate": 68.9508161338508
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 400,
+        "rate": 17.2377040334627
+      },
+      "httpReqBlocked": {
+        "p95": 124.62973174999999,
+        "p99": 140.09646805,
+        "med": 0.004329,
+        "max": 155.661948,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 0,
+      "cpu": {
+        "web": {
+          "mean": 2,
+          "p90": 4
+        },
+        "api-b": {
+          "mean": 11,
+          "p90": 34
+        },
+        "api-a": {
+          "mean": 12,
+          "p90": 33
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 16,
+          "p90": 60
+        },
+        "prometheus": {
+          "mean": 0,
+          "p90": 0
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 19,
+          "p90": 30
+        },
+        "k6": {
+          "mean": 23,
+          "p90": 25
+        }
+      },
+      "durations": {
+        "http_req_duration": {
+          "p95": 2406.01376605,
+          "p99": 2716.7436964,
+          "med": 987.101623,
+          "max": 3005.727621,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{operation:submit}": {
+          "p95": 2697.7927431499998,
+          "p99": 2819.275728929999,
+          "med": 1615.1836899999998,
+          "max": 3005.727621,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 2406.01376605,
+          "p99": 2716.7436964,
+          "med": 987.101623,
+          "max": 3005.727621,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 11952,
+        "simulator_actors": 13918,
+        "simulator_campaigns": 52,
+        "simulator_credentials": 13900,
+        "simulator_enrollment_items": 6570,
+        "simulator_enrollments": 2190,
+        "simulator_http_metrics": 1046,
+        "simulator_profiles": 52,
+        "simulator_rate_limits": 11929,
+        "simulator_reports": 2190,
+        "simulator_requests": 8437,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 483,
+        "simulator_sessions": 11938
+      },
+      "campaigns": 52
+    },
+    {
+      "scenario": "ample",
+      "variant": null,
+      "rep": 1,
+      "actors": 400,
+      "profile": "ample",
+      "startedAtMs": 1792637720891,
+      "wallMs": 31762,
+      "k6Exit": 99,
+      "integrity": false,
+      "correctnessPassed": false,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_BLOCKED: http_req_blocked p(95)=107.39516289999996 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=77.90829550000001 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(99)<5000"
+        },
+        {
+          "metric": "enrollments_unexpected",
+          "threshold": "count==0"
+        },
+        {
+          "metric": "enrollment_iterations_completed",
+          "threshold": "count==400"
+        },
+        {
+          "metric": "enrollments_accepted",
+          "threshold": "count==400"
+        },
+        {
+          "metric": "checks",
+          "threshold": "rate==1"
+        }
+      ],
+      "expected": {
+        "enrollments": 400,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 365,
+        "requests": 365
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1600,
+        "rate": 58.446503448643334
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 400,
+        "rate": 14.611625862160833
+      },
+      "httpReqBlocked": {
+        "p95": 107.39516289999996,
+        "p99": 119.81844090999999,
+        "med": 0.0037215,
+        "max": 126.599781,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 35,
+      "cpu": {
+        "web": {
+          "mean": 2,
+          "p90": 6
+        },
+        "api-a": {
+          "mean": 10,
+          "p90": 30
+        },
+        "api-b": {
+          "mean": 10,
+          "p90": 23
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 28,
+          "p90": 84
+        },
+        "prometheus": {
+          "mean": 0,
+          "p90": 0
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 20,
+          "p90": 32
+        },
+        "k6": {
+          "mean": 21,
+          "p90": 41
+        }
+      },
+      "durations": {
+        "http_req_duration{operation:submit}": {
+          "p95": 6557.243840749999,
+          "p99": 7039.5819955199995,
+          "med": 2841.7304915,
+          "max": 7198.919847,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 5661.05492115,
+          "p99": 6690.24504829,
+          "med": 1071.2165655,
+          "max": 7198.919847,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 4790.130684999999,
+          "p99": 6651.036595039995,
+          "med": 1056.657117,
+          "max": 7198.919847,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 12372,
+        "simulator_actors": 14318,
+        "simulator_campaigns": 53,
+        "simulator_credentials": 14300,
+        "simulator_enrollment_items": 6600,
+        "simulator_enrollments": 2200,
+        "simulator_http_metrics": 1057,
+        "simulator_profiles": 53,
+        "simulator_rate_limits": 12351,
+        "simulator_reports": 2200,
+        "simulator_requests": 8837,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 486,
+        "simulator_sessions": 12358
+      },
+      "campaigns": 53
+    },
+    {
+      "scenario": "ample",
+      "variant": null,
+      "rep": 2,
+      "actors": 400,
+      "profile": "ample",
+      "startedAtMs": 1792637804128,
+      "wallMs": 31315,
+      "k6Exit": 99,
+      "integrity": false,
+      "correctnessPassed": false,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_CONNECTING: http_req_connecting p(95)=39.9698578 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "enrollments_unexpected",
+          "threshold": "count==0"
+        },
+        {
+          "metric": "enrollment_iterations_completed",
+          "threshold": "count==400"
+        },
+        {
+          "metric": "enrollments_accepted",
+          "threshold": "count==400"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(99)<5000"
+        },
+        {
+          "metric": "checks",
+          "threshold": "rate==1"
+        }
+      ],
+      "expected": {
+        "enrollments": 400,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 349,
+        "requests": 349
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1600,
+        "rate": 59.38148890640127
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 400,
+        "rate": 14.845372226600318
+      },
+      "httpReqBlocked": {
+        "p95": 40.937486249999985,
+        "p99": 55.474818649999996,
+        "med": 0.004574,
+        "max": 71.815733,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 51,
+      "cpu": {
+        "web": {
+          "mean": 2,
+          "p90": 4
+        },
+        "api-b": {
+          "mean": 9,
+          "p90": 19
+        },
+        "api-a": {
+          "mean": 8,
+          "p90": 22
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 23,
+          "p90": 84
+        },
+        "prometheus": {
+          "mean": 1,
+          "p90": 3
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 20,
+          "p90": 31
+        },
+        "k6": {
+          "mean": 20,
+          "p90": 37
+        }
+      },
+      "durations": {
+        "http_req_duration": {
+          "p95": 5697.649829049999,
+          "p99": 6208.15846609,
+          "med": 990.613871,
+          "max": 6831.862994,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{operation:submit}": {
+          "p95": 6097.3911996,
+          "p99": 6607.38629616,
+          "med": 2955.678746,
+          "max": 6831.862994,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 4450.394682999998,
+          "p99": 6224.65120768,
+          "med": 954.843426,
+          "max": 6831.862994,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 12792,
+        "simulator_actors": 14718,
+        "simulator_campaigns": 54,
+        "simulator_credentials": 14700,
+        "simulator_enrollment_items": 7695,
+        "simulator_enrollments": 2565,
+        "simulator_http_metrics": 1067,
+        "simulator_profiles": 54,
+        "simulator_rate_limits": 12772,
+        "simulator_reports": 2565,
+        "simulator_requests": 9202,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 489,
+        "simulator_sessions": 12778
+      },
+      "campaigns": 54
+    },
+    {
+      "scenario": "ample",
+      "variant": null,
+      "rep": 3,
+      "actors": 400,
+      "profile": "ample",
+      "startedAtMs": 1792637886874,
+      "wallMs": 31105,
+      "k6Exit": 99,
+      "integrity": false,
+      "correctnessPassed": false,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_BLOCKED: http_req_blocked p(95)=94.3569766 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=37.54866559999999 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "enrollments_accepted",
+          "threshold": "count==400"
+        },
+        {
+          "metric": "checks",
+          "threshold": "rate==1"
+        },
+        {
+          "metric": "enrollment_iterations_completed",
+          "threshold": "count==400"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(99)<5000"
+        },
+        {
+          "metric": "enrollments_unexpected",
+          "threshold": "count==0"
+        }
+      ],
+      "expected": {
+        "enrollments": 400,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 346,
+        "requests": 346
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1600,
+        "rate": 60.38606994680566
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 400,
+        "rate": 15.096517486701416
+      },
+      "httpReqBlocked": {
+        "p95": 94.3569766,
+        "p99": 111.66621938,
+        "med": 0.003901,
+        "max": 122.725158,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 54,
+      "cpu": {
+        "web": {
+          "mean": 2,
+          "p90": 4
+        },
+        "api-a": {
+          "mean": 9,
+          "p90": 21
+        },
+        "api-b": {
+          "mean": 9,
+          "p90": 18
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 23,
+          "p90": 81
+        },
+        "prometheus": {
+          "mean": 1,
+          "p90": 3
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 22,
+          "p90": 35
+        },
+        "k6": {
+          "mean": 20,
+          "p90": 27
+        }
+      },
+      "durations": {
+        "http_req_duration{expected_response:true}": {
+          "p95": 4055.5968887500003,
+          "p99": 5766.1456607499995,
+          "med": 924.8971865000001,
+          "max": 6261.672387,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 5393.5030909,
+          "p99": 5755.2840224500005,
+          "med": 941.1655135000001,
+          "max": 6261.672387,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{operation:submit}": {
+          "p95": 5630.1717944,
+          "p99": 6151.87464476,
+          "med": 2663.288326,
+          "max": 6261.672387,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 13212,
+        "simulator_actors": 15118,
+        "simulator_campaigns": 55,
+        "simulator_credentials": 15100,
+        "simulator_enrollment_items": 8742,
+        "simulator_enrollments": 2914,
+        "simulator_http_metrics": 1075,
+        "simulator_profiles": 55,
+        "simulator_rate_limits": 13173,
+        "simulator_reports": 2914,
+        "simulator_requests": 9551,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 492,
+        "simulator_sessions": 13198
+      },
+      "campaigns": 55
+    },
+    {
+      "scenario": "ample",
+      "variant": null,
+      "rep": 4,
+      "actors": 400,
+      "profile": "ample",
+      "startedAtMs": 1792637969221,
+      "wallMs": 32516,
+      "k6Exit": 99,
+      "integrity": false,
+      "correctnessPassed": false,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_BLOCKED: http_req_blocked p(95)=60.419592099999996 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=35.36651515 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "enrollments_unexpected",
+          "threshold": "count==0"
+        },
+        {
+          "metric": "checks",
+          "threshold": "rate==1"
+        },
+        {
+          "metric": "enrollments_accepted",
+          "threshold": "count==400"
+        },
+        {
+          "metric": "enrollment_iterations_completed",
+          "threshold": "count==400"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(99)<5000"
+        }
+      ],
+      "expected": {
+        "enrollments": 400,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 381,
+        "requests": 381
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1600,
+        "rate": 57.13428419860691
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 400,
+        "rate": 14.283571049651728
+      },
+      "httpReqBlocked": {
+        "p95": 60.419592099999996,
+        "p99": 64.65484583,
+        "med": 0.004439,
+        "max": 98.505062,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 19,
+      "cpu": {
+        "web": {
+          "mean": 2,
+          "p90": 3
+        },
+        "api-b": {
+          "mean": 10,
+          "p90": 30
+        },
+        "api-a": {
+          "mean": 10,
+          "p90": 24
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 29,
+          "p90": 90
+        },
+        "prometheus": {
+          "mean": 1,
+          "p90": 3
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 19,
+          "p90": 30
+        },
+        "k6": {
+          "mean": 20,
+          "p90": 27
+        }
+      },
+      "durations": {
+        "http_req_duration{expected_response:true}": {
+          "p95": 4905.368881,
+          "p99": 6900.995635600002,
+          "med": 1037.294635,
+          "max": 7475.737834,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{operation:submit}": {
+          "p95": 6770.263758449998,
+          "p99": 7396.500247530001,
+          "med": 2838.5193870000003,
+          "max": 7475.737834,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 5439.906088399999,
+          "p99": 6891.19405563,
+          "med": 1044.5788105000001,
+          "max": 7475.737834,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 13632,
+        "simulator_actors": 15518,
+        "simulator_campaigns": 56,
+        "simulator_credentials": 15500,
+        "simulator_enrollment_items": 9780,
+        "simulator_enrollments": 3260,
+        "simulator_http_metrics": 1087,
+        "simulator_profiles": 56,
+        "simulator_rate_limits": 13595,
+        "simulator_reports": 3260,
+        "simulator_requests": 9897,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 495,
+        "simulator_sessions": 13618
+      },
+      "campaigns": 56
+    },
+    {
+      "scenario": "ample",
+      "variant": null,
+      "rep": 5,
+      "actors": 400,
+      "profile": "ample",
+      "startedAtMs": 1792638052269,
+      "wallMs": 31244,
+      "k6Exit": 99,
+      "integrity": false,
+      "correctnessPassed": false,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_CONNECTING: http_req_connecting p(95)=27.2047476 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "enrollments_unexpected",
+          "threshold": "count==0"
+        },
+        {
+          "metric": "enrollments_accepted",
+          "threshold": "count==400"
+        },
+        {
+          "metric": "enrollment_iterations_completed",
+          "threshold": "count==400"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(99)<5000"
+        },
+        {
+          "metric": "checks",
+          "threshold": "rate==1"
+        }
+      ],
+      "expected": {
+        "enrollments": 400,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 335,
+        "requests": 335
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1600,
+        "rate": 60.811701880980465
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 400,
+        "rate": 15.202925470245116
+      },
+      "httpReqBlocked": {
+        "p95": 27.71923525,
+        "p99": 37.08397625,
+        "med": 0.0038919999999999996,
+        "max": 96.849284,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 65,
+      "cpu": {
+        "web": {
+          "mean": 2,
+          "p90": 4
+        },
+        "api-a": {
+          "mean": 9,
+          "p90": 18
+        },
+        "api-b": {
+          "mean": 9,
+          "p90": 18
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 23,
+          "p90": 81
+        },
+        "prometheus": {
+          "mean": 0,
+          "p90": 1
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 20,
+          "p90": 33
+        },
+        "k6": {
+          "mean": 23,
+          "p90": 32
+        }
+      },
+      "durations": {
+        "http_req_duration{operation:submit}": {
+          "p95": 5563.784688149999,
+          "p99": 5982.31520966,
+          "med": 2775.6529689999998,
+          "max": 6100.919724,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 3961.351330199999,
+          "p99": 5670.578796120004,
+          "med": 1013.829027,
+          "max": 6100.919724,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 5249.58309505,
+          "p99": 5641.580585319999,
+          "med": 1035.3242424999999,
+          "max": 6100.919724,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 14052,
+        "simulator_actors": 15918,
+        "simulator_campaigns": 57,
+        "simulator_credentials": 15900,
+        "simulator_enrollment_items": 10923,
+        "simulator_enrollments": 3641,
+        "simulator_http_metrics": 1098,
+        "simulator_profiles": 57,
+        "simulator_rate_limits": 14016,
+        "simulator_reports": 3641,
+        "simulator_requests": 10278,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 498,
+        "simulator_sessions": 14038
+      },
+      "campaigns": 57
+    },
+    {
+      "scenario": "multi-uniform",
+      "variant": null,
+      "rep": 1,
+      "actors": 400,
+      "profile": "multi-uniform",
+      "startedAtMs": 1792638135463,
+      "wallMs": 32982,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_BLOCKED: http_req_blocked p(95)=75.19893504999999 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=60.4273421 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        }
+      ],
+      "expected": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1600,
+        "rate": 68.82002030974631
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 400,
+        "rate": 17.205005077436578
+      },
+      "httpReqBlocked": {
+        "p95": 75.19893504999999,
+        "p99": 128.59215913,
+        "med": 0.003999,
+        "max": 193.502828,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 0,
+      "cpu": {
+        "web": {
+          "mean": 1,
+          "p90": 3
+        },
+        "api-a": {
+          "mean": 10,
+          "p90": 37
+        },
+        "api-b": {
+          "mean": 9,
+          "p90": 34
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 19,
+          "p90": 89
+        },
+        "prometheus": {
+          "mean": 1,
+          "p90": 3
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 22,
+          "p90": 35
+        },
+        "k6": {
+          "mean": 46,
+          "p90": 176
+        }
+      },
+      "durations": {
+        "http_req_duration": {
+          "p95": 2505.59856305,
+          "p99": 2878.3784519,
+          "med": 1000.347152,
+          "max": 3126.229389,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{operation:submit}": {
+          "p95": 2863.7149684499996,
+          "p99": 2936.4530494600003,
+          "med": 1813.1970525000002,
+          "max": 3126.229389,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 2505.59856305,
+          "p99": 2878.3784519,
+          "med": 1000.347152,
+          "max": 3126.229389,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 14472,
+        "simulator_actors": 16318,
+        "simulator_campaigns": 58,
+        "simulator_credentials": 16300,
+        "simulator_enrollment_items": 11928,
+        "simulator_enrollments": 3976,
+        "simulator_http_metrics": 1109,
+        "simulator_profiles": 58,
+        "simulator_rate_limits": 14417,
+        "simulator_reports": 3976,
+        "simulator_requests": 10613,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 513,
+        "simulator_sessions": 14458
+      },
+      "campaigns": 58
+    },
+    {
+      "scenario": "multi-uniform",
+      "variant": null,
+      "rep": 2,
+      "actors": 400,
+      "profile": "multi-uniform",
+      "startedAtMs": 1792638220730,
+      "wallMs": 33203,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_CONNECTING: http_req_connecting p(95)=39.00633305 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        }
+      ],
+      "expected": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1600,
+        "rate": 69.00056766197761
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 400,
+        "rate": 17.250141915494403
+      },
+      "httpReqBlocked": {
+        "p95": 47.807551849999996,
+        "p99": 51.63702771999999,
+        "med": 0.004,
+        "max": 71.209265,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 0,
+      "cpu": {
+        "web": {
+          "mean": 2,
+          "p90": 3
+        },
+        "api-a": {
+          "mean": 11,
+          "p90": 38
+        },
+        "api-b": {
+          "mean": 11,
+          "p90": 36
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 19,
+          "p90": 88
+        },
+        "prometheus": {
+          "mean": 0,
+          "p90": 0
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 23,
+          "p90": 40
+        },
+        "k6": {
+          "mean": 47,
+          "p90": 191
+        }
+      },
+      "durations": {
+        "http_req_duration{expected_response:true}": {
+          "p95": 2288.0195024999994,
+          "p99": 2727.7193170299997,
+          "med": 998.761706,
+          "max": 2997.295194,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{operation:submit}": {
+          "p95": 2693.6019549999996,
+          "p99": 2895.0394807499997,
+          "med": 1589.5965765,
+          "max": 2997.295194,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 2288.0195024999994,
+          "p99": 2727.7193170299997,
+          "med": 998.761706,
+          "max": 2997.295194,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 14892,
+        "simulator_actors": 16718,
+        "simulator_campaigns": 59,
+        "simulator_credentials": 16700,
+        "simulator_enrollment_items": 12228,
+        "simulator_enrollments": 4076,
+        "simulator_http_metrics": 1119,
+        "simulator_profiles": 59,
+        "simulator_rate_limits": 14839,
+        "simulator_reports": 4076,
+        "simulator_requests": 11013,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 528,
+        "simulator_sessions": 14878
+      },
+      "campaigns": 59
+    },
+    {
+      "scenario": "multi-uniform",
+      "variant": null,
+      "rep": 3,
+      "actors": 400,
+      "profile": "multi-uniform",
+      "startedAtMs": 1792638303760,
+      "wallMs": 32418,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_BLOCKED: http_req_blocked p(95)=165.08816545 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=162.72737510000002 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        }
+      ],
+      "expected": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1600,
+        "rate": 68.83899692436393
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 400,
+        "rate": 17.20974923109098
+      },
+      "httpReqBlocked": {
+        "p95": 165.08816545,
+        "p99": 180.32954354,
+        "med": 0.0038815000000000004,
+        "max": 218.506077,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 0,
+      "cpu": {
+        "web": {
+          "mean": 2,
+          "p90": 4
+        },
+        "api-a": {
+          "mean": 11,
+          "p90": 37
+        },
+        "api-b": {
+          "mean": 10,
+          "p90": 37
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 19,
+          "p90": 93
+        },
+        "prometheus": {
+          "mean": 1,
+          "p90": 3
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 21,
+          "p90": 34
+        },
+        "k6": {
+          "mean": 47,
+          "p90": 191
+        }
+      },
+      "durations": {
+        "http_req_duration{operation:submit}": {
+          "p95": 2864.0985130499994,
+          "p99": 2959.5207044199997,
+          "med": 1740.8448950000002,
+          "max": 3081.151383,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 2486.6900197,
+          "p99": 2879.74249449,
+          "med": 1029.696385,
+          "max": 3081.151383,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 2486.6900197,
+          "p99": 2879.74249449,
+          "med": 1029.696385,
+          "max": 3081.151383,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 15312,
+        "simulator_actors": 17118,
+        "simulator_campaigns": 60,
+        "simulator_credentials": 17100,
+        "simulator_enrollment_items": 12528,
+        "simulator_enrollments": 4176,
+        "simulator_http_metrics": 1126,
+        "simulator_profiles": 60,
+        "simulator_rate_limits": 15240,
+        "simulator_reports": 4176,
+        "simulator_requests": 11413,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 543,
+        "simulator_sessions": 15298
+      },
+      "campaigns": 60
+    },
+    {
+      "scenario": "multi-uniform",
+      "variant": null,
+      "rep": 4,
+      "actors": 400,
+      "profile": "multi-uniform",
+      "startedAtMs": 1792638387411,
+      "wallMs": 32368,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_BLOCKED: http_req_blocked p(95)=117.27358 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=104.44046885 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        }
+      ],
+      "expected": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1600,
+        "rate": 69.34748295029677
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 400,
+        "rate": 17.33687073757419
+      },
+      "httpReqBlocked": {
+        "p95": 117.27358,
+        "p99": 130.82849758999998,
+        "med": 0.0040535,
+        "max": 183.557229,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 0,
+      "cpu": {
+        "web": {
+          "mean": 2,
+          "p90": 4
+        },
+        "api-b": {
+          "mean": 10,
+          "p90": 35
+        },
+        "api-a": {
+          "mean": 11,
+          "p90": 40
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 20,
+          "p90": 91
+        },
+        "prometheus": {
+          "mean": 0,
+          "p90": 0
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 22,
+          "p90": 34
+        },
+        "k6": {
+          "mean": 44,
+          "p90": 185
+        }
+      },
+      "durations": {
+        "http_req_duration": {
+          "p95": 2468.8999447499996,
+          "p99": 2808.90054651,
+          "med": 1039.5950910000001,
+          "max": 2880.24494,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 2468.8999447499996,
+          "p99": 2808.90054651,
+          "med": 1039.5950910000001,
+          "max": 2880.24494,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{operation:submit}": {
+          "p95": 2793.76573865,
+          "p99": 2869.74664981,
+          "med": 1786.738702,
+          "max": 2880.24494,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 15732,
+        "simulator_actors": 17518,
+        "simulator_campaigns": 61,
+        "simulator_credentials": 17500,
+        "simulator_enrollment_items": 12828,
+        "simulator_enrollments": 4276,
+        "simulator_http_metrics": 1137,
+        "simulator_profiles": 61,
+        "simulator_rate_limits": 15662,
+        "simulator_reports": 4276,
+        "simulator_requests": 11813,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 558,
+        "simulator_sessions": 15718
+      },
+      "campaigns": 61
+    },
+    {
+      "scenario": "multi-uniform",
+      "variant": null,
+      "rep": 5,
+      "actors": 400,
+      "profile": "multi-uniform",
+      "startedAtMs": 1792638470313,
+      "wallMs": 32407,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_BLOCKED: http_req_blocked p(95)=55.4707927 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=30.11918725 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        }
+      ],
+      "expected": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1600,
+        "rate": 69.30613873233666
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 400,
+        "rate": 17.326534683084166
+      },
+      "httpReqBlocked": {
+        "p95": 55.4707927,
+        "p99": 63.92087275,
+        "med": 0.0038325,
+        "max": 78.525196,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 0,
+      "cpu": {
+        "web": {
+          "mean": 1,
+          "p90": 4
+        },
+        "api-b": {
+          "mean": 10,
+          "p90": 38
+        },
+        "api-a": {
+          "mean": 11,
+          "p90": 37
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 24,
+          "p90": 92
+        },
+        "prometheus": {
+          "mean": 0,
+          "p90": 0
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 21,
+          "p90": 32
+        },
+        "k6": {
+          "mean": 46,
+          "p90": 190
+        }
+      },
+      "durations": {
+        "http_req_duration": {
+          "p95": 2333.0493605499996,
+          "p99": 2676.3686339499995,
+          "med": 1048.0147955,
+          "max": 2919.63607,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 2333.0493605499996,
+          "p99": 2676.3686339499995,
+          "med": 1048.0147955,
+          "max": 2919.63607,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{operation:submit}": {
+          "p95": 2633.3029117499996,
+          "p99": 2781.5298187999997,
+          "med": 1766.9893255000002,
+          "max": 2919.63607,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 16152,
+        "simulator_actors": 17918,
+        "simulator_campaigns": 62,
+        "simulator_credentials": 17900,
+        "simulator_enrollment_items": 13128,
+        "simulator_enrollments": 4376,
+        "simulator_http_metrics": 1147,
+        "simulator_profiles": 62,
+        "simulator_rate_limits": 16083,
+        "simulator_reports": 4376,
+        "simulator_requests": 12213,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 573,
+        "simulator_sessions": 16138
+      },
+      "campaigns": 62
+    },
+    {
+      "scenario": "multi-hotspot",
+      "variant": null,
+      "rep": 1,
+      "actors": 400,
+      "profile": "multi-hotspot",
+      "startedAtMs": 1792638553374,
+      "wallMs": 32813,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_BLOCKED: http_req_blocked p(95)=96.51102845 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=96.2410439 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        }
+      ],
+      "expected": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1600,
+        "rate": 67.58878041190731
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 400,
+        "rate": 16.897195102976827
+      },
+      "httpReqBlocked": {
+        "p95": 96.51102845,
+        "p99": 127.2759482,
+        "med": 0.0042245,
+        "max": 136.862305,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 0,
+      "cpu": {
+        "web": {
+          "mean": 1,
+          "p90": 4
+        },
+        "api-b": {
+          "mean": 10,
+          "p90": 37
+        },
+        "api-a": {
+          "mean": 10,
+          "p90": 36
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 17,
+          "p90": 64
+        },
+        "prometheus": {
+          "mean": 1,
+          "p90": 3
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 21,
+          "p90": 35
+        },
+        "k6": {
+          "mean": 48,
+          "p90": 180
+        }
+      },
+      "durations": {
+        "http_req_duration{expected_response:true}": {
+          "p95": 2713.7418283999996,
+          "p99": 3063.55274685,
+          "med": 1006.609554,
+          "max": 3487.910021,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 2713.7418283999996,
+          "p99": 3063.55274685,
+          "med": 1006.609554,
+          "max": 3487.910021,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{operation:submit}": {
+          "p95": 3005.10947045,
+          "p99": 3256.62562846,
+          "med": 2079.6091535,
+          "max": 3487.910021,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 16572,
+        "simulator_actors": 18318,
+        "simulator_campaigns": 63,
+        "simulator_credentials": 18300,
+        "simulator_enrollment_items": 13428,
+        "simulator_enrollments": 4476,
+        "simulator_http_metrics": 1157,
+        "simulator_profiles": 63,
+        "simulator_rate_limits": 16505,
+        "simulator_reports": 4476,
+        "simulator_requests": 12613,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 588,
+        "simulator_sessions": 16558
+      },
+      "campaigns": 63
+    },
+    {
+      "scenario": "multi-hotspot",
+      "variant": null,
+      "rep": 2,
+      "actors": 400,
+      "profile": "multi-hotspot",
+      "startedAtMs": 1792638638714,
+      "wallMs": 32396,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_CONNECTING: http_req_connecting p(95)=22.93923835 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        }
+      ],
+      "expected": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1600,
+        "rate": 68.3635358119998
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 400,
+        "rate": 17.09088395299995
+      },
+      "httpReqBlocked": {
+        "p95": 45.81787415,
+        "p99": 52.76078286,
+        "med": 0.004011000000000001,
+        "max": 54.111442,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 0,
+      "cpu": {
+        "web": {
+          "mean": 2,
+          "p90": 4
+        },
+        "api-b": {
+          "mean": 11,
+          "p90": 34
+        },
+        "api-a": {
+          "mean": 10,
+          "p90": 34
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 19,
+          "p90": 96
+        },
+        "prometheus": {
+          "mean": 0,
+          "p90": 0
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 20,
+          "p90": 32
+        },
+        "k6": {
+          "mean": 51,
+          "p90": 188
+        }
+      },
+      "durations": {
+        "http_req_duration{operation:submit}": {
+          "p95": 2979.012658899999,
+          "p99": 3111.6209033299997,
+          "med": 1630.514346,
+          "max": 3178.300608,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 2519.3026818499993,
+          "p99": 3008.5366063499996,
+          "med": 981.4674319999999,
+          "max": 3178.300608,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 2519.3026818499993,
+          "p99": 3008.5366063499996,
+          "med": 981.4674319999999,
+          "max": 3178.300608,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 16992,
+        "simulator_actors": 18718,
+        "simulator_campaigns": 64,
+        "simulator_credentials": 18700,
+        "simulator_enrollment_items": 13728,
+        "simulator_enrollments": 4576,
+        "simulator_http_metrics": 1167,
+        "simulator_profiles": 64,
+        "simulator_rate_limits": 16926,
+        "simulator_reports": 4576,
+        "simulator_requests": 13013,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 603,
+        "simulator_sessions": 16978
+      },
+      "campaigns": 64
+    },
+    {
+      "scenario": "multi-hotspot",
+      "variant": null,
+      "rep": 3,
+      "actors": 400,
+      "profile": "multi-hotspot",
+      "startedAtMs": 1792638721886,
+      "wallMs": 32743,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_BLOCKED: http_req_blocked p(95)=105.79226999999999 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=105.3520656 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        }
+      ],
+      "expected": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1600,
+        "rate": 68.43067750721553
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 400,
+        "rate": 17.107669376803884
+      },
+      "httpReqBlocked": {
+        "p95": 105.79226999999999,
+        "p99": 119.45254737,
+        "med": 0.004045,
+        "max": 159.703202,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 0,
+      "cpu": {
+        "web": {
+          "mean": 1,
+          "p90": 3
+        },
+        "api-a": {
+          "mean": 9,
+          "p90": 34
+        },
+        "api-b": {
+          "mean": 10,
+          "p90": 38
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 18,
+          "p90": 79
+        },
+        "prometheus": {
+          "mean": 0,
+          "p90": 0
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 20,
+          "p90": 32
+        },
+        "k6": {
+          "mean": 45,
+          "p90": 181
+        }
+      },
+      "durations": {
+        "http_req_duration{operation:submit}": {
+          "p95": 2926.5396999999994,
+          "p99": 3044.71069577,
+          "med": 1813.597186,
+          "max": 3196.176816,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 2561.68789925,
+          "p99": 2962.89929733,
+          "med": 1051.029324,
+          "max": 3196.176816,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 2561.68789925,
+          "p99": 2962.89929733,
+          "med": 1051.029324,
+          "max": 3196.176816,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 17412,
+        "simulator_actors": 19118,
+        "simulator_campaigns": 65,
+        "simulator_credentials": 19100,
+        "simulator_enrollment_items": 14028,
+        "simulator_enrollments": 4676,
+        "simulator_http_metrics": 1174,
+        "simulator_profiles": 65,
+        "simulator_rate_limits": 17327,
+        "simulator_reports": 4676,
+        "simulator_requests": 13413,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 618,
+        "simulator_sessions": 17398
+      },
+      "campaigns": 65
+    },
+    {
+      "scenario": "multi-hotspot",
+      "variant": null,
+      "rep": 4,
+      "actors": 400,
+      "profile": "multi-hotspot",
+      "startedAtMs": 1792638807390,
+      "wallMs": 32306,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_BLOCKED: http_req_blocked p(95)=74.84254575 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=43.50150745 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        }
+      ],
+      "expected": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1600,
+        "rate": 68.60704240481246
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 400,
+        "rate": 17.151760601203115
+      },
+      "httpReqBlocked": {
+        "p95": 74.84254575,
+        "p99": 88.63638227,
+        "med": 0.003989,
+        "max": 98.47016,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 0,
+      "cpu": {
+        "web": {
+          "mean": 2,
+          "p90": 4
+        },
+        "api-b": {
+          "mean": 10,
+          "p90": 33
+        },
+        "api-a": {
+          "mean": 11,
+          "p90": 38
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 17,
+          "p90": 75
+        },
+        "prometheus": {
+          "mean": 1,
+          "p90": 3
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 22,
+          "p90": 36
+        },
+        "k6": {
+          "mean": 46,
+          "p90": 181
+        }
+      },
+      "durations": {
+        "http_req_duration{expected_response:true}": {
+          "p95": 2539.9379664,
+          "p99": 2971.51470723,
+          "med": 990.2023505,
+          "max": 3074.390937,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{operation:submit}": {
+          "p95": 2946.7293179999992,
+          "p99": 3037.90816719,
+          "med": 1698.1016155,
+          "max": 3074.390937,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 2539.9379664,
+          "p99": 2971.51470723,
+          "med": 990.2023505,
+          "max": 3074.390937,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 17832,
+        "simulator_actors": 19518,
+        "simulator_campaigns": 66,
+        "simulator_credentials": 19500,
+        "simulator_enrollment_items": 14328,
+        "simulator_enrollments": 4776,
+        "simulator_http_metrics": 1185,
+        "simulator_profiles": 66,
+        "simulator_rate_limits": 17749,
+        "simulator_reports": 4776,
+        "simulator_requests": 13813,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 633,
+        "simulator_sessions": 17818
+      },
+      "campaigns": 66
+    },
+    {
+      "scenario": "multi-hotspot",
+      "variant": null,
+      "rep": 5,
+      "actors": 400,
+      "profile": "multi-hotspot",
+      "startedAtMs": 1792638890244,
+      "wallMs": 32298,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_CONNECTING: http_req_connecting p(95)=48.58570679999999 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        }
+      ],
+      "expected": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 100,
+        "requests": 400
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1600,
+        "rate": 68.57452333084977
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 400,
+        "rate": 17.143630832712443
+      },
+      "httpReqBlocked": {
+        "p95": 49.91076654999999,
+        "p99": 63.789540509999995,
+        "med": 0.003949,
+        "max": 111.991829,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 0,
+      "cpu": {
+        "web": {
+          "mean": 2,
+          "p90": 4
+        },
+        "api-a": {
+          "mean": 9,
+          "p90": 39
+        },
+        "api-b": {
+          "mean": 11,
+          "p90": 46
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 15,
+          "p90": 68
+        },
+        "prometheus": {
+          "mean": 1,
+          "p90": 3
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 18,
+          "p90": 29
+        },
+        "k6": {
+          "mean": 48,
+          "p90": 191
+        }
+      },
+      "durations": {
+        "http_req_duration{expected_response:true}": {
+          "p95": 2491.3047125499993,
+          "p99": 2986.49561836,
+          "med": 1007.384637,
+          "max": 3117.719827,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 2491.3047125499993,
+          "p99": 2986.49561836,
+          "med": 1007.384637,
+          "max": 3117.719827,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{operation:submit}": {
+          "p95": 2967.90073115,
+          "p99": 3057.99838148,
+          "med": 1827.3863325,
+          "max": 3117.719827,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 18252,
+        "simulator_actors": 19918,
+        "simulator_campaigns": 67,
+        "simulator_credentials": 19900,
+        "simulator_enrollment_items": 14628,
+        "simulator_enrollments": 4876,
+        "simulator_http_metrics": 1195,
+        "simulator_profiles": 67,
+        "simulator_rate_limits": 18170,
+        "simulator_reports": 4876,
+        "simulator_requests": 14213,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 648,
+        "simulator_sessions": 18238
+      },
+      "campaigns": 67
+    },
+    {
+      "scenario": "mixed",
+      "variant": null,
+      "rep": 1,
+      "actors": 400,
+      "profile": "ample",
+      "startedAtMs": 1792638974815,
+      "wallMs": 608492,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": false,
+      "performancePassed": false,
+      "runValid": true,
+      "guardReasons": [],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(99)<5000"
+        },
+        {
+          "metric": "checks",
+          "threshold": "rate==1"
+        },
+        {
+          "metric": "mixed_unexpected",
+          "threshold": "count==0"
+        }
+      ],
+      "expected": {
+        "enrollments": 400,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 400,
+        "requests": 400
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 77851,
+        "rate": 128.71175791148585
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 76650,
+        "rate": 126.72613381864574
+      },
+      "httpReqBlocked": {
+        "p95": 0.0092645,
+        "p99": 0.0263985,
+        "med": 0.005967,
+        "max": 123.920444,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 4,
+      "cpu": {
+        "web": {
+          "mean": 4,
+          "p90": 6
+        },
+        "api-a": {
+          "mean": 20,
+          "p90": 31
+        },
+        "api-b": {
+          "mean": 20,
+          "p90": 30
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 54,
+          "p90": 57
+        },
+        "prometheus": {
+          "mean": 1,
+          "p90": 3
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 41,
+          "p90": 50
+        },
+        "k6": {
+          "mean": 12,
+          "p90": 13
+        }
+      },
+      "durations": {
+        "http_req_duration{operation:submit}": {
+          "p95": 9394.252129,
+          "p99": 10996.700583,
+          "med": 2351.103028,
+          "max": 13461.356758,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 139.21795550000002,
+          "p99": 4679.4217895,
+          "med": 8.749244,
+          "max": 13461.356758,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 138.99716849999967,
+          "p99": 4671.502007119954,
+          "med": 8.748122,
+          "max": 13461.356758,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 18672,
+        "simulator_actors": 20318,
+        "simulator_campaigns": 68,
+        "simulator_credentials": 20300,
+        "simulator_enrollment_items": 14928,
+        "simulator_enrollments": 4976,
+        "simulator_http_metrics": 1205,
+        "simulator_profiles": 68,
+        "simulator_rate_limits": 18571,
+        "simulator_reports": 4976,
+        "simulator_requests": 14613,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 651,
+        "simulator_sessions": 18658
+      },
+      "campaigns": 68
+    },
+    {
+      "scenario": "mixed",
+      "variant": null,
+      "rep": 2,
+      "actors": 400,
+      "profile": "ample",
+      "startedAtMs": 1792639635436,
+      "wallMs": 614529,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": false,
+      "performancePassed": false,
+      "runValid": true,
+      "guardReasons": [],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(99)<5000"
+        },
+        {
+          "metric": "checks",
+          "threshold": "rate==1"
+        },
+        {
+          "metric": "mixed_unexpected",
+          "threshold": "count==0"
+        }
+      ],
+      "expected": {
+        "enrollments": 400,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 400,
+        "requests": 400
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 21335,
+        "rate": 34.97321175491483
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 20121,
+        "rate": 32.98317289527262
+      },
+      "httpReqBlocked": {
+        "p95": 0.012665,
+        "p99": 52.287377959999986,
+        "med": 0.008053,
+        "max": 110.349258,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 2457,
+      "cpu": {
+        "web": {
+          "mean": 2,
+          "p90": 3
+        },
+        "api-b": {
+          "mean": 8,
+          "p90": 17
+        },
+        "api-a": {
+          "mean": 7,
+          "p90": 16
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 166,
+          "p90": 180
+        },
+        "prometheus": {
+          "mean": 0,
+          "p90": 3
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 96,
+          "p90": 99
+        },
+        "k6": {
+          "mean": 4,
+          "p90": 4
+        }
+      },
+      "durations": {
+        "http_req_duration{operation:submit}": {
+          "p95": 12555.415268099996,
+          "p99": 16219.697164289999,
+          "med": 3873.5401075,
+          "max": 18642.984959,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 12380.528702900001,
+          "p99": 12799.400414439999,
+          "med": 10098.964217,
+          "max": 18642.984959,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 12415.868746749999,
+          "p99": 12824.15641722,
+          "med": 10229.6466655,
+          "max": 18642.984959,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 19092,
+        "simulator_actors": 20718,
+        "simulator_campaigns": 69,
+        "simulator_credentials": 20700,
+        "simulator_enrollment_items": 16128,
+        "simulator_enrollments": 5376,
+        "simulator_http_metrics": 1256,
+        "simulator_profiles": 69,
+        "simulator_rate_limits": 18993,
+        "simulator_reports": 5376,
+        "simulator_requests": 15013,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 654,
+        "simulator_sessions": 19078
+      },
+      "campaigns": 69
+    },
+    {
+      "scenario": "mixed",
+      "variant": null,
+      "rep": 3,
+      "actors": 400,
+      "profile": "ample",
+      "startedAtMs": 1792640303327,
+      "wallMs": 609205,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": false,
+      "performancePassed": false,
+      "runValid": true,
+      "guardReasons": [],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(99)<5000"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        },
+        {
+          "metric": "checks",
+          "threshold": "rate==1"
+        },
+        {
+          "metric": "mixed_unexpected",
+          "threshold": "count==0"
+        }
+      ],
+      "expected": {
+        "enrollments": 400,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 400,
+        "requests": 400
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 78685,
+        "rate": 130.11689470085017
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 77485,
+        "rate": 128.1325231733542
+      },
+      "httpReqBlocked": {
+        "p95": 0.009282600000000005,
+        "p99": 0.027184480000000098,
+        "med": 0.00601,
+        "max": 180.79081,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 1,
+      "cpu": {
+        "web": {
+          "mean": 4,
+          "p90": 6
+        },
+        "api-b": {
+          "mean": 21,
+          "p90": 30
+        },
+        "api-a": {
+          "mean": 20,
+          "p90": 30
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 54,
+          "p90": 58
+        },
+        "prometheus": {
+          "mean": 0,
+          "p90": 1
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 40,
+          "p90": 46
+        },
+        "k6": {
+          "mean": 12,
+          "p90": 13
+        }
+      },
+      "durations": {
+        "http_req_duration{operation:submit}": {
+          "p95": 7533.547165099997,
+          "p99": 8633.94466412,
+          "med": 1410.4384535,
+          "max": 8927.368682,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 102.15988724999949,
+          "p99": 3534.08805533,
+          "med": 8.917223,
+          "max": 8927.368682,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 102.15697900000016,
+          "p99": 3534.086443840001,
+          "med": 8.917006,
+          "max": 8927.368682,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 19512,
+        "simulator_actors": 21118,
+        "simulator_campaigns": 70,
+        "simulator_credentials": 21100,
+        "simulator_enrollment_items": 17328,
+        "simulator_enrollments": 5776,
+        "simulator_http_metrics": 1332,
+        "simulator_profiles": 70,
+        "simulator_rate_limits": 19415,
+        "simulator_reports": 5776,
+        "simulator_requests": 15413,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 657,
+        "simulator_sessions": 19498
+      },
+      "campaigns": 70
+    },
+    {
+      "scenario": "mixed",
+      "variant": null,
+      "rep": 4,
+      "actors": 400,
+      "profile": "ample",
+      "startedAtMs": 1792640963937,
+      "wallMs": 614708,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": false,
+      "performancePassed": false,
+      "runValid": true,
+      "guardReasons": [],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(99)<5000"
+        },
+        {
+          "metric": "mixed_unexpected",
+          "threshold": "count==0"
+        },
+        {
+          "metric": "checks",
+          "threshold": "rate==1"
+        }
+      ],
+      "expected": {
+        "enrollments": 400,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 400,
+        "requests": 400
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 22215,
+        "rate": 36.41636414615652
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 20997,
+        "rate": 34.41973432261303
+      },
+      "httpReqBlocked": {
+        "p95": 0.013557099999999994,
+        "p99": 107.33339758000015,
+        "med": 0.007904,
+        "max": 317.351387,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 3203,
+      "cpu": {
+        "web": {
+          "mean": 2,
+          "p90": 3
+        },
+        "api-b": {
+          "mean": 8,
+          "p90": 17
+        },
+        "api-a": {
+          "mean": 8,
+          "p90": 17
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 165,
+          "p90": 181
+        },
+        "prometheus": {
+          "mean": 0,
+          "p90": 0
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 96,
+          "p90": 99
+        },
+        "k6": {
+          "mean": 5,
+          "p90": 5
+        }
+      },
+      "durations": {
+        "http_req_duration{operation:submit}": {
+          "p95": 12223.080934649997,
+          "p99": 14290.636162549996,
+          "med": 4300.777161,
+          "max": 15980.223103,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 12255.0785292,
+          "p99": 12998.649809229999,
+          "med": 9338.7469565,
+          "max": 15980.223103,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 12174.1097278,
+          "p99": 12927.029975480002,
+          "med": 9110.714464,
+          "max": 15980.223103,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 19932,
+        "simulator_actors": 21518,
+        "simulator_campaigns": 71,
+        "simulator_credentials": 21500,
+        "simulator_enrollment_items": 18528,
+        "simulator_enrollments": 6176,
+        "simulator_http_metrics": 1382,
+        "simulator_profiles": 71,
+        "simulator_rate_limits": 19837,
+        "simulator_reports": 6176,
+        "simulator_requests": 15813,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 660,
+        "simulator_sessions": 19918
+      },
+      "campaigns": 71
+    },
+    {
+      "scenario": "mixed",
+      "variant": null,
+      "rep": 5,
+      "actors": 400,
+      "profile": "ample",
+      "startedAtMs": 1792641633897,
+      "wallMs": 610079,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "runValid": true,
+      "guardReasons": [],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(99)<5000"
+        }
+      ],
+      "expected": {
+        "enrollments": 400,
+        "requests": 400
+      },
+      "actual": {
+        "enrollments": 400,
+        "requests": 400
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 79588,
+        "rate": 131.575290441896
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 78388,
+        "rate": 129.59144427752102
+      },
+      "httpReqBlocked": {
+        "p95": 0.009602,
+        "p99": 0.028307940000000177,
+        "med": 0.006121,
+        "max": 127.558443,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 0,
+      "cpu": {
+        "web": {
+          "mean": 4,
+          "p90": 6
+        },
+        "api-b": {
+          "mean": 21,
+          "p90": 30
+        },
+        "api-a": {
+          "mean": 21,
+          "p90": 31
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 53,
+          "p90": 58
+        },
+        "prometheus": {
+          "mean": 1,
+          "p90": 2
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 41,
+          "p90": 50
+        },
+        "k6": {
+          "mean": 13,
+          "p90": 13
+        }
+      },
+      "durations": {
+        "http_req_duration{operation:submit}": {
+          "p95": 6126.943811149998,
+          "p99": 7007.8670777,
+          "med": 531.093353,
+          "max": 7248.048032,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 105.54020089999956,
+          "p99": 2076.5081186100024,
+          "med": 9.4591235,
+          "max": 7248.048032,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 105.54020089999956,
+          "p99": 2076.5081186100024,
+          "med": 9.4591235,
+          "max": 7248.048032,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 20352,
+        "simulator_actors": 21918,
+        "simulator_campaigns": 72,
+        "simulator_credentials": 21900,
+        "simulator_enrollment_items": 19728,
+        "simulator_enrollments": 6576,
+        "simulator_http_metrics": 1458,
+        "simulator_profiles": 72,
+        "simulator_rate_limits": 20259,
+        "simulator_reports": 6576,
+        "simulator_requests": 16213,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 663,
+        "simulator_sessions": 20338
+      },
+      "campaigns": 72
+    },
+    {
+      "scenario": "stress",
+      "variant": null,
+      "rep": 1,
+      "actors": 400,
+      "profile": "shared",
+      "startedAtMs": 1792642296157,
+      "wallMs": 728162,
+      "k6Exit": 0,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": true,
+      "runValid": true,
+      "guardReasons": [],
+      "failedThresholds": [],
+      "expected": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "actual": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 126077,
+        "rate": 174.39697414205153
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 125277,
+        "rate": 173.29036802583968
+      },
+      "httpReqBlocked": {
+        "p95": 0.008994,
+        "p99": 0.02429120000000016,
+        "med": 0.00574,
+        "max": 32.519271,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 0,
+      "cpu": {
+        "web": {
+          "mean": 4,
+          "p90": 7
+        },
+        "api-b": {
+          "mean": 24,
+          "p90": 36
+        },
+        "api-a": {
+          "mean": 24,
+          "p90": 36
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 65,
+          "p90": 81
+        },
+        "prometheus": {
+          "mean": 0,
+          "p90": 0
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 65,
+          "p90": 78
+        },
+        "k6": {
+          "mean": 16,
+          "p90": 20
+        }
+      },
+      "durations": {
+        "http_req_duration{expected_response:true}": {
+          "p95": 185.3720816,
+          "p99": 300.7467827200002,
+          "med": 23.511798,
+          "max": 662.502941,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 185.3720816,
+          "p99": 300.7467827200002,
+          "med": 23.511798,
+          "max": 662.502941,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{operation:read}": {
+          "p95": 185.8518226,
+          "p99": 301.2960110400007,
+          "med": 23.710272,
+          "max": 662.502941,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 20772,
+        "simulator_actors": 22318,
+        "simulator_campaigns": 73,
+        "simulator_credentials": 22300,
+        "simulator_enrollment_items": 20928,
+        "simulator_enrollments": 6976,
+        "simulator_http_metrics": 1507,
+        "simulator_profiles": 73,
+        "simulator_rate_limits": 20660,
+        "simulator_reports": 6976,
+        "simulator_requests": 16613,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 666,
+        "simulator_sessions": 20758
+      },
+      "campaigns": 73
+    },
+    {
+      "scenario": "stress",
+      "variant": null,
+      "rep": 2,
+      "actors": 400,
+      "profile": "shared",
+      "startedAtMs": 1792643076281,
+      "wallMs": 727974,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": false,
+      "performancePassed": true,
+      "runValid": true,
+      "guardReasons": [],
+      "failedThresholds": [
+        {
+          "metric": "sessions_unexpected",
+          "threshold": "count==0"
+        },
+        {
+          "metric": "checks",
+          "threshold": "rate==1"
+        }
+      ],
+      "expected": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "actual": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 126017,
+        "rate": 174.34430183021766
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 125217,
+        "rate": 173.23750321206157
+      },
+      "httpReqBlocked": {
+        "p95": 0.009209199999999997,
+        "p99": 0.024826239999999875,
+        "med": 0.005874,
+        "max": 12.275323,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 313,
+      "cpu": {
+        "web": {
+          "mean": 4,
+          "p90": 7
+        },
+        "api-a": {
+          "mean": 25,
+          "p90": 36
+        },
+        "api-b": {
+          "mean": 25,
+          "p90": 36
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 66,
+          "p90": 82
+        },
+        "prometheus": {
+          "mean": 1,
+          "p90": 2
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 66,
+          "p90": 81
+        },
+        "k6": {
+          "mean": 16,
+          "p90": 20
+        }
+      },
+      "durations": {
+        "http_req_duration{expected_response:true}": {
+          "p95": 187.84143094999973,
+          "p99": 300.05782723000004,
+          "med": 26.2142785,
+          "max": 533.482457,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{operation:read}": {
+          "p95": 187.96166119999998,
+          "p99": 299.7038864799999,
+          "med": 26.361382,
+          "max": 533.482457,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 187.66702199999992,
+          "p99": 299.89004155999993,
+          "med": 26.111619,
+          "max": 533.482457,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 21192,
+        "simulator_actors": 22718,
+        "simulator_campaigns": 74,
+        "simulator_credentials": 22700,
+        "simulator_enrollment_items": 20928,
+        "simulator_enrollments": 6976,
+        "simulator_http_metrics": 1553,
+        "simulator_profiles": 74,
+        "simulator_rate_limits": 21063,
+        "simulator_reports": 6976,
+        "simulator_requests": 16613,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 669,
+        "simulator_sessions": 21178
+      },
+      "campaigns": 74
+    },
+    {
+      "scenario": "stress",
+      "variant": null,
+      "rep": 3,
+      "actors": 400,
+      "profile": "shared",
+      "startedAtMs": 1792643855102,
+      "wallMs": 728884,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": false,
+      "performancePassed": true,
+      "runValid": true,
+      "guardReasons": [],
+      "failedThresholds": [
+        {
+          "metric": "checks",
+          "threshold": "rate==1"
+        },
+        {
+          "metric": "sessions_unexpected",
+          "threshold": "count==0"
+        }
+      ],
+      "expected": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "actual": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 125828,
+        "rate": 174.06042393920296
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 125028,
+        "rate": 172.9537677168092
+      },
+      "httpReqBlocked": {
+        "p95": 0.009129649999999994,
+        "p99": 0.024120569999999963,
+        "med": 0.005888,
+        "max": 10.550754,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 2,
+      "cpu": {
+        "web": {
+          "mean": 4,
+          "p90": 7
+        },
+        "api-b": {
+          "mean": 24,
+          "p90": 35
+        },
+        "api-a": {
+          "mean": 24,
+          "p90": 36
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 65,
+          "p90": 81
+        },
+        "prometheus": {
+          "mean": 1,
+          "p90": 1
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 65,
+          "p90": 77
+        },
+        "k6": {
+          "mean": 16,
+          "p90": 21
+        }
+      },
+      "durations": {
+        "http_req_duration{operation:read}": {
+          "p95": 201.91809589999997,
+          "p99": 305.1814287399999,
+          "med": 25.9406295,
+          "max": 807.356465,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 201.45938734999996,
+          "p99": 304.64143809999996,
+          "med": 25.6807105,
+          "max": 807.356465,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 201.46024525,
+          "p99": 304.6416135,
+          "med": 25.6807105,
+          "max": 807.356465,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 21612,
+        "simulator_actors": 23118,
+        "simulator_campaigns": 75,
+        "simulator_credentials": 23100,
+        "simulator_enrollment_items": 20928,
+        "simulator_enrollments": 6976,
+        "simulator_http_metrics": 1599,
+        "simulator_profiles": 75,
+        "simulator_rate_limits": 21466,
+        "simulator_reports": 6976,
+        "simulator_requests": 16613,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 672,
+        "simulator_sessions": 21598
+      },
+      "campaigns": 75
+    },
+    {
+      "scenario": "fisi-franja",
+      "variant": null,
+      "rep": 1,
+      "actors": 507,
+      "profile": "fisi-schools",
+      "startedAtMs": 1792668354159,
+      "wallMs": 48476,
+      "k6Exit": 99,
+      "integrity": false,
+      "correctnessPassed": false,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "GEN_CPU: sum-load-<testid> superó 85% de CPU (85% de 1 CPU) durante 8 muestras consecutivas (máximo 5); generador saturado",
+        "HTTP_BLOCKED: http_req_blocked p(95)=51.65651749999998 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=49.00607314999999 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(99)<5000"
+        },
+        {
+          "metric": "enrollment_iterations_completed",
+          "threshold": "count==507"
+        },
+        {
+          "metric": "checks",
+          "threshold": "rate==1"
+        },
+        {
+          "metric": "enrollments_unexpected",
+          "threshold": "count==0"
+        },
+        {
+          "metric": "enrollments_accepted",
+          "threshold": "count==507"
+        }
+      ],
+      "expected": {
+        "enrollments": 507,
+        "requests": 507
+      },
+      "actual": {
+        "enrollments": 411,
+        "requests": 411
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 2028,
+        "rate": 69.26266474068841
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 507,
+        "rate": 17.315666185172102
+      },
+      "httpReqBlocked": {
+        "p95": 51.65651749999998,
+        "p99": 84.67213417,
+        "med": 0.003818,
+        "max": 133.411959,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 96,
+      "cpu": {
+        "web": {
+          "mean": 2,
+          "p90": 4
+        },
+        "api-a": {
+          "mean": 10,
+          "p90": 33
+        },
+        "api-b": {
+          "mean": 9,
+          "p90": 27
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 35,
+          "p90": 131
+        },
+        "prometheus": {
+          "mean": 0,
+          "p90": 0
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 26,
+          "p90": 36
+        },
+        "k6": {
+          "mean": 70,
+          "p90": 177
+        }
+      },
+      "durations": {
+        "http_req_duration{operation:submit}": {
+          "p95": 7723.395728999999,
+          "p99": 8676.70785118,
+          "med": 3603.840649,
+          "max": 9122.794267,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 5728.246707099997,
+          "p99": 7871.14675791,
+          "med": 1280.7867535,
+          "max": 9122.794267,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 5266.986870299995,
+          "p99": 7912.889320620003,
+          "med": 1228.0421725,
+          "max": 9122.794267,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 22452,
+        "simulator_actors": 24025,
+        "simulator_campaigns": 77,
+        "simulator_credentials": 24007,
+        "simulator_enrollment_items": 20928,
+        "simulator_enrollments": 6976,
+        "simulator_http_metrics": 1673,
+        "simulator_profiles": 77,
+        "simulator_rate_limits": 22272,
+        "simulator_reports": 6976,
+        "simulator_requests": 16613,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 684,
+        "simulator_sessions": 22438
+      },
+      "campaigns": 77
+    },
+    {
+      "scenario": "fisi-franja",
+      "variant": null,
+      "rep": 2,
+      "actors": 507,
+      "profile": "fisi-schools",
+      "startedAtMs": 1792668455719,
+      "wallMs": 49468,
+      "k6Exit": 99,
+      "integrity": false,
+      "correctnessPassed": false,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "GEN_CPU: sum-load-<testid> superó 85% de CPU (85% de 1 CPU) durante 9 muestras consecutivas (máximo 5); generador saturado",
+        "HTTP_BLOCKED: http_req_blocked p(95)=52.91957164999999 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=39.519058099999995 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "enrollments_accepted",
+          "threshold": "count==507"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(99)<5000"
+        },
+        {
+          "metric": "checks",
+          "threshold": "rate==1"
+        },
+        {
+          "metric": "enrollments_unexpected",
+          "threshold": "count==0"
+        },
+        {
+          "metric": "enrollment_iterations_completed",
+          "threshold": "count==507"
+        }
+      ],
+      "expected": {
+        "enrollments": 507,
+        "requests": 507
+      },
+      "actual": {
+        "enrollments": 353,
+        "requests": 353
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 2028,
+        "rate": 71.79588990038641
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 507,
+        "rate": 17.948972475096603
+      },
+      "httpReqBlocked": {
+        "p95": 52.91957164999999,
+        "p99": 156.25011709999998,
+        "med": 0.004141,
+        "max": 157.633415,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 154,
+      "cpu": {
+        "web": {
+          "mean": 2,
+          "p90": 4
+        },
+        "api-a": {
+          "mean": 9,
+          "p90": 30
+        },
+        "api-b": {
+          "mean": 8,
+          "p90": 26
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 29,
+          "p90": 87
+        },
+        "prometheus": {
+          "mean": 0,
+          "p90": 0
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 33,
+          "p90": 47
+        },
+        "k6": {
+          "mean": 68,
+          "p90": 176
+        }
+      },
+      "durations": {
+        "http_req_duration{operation:submit}": {
+          "p95": 7047.6265342,
+          "p99": 7808.96810844,
+          "med": 3760.74982,
+          "max": 7996.444943,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 3960.342191999997,
+          "p99": 7248.731525589998,
+          "med": 1258.1594055,
+          "max": 7996.444943,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 6966.7387284999995,
+          "p99": 7141.75059466,
+          "med": 1299.3536789999998,
+          "max": 7996.444943,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 22979,
+        "simulator_actors": 24532,
+        "simulator_campaigns": 78,
+        "simulator_credentials": 24514,
+        "simulator_enrollment_items": 22161,
+        "simulator_enrollments": 7387,
+        "simulator_http_metrics": 1686,
+        "simulator_profiles": 78,
+        "simulator_rate_limits": 22801,
+        "simulator_reports": 7387,
+        "simulator_requests": 17024,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 693,
+        "simulator_sessions": 22965
+      },
+      "campaigns": 78
+    },
+    {
+      "scenario": "fisi-franja",
+      "variant": null,
+      "rep": 3,
+      "actors": 507,
+      "profile": "fisi-schools",
+      "startedAtMs": 1792668557372,
+      "wallMs": 46295,
+      "k6Exit": 99,
+      "integrity": false,
+      "correctnessPassed": false,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "GEN_CPU: sum-load-<testid> superó 85% de CPU (85% de 1 CPU) durante 8 muestras consecutivas (máximo 5); generador saturado",
+        "HTTP_BLOCKED: http_req_blocked p(95)=129.1769026 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=128.20377029999995 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "enrollment_iterations_completed",
+          "threshold": "count==507"
+        },
+        {
+          "metric": "enrollments_accepted",
+          "threshold": "count==507"
+        },
+        {
+          "metric": "enrollments_unexpected",
+          "threshold": "count==0"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(99)<5000"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        },
+        {
+          "metric": "checks",
+          "threshold": "rate==1"
+        }
+      ],
+      "expected": {
+        "enrollments": 507,
+        "requests": 507
+      },
+      "actual": {
+        "enrollments": 368,
+        "requests": 368
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 2028,
+        "rate": 75.19940272427937
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 507,
+        "rate": 18.79985068106984
+      },
+      "httpReqBlocked": {
+        "p95": 129.1769026,
+        "p99": 234.24279397,
+        "med": 0.004084,
+        "max": 318.072339,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 139,
+      "cpu": {
+        "web": {
+          "mean": 1,
+          "p90": 4
+        },
+        "api-b": {
+          "mean": 9,
+          "p90": 38
+        },
+        "api-a": {
+          "mean": 9,
+          "p90": 28
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 28,
+          "p90": 89
+        },
+        "prometheus": {
+          "mean": 1,
+          "p90": 2
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 27,
+          "p90": 42
+        },
+        "k6": {
+          "mean": 74,
+          "p90": 177
+        }
+      },
+      "durations": {
+        "http_req_duration{expected_response:true}": {
+          "p95": 3798.7138873999997,
+          "p99": 6019.604902439995,
+          "med": 1238.199822,
+          "max": 6681.51725,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{operation:submit}": {
+          "p95": 5857.947875,
+          "p99": 6404.7240379800005,
+          "med": 3320.941725,
+          "max": 6681.51725,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 5617.6595023,
+          "p99": 5946.043299950001,
+          "med": 1292.4751155,
+          "max": 6681.51725,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 23506,
+        "simulator_actors": 25039,
+        "simulator_campaigns": 79,
+        "simulator_credentials": 25021,
+        "simulator_enrollment_items": 23220,
+        "simulator_enrollments": 7740,
+        "simulator_http_metrics": 1696,
+        "simulator_profiles": 79,
+        "simulator_rate_limits": 23309,
+        "simulator_reports": 7740,
+        "simulator_requests": 17377,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 702,
+        "simulator_sessions": 23492
+      },
+      "campaigns": 79
+    },
+    {
+      "scenario": "fisi-franja",
+      "variant": null,
+      "rep": 4,
+      "actors": 507,
+      "profile": "fisi-schools",
+      "startedAtMs": 1792668654859,
+      "wallMs": 45331,
+      "k6Exit": 99,
+      "integrity": false,
+      "correctnessPassed": false,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "GEN_CPU: sum-load-<testid> superó 85% de CPU (85% de 1 CPU) durante 7 muestras consecutivas (máximo 5); generador saturado",
+        "HTTP_BLOCKED: http_req_blocked p(95)=83.74705565 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=82.96242119999998 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "enrollments_unexpected",
+          "threshold": "count==0"
+        },
+        {
+          "metric": "enrollments_accepted",
+          "threshold": "count==507"
+        },
+        {
+          "metric": "enrollment_iterations_completed",
+          "threshold": "count==507"
+        },
+        {
+          "metric": "checks",
+          "threshold": "rate==1"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(99)<5000"
+        }
+      ],
+      "expected": {
+        "enrollments": 507,
+        "requests": 507
+      },
+      "actual": {
+        "enrollments": 391,
+        "requests": 391
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 2028,
+        "rate": 73.03851784138071
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 507,
+        "rate": 18.259629460345177
+      },
+      "httpReqBlocked": {
+        "p95": 83.74705565,
+        "p99": 96.59237513,
+        "med": 0.0038510000000000003,
+        "max": 123.489434,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 116,
+      "cpu": {
+        "web": {
+          "mean": 2,
+          "p90": 4
+        },
+        "api-a": {
+          "mean": 10,
+          "p90": 26
+        },
+        "api-b": {
+          "mean": 9,
+          "p90": 26
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 38,
+          "p90": 138
+        },
+        "prometheus": {
+          "mean": 0,
+          "p90": 0
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 21,
+          "p90": 33
+        },
+        "k6": {
+          "mean": 65,
+          "p90": 186
+        }
+      },
+      "durations": {
+        "http_req_duration": {
+          "p95": 5453.594103149995,
+          "p99": 6822.45916535,
+          "med": 1287.404908,
+          "max": 7466.092105,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 4273.7718062999975,
+          "p99": 6655.979792179998,
+          "med": 1230.7085025000001,
+          "max": 7466.092105,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{operation:submit}": {
+          "p95": 6819.1886342,
+          "p99": 7302.2324626,
+          "med": 3398.938738,
+          "max": 7466.092105,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 24033,
+        "simulator_actors": 25546,
+        "simulator_campaigns": 80,
+        "simulator_credentials": 25528,
+        "simulator_enrollment_items": 24324,
+        "simulator_enrollments": 8108,
+        "simulator_http_metrics": 1709,
+        "simulator_profiles": 80,
+        "simulator_rate_limits": 23838,
+        "simulator_reports": 8108,
+        "simulator_requests": 17745,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 711,
+        "simulator_sessions": 24019
+      },
+      "campaigns": 80
+    },
+    {
+      "scenario": "fisi-franja",
+      "variant": null,
+      "rep": 5,
+      "actors": 507,
+      "profile": "fisi-schools",
+      "startedAtMs": 1792668752538,
+      "wallMs": 48233,
+      "k6Exit": 99,
+      "integrity": false,
+      "correctnessPassed": false,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "GEN_CPU: sum-load-<testid> superó 85% de CPU (85% de 1 CPU) durante 7 muestras consecutivas (máximo 5); generador saturado",
+        "HTTP_BLOCKED: http_req_blocked p(95)=50.16053095 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=21.952345049999998 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "checks",
+          "threshold": "rate==1"
+        },
+        {
+          "metric": "enrollment_iterations_completed",
+          "threshold": "count==507"
+        },
+        {
+          "metric": "enrollments_accepted",
+          "threshold": "count==507"
+        },
+        {
+          "metric": "enrollments_unexpected",
+          "threshold": "count==0"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(95)<2000"
+        },
+        {
+          "metric": "http_req_duration{operation:submit}",
+          "threshold": "p(99)<5000"
+        }
+      ],
+      "expected": {
+        "enrollments": 507,
+        "requests": 507
+      },
+      "actual": {
+        "enrollments": 449,
+        "requests": 449
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 2028,
+        "rate": 66.62633746206315
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 507,
+        "rate": 16.656584365515787
+      },
+      "httpReqBlocked": {
+        "p95": 50.16053095,
+        "p99": 56.56872576,
+        "med": 0.003957499999999999,
+        "max": 73.013965,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 58,
+      "cpu": {
+        "web": {
+          "mean": 2,
+          "p90": 3
+        },
+        "api-a": {
+          "mean": 10,
+          "p90": 22
+        },
+        "api-b": {
+          "mean": 10,
+          "p90": 25
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 45,
+          "p90": 146
+        },
+        "prometheus": {
+          "mean": 1,
+          "p90": 3
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 22,
+          "p90": 33
+        },
+        "k6": {
+          "mean": 62,
+          "p90": 179
+        }
+      },
+      "durations": {
+        "http_req_duration": {
+          "p95": 7048.813986799996,
+          "p99": 9648.77342926,
+          "med": 1274.7892765,
+          "max": 10230.540229,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 5987.000968799999,
+          "p99": 9310.415788199998,
+          "med": 1258.473219,
+          "max": 10230.540229,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{operation:submit}": {
+          "p95": 9646.9343979,
+          "p99": 10015.2303398,
+          "med": 3422.283065,
+          "max": 10230.540229,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 24560,
+        "simulator_actors": 26053,
+        "simulator_campaigns": 81,
+        "simulator_credentials": 26035,
+        "simulator_enrollment_items": 25497,
+        "simulator_enrollments": 8499,
+        "simulator_http_metrics": 1720,
+        "simulator_profiles": 81,
+        "simulator_rate_limits": 24367,
+        "simulator_reports": 8499,
+        "simulator_requests": 18136,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 720,
+        "simulator_sessions": 24546
+      },
+      "campaigns": 81
+    },
+    {
+      "scenario": "login",
+      "variant": null,
+      "rep": 1,
+      "actors": 507,
+      "profile": "shared",
+      "startedAtMs": 1792668851643,
+      "wallMs": 10777,
+      "k6Exit": 0,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": true,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_BLOCKED: http_req_blocked p(95)=156.160683 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=153.41327 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [],
+      "expected": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "actual": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1521,
+        "rate": 338.40123324302306
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 507,
+        "rate": 112.8004110810077
+      },
+      "httpReqBlocked": {
+        "p95": 156.160683,
+        "p99": 254.49695999999997,
+        "med": 0.004047,
+        "max": 431.953309,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 0,
+      "cpu": {
+        "web": {
+          "mean": 3,
+          "p90": 7
+        },
+        "api-b": {
+          "mean": 17,
+          "p90": 44
+        },
+        "api-a": {
+          "mean": 17,
+          "p90": 48
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 34,
+          "p90": 103
+        },
+        "prometheus": {
+          "mean": 0,
+          "p90": 0
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 20,
+          "p90": 42
+        },
+        "k6": {
+          "mean": 69,
+          "p90": 158
+        }
+      },
+      "durations": {
+        "http_req_duration": {
+          "p95": 1587.18105,
+          "p99": 1653.093486,
+          "med": 1166.307636,
+          "max": 1708.397608,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 1587.18105,
+          "p99": 1653.093486,
+          "med": 1166.307636,
+          "max": 1708.397608,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{name:auth-login}": {
+          "p95": 1614.0266145,
+          "p99": 1652.3967096200001,
+          "med": 1322.528131,
+          "max": 1708.397608,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 25087,
+        "simulator_actors": 26560,
+        "simulator_campaigns": 82,
+        "simulator_credentials": 26542,
+        "simulator_enrollment_items": 26844,
+        "simulator_enrollments": 8948,
+        "simulator_http_metrics": 1730,
+        "simulator_profiles": 82,
+        "simulator_rate_limits": 24875,
+        "simulator_reports": 8948,
+        "simulator_requests": 18585,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 723,
+        "simulator_sessions": 25073
+      },
+      "campaigns": 82
+    },
+    {
+      "scenario": "login",
+      "variant": null,
+      "rep": 2,
+      "actors": 507,
+      "profile": "shared",
+      "startedAtMs": 1792668914277,
+      "wallMs": 10845,
+      "k6Exit": 99,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": false,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_BLOCKED: http_req_blocked p(95)=262.469812 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=260.399191 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [
+        {
+          "metric": "http_req_duration{name:auth-login}",
+          "threshold": "p(95)<2000"
+        }
+      ],
+      "expected": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "actual": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1521,
+        "rate": 336.77494245512054
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 507,
+        "rate": 112.25831415170686
+      },
+      "httpReqBlocked": {
+        "p95": 262.469812,
+        "p99": 314.93571779999996,
+        "med": 0.004522,
+        "max": 625.777884,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 0,
+      "cpu": {
+        "web": {
+          "mean": 3,
+          "p90": 6
+        },
+        "api-b": {
+          "mean": 16,
+          "p90": 48
+        },
+        "api-a": {
+          "mean": 17,
+          "p90": 40
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 35,
+          "p90": 103
+        },
+        "prometheus": {
+          "mean": 0,
+          "p90": 0
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 23,
+          "p90": 40
+        },
+        "k6": {
+          "mean": 71,
+          "p90": 175
+        }
+      },
+      "durations": {
+        "http_req_duration": {
+          "p95": 1833.761939,
+          "p99": 2092.6512839999987,
+          "med": 1073.196223,
+          "max": 2330.391494,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 1833.761939,
+          "p99": 2092.6512839999987,
+          "med": 1073.196223,
+          "max": 2330.391494,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{name:auth-login}": {
+          "p95": 2022.2081949,
+          "p99": 2284.2235048,
+          "med": 1156.73372,
+          "max": 2330.391494,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 25614,
+        "simulator_actors": 27067,
+        "simulator_campaigns": 83,
+        "simulator_credentials": 27049,
+        "simulator_enrollment_items": 26844,
+        "simulator_enrollments": 8948,
+        "simulator_http_metrics": 1740,
+        "simulator_profiles": 83,
+        "simulator_rate_limits": 25404,
+        "simulator_reports": 8948,
+        "simulator_requests": 18585,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 726,
+        "simulator_sessions": 25600
+      },
+      "campaigns": 83
+    },
+    {
+      "scenario": "login",
+      "variant": null,
+      "rep": 3,
+      "actors": 507,
+      "profile": "shared",
+      "startedAtMs": 1792668977241,
+      "wallMs": 10966,
+      "k6Exit": 0,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": true,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_BLOCKED: http_req_blocked p(95)=227.062094 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=164.815642 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [],
+      "expected": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "actual": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1521,
+        "rate": 320.24120832257245
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 507,
+        "rate": 106.74706944085749
+      },
+      "httpReqBlocked": {
+        "p95": 227.062094,
+        "p99": 279.3593776,
+        "med": 0.003711,
+        "max": 311.69872,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 0,
+      "cpu": {
+        "web": {
+          "mean": 3,
+          "p90": 7
+        },
+        "api-b": {
+          "mean": 20,
+          "p90": 46
+        },
+        "api-a": {
+          "mean": 20,
+          "p90": 38
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 39,
+          "p90": 97
+        },
+        "prometheus": {
+          "mean": 1,
+          "p90": 3
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 21,
+          "p90": 42
+        },
+        "k6": {
+          "mean": 88,
+          "p90": 159
+        }
+      },
+      "durations": {
+        "http_req_duration{name:auth-login}": {
+          "p95": 1551.4928719,
+          "p99": 1615.30499682,
+          "med": 1327.116662,
+          "max": 1645.260492,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 1645.260492,
+          "p99": 1936.5237384,
+          "med": 1153.494698,
+          "max": 2026.931064,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 1645.260492,
+          "p99": 1936.5237384,
+          "med": 1153.494698,
+          "max": 2026.931064,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 26141,
+        "simulator_actors": 27574,
+        "simulator_campaigns": 84,
+        "simulator_credentials": 27556,
+        "simulator_enrollment_items": 26844,
+        "simulator_enrollments": 8948,
+        "simulator_http_metrics": 1746,
+        "simulator_profiles": 84,
+        "simulator_rate_limits": 25932,
+        "simulator_reports": 8948,
+        "simulator_requests": 18585,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 729,
+        "simulator_sessions": 26127
+      },
+      "campaigns": 84
+    },
+    {
+      "scenario": "login",
+      "variant": null,
+      "rep": 4,
+      "actors": 507,
+      "profile": "shared",
+      "startedAtMs": 1792669039876,
+      "wallMs": 10481,
+      "k6Exit": 0,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": true,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_BLOCKED: http_req_blocked p(95)=70.028773 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=65.396841 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [],
+      "expected": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "actual": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1521,
+        "rate": 358.0002441062677
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 507,
+        "rate": 119.33341470208923
+      },
+      "httpReqBlocked": {
+        "p95": 70.028773,
+        "p99": 94.50106419999979,
+        "med": 0.003662,
+        "max": 142.8053,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 0,
+      "cpu": {
+        "web": {
+          "mean": 3,
+          "p90": 8
+        },
+        "api-b": {
+          "mean": 19,
+          "p90": 46
+        },
+        "api-a": {
+          "mean": 17,
+          "p90": 41
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 29,
+          "p90": 95
+        },
+        "prometheus": {
+          "mean": 1,
+          "p90": 3
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 19,
+          "p90": 39
+        },
+        "k6": {
+          "mean": 72,
+          "p90": 165
+        }
+      },
+      "durations": {
+        "http_req_duration{expected_response:true}": {
+          "p95": 1768.581087,
+          "p99": 1843.7706388,
+          "med": 1149.662323,
+          "max": 1888.595987,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{name:auth-login}": {
+          "p95": 1575.6222914999998,
+          "p99": 1655.32445554,
+          "med": 1302.567459,
+          "max": 1676.916418,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration": {
+          "p95": 1768.581087,
+          "p99": 1843.7706388,
+          "med": 1149.662323,
+          "max": 1888.595987,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 26668,
+        "simulator_actors": 28081,
+        "simulator_campaigns": 85,
+        "simulator_credentials": 28063,
+        "simulator_enrollment_items": 26844,
+        "simulator_enrollments": 8948,
+        "simulator_http_metrics": 1752,
+        "simulator_profiles": 85,
+        "simulator_rate_limits": 26460,
+        "simulator_reports": 8948,
+        "simulator_requests": 18585,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 732,
+        "simulator_sessions": 26654
+      },
+      "campaigns": 85
+    },
+    {
+      "scenario": "login",
+      "variant": null,
+      "rep": 5,
+      "actors": 507,
+      "profile": "shared",
+      "startedAtMs": 1792669102655,
+      "wallMs": 10607,
+      "k6Exit": 0,
+      "integrity": true,
+      "correctnessPassed": true,
+      "performancePassed": true,
+      "runValid": false,
+      "guardReasons": [
+        "HTTP_BLOCKED: http_req_blocked p(95)=105.272886 ms supera 50 ms; el cliente espera conexiones",
+        "HTTP_CONNECTING: http_req_connecting p(95)=104.293868 ms supera 1 ms; se abren conexiones nuevas pese a keepalive"
+      ],
+      "failedThresholds": [],
+      "expected": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "actual": {
+        "enrollments": 0,
+        "requests": 0
+      },
+      "httpReqs": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 1521,
+        "rate": 316.27600073109284
+      },
+      "iterations": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": 507,
+        "rate": 105.42533357703095
+      },
+      "httpReqBlocked": {
+        "p95": 105.272886,
+        "p99": 156.22597339999987,
+        "med": 0.003839,
+        "max": 192.228209,
+        "count": null,
+        "rate": null
+      },
+      "httpReqFailed": {
+        "p95": null,
+        "p99": null,
+        "med": null,
+        "max": null,
+        "count": null,
+        "rate": null
+      },
+      "unexpected": 0,
+      "cpu": {
+        "web": {
+          "mean": 3,
+          "p90": 8
+        },
+        "api-b": {
+          "mean": 18,
+          "p90": 39
+        },
+        "api-a": {
+          "mean": 18,
+          "p90": 45
+        },
+        "metrics-exporter": {
+          "mean": 0,
+          "p90": 0
+        },
+        "postgres": {
+          "mean": 39,
+          "p90": 105
+        },
+        "prometheus": {
+          "mean": 1,
+          "p90": 3
+        },
+        "__host_psi_cpu_some_avg10": {
+          "mean": 23,
+          "p90": 39
+        },
+        "k6": {
+          "mean": 92,
+          "p90": 174
+        }
+      },
+      "durations": {
+        "http_req_duration": {
+          "p95": 1811.354059,
+          "p99": 2099.0629005999995,
+          "med": 1165.709704,
+          "max": 2453.637121,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{name:auth-login}": {
+          "p95": 1790.3480136,
+          "p99": 1856.17736846,
+          "med": 1331.723003,
+          "max": 1926.345173,
+          "count": null,
+          "rate": null
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95": 1811.354059,
+          "p99": 2099.0629005999995,
+          "med": 1165.709704,
+          "max": 2453.637121,
+          "count": null,
+          "rate": null
+        }
+      },
+      "tableCounts": {
+        "simulator_academic_sessions": 27195,
+        "simulator_actors": 28588,
+        "simulator_campaigns": 86,
+        "simulator_credentials": 28570,
+        "simulator_enrollment_items": 26844,
+        "simulator_enrollments": 8948,
+        "simulator_http_metrics": 1758,
+        "simulator_profiles": 86,
+        "simulator_rate_limits": 26988,
+        "simulator_reports": 8948,
+        "simulator_requests": 18585,
+        "simulator_schema_migrations": 2,
+        "simulator_sections": 735,
+        "simulator_sessions": 27181
+      },
+      "campaigns": 86
+    }
+  ],
+  "aggregate": {
+    "race@400": {
+      "n": 5,
+      "valid": 0,
+      "correctness": 5,
+      "performance": 0,
+      "httpReqRateMedian": 69.52310897018785,
+      "wallMsMedian": 27490,
+      "keyMetric": "http_req_duration{operation:submit}",
+      "guardReasonCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "metrics": {
+        "http_req_duration{expected_response:true}": {
+          "p95Median": 2249.4702171999998,
+          "p95Range": [
+            2140.1421909499995,
+            2406.01376605
+          ],
+          "p99Median": 2654.09000936,
+          "p99Range": [
+            2445.47027605,
+            2716.7436964
+          ]
+        },
+        "http_req_duration": {
+          "p95Median": 2249.4702171999998,
+          "p95Range": [
+            2140.1421909499995,
+            2406.01376605
+          ],
+          "p99Median": 2654.09000936,
+          "p99Range": [
+            2445.47027605,
+            2716.7436964
+          ]
+        },
+        "http_req_duration{operation:submit}": {
+          "p95Median": 2632.7355568,
+          "p95Range": [
+            2426.0793224499994,
+            2697.7927431499998
+          ],
+          "p99Median": 2711.4910245,
+          "p99Range": [
+            2500.07757053,
+            2819.275728929999
+          ]
+        }
+      }
+    },
+    "ample@400": {
+      "n": 5,
+      "valid": 0,
+      "correctness": 0,
+      "performance": 0,
+      "httpReqRateMedian": 59.38148890640127,
+      "wallMsMedian": 31315,
+      "keyMetric": "http_req_duration{operation:submit}",
+      "guardReasonCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "metrics": {
+        "http_req_duration{operation:submit}": {
+          "p95Median": 6097.3911996,
+          "p95Range": [
+            5563.784688149999,
+            6770.263758449998
+          ],
+          "p99Median": 6607.38629616,
+          "p99Range": [
+            5982.31520966,
+            7396.500247530001
+          ]
+        },
+        "http_req_duration": {
+          "p95Median": 5439.906088399999,
+          "p95Range": [
+            5249.58309505,
+            5697.649829049999
+          ],
+          "p99Median": 6208.15846609,
+          "p99Range": [
+            5641.580585319999,
+            6891.19405563
+          ]
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95Median": 4450.394682999998,
+          "p95Range": [
+            3961.351330199999,
+            4905.368881
+          ],
+          "p99Median": 6224.65120768,
+          "p99Range": [
+            5670.578796120004,
+            6900.995635600002
+          ]
+        }
+      }
+    },
+    "multi-uniform@400": {
+      "n": 5,
+      "valid": 0,
+      "correctness": 5,
+      "performance": 0,
+      "httpReqRateMedian": 69.00056766197761,
+      "wallMsMedian": 32418,
+      "keyMetric": "http_req_duration{operation:submit}",
+      "guardReasonCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "metrics": {
+        "http_req_duration": {
+          "p95Median": 2468.8999447499996,
+          "p95Range": [
+            2288.0195024999994,
+            2505.59856305
+          ],
+          "p99Median": 2808.90054651,
+          "p99Range": [
+            2676.3686339499995,
+            2879.74249449
+          ]
+        },
+        "http_req_duration{operation:submit}": {
+          "p95Median": 2793.76573865,
+          "p95Range": [
+            2633.3029117499996,
+            2864.0985130499994
+          ],
+          "p99Median": 2895.0394807499997,
+          "p99Range": [
+            2781.5298187999997,
+            2959.5207044199997
+          ]
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95Median": 2468.8999447499996,
+          "p95Range": [
+            2288.0195024999994,
+            2505.59856305
+          ],
+          "p99Median": 2808.90054651,
+          "p99Range": [
+            2676.3686339499995,
+            2879.74249449
+          ]
+        }
+      }
+    },
+    "multi-hotspot@400": {
+      "n": 5,
+      "valid": 0,
+      "correctness": 5,
+      "performance": 0,
+      "httpReqRateMedian": 68.43067750721553,
+      "wallMsMedian": 32396,
+      "keyMetric": "http_req_duration{operation:submit}",
+      "guardReasonCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "metrics": {
+        "http_req_duration{expected_response:true}": {
+          "p95Median": 2539.9379664,
+          "p95Range": [
+            2491.3047125499993,
+            2713.7418283999996
+          ],
+          "p99Median": 2986.49561836,
+          "p99Range": [
+            2962.89929733,
+            3063.55274685
+          ]
+        },
+        "http_req_duration": {
+          "p95Median": 2539.9379664,
+          "p95Range": [
+            2491.3047125499993,
+            2713.7418283999996
+          ],
+          "p99Median": 2986.49561836,
+          "p99Range": [
+            2962.89929733,
+            3063.55274685
+          ]
+        },
+        "http_req_duration{operation:submit}": {
+          "p95Median": 2967.90073115,
+          "p95Range": [
+            2926.5396999999994,
+            3005.10947045
+          ],
+          "p99Median": 3057.99838148,
+          "p99Range": [
+            3037.90816719,
+            3256.62562846
+          ]
+        }
+      }
+    },
+    "mixed@400": {
+      "n": 5,
+      "valid": 5,
+      "correctness": 1,
+      "performance": 0,
+      "httpReqRateMedian": 128.71175791148585,
+      "wallMsMedian": 610079,
+      "keyMetric": "http_req_duration{operation:submit}",
+      "guardReasonCodes": [],
+      "metrics": {
+        "http_req_duration{operation:submit}": {
+          "p95Median": 9394.252129,
+          "p95Range": [
+            6126.943811149998,
+            12555.415268099996
+          ],
+          "p99Median": 10996.700583,
+          "p99Range": [
+            7007.8670777,
+            16219.697164289999
+          ]
+        },
+        "http_req_duration": {
+          "p95Median": 139.21795550000002,
+          "p95Range": [
+            102.15697900000016,
+            12380.528702900001
+          ],
+          "p99Median": 4679.4217895,
+          "p99Range": [
+            2076.5081186100024,
+            12927.029975480002
+          ]
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95Median": 138.99716849999967,
+          "p95Range": [
+            102.15988724999949,
+            12415.868746749999
+          ],
+          "p99Median": 4671.502007119954,
+          "p99Range": [
+            2076.5081186100024,
+            12998.649809229999
+          ]
+        }
+      }
+    },
+    "stress@400": {
+      "n": 3,
+      "valid": 3,
+      "correctness": 1,
+      "performance": 3,
+      "httpReqRateMedian": 174.34430183021766,
+      "wallMsMedian": 728162,
+      "keyMetric": "http_req_duration{operation:read}",
+      "guardReasonCodes": [],
+      "metrics": {
+        "http_req_duration{expected_response:true}": {
+          "p95Median": 187.84143094999973,
+          "p95Range": [
+            185.3720816,
+            201.46024525
+          ],
+          "p99Median": 300.7467827200002,
+          "p99Range": [
+            300.05782723000004,
+            304.6416135
+          ]
+        },
+        "http_req_duration": {
+          "p95Median": 187.66702199999992,
+          "p95Range": [
+            185.3720816,
+            201.45938734999996
+          ],
+          "p99Median": 300.7467827200002,
+          "p99Range": [
+            299.89004155999993,
+            304.64143809999996
+          ]
+        },
+        "http_req_duration{operation:read}": {
+          "p95Median": 187.96166119999998,
+          "p95Range": [
+            185.8518226,
+            201.91809589999997
+          ],
+          "p99Median": 301.2960110400007,
+          "p99Range": [
+            299.7038864799999,
+            305.1814287399999
+          ]
+        }
+      }
+    },
+    "fisi-franja@507": {
+      "n": 5,
+      "valid": 0,
+      "correctness": 0,
+      "performance": 0,
+      "httpReqRateMedian": 71.79588990038641,
+      "wallMsMedian": 48233,
+      "keyMetric": "http_req_duration{operation:submit}",
+      "guardReasonCodes": [
+        "GEN_CPU",
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "metrics": {
+        "http_req_duration{operation:submit}": {
+          "p95Median": 7047.6265342,
+          "p95Range": [
+            5857.947875,
+            9646.9343979
+          ],
+          "p99Median": 7808.96810844,
+          "p99Range": [
+            6404.7240379800005,
+            10015.2303398
+          ]
+        },
+        "http_req_duration": {
+          "p95Median": 5728.246707099997,
+          "p95Range": [
+            5453.594103149995,
+            7048.813986799996
+          ],
+          "p99Median": 7141.75059466,
+          "p99Range": [
+            5946.043299950001,
+            9648.77342926
+          ]
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95Median": 4273.7718062999975,
+          "p95Range": [
+            3798.7138873999997,
+            5987.000968799999
+          ],
+          "p99Median": 7248.731525589998,
+          "p99Range": [
+            6019.604902439995,
+            9310.415788199998
+          ]
+        }
+      }
+    },
+    "login@507": {
+      "n": 5,
+      "valid": 0,
+      "correctness": 5,
+      "performance": 4,
+      "httpReqRateMedian": 336.77494245512054,
+      "wallMsMedian": 10777,
+      "keyMetric": "http_req_duration{name:auth-login}",
+      "guardReasonCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "metrics": {
+        "http_req_duration": {
+          "p95Median": 1768.581087,
+          "p95Range": [
+            1587.18105,
+            1833.761939
+          ],
+          "p99Median": 1936.5237384,
+          "p99Range": [
+            1653.093486,
+            2099.0629005999995
+          ]
+        },
+        "http_req_duration{expected_response:true}": {
+          "p95Median": 1768.581087,
+          "p95Range": [
+            1587.18105,
+            1833.761939
+          ],
+          "p99Median": 1936.5237384,
+          "p99Range": [
+            1653.093486,
+            2099.0629005999995
+          ]
+        },
+        "http_req_duration{name:auth-login}": {
+          "p95Median": 1614.0266145,
+          "p95Range": [
+            1551.4928719,
+            2022.2081949
+          ],
+          "p99Median": 1655.32445554,
+          "p99Range": [
+            1615.30499682,
+            2284.2235048
+          ]
+        }
+      }
+    }
+  },
+  "bench": {
+    "100": {
+      "n": 5,
+      "p95Median": 709.92,
+      "p95Range": [
+        677.49,
+        841.67
+      ],
+      "p99Median": 730.22,
+      "p99Range": [
+        698.4,
+        860.73
+      ],
+      "drainMsMedian": 736.19,
+      "submitsPerSecondMedian": 135.83,
+      "tcsEstMedian": 7.36,
+      "tcsEstRange": [
+        7.06,
+        8.67
+      ],
+      "tcsBudget": 21.05,
+      "accepted": [
+        10
+      ],
+      "expectedAccepted": 10,
+      "errors": 0,
+      "auditPassed": 5,
+      "verdicts": [
+        "green",
+        "green",
+        "green",
+        "green",
+        "green"
+      ]
+    },
+    "200": {
+      "n": 5,
+      "p95Median": 1330.46,
+      "p95Range": [
+        1195.33,
+        1574.74
+      ],
+      "p99Median": 1376.58,
+      "p99Range": [
+        1242.42,
+        1645.51
+      ],
+      "drainMsMedian": 1388.55,
+      "submitsPerSecondMedian": 144.04,
+      "tcsEstMedian": 6.94,
+      "tcsEstRange": [
+        6.27,
+        8.32
+      ],
+      "tcsBudget": 10.53,
+      "accepted": [
+        10
+      ],
+      "expectedAccepted": 10,
+      "errors": 0,
+      "auditPassed": 5,
+      "verdicts": [
+        "green",
+        "green",
+        "green",
+        "green",
+        "green"
+      ]
+    },
+    "400": {
+      "n": 5,
+      "p95Median": 2388.2,
+      "p95Range": [
+        2287.98,
+        2881.1
+      ],
+      "p99Median": 2506.81,
+      "p99Range": [
+        2367.33,
+        2959.27
+      ],
+      "drainMsMedian": 2527.94,
+      "submitsPerSecondMedian": 158.23,
+      "tcsEstMedian": 6.32,
+      "tcsEstRange": [
+        5.97,
+        7.45
+      ],
+      "tcsBudget": 5.26,
+      "accepted": [
+        10
+      ],
+      "expectedAccepted": 10,
+      "errors": 0,
+      "auditPassed": 5,
+      "verdicts": [
+        "perf-red",
+        "perf-red",
+        "perf-red",
+        "perf-red",
+        "perf-red"
+      ]
+    },
+    "507": {
+      "n": 5,
+      "p95Median": 3107.72,
+      "p95Range": [
+        2963,
+        3278.04
+      ],
+      "p99Median": 3202,
+      "p99Range": [
+        3070.63,
+        3384.35
+      ],
+      "drainMsMedian": 3227.6,
+      "submitsPerSecondMedian": 157.08,
+      "tcsEstMedian": 6.37,
+      "tcsEstRange": [
+        6.11,
+        6.73
+      ],
+      "tcsBudget": 4.15,
+      "accepted": [
+        10
+      ],
+      "expectedAccepted": 10,
+      "errors": 0,
+      "auditPassed": 5,
+      "verdicts": [
+        "perf-red",
+        "perf-red",
+        "perf-red",
+        "perf-red",
+        "perf-red"
+      ]
+    }
+  }
+}
