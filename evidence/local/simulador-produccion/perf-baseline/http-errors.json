@@ -1,0 +1,145 @@
+{
+  "source": "simulator_http_metrics (minute buckets written by api-a and api-b), statuses >= 400 summed per run window; queried after the baseline ended",
+  "status": "local-only",
+  "collectedAt": "2026-10-22",
+  "windowsUtc": {
+    "ample": [
+      "02:55",
+      "03:02"
+    ],
+    "mixed-rep1": [
+      "03:16",
+      "03:27"
+    ],
+    "mixed-rep2": [
+      "03:27",
+      "03:38"
+    ],
+    "mixed-rep4": [
+      "03:49",
+      "04:00"
+    ],
+    "stress-rep2": [
+      "04:24",
+      "04:37"
+    ],
+    "fisi-franja": [
+      "11:25",
+      "11:34"
+    ],
+    "login": [
+      "11:34",
+      "11:39"
+    ]
+  },
+  "rows": [
+    {
+      "window": "ample",
+      "method": "POST",
+      "route": "/local/matricula-regular/v1/solicitudes",
+      "status": 503,
+      "count": 224,
+      "maxMs": 6495
+    },
+    {
+      "window": "mixed-rep1",
+      "method": "GET",
+      "route": "/local/perfiles/v1/consultas/:key",
+      "status": 503,
+      "count": 3,
+      "maxMs": 6339
+    },
+    {
+      "window": "mixed-rep1",
+      "method": "POST",
+      "route": "/local/matricula-regular/v1/solicitudes",
+      "status": 503,
+      "count": 1,
+      "maxMs": 6212
+    },
+    {
+      "window": "mixed-rep2",
+      "method": "GET",
+      "route": "/local/perfiles/v1/consultas/:key",
+      "status": 503,
+      "count": 1943,
+      "maxMs": 12580
+    },
+    {
+      "window": "mixed-rep2",
+      "method": "GET",
+      "route": "/local/matricula-regular/v1/contextos/:actorId",
+      "status": 503,
+      "count": 500,
+      "maxMs": 12151
+    },
+    {
+      "window": "mixed-rep2",
+      "method": "POST",
+      "route": "/local/matricula-regular/v1/solicitudes",
+      "status": 503,
+      "count": 14,
+      "maxMs": 9946
+    },
+    {
+      "window": "mixed-rep4",
+      "method": "GET",
+      "route": "/local/perfiles/v1/consultas/:key",
+      "status": 503,
+      "count": 2557,
+      "maxMs": 12903
+    },
+    {
+      "window": "mixed-rep4",
+      "method": "GET",
+      "route": "/local/matricula-regular/v1/contextos/:actorId",
+      "status": 503,
+      "count": 628,
+      "maxMs": 12322
+    },
+    {
+      "window": "mixed-rep4",
+      "method": "POST",
+      "route": "/local/matricula-regular/v1/solicitudes",
+      "status": 503,
+      "count": 18,
+      "maxMs": 8305
+    },
+    {
+      "window": "fisi-franja",
+      "method": "POST",
+      "route": "/local/matricula-regular/v1/solicitudes",
+      "status": 503,
+      "count": 563,
+      "maxMs": 9500
+    }
+  ],
+  "noErrorRows": [
+    "stress-rep2",
+    "login"
+  ],
+  "postgresLog": {
+    "window": "2026-10-22T02:40Z to 11:49Z",
+    "deadlockDetected": 8,
+    "deadlockRelation": "simulator_http_metrics",
+    "deadlockTimesUtc": {
+      "rotationOrWarmup": [
+        "02:48:23",
+        "02:48:27",
+        "02:53:42",
+        "04:50:28",
+        "11:27:31",
+        "11:30:37"
+      ],
+      "insideValidRun": {
+        "04:08:47": "mixed rep 5"
+      },
+      "insideExcludedRun": {
+        "04:50:55": "stress rep 4"
+      }
+    },
+    "lockTimeoutErrors": 0,
+    "statementTimeoutErrors": 2,
+    "statementTimeoutNote": "both at 11:44:22 on a pg_stat_activity monitoring query while k6 was being OOM-killed during jornada VU init; outside any measured run"
+  }
+}
