@@ -82,35 +82,32 @@ locales. No se declara paridad píxel a píxel con el SUM.
 
 ## Concordancia entre requisitos e interfaces
 
-El [análisis](SITUACION-SUM.md#5-matriz-de-requisitos-funcionales) cubre todo el
-proceso de matrícula, incluida la gestión que hacen la facultad y las oficinas.
-El SUM replicado es la **vista del estudiante**, así que cada requisito se divide
-en la parte que el estudiante ve o ejecuta y la parte administrativa, que no le
-corresponde a esta interfaz.
+Cada requisito del [análisis](SITUACION-SUM.md#5-matriz-de-requisitos-funcionales)
+se contrasta con lo que el estudiante ve o hace en la réplica.
 
-**Estados:** ✅ cubierto · 🟡 parcial · ⬜ no implementado · — no aplica al estudiante.
+**Estados:** ✅ cubierto · 🟡 parcial · ⬜ no implementado · — no aplica a la vista del estudiante.
 
-| ID | Requisito del análisis | Qué ve o hace el estudiante en la réplica | Estado | Parte administrativa fuera de alcance |
-| --- | --- | --- | --- | --- |
-| RF-01 | Horarios con validación de cruce | Consulta los horarios en Programación y en el Reporte de horarios. Si elige secciones que se cruzan, la matrícula se rechaza (`SCHEDULE_CONFLICT`). | ✅ | Repositorio central de horarios de la facultad. |
-| RF-02 | Vínculo sección–docente | Ve el docente de cada sección en Programación y al elegir sección. | ✅ | Historial de cambios de docente. |
-| RF-03 | Cupos por sección | Ve el tope y los matriculados por sección. Si se agota el cupo, su matrícula se rechaza (`SECTION_FULL`) sin sobre-matrícula, incluso con muchos estudiantes a la vez. | ✅ | Lista de espera: es una mejora propuesta que el SUM no tiene. |
-| RF-04 | Sílabo semanal por sección | El SUM del estudiante no muestra sílabos. | — | Registro y seguimiento del sílabo. |
-| RF-05 | Aulas | Ve el aula de cada sección y de cada horario. | ✅ | Validar capacidad del aula y evitar doble reserva. |
-| RF-06 | Rango de créditos por perfil | Ve su «Tope de créditos». La matrícula exige entre 12 y 26 créditos en FISI 2026-II (`CREDIT_LOAD_INVALID`) y admite una excepción autorizada. | 🟡 | Autorizar excepciones. |
-| RF-07 | Repitencia y tutoría | Debe priorizar cursos desaprobados (`RETAKE_PRIORITY`). Se le exige tutoría (`TUTORSHIP_REQUIREMENT_UNMET`) y en cuarta matrícula solo esa asignatura, o hasta 12 créditos con autorización (`FOURTH_ENROLLMENT_RULE_UNMET`). | ✅ | Alertas al Vicedecanato y resoluciones. |
-| RF-08 | Trámites presenciales o virtuales | Rectificación, reserva, extemporánea y retiro no se emulan. | ⬜ | Autorización por Vicedecanato, Consejo o VRAP. |
-| RF-09 | Promedio ponderado | Ve su ponderado en Historial académico y Mi Perfil. | ✅ | Publicar el ranking por tercio, quinto y décimo superior. |
-| RF-10 | Turno de matrícula según ponderado | Ve el cuadro de turnos de FISI 2026-II. Fuera de su turno no puede matricularse (`OUTSIDE_WINDOW`). | ✅ | Definir y aprobar los turnos. |
-| RF-11 | Reporte de matrícula | Al confirmar obtiene su reporte, que indica que no es un documento oficial ni equivale a un visado. | ✅ | Visado del Vicedecanato y firma digital. |
-| RF-12 | Actas promocionales | El estudiante no gestiona actas. | — | Cierre de actas y actas adicionales. |
-| RF-13 | Prematrícula antes de matricular | Consulta su reporte de prematrícula. Solo puede matricularse si la prematrícula está habilitada (`PRE_ENROLLMENT_NOT_ENABLED`) y en cursos prematriculados (`COURSE_NOT_IN_PRE_ENROLLMENT`). Horario, créditos y repitencia se validan antes de confirmar. | ✅ | — |
-| RF-14 | Integración con el SUM en modo lectura | La réplica nunca escribe en el SUM ni lo consulta en ejecución. El operador puede cargar sus propios datos exportados solo para lectura ([guía](docs/operador.md)). | ✅ | — |
+| ID | Requisito del análisis | Qué ve o hace el estudiante en la réplica | Estado |
+| --- | --- | --- | --- |
+| RF-01 | Horarios con validación de cruce | Consulta los horarios en Programación y en el Reporte de horarios. Si elige secciones que se cruzan, la matrícula se rechaza (`SCHEDULE_CONFLICT`). | ✅ |
+| RF-02 | Vínculo sección–docente | Ve el docente de cada sección en Programación y al elegir sección. | ✅ |
+| RF-03 | Cupos por sección | Ve el tope y los matriculados por sección. Si se agota el cupo, su matrícula se rechaza (`SECTION_FULL`) sin sobre-matrícula, incluso con muchos estudiantes a la vez. | ✅ |
+| RF-04 | Sílabo semanal por sección | El SUM del estudiante no muestra sílabos. | — |
+| RF-05 | Aulas | Ve el aula de cada sección y de cada horario. | ✅ |
+| RF-06 | Rango de créditos por perfil | Ve su «Tope de créditos». La matrícula exige entre 12 y 26 créditos en FISI 2026-II (`CREDIT_LOAD_INVALID`) y admite una excepción autorizada. | 🟡 |
+| RF-07 | Repitencia y tutoría | Debe priorizar cursos desaprobados (`RETAKE_PRIORITY`). Se le exige tutoría (`TUTORSHIP_REQUIREMENT_UNMET`) y en cuarta matrícula solo esa asignatura, o hasta 12 créditos con autorización (`FOURTH_ENROLLMENT_RULE_UNMET`). | ✅ |
+| RF-08 | Trámites presenciales o virtuales | Rectificación, reserva, extemporánea y retiro no se emulan. | ⬜ |
+| RF-09 | Promedio ponderado | Ve su ponderado en Historial académico y Mi Perfil. | ✅ |
+| RF-10 | Turno de matrícula según ponderado | Ve el cuadro de turnos de FISI 2026-II. Fuera de su turno no puede matricularse (`OUTSIDE_WINDOW`). | ✅ |
+| RF-11 | Reporte de matrícula | Al confirmar obtiene su reporte, que indica que no es un documento oficial ni equivale a un visado. | ✅ |
+| RF-12 | Actas promocionales | El SUM del estudiante no muestra actas. | — |
+| RF-13 | Prematrícula antes de matricular | Consulta su reporte de prematrícula. Solo puede matricularse si la prematrícula está habilitada (`PRE_ENROLLMENT_NOT_ENABLED`) y en cursos prematriculados (`COURSE_NOT_IN_PRE_ENROLLMENT`). Horario, créditos y repitencia se validan antes de confirmar. | ✅ |
+| RF-14 | Integración con el SUM en modo lectura | La réplica nunca escribe en el SUM ni lo consulta en ejecución. El operador puede cargar sus propios datos exportados solo para lectura ([guía](docs/operador.md)). | ✅ |
 
-**Resumen:** de los 12 requisitos que tocan la vista del estudiante, 10 están
-cubiertos, 1 es parcial y 1 no está implementado. La parte parcial de RF-06 son
-los regímenes anual y de verano, que no se modelan; lo no implementado son los
-trámites de RF-08. RF-04 y RF-12 son puramente administrativos.
+**Resumen:** de los 12 requisitos que aplican a la vista del estudiante, 10 están
+cubiertos, 1 es parcial y 1 no está implementado. RF-06 es parcial porque los
+regímenes anual y de verano no se modelan; RF-08 corresponde a los trámites, que
+no se emulan.
 
 La matrícula valida además reglas que el estudiante encuentra en el proceso y
 que salen del dossier FISI, aunque el análisis no las listaba: deudas, requisito
@@ -125,7 +122,7 @@ El catálogo completo de causas está en
 | La Ley 30220 y el Reglamento 2026 se contradicen en la repitencia | Aplica la «cuarta matrícula» del Reglamento ([RN-09](docs/domain/fisi/2026-II/business-rules.md)). Si falta la autorización o el dato de tutoría, devuelve `REPETITION_OR_AUTHORIZATION_UNKNOWN` en vez de decidir por su cuenta. |
 | No hay regla publicada que use el ponderado para ordenar la matrícula | Para FISI 2026-II sí existe un cuadro publicado con turnos por ponderado. La réplica lo transcribe con su fuente; otras facultades y periodos quedan sin perfil. |
 | Riesgo de documentos paralelos al reporte oficial | El reporte y las pantallas propias se marcan como «Prototipo Local» y el proyecto declara que no tiene valor legal. |
-| Horarios, cupos y aulas dispersos entre facultades | Es un problema de gestión; la réplica solo centraliza por sección lo que el estudiante consulta. |
+| Horarios, cupos y aulas dispersos entre facultades | El estudiante consulta horario, cupo, docente y aula de cada sección en un mismo lugar. |
 | Vacío sobre qué trámites requieren presencia | Sigue abierto: los trámites no se emulan. |
 
 Las preguntas sin resolver están en
