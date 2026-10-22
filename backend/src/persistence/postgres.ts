@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { Pool } from 'pg'
 
 /** Fixed bucket upper bounds in milliseconds shared by the pool-wait and HTTP histograms. */
-export const DURATION_BUCKETS_MS = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 30000] as const
+export const DURATION_BUCKETS_MS = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 8000, 10000, 20000, 30000] as const
 const MAX_SERIES = 64
 const OVERFLOW_LABEL = 'other'
 export const NO_ROUTE_GROUP = 'none'

@@ -28,7 +28,7 @@ export function isRouteTemplate(value) {
 const isStatus = (value) => value === 'other' || /^[1-5][0-9]{2}$/.test(String(value))
 
 // Fixed bounds of the API's LabeledHistogram (backend/src/persistence/postgres.ts), in milliseconds.
-const DURATION_BUCKETS_MS = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 30000]
+const DURATION_BUCKETS_MS = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 8000, 10000, 20000, 30000]
 const toSeconds = (bounds) => Array.isArray(bounds) ? bounds.map((value) => value / 1000) : null
 
 // Collectors keep non-cumulative counts per slot (last slot is +Inf). Prometheus wants cumulative buckets.
