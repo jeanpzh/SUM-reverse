@@ -1203,6 +1203,610 @@
           "editorMode": "code"
         }
       ]
+    },
+    {
+      "id": 25,
+      "type": "timeseries",
+      "title": "Submit phase p95 by phase and route",
+      "description": "Server-side phases of the enrollment submit, aggregated over both replicas. Phases a route never reaches have no observations and show no line.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 64,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "showPoints": "always",
+            "pointSize": 3
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, phase, route) (rate(sum_simulator_submit_phase_seconds_bucket[$__rate_interval])))",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "{{phase}} / {{route}}"
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "type": "timeseries",
+      "title": "Database pool wait p95 by route group",
+      "description": "Pool checkout wait per route template (API-side collector) and the store-side checkout wait of the submit path.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 64,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "showPoints": "always",
+            "pointSize": 3
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, route_group) (rate(sum_simulator_pool_wait_seconds_bucket[$__rate_interval])))",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "{{route_group}}"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(sum_simulator_pool_acquire_seconds_bucket[$__rate_interval])))",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "store acquire"
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "type": "timeseries",
+      "title": "Server HTTP duration p95 by route",
+      "description": "Server-side request duration by route template, from the API histogram; compare with k6 to separate API time from proxy, network and generator time.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 71,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "showPoints": "always",
+            "pointSize": 3
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, route) (rate(sum_simulator_http_request_seconds_bucket[$__rate_interval])))",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "{{route}}"
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "type": "timeseries",
+      "title": "Storage errors by cause (503 sources)",
+      "description": "Classified storage failures per second. lock_timeout and statement_timeout come from the section FOR UPDATE; pool_timeout from pool exhaustion.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 71,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "showPoints": "always",
+            "pointSize": 3
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (cause) (rate(sum_simulator_storage_errors_total[$__rate_interval]))",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "{{cause}}"
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "type": "timeseries",
+      "title": "Internal submit retries by code",
+      "description": "Retries per second by PostgreSQL error code (55P03 lock timeout, 40P01 deadlock, 40001 serialization, 57014 statement timeout).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 78,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "showPoints": "always",
+            "pointSize": 3
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (code) (rate(sum_simulator_submit_retries_total[$__rate_interval]))",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "{{code}}"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Database wait events (max per scrape window)",
+      "description": "Backends of application sum-simulator by wait_event_type and wait_event, maximum of 1 s samples within each scrape window; maximum across replica observers.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 78,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "showPoints": "always",
+            "pointSize": 3
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (wait_type, wait_event) (sum_simulator_db_wait_events)",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "{{wait_type}} / {{wait_event}}"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Locks waiting (not granted)",
+      "description": "pg_locks entries with granted = false, by lock type; maximum across replica observers.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 85,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "showPoints": "always",
+            "pointSize": 3
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (locktype) (sum_simulator_db_locks_waiting)",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "{{locktype}}"
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "type": "timeseries",
+      "title": "Transactions: commit, rollback, deadlocks",
+      "description": "pg_stat_database rates for the synthetic database (same value from each replica, so the maximum is shown).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 85,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "showPoints": "always",
+            "pointSize": 3
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(rate(sum_simulator_db_xact_commit_total[$__rate_interval]))",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "commits/s"
+        },
+        {
+          "refId": "B",
+          "expr": "max(rate(sum_simulator_db_xact_rollback_total[$__rate_interval]))",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "rollbacks/s"
+        },
+        {
+          "refId": "C",
+          "expr": "max(rate(sum_simulator_db_deadlocks_total[$__rate_interval]))",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "deadlocks/s"
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "type": "timeseries",
+      "title": "WAL write rate and fsync",
+      "description": "WAL bytes and fsync rate from pg_stat_wal and pg_stat_io (PostgreSQL 18). Fsync time needs track_wal_io_timing; with it off the average fsync time reads 0.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 92,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "showPoints": "always",
+            "pointSize": 3
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(rate(sum_simulator_db_wal_bytes_total[$__rate_interval]))",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "WAL bytes/s"
+        },
+        {
+          "refId": "B",
+          "expr": "max(rate(sum_simulator_db_wal_fsyncs_total[$__rate_interval]))",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "fsyncs/s"
+        },
+        {
+          "refId": "C",
+          "expr": "max(rate(sum_simulator_db_wal_buffers_full_total[$__rate_interval]))",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "buffers full/s"
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "type": "timeseries",
+      "title": "Average WAL fsync time",
+      "description": "Average fsync duration over the window: fsync seconds per fsync. Empty when no fsync happened or track_wal_io_timing is off.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 92,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "showPoints": "always",
+            "pointSize": 3
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(rate(sum_simulator_db_wal_fsync_seconds_total[$__rate_interval])) / max(rate(sum_simulator_db_wal_fsyncs_total[$__rate_interval]))",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "avg fsync"
+        }
+      ]
+    },
+    {
+      "id": 35,
+      "type": "timeseries",
+      "title": "Database pool peaks since previous scrape",
+      "description": "Peak waiting requests, connections in use and total connections between scrapes; catches bursts shorter than the scrape interval.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 99,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "showPoints": "always",
+            "pointSize": 3
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum_simulator_pool_peak",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "{{replica}} {{stat}}"
+        }
+      ]
+    },
+    {
+      "id": 36,
+      "type": "timeseries",
+      "title": "Event loop delay per scrape window",
+      "description": "Event loop delay p99 and max since the previous scrape (resolution 5 ms), unlike the process-lifetime p95 above.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "simulator-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 99,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "showPoints": "always",
+            "pointSize": 3
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "1000 * sum_simulator_event_loop_window_seconds{stat=~\"p99|max\"}",
+          "range": true,
+          "instant": false,
+          "editorMode": "code",
+          "legendFormat": "{{replica}} {{stat}}"
+        }
+      ]
     }
   ],
   "templating": {
