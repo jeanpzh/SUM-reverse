@@ -12,7 +12,7 @@ import { createSyntheticAcademicDemoFixture } from './academic-demo.fixtures.js'
 import type { Meeting, OfferedCourse, School, SyntheticFixture } from './profile.types.js'
 
 export const enrollmentScenarioIds = [
-  'regular', 'repitencia', 'tutoria', 'prerrequisito', 'cruce', 'cupo', 'deuda', 'gap-horario', 'prioridad',
+  'regular', 'repitencia', 'tutoria', 'prerrequisito', 'cruce', 'cupo', 'deuda', 'docente-no-asignado', 'prioridad',
 ] as const
 export type EnrollmentScenarioId = typeof enrollmentScenarioIds[number]
 export const ENROLLMENT_SCENARIO_CLOCK = '2026-08-11T14:00:00.000Z' as const
@@ -70,9 +70,6 @@ function choice(school: School, number: number): MatriculaRegularChoice {
 function cause(code: MatriculaRegularCause['code'], courseIds: MatriculaRegularId[] = [], sectionIds: MatriculaRegularId[] = []): MatriculaRegularCause {
   return { code, courseIds: [...courseIds].sort(), sectionIds: [...sectionIds].sort(), sourceIds: [ENROLLMENT_SCENARIO_SOURCE] }
 }
-function gap(code: MatriculaRegularGap['code'], courseIds: MatriculaRegularId[] = []): MatriculaRegularGap {
-  return { code, courseIds: [...courseIds].sort(), sourceIds: [ENROLLMENT_SCENARIO_SOURCE] }
-}
 function expected(state: MatriculaRegularOutcomeState, causes: MatriculaRegularCause[] = [], gaps: MatriculaRegularGap[] = []) {
   return { state, causes, gaps }
 }
@@ -91,7 +88,8 @@ const scenarioDefinitions: Record<EnrollmentScenarioId, (school: School, suffix:
   cruce: (school, suffix) => ({ actorId: `SYN-${school === 'SISTEMAS' ? 'SIS' : 'SOFT'}-${suffix}`, selection: (suffix === 'A' ? baseA : baseB).map((n) => choice(school, n)), expected: expected('rejected', [cause('SCHEDULE_CONFLICT', [courseId(school, 9), courseId(school, 10)])]) }),
   cupo: (school, suffix) => ({ actorId: `SYN-${school === 'SISTEMAS' ? 'SIS' : 'SOFT'}-${suffix}`, selection: (suffix === 'A' ? baseA : baseB).map((n) => choice(school, n)), expected: expected('rejected', [cause('SECTION_FULL', [courseId(school, 9)], [`${courseId(school, 9)}-S1`])]) }),
   deuda: (school, suffix) => ({ actorId: `SYN-${school === 'SISTEMAS' ? 'SIS' : 'SOFT'}-${suffix}`, selection: (suffix === 'A' ? baseA : baseB).map((n) => choice(school, n)), expected: suffix === 'A' ? expected('accepted') : expected('rejected', [cause('DEBT_REQUIREMENT_UNMET')]) }),
-  'gap-horario': (school, suffix) => ({ actorId: `SYN-${school === 'SISTEMAS' ? 'SIS' : 'SOFT'}-${suffix}`, selection: (suffix === 'A' ? baseA : baseB).map((n) => choice(school, n)), expected: expected('configuration-pending', [], [gap('SCHEDULE_UNKNOWN', [courseId(school, 9)])]) }),
+  // Testimony 2026-10-22: sections are published with a schedule before a teacher is assigned.
+  'docente-no-asignado': (school, suffix) => ({ actorId: `SYN-${school === 'SISTEMAS' ? 'SIS' : 'SOFT'}-${suffix}`, selection: (suffix === 'A' ? baseA : baseB).map((n) => choice(school, n)), expected: expected('accepted') }),
   prioridad: (school, suffix) => ({ actorId: `SYN-${school === 'SISTEMAS' ? 'SIS' : 'SOFT'}-${suffix}`, selection: (suffix === 'A' ? baseA : [8, 9, 10]).map((n) => choice(school, n)), expected: suffix === 'A' ? expected('accepted') : expected('rejected', [
     cause('RETAKE_PRIORITY', [courseId(school, 7)]),
   ]) }),
@@ -165,8 +163,8 @@ function buildFixture(school: School, scenarioId: EnrollmentScenarioId, selected
     ...structuredClone(course),
     prerequisiteIds: Number(course.courseId.slice(-2)) < 5 ? [] : [courseId(school, Number(course.courseId.slice(-2)) - 4)],
     sections: [{ sectionId: `${course.courseId}-S1` as MatriculaRegularId, capacity: 10, occupied: scenarioId === 'cupo' && course.courseId.endsWith('C09') ? 10 : 2,
-      schedule: scenarioId === 'gap-horario' && course.courseId.endsWith('C09') ? null : [{ day: (scenarioId === 'cruce' && ['C09', 'C10'].some((suffix) => course.courseId.endsWith(suffix)) ? 3 : Number(course.courseId.slice(-2)) - 6) as Meeting['day'], startMinute: 480, endMinute: 540 }],
-      label: '1', teacher: 'DOCENTE SINTÉTICO', room: null }],
+      schedule: [{ day: (scenarioId === 'cruce' && ['C09', 'C10'].some((suffix) => course.courseId.endsWith(suffix)) ? 3 : Number(course.courseId.slice(-2)) - 6) as Meeting['day'], startMinute: 480, endMinute: 540 }],
+      label: '1', teacher: scenarioId === 'docente-no-asignado' && course.courseId.endsWith('C09') ? null : 'DOCENTE SINTÉTICO', room: null }],
   }))
   for (const actor of fixture.actors) {
     const suffix = actor.actorId.endsWith('-A') ? 'A' : 'B'
