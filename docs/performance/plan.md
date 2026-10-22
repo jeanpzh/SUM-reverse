@@ -132,7 +132,7 @@ Objetivo: resultados repetibles, generador controlado y un bucle rápido (*red-c
 
 ### P0-07c Límite de 2000 y perfil en el arnés de carga
 
-- **Carpeta:** raíz. **Archivos exclusivos:** `load/profile-config.mjs` y su prueba, `infra/simulator/init-runtime.mjs`, `infra/simulator/rotate-campaign.sh`, `load/scenarios.sh` (expresiones `{0,3}` y `> 1000`, y el nuevo escenario `fisi-franja`).
+- **Carpeta:** raíz. **Archivos exclusivos:** `load/profile-config.mjs` y su prueba, `infra/simulator/init-runtime.mjs`, `infra/simulator/rotate-campaign.sh`, `load/scenarios.sh` (expresiones `{0,3}` y `> 1000`, y el nuevo escenario `fisi-franja`). **Enmienda 2026-10-22 (coordinador):** se añade `infra/simulator/scenario-results.mjs`, que también rechazaba el perfil y debe calcular los conteos esperados de `fisi-franja`. Si `load-runtime-env.sh` filtra claves, también se añade, para que `SIMULATOR_FISI_*` llegue al seed. Las variables `SIMULATOR_FISI_*` se escriben en `config.env` solo con `fisi-schools` y se eliminan con cualquier otro perfil.
 - **Dependencias:** P0-07a y P0-04 (mismo archivo `scenarios.sh`).
 - **Validación:** pruebas `node --test` de `profile-config` (1422 válido, 2001 rechazado, `fisi-schools` con cohortes disjuntas); `bash -n`; `SCENARIO_ACTORS=1422` acepta la rotación.
 - **Aceptación:** los valores por defecto siguen igual (100 en el seed, 400 en la batería).
@@ -140,7 +140,7 @@ Objetivo: resultados repetibles, generador controlado y un bucle rápido (*red-c
 
 ### P0-08 Escenarios: jornada, carga sostenida y SLO del login
 
-- **Carpeta:** raíz. **Archivos exclusivos:** `load/jornada.js` (nuevo), `load/enrollment-open.js` (nuevo), `load/login.js`, `infra/simulator/scenario-results.mjs` (SLO declarado para login, jornada y enrollment-open).
+- **Carpeta:** raíz. **Archivos exclusivos:** `load/jornada.js` (nuevo), `load/enrollment-open.js` (nuevo), `load/login.js`, `infra/simulator/scenario-results.mjs` (SLO declarado para login, jornada y enrollment-open). **Enmienda 2026-10-22 (coordinador):** se añade `load/scenarios.sh`, para registrar los escenarios `jornada` y `enrollment-open`, que quedan fuera de `all`. `enrollment.js` ya declara p95/p99 en `{operation:submit}` y no cambia: el único umbral nuevo en un script existente es `{name:auth-login}` en `login.js`.
 - **Contenido:**
   - **`jornada.js`:** oleadas según el manifiesto de P0-07 y `WAVE_INTERVAL`/`WAVE_FRONTLOAD`. Cada actor inicia sesión en su oleada, crea sesión, lee el contexto y envía una vez. Contadores exactos frente a las admisiones derivadas.
   - **`enrollment-open.js`:** `constant-arrival-rate` de envíos con una población suficiente.
