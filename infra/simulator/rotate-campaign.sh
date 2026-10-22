@@ -114,9 +114,11 @@ mv "$next_env" "$ENV_FILE"
 chmod 600 "$ENV_FILE"
 echo 'Closed and preserved the prior synthetic campaign; starting the next campaign.'
 if [[ "$RECREATE" == app ]]; then
-  # The new config.env is already in place. migrate/seed run against the unchanged PostgreSQL and create the new campaign row
-  # (a bare API restart would fail in onModuleInit); simulator-init is not needed because config.env already exists.
+  # The new campaign is in $ENV_FILE, which is the legacy infra/simulator/.env when it exists. simulator-init copies it into
+  # runtime/config.env, as the full path does; skipping it seeds the previous campaign again. migrate/seed then run against the
+  # unchanged PostgreSQL and create the new campaign row (a bare API restart would fail in onModuleInit).
   # api-a/api-b/web are recreated because they read config.env and web stays bound to the campaign. No rebuild happens in this mode.
+  docker compose run --rm --no-deps simulator-init
   docker compose run --rm --no-deps migrate
   docker compose run --rm --no-deps seed
   docker compose up -d --wait --no-deps --force-recreate api-a api-b web

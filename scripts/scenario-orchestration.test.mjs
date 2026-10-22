@@ -108,11 +108,13 @@ test('default mode: docker invocations are identical to the P0-03 baseline', wit
   assert.deepEqual(normalize(scenario.calls), baselineLogin)
 }))
 
-test('SIMULATOR_RECREATE=app runs migrate, seed and a --no-deps recreate of api-a, api-b and web, never touching postgres', withTree(async root => {
+test('SIMULATOR_RECREATE=app runs simulator-init, migrate, seed and a --no-deps recreate of api-a, api-b and web, never touching postgres', withTree(async root => {
   const result = await exec(root, 'infra/simulator/rotate-campaign.sh', rotateArgs, { SIMULATOR_RECREATE: 'app' })
   assert.equal(result.code, 0, result.stderr)
   assert.deepEqual(result.calls, [
     `compose ${uuidCall}`, `compose ${uuidCall}`, closeCall,
+    // simulator-init propagates a legacy infra/simulator/.env into runtime/config.env before the seed reads it.
+    'compose run --rm --no-deps simulator-init',
     'compose run --rm --no-deps migrate',
     'compose run --rm --no-deps seed',
     'compose up -d --wait --no-deps --force-recreate api-a api-b web',
