@@ -1,0 +1,5 @@
+# P1-06 E14 only (scratch, not committed): nginx routes to api-a alone; api-b stays up but receives no traffic.
+services:
+  web:
+    volumes:
+      - ./nginx-1api.conf:/etc/nginx/templates/default.conf.template:ro
