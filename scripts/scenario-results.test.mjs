@@ -142,3 +142,24 @@ test('runner validates SCENARIO_ENV and SCENARIO_REP before touching Docker and 
   assert.match(source, /"guard-\$testid\.json" \|\| check_status/)
   assert.match(source, /cleanup\(\) \{\n  stop_sampler/)
 })
+
+test('fisi-franja expects manifest.expectedAccepted enrollments and one request per actor', async () => {
+  const dir = await fixture()
+  try {
+    const actors = Array.from({ length: 507 }, (_, index) => ({ actorId: `SYN-SIS-U${index}` }))
+    await writeFile(join(dir, 'manifest.json'), JSON.stringify({ actors, scenarioProfile: 'fisi-schools', expectedAccepted: 253, initialEnrollments: 0, initialRequests: 0 }))
+    await writeFile(join(dir, 'results', 'audit.json'), JSON.stringify({ passed: true, totals: { enrollments: 253, requests: 507 } }))
+    await writeFile(join(dir, 'results', `fisi-franja-${testid}-summary.json`), JSON.stringify({ metrics: {} }))
+    const args = [helper, 'check', 'audit.json', 'fisi-franja', testid, '0', 'normal', '1000', '2000']
+    const { stdout } = await run('node', args, { env: { ...process.env, SCENARIO_RUNTIME_DIR: dir } })
+    const printed = JSON.parse(stdout)
+    assert.equal(printed.profile, 'fisi-schools')
+    assert.equal(printed.actors, 507)
+    assert.deepEqual(printed.expected, { enrollments: 253, requests: 507 })
+    assert.equal(printed.integrity, true)
+    assert.equal(printed.passed, true)
+    // A different SQL outcome is not an accepted FISI run.
+    await writeFile(join(dir, 'results', 'audit.json'), JSON.stringify({ passed: true, totals: { enrollments: 507, requests: 507 } }))
+    await assert.rejects(run('node', args, { env: { ...process.env, SCENARIO_RUNTIME_DIR: dir } }))
+  } finally { await rm(dir, { recursive: true, force: true }) }
+})

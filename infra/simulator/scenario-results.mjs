@@ -69,7 +69,7 @@ if (mode === 'audit-counts') {
   const initial = Number(manifest.initialEnrollments ?? 0)
   const initialRequests = Number(manifest.initialRequests ?? 0)
   let expectedEnrollments = initial, expectedRequests = initialRequests
-  if (['race', 'ample', 'last-seat', 'multi-uniform', 'multi-hotspot'].includes(scenario)) {
+  if (['race', 'ample', 'last-seat', 'multi-uniform', 'multi-hotspot', 'fisi-franja'].includes(scenario)) {
     expectedEnrollments += manifest.expectedAccepted
     expectedRequests += manifest.actors.length
   } else if (scenario === 'retry') {
