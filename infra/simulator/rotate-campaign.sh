@@ -21,6 +21,16 @@ if ! [[ "$NEXT_ACTOR_COUNT" =~ ^[1-9][0-9]{0,3}$ ]] || (( NEXT_ACTOR_COUNT > 100
   echo 'Next actor count must be 1..1000 and profile must be a supported synthetic profile.' >&2
   exit 2
 fi
+# SIMULATOR_RECREATE: full (default) recreates the whole stack; app keeps postgres and the observability services running.
+RECREATE=${SIMULATOR_RECREATE:-full}
+if [[ "$RECREATE" != full && "$RECREATE" != app ]]; then
+  echo 'SIMULATOR_RECREATE must be full or app.' >&2
+  exit 2
+fi
+if [[ "$RECREATE" == app && "${SIMULATOR_REBUILD-}" == 1 ]]; then
+  echo 'SIMULATOR_RECREATE=app does not rebuild images; build first (SCENARIO_BUILD=1 or docker compose build) and leave SIMULATOR_REBUILD unset or 0.' >&2
+  exit 2
+fi
 if [[ ! -f "$ENV_FILE" || -L "$ENV_FILE" || ! -d "$RUNTIME" || -L "$RUNTIME" || ! -f "$RUNTIME/manifest.json" ]]; then
   echo 'Current private environment, runtime directory, or seed manifest is missing.' >&2
   exit 1
@@ -74,7 +84,14 @@ mv "$RUNTIME/manifest.json" "$old_manifest"
 mv "$next_env" "$ENV_FILE"
 chmod 600 "$ENV_FILE"
 echo 'Closed and preserved the prior synthetic campaign; starting the next campaign.'
-if [[ ${SIMULATOR_REBUILD:-1} == 1 ]]; then
+if [[ "$RECREATE" == app ]]; then
+  # The new config.env is already in place. migrate/seed run against the unchanged PostgreSQL and create the new campaign row
+  # (a bare API restart would fail in onModuleInit); simulator-init is not needed because config.env already exists.
+  # api-a/api-b/web are recreated because they read config.env and web stays bound to the campaign. No rebuild happens in this mode.
+  docker compose run --rm --no-deps migrate
+  docker compose run --rm --no-deps seed
+  docker compose up -d --wait --no-deps --force-recreate api-a api-b web
+elif [[ ${SIMULATOR_REBUILD:-1} == 1 ]]; then
   docker compose up --build --force-recreate -d --wait
 else
   docker compose up --force-recreate -d --wait

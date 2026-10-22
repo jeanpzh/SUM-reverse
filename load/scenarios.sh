@@ -9,8 +9,18 @@ QUICK=${SCENARIO_QUICK:-0}
 if ! [[ "$ACTORS" =~ ^[1-9][0-9]{0,3}$ ]] || (( ACTORS > 1000 )); then echo 'SCENARIO_ACTORS must be 1..1000' >&2; exit 2; fi
 ENV_LABEL=${SCENARIO_ENV:-H}
 REP=${SCENARIO_REP:-1}
+REPEATS=${SCENARIO_REPEATS:-1}
+WARMUP=${SCENARIO_WARMUP:-0}
+ORDER=${SCENARIO_ORDER:-fixed}
+SEED=${SCENARIO_SEED:-}
 if [[ "$ENV_LABEL" != H && "$ENV_LABEL" != C ]]; then echo 'SCENARIO_ENV must be H or C' >&2; exit 2; fi
 if ! [[ "$REP" =~ ^[1-9][0-9]{0,5}$ ]]; then echo 'SCENARIO_REP must be a positive integer' >&2; exit 2; fi
+if ! [[ "$REPEATS" =~ ^[1-9][0-9]{0,2}$ ]]; then echo 'SCENARIO_REPEATS must be a positive integer (1..999)' >&2; exit 2; fi
+if [[ "$REPEATS" != 1 && -n "${SCENARIO_REP:-}" ]]; then echo 'SCENARIO_REP cannot be combined with SCENARIO_REPEATS>1; repetition r of n runs with rep=r' >&2; exit 2; fi
+if [[ "$WARMUP" != 0 && "$WARMUP" != 1 ]]; then echo 'SCENARIO_WARMUP must be 0 or 1' >&2; exit 2; fi
+if [[ "$ORDER" != fixed && "$ORDER" != shuffle ]]; then echo 'SCENARIO_ORDER must be fixed or shuffle' >&2; exit 2; fi
+if [[ -n "$SEED" ]] && ! [[ "$SEED" =~ ^[0-9]{1,9}$ ]]; then echo 'SCENARIO_SEED must be an integer with at most 9 digits' >&2; exit 2; fi
+if [[ "${SIMULATOR_RECREATE:-full}" != full && "${SIMULATOR_RECREATE:-full}" != app ]]; then echo 'SIMULATOR_RECREATE must be full or app' >&2; exit 2; fi
 case "$scenario" in all|login|race|last-seat|ample|mixed|multi-uniform|multi-hotspot|retry|resilience|stress|soak|reads) ;; *) echo 'Usage: bash load/scenarios.sh all|login|race|last-seat|ample|mixed|multi-uniform|multi-hotspot|retry|resilience|stress|soak|reads' >&2; exit 2 ;; esac
 if [[ "$QUICK" != 0 && "$QUICK" != 1 ]]; then echo 'SCENARIO_QUICK must be 0 or 1' >&2; exit 2; fi
 if [[ ! -f infra/simulator/runtime/config.env ]]; then docker compose up --build -d --wait; fi
@@ -52,10 +62,17 @@ fault_sequence() {
   sleep 3
   docker compose up -d --wait --no-deps postgres >/dev/null || return 1
 }
+meta_patch() {
+  # Host-side minimal merge into the run metadata written by `run-meta`; metadata is informative, so a failure only warns.
+  node -e "const fs=require('node:fs');const f=process.argv[1];const m=JSON.parse(fs.readFileSync(f,'utf8'));fs.writeFileSync(f,JSON.stringify({...m,...JSON.parse(process.argv[2])},null,2)+'\n')" "$1" "$2" || echo "Warning: could not update $1" >&2
+}
+shuffle_items() {
+  node -e "let a=Number(process.argv[1])>>>0;const r=()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296};const x=process.argv.slice(2);for(let i=x.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[x[i],x[j]]=[x[j],x[i]]}console.log(x.join('\n'))" "$@"
+}
 run_one() {
   local item=$1 profile=shared script=enrollment duration='' stage='30s' mode=normal testid status=0 check_status=0 guard_status=0
   local current_enrollments current_requests
-  local started_ms ended_ms
+  local started_ms ended_ms warmup_status=0
   testid=$(docker compose run --rm --no-deps migrate node -e "process.stdout.write(require('node:crypto').randomUUID())") || return 1
   audit > "$RESULTS/preflight-$testid.json" || return 1
   read -r current_enrollments current_requests < <(helper audit-counts "preflight-$testid.json") || return 1
@@ -87,6 +104,26 @@ run_one() {
   if [[ "$item" == resilience ]]; then args+=(-e RESILIENCE_API_DOWN_START_SECONDS=13 -e RESILIENCE_API_DOWN_DURATION_SECONDS=15 -e RESILIENCE_DB_DOWN_START_SECONDS=28 -e RESILIENCE_DB_DOWN_DURATION_SECONDS=20); fi
   container="sum-load-$testid"
   helper run-meta "$testid" "$ENV_LABEL" "$REP" "$(git rev-parse HEAD 2>/dev/null || echo unknown)" "$(cpuset_lines)" > /dev/null || return 1
+  if (( REPEATS > 1 )) || [[ "$ORDER" == shuffle || "$WARMUP" == 1 ]]; then
+    meta_patch "$RESULTS/run-meta-$testid.json" "{\"repeats\":$REPEATS,\"order\":\"$ORDER\",\"orderSeed\":${ORDER_SEED:-null},\"scenarioSeed\":${SEED:-null},\"warmup\":$([[ "$WARMUP" == 1 ]] && echo true || echo false)}"
+  fi
+  if [[ "$WARMUP" == 1 ]]; then
+    # Separate k6 run against the already prepared campaign: its summary and exit status never reach `check`.
+    # Closest faithful use of the existing reads.js knobs: RATE=10 it/s for 30s, with 1s ramps instead of the default 30s ones.
+    # It is not sent to Prometheus, so dashboards filtered by testid only show the measured run.
+    container="sum-load-$testid-warmup"
+    printf 'Warm-up: reads at 10 it/s for 30s (phase=warmup, excluded from thresholds and pass/fail)\n'
+    docker compose run --rm --no-deps --name "$container" -e SCENARIO_NAME=warmup -e SCENARIO_RUN_MODE=warmup -e RATE=10 -e DURATION=30s -e RAMP_10_DURATION=1s -e RAMP_25_DURATION=1s k6 run \
+      --tag "testid=$testid" --tag "load_scenario=$item" --tag "population=$ACTORS" --tag "run_mode=$mode" --tag "env=$ENV_LABEL" --tag "rep=$REP" --tag "phase=warmup" \
+      --summary-export "/results/warmup-$testid-summary.json" /load/reads.js > "$RESULTS/warmup-$testid.log" 2>&1 || warmup_status=$?
+    container="sum-load-$testid"
+    chmod 600 "$RESULTS/warmup-$testid.log" "$RESULTS/warmup-$testid-summary.json" 2>/dev/null || true
+    meta_patch "$RESULTS/run-meta-$testid.json" "{\"warmupExitCode\":$warmup_status}"
+    if [[ "$warmup_status" != 0 && "$warmup_status" != 99 ]]; then
+      echo "Warm-up failed hard (exit $warmup_status). Inspect $RESULTS/warmup-$testid.log; the measured run was not started."
+      return 1
+    fi
+  fi
   printf '\nScenario=%s actors=%s profile=%s mode=%s testid=%s\n' "$item" "$ACTORS" "$profile" "$mode" "$testid"
   started_ms=$(date +%s%3N)
   bash load/resource-sampler.sh --project "$PROJECT" --duration "${SCENARIO_SAMPLER_MAX_SECONDS:-14400}" --out "$RESULTS/resources-$testid.csv" > /dev/null 2>&1 & sampler_pid=$!
@@ -116,11 +153,19 @@ run_one() {
   if [[ "$status" != 0 || "$check_status" != 0 ]]; then return 1; fi
 }
 status=0
-if [[ "$scenario" == all ]]; then
-  for item in login race last-seat ample mixed multi-uniform multi-hotspot retry resilience stress soak reads; do
+items_all=(login race last-seat ample mixed multi-uniform multi-hotspot retry resilience stress soak reads)
+if [[ "$ORDER" == shuffle && -z "$SEED" ]]; then SEED=$(( ((RANDOM << 15) | RANDOM) % 900000000 )); fi
+ORDER_SEED=''
+for (( rep_index = 1; rep_index <= REPEATS; rep_index++ )); do
+  if (( REPEATS > 1 )); then REP=$rep_index; fi
+  if [[ "$scenario" == all ]]; then items=("${items_all[@]}"); else items=("$scenario"); fi
+  if [[ "$ORDER" == shuffle && ${#items[@]} -gt 1 ]]; then
+    ORDER_SEED=$(( SEED + rep_index - 1 ))
+    mapfile -t items < <(shuffle_items "$ORDER_SEED" "${items[@]}")
+    printf 'Order=shuffle seed=%s rep=%s: %s\n' "$ORDER_SEED" "$REP" "${items[*]}"
+  fi
+  for item in "${items[@]}"; do
     run_one "$item" || status=1
   done
-else
-  run_one "$scenario" || status=1
-fi
+done
 exit "$status"
