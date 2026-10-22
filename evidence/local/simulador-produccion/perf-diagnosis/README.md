@@ -22,6 +22,8 @@ Commit medido: `6dd3c95`. Fecha de ejecución: 2026-10-22.
 
 ## Cómo se ejecutó (resumen)
 
+> Los scripts asumen la disposición original de la sesión (un directorio de trabajo con `p16/` y un envoltorio `bin-perf/docker`) y no se ejecutan tal cual desde esta carpeta; documentan el procedimiento y permiten reconstruirlo.
+
 - `scripts/mkplan.mjs` genera `scripts/plan-full.txt` (135 ejecuciones); `scripts/driver.sh <plan>` las ejecuta en serie, con un único propietario de Docker, y guarda por ejecución el resultado de k6, el estado inicial, la configuración efectiva de los contenedores y la captura del servidor (`scripts/capture.mjs`).
 - `scripts/docker-wrapper.sh`: `sudo` descarta las variables de entorno, por lo que `PERF_CPUSET_*`, `SIMULATOR_DB_POOL_MAX` y `COMPOSE_FILE` se pasan con `sudo env`. El driver usa este envoltorio como `docker`.
 - E14 usa `scripts/compose.e14.yaml`, que monta un `nginx.conf` sin la línea del servidor `api-b` (archivo `nginx-1api.conf`, no incluido: es el `infra/simulator/nginx.conf` de ese commit sin esa línea).
