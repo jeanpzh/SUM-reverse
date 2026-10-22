@@ -59,3 +59,24 @@ Documentos relacionados: [evaluación](assessment.md) · [estrategia §6](test-s
 
 - No se cambian umbrales, SLO ni contratos.
 - Las tareas P2 se **recomiendan** según los veredictos, pero no se implementan en P1-06.
+
+## 3. Atribución del envío (resultado parcial: bloque A, `observed`)
+
+Mediana de 3 repeticiones válidas por escenario, en ms, sobre `6dd3c95`. La media se descompone de forma exacta (sumas y conteos); el reparto del p95 se da solo como intervalo (§2.1). Escenarios con perfil ENV-H y pool 12 por réplica.
+
+| Escenario | n | Media k6 | Cliente+nginx | Espera de conexión | `pre_lock` | Espera del bloqueo de sección | `critical` | `commit` | Residuo | Cobertura de la media | p95 k6 | Cobertura del p95 (intervalo) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| race 100 | 3 | 543 | 25,9 | 299 | 5,3 | 185,6 | 6,4 | 1,3 | 5,8 | 99,0 % | 816 | 78–104 % |
+| race 200 | 3 | 978 | 38,7 | 726 | 3,7 | 209,1 | 6,7 | 1,3 | 4,2 | 99,6 % | 1753 | 86–114 % |
+| race 400 | 3 | 1803 | 38,4 | 1560 | 2,5 | 191,5 | 5,8 | 1,3 | 3,2 | 99,8 % | 3128 | 96–128 % |
+| ample 400 | 3 | 3334 | 118 | 2839 | 3,3 | 352,7 | 13,8 | 1,2 | 4,1 | 99,9 % | 5777 | 87–104 % |
+| multi-uniform 400 | 3 | 1959 | 149,7 | 1563 | 5,6 | 163,4 | 35,3 | 3,7 | 7,1 | 99,6 % | 3349 | 86–115 % |
+
+Lecturas (`observed`):
+
+- **La media queda explicada al 99–99,9 %** en los cinco escenarios; el residuo (consultas de autenticación, serialización y event loop) es de 3 a 7 ms.
+- **La mayor parte del tiempo es espera de conexión**: 55–85 % de la media. Crece casi linealmente con N (299 → 726 → 1560 ms al pasar de 100 a 400 actores).
+- **La espera del bloqueo de sección no crece con N** (186 → 209 → 192 ms). Con el pool de 12 por réplica solo 24 peticiones pueden esperar el bloqueo a la vez; las demás esperan antes, en la fila del pool. La cola se desplaza del bloqueo al pool.
+- **El trabajo serializado es corto**: `critical` de 6 ms y `commit` de 1,3 ms en race. En ample sube `critical` a 14 ms por la ruta de aceptación (≈22 sentencias).
+- **Límite del criterio P1 sobre el p95 (≥ 90 %):** con buckets de 500 ms a 1 s, el intervalo del p95 del servidor es ancho. El límite inferior alcanza el 90 % solo en race 400 (96 %); en race 100, race 200, ample y multi-uniform queda entre 78 y 87 %. Por la regla de §2.1, **el criterio del p95 no se da por cumplido** en esas filas: la cobertura exacta se cumple en la media, no en el percentil. No se cambia la regla.
+- **ample 400 acepta entre 322 y 400 de 400** según la repetición: hasta 78 envíos por ejecución terminan en `503` por timeout del pool (5 s). Es variabilidad del límite del pool, no un fallo de una repetición.
