@@ -1,0 +1,37 @@
+{
+  "source": "simulator_http_metrics (minute buckets written by api-a and api-b), statuses >= 400 summed per run window, plus the PostgreSQL container log; queried after the runs, before the stack was stopped",
+  "status": "local-only",
+  "collectedAt": "2026-10-22",
+  "gitSha": "d4b4a7f",
+  "windowsUtc": {
+    "stress-rep4": ["12:09:47", "12:22:42"],
+    "stress-rep5": ["12:22:42", "12:35:36"],
+    "jornada-front1": ["12:35:36", "12:44:40"],
+    "jornada-front0": ["12:44:40", "12:55:00"]
+  },
+  "rows": [
+    { "window": "jornada-front1", "method": "GET", "route": "/local/matricula-regular/v1/contextos/:actorId", "status": 503, "count": 452, "maxMs": 10032 },
+    { "window": "jornada-front1", "method": "POST", "route": "/local/matricula-regular/v1/sesiones", "status": 503, "count": 18, "maxMs": 5434 },
+    { "window": "jornada-front1", "method": "POST", "route": "/local/matricula-regular/v1/solicitudes", "status": 503, "count": 156, "maxMs": 10082 },
+    { "window": "jornada-front0", "method": "GET", "route": "/local/matricula-regular/v1/contextos/:actorId", "status": 503, "count": 57, "maxMs": 11935 },
+    { "window": "jornada-front0", "method": "POST", "route": "/local/matricula-regular/v1/sesiones", "status": 503, "count": 84, "maxMs": 14022 },
+    { "window": "jornada-front0", "method": "POST", "route": "/local/matricula-regular/v1/solicitudes", "status": 503, "count": 51, "maxMs": 10722 },
+    { "window": "jornada-front0", "method": "POST", "route": "/simulator/auth/v1/login", "status": 503, "count": 76, "maxMs": 14302 }
+  ],
+  "noErrorRows": ["stress-rep4", "stress-rep5"],
+  "reconciliation": {
+    "jornada-front1": "452 + 18 + 156 = 626 = jornada_unexpected (1422 - 796 accepted)",
+    "jornada-front0": "57 + 84 + 51 + 76 = 268; jornada_unexpected = 270 and 1422 - 1153 accepted = 269; the remaining 1-2 are not attributed"
+  },
+  "postgresLog": {
+    "window": "2026-10-22T12:09Z to 12:55Z",
+    "deadlockDetected": 3,
+    "deadlockRelation": "simulator_http_metrics",
+    "deadlockTimesUtc": { "insideValidRun": { "12:10:41": "stress rep 4 (warm-up ended about 12:10:17)", "12:11:34": "stress rep 4", "12:48:43": "jornada front0" } },
+    "lockTimeoutErrors": 0,
+    "statementTimeoutErrors": 5,
+    "statementTimeoutTimesUtc": ["12:50:32", "12:51:04", "12:51:05", "12:51:24", "12:51:25"],
+    "statementTimeoutStatement": "SELECT section_id FROM simulator_sections WHERE campaign_id=$1 AND course_id=$2 AND section_id=$3 FOR UPDATE",
+    "statementTimeoutNote": "all inside jornada front0; lock_timeout=5000 and statement_timeout=20000 are set per connection through the pool options (backend/src/persistence/postgres.ts:14), with no override in the runtime configuration"
+  }
+}

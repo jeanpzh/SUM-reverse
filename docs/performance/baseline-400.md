@@ -1,6 +1,7 @@
 # Línea base P0-06 (ENV-H)
 
 **Fecha de ejecución:** 2026-10-22, de 02:47 a 04:52 UTC y de 11:25 a 11:49 UTC. **Commit medido:** `c29b9d5` (master con #6–#18).
+**Ejecuciones complementarias:** 2026-10-22, de 12:09 a 12:55 UTC, sobre `d4b4a7f` (#20). Son stress, repeticiones 4 y 5, y la jornada de 1422. #20 cambia solo el arnés de carga (manifiesto compartido y guard por VU); el backend es el mismo que en `c29b9d5`.
 **Estado de todo el documento:** `local-only`. Mide el simulador propio con datos construidos de forma independiente, en una VM de 2 vCPU donde generador y servidor comparten host (`generatorSharesServerHost: true`). No acredita capacidad absoluta ni comportamiento del SUM institucional.
 
 Documentos relacionados: [evaluación](assessment.md) · [estrategia](test-strategy.md) · [plan, tarea P0-06](plan.md#p0-06-línea-base). Agregados sanitizados: [`evidence/local/simulador-produccion/perf-baseline/`](../../evidence/local/simulador-produccion/perf-baseline/).
@@ -11,7 +12,7 @@ Se usan las etiquetas de la [evaluación §0](assessment.md#0-convenciones-de-ev
 
 - Estadística (estrategia §8.4): mediana de los p95 de las repeticiones y rango [mín, máx]. No se combinan percentiles entre ejecuciones.
 - Métrica clave por escenario: `http_req_duration{operation:submit}` en los escenarios de envío, `{operation:read}` en stress y `{name:auth-login}` en login. SLO D-2 sin cambios: p95 < 2000 ms y p99 < 5000 ms.
-- Validez: la decide el guard del generador (estrategia §5.3, `load/check-generator-guard.mjs`). Una ejecución inválida no cuenta a favor ni en contra; sus cifras se muestran como **indicativas**.
+- Validez: la decide el guard del generador (estrategia §5.3, `load/check-generator-guard.mjs`), con el modelo de una iteración por VU de #20 (§3). Una ejecución inválida no cuenta a favor ni en contra; sus cifras se muestran como **indicativas**.
 - Corrección: integridad de la auditoría SQL más los umbrales de conteo y `checks` de k6.
 
 ## 1. Condiciones
@@ -24,55 +25,63 @@ Se usan las etiquetas de la [evaluación §0](assessment.md#0-convenciones-de-ev
 | Datos | Campañas sintéticas; el número de campañas y filas por tabla antes de cada ejecución queda en `run-meta-<testid>.json` (privado) y resumido en los agregados |
 | Orden | Bloques secuenciales sin k6 simultáneos: ráfagas a 400, mixed, stress, franja FISI, login, jornada y bench |
 
-**Interrupción.** La cuarta repetición de stress se cortó a las 04:52 UTC: es la hora de los últimos ficheros escritos, y `uptime -s` indica que la VM arrancó de nuevo a las 11:19. Esa ejecución quedó sin resultado y se **excluye**. stress queda con n = 3, la reducción que ya se había propuesto para los escenarios largos. El resto continuó a las 11:25 sobre el mismo commit, tras comprobar que no quedaban ficheros de rotación pendientes.
+**Interrupción.** La cuarta repetición de stress se cortó a las 04:52 UTC: es la hora de los últimos ficheros escritos, y `uptime -s` indica que la VM arrancó de nuevo a las 11:19. Esa ejecución quedó sin resultado y se **excluye**. Sobre `c29b9d5`, stress queda con n = 3; las repeticiones 4 y 5 se ejecutaron después, como complementarias (abajo). El resto continuó a las 11:25 sobre el mismo commit, tras comprobar que no quedaban ficheros de rotación pendientes.
+
+**Ejecuciones complementarias.** Las repeticiones 4 y 5 de stress y las dos jornadas se ejecutaron después, sobre `d4b4a7f`, con la misma configuración y Grafana detenido. Para entonces la base había crecido: 109–112 campañas y unas 34 000 filas en `simulator_academic_sessions`, frente a 73–75 campañas y unas 21 000 filas en las repeticiones 1–3 de stress. Por eso se agregan aparte ([`aggregate-p0b.json`](../../evidence/local/simulador-produccion/perf-baseline/aggregate-p0b.json)) y no se mezclan con las de `c29b9d5`.
 
 ## 2. Resultados por escenario (k6)
 
-Fuente: [`aggregate.json`](../../evidence/local/simulador-produccion/perf-baseline/aggregate.json) (`observed`). Latencias en ms; p95 y p99 como mediana [mín, máx] de las repeticiones. «Válidas», «correctas» y «SLO» cuentan repeticiones.
+Fuentes: [`aggregate.json`](../../evidence/local/simulador-produccion/perf-baseline/aggregate.json) y, para las filas marcadas con `d4b4a7f`, [`aggregate-p0b.json`](../../evidence/local/simulador-produccion/perf-baseline/aggregate-p0b.json) (`observed`). Latencias en ms; p95 y p99 como mediana [mín, máx] de las repeticiones. «Válidas», «correctas» y «SLO» cuentan repeticiones. La validez es la del guard de #20 (§3).
 
 | Escenario | n | Válidas | Correctas | SLO | p95 métrica clave | p99 métrica clave | req/s (mediana) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| race 400 | 5 | 0 | 5 | 0 | 2633 [2426, 2698] | 2711 [2500, 2819] | 69,5 |
-| ample 400 | 5 | 0 | 0 | 0 | 6097 [5564, 6770] | 6607 [5982, 7397] | 59,4 |
-| multi-uniform 400 | 5 | 0 | 5 | 0 | 2794 [2633, 2864] | 2895 [2782, 2960] | 69,0 |
-| multi-hotspot 400 | 5 | 0 | 5 | 0 | 2968 [2927, 3005] | 3058 [3038, 3257] | 68,4 |
+| race 400 | 5 | 5 | 5 | 0 | 2633 [2426, 2698] | 2711 [2500, 2819] | 69,5 |
+| ample 400 | 5 | 5 | 0 | 0 | 6097 [5564, 6770] | 6607 [5982, 7397] | 59,4 |
+| multi-uniform 400 | 5 | 5 | 5 | 0 | 2794 [2633, 2864] | 2895 [2782, 2960] | 69,0 |
+| multi-hotspot 400 | 5 | 5 | 5 | 0 | 2968 [2927, 3005] | 3058 [3038, 3257] | 68,4 |
 | mixed 400 (10 min) | 5 | 5 | 1 | 0 | 9394 [6127, 12555] | 10997 [7008, 16220] | 128,7 |
-| stress 400 (lecturas) | 3 | 3 | 1 | 3 | 188 [186, 202] | 301 [300, 305] | 174,3 |
+| stress 400 (lecturas), rep. 1–3 | 3 | 3 | 1 | 3 | 188 [186, 202] | 301 [300, 305] | 174,3 |
+| stress 400 (lecturas), rep. 4–5, `d4b4a7f` | 2 | 2 | 1 | 2 | 364 [222, 506] | 573 [322, 824] | 171,2 |
 | franja FISI 507 | 5 | 0 | 0 | 0 | 7048 [5858, 9647] | 7809 [6405, 10015] | 71,8 |
-| login 507 | 5 | 0 | 5 | 4 | 1614 [1551, 2022] | 1655 [1615, 2284] | 336,8 |
-| jornada 1422 (`WAVE_FRONTLOAD=1` y `0`) | 0 | — | — | — | sin resultado: §5.5 | — | — |
+| login 507 | 5 | 3 | 5 | 4 | 1614 [1551, 2022] | 1655 [1615, 2284] | 336,8 |
+| jornada 1422, `WAVE_FRONTLOAD=1`, `d4b4a7f` | 1 | 1 | 0 | 0 | 10918 (login: 1680) | 12749 (login: 1812) | 10,6 |
+| jornada 1422, `WAVE_FRONTLOAD=0`, `d4b4a7f` | 1 | 1 | 0 | 0 | 19018 (login: 11827) | 26025 (login: 13043) | 9,6 |
 
 Ruido base (anchura del rango del p95 de la métrica clave): race 272 ms, ample 1206, multi-uniform 231, multi-hotspot 78, stress 16 y login 471. En mixed (6428 ms) y en la franja FISI (3789 ms) el rango no mide ruido sino dos regímenes distintos (§5.3) o aceptaciones muy distintas entre repeticiones (§5.2).
 
 **Lectura de cada fila:**
 
-- **race, multi-uniform y multi-hotspot:** los conteos son exactos en las 15 repeticiones (10/400 y 100/400). Falla solo la latencia del envío. Son inválidas solo por el guard (§3).
+- **race, multi-uniform y multi-hotspot:** los conteos son exactos en las 15 repeticiones (10/400 y 100/400). Falla solo la latencia del envío.
 - **ample:** acepta 335–381 de 400 (mediana 349). Las 224 peticiones restantes devuelven 503, con un máximo de 6,5 s (§4). La auditoría SQL pasa en todas: no hay efectos parciales.
 - **mixed:** los conteos son 400/400 en las cinco. El p95 del envío falla siempre, incluso en las repeticiones «buenas» (6,1–9,4 s). La corrección falla en cuatro por respuestas inesperadas: 4, 2457, 1, 3203 y 0.
-- **stress:** solo lecturas y cumple el SLO en las tres. La corrección falla en dos por `sessions_unexpected`: 313 y 2. En esas ventanas no hay respuestas HTTP ≥ 400 (§4), así que el origen está en una comprobación del cliente y **no está atribuido**.
+- **stress:** solo lecturas. Cumple el SLO y es válida en las cinco repeticiones. La corrección falla en tres por `sessions_unexpected`: 313 y 2 en las repeticiones 2 y 3, y 2 en la 5. En esas ventanas no hay respuestas HTTP ≥ 400 (§4), así que el origen está en una comprobación del cliente y **no está atribuido**.
+- **stress, repeticiones 4–5:** el p95 de lecturas (506 y 222 ms) queda fuera del rango de las repeticiones 1–3 (186–202 ms). Partían de otra base (§1): 109–110 campañas y unas 34 000 sesiones, con PostgreSQL al 75 % de CPU media frente al 65 %. La diferencia **no está atribuida**. H7 encaja, porque el escaneo de `simulator_academic_sessions` crece con la tabla, pero nada aquí lo prueba.
 - **franja FISI:** acepta 353–449 de 507 (mediana 391). Las 563 restantes devuelven 503 (máximo 9,5 s).
 - **login:** el p95 de `auth-login` queda por debajo de 2000 ms en 4 de 5. La repetición 2 marca 2022 ms (p99 2284).
+- **jornada:** ver §5.5.
 
 ## 3. Validez de las ejecuciones (guard)
 
-| Motivo del guard | Escenarios afectados | Qué mide |
-| --- | --- | --- |
-| `HTTP_CONNECTING` (p95 de `http_req_connecting` > 1 ms) | Las 20 ráfagas a 400, franja FISI y login | Conexiones TCP nuevas. Valores de 23–163 ms |
-| `HTTP_BLOCKED` (p95 de `http_req_blocked` > 50 ms) | 14 de las 20 ráfagas, franja FISI (5/5) y login (5/5) | Espera del cliente antes de enviar. Valores de 28–262 ms |
-| `GEN_CPU` (k6 > 85 % de 1 CPU durante > 5 muestras) | franja FISI (5/5) | k6 con media del 62–74 % y p90 del 176–186 % (sin cpuset puede usar las 2 CPU) |
+**Criterio vigente (#20, estrategia §5.3).** En los escenarios de una iteración por VU (enrollment, login, retry y jornada), cada VU abre su propia conexión por diseño. Para ellos el guard aplica el modelo `per-vu`:
+- `http_req_connecting` no invalida la ejecución;
+- el p95 de `http_req_blocked` debe quedar por debajo de max(50 ms, 10 % del p95 de `http_req_duration`).
 
-mixed y stress (modelo cerrado con keepalive) son **válidas**. Las 30 ejecuciones de una iteración por VU son **inválidas**, así que el criterio P0 de la estrategia §9 («guard válido») **no se cumple** en esos escenarios.
+El resto de las reglas no cambia. El usuario aprobó el criterio el 2026-10-22 **después** de ver estos datos, así que el umbral no es una predicción independiente.
 
-**Limitación del criterio** (`inferred`). La estrategia §5.3 condiciona `http_req_connecting > 0` a que haya keepalive esperado. En un escenario de una iteración por VU, cada VU abre su propia conexión, así que la condición se cumple siempre. La implementación (`load/check-generator-guard.mjs`) la aplica sin esa salvedad. Aun así, el coste de conexión es acotado:
+Las 30 ejecuciones de una iteración por VU se re-evaluaron sin conexión con el guard nuevo, sobre los mismos CSV de recursos, summary-export y logs ([`guard-reeval.json`](../../evidence/local/simulador-produccion/perf-baseline/guard-reeval.json), `observed`):
 
-- `http_req_blocked` (p95 ≤ 165 ms en las ráfagas) es menos del 7 % del p95 del envío (≥ 2426 ms).
-- La métrica del lado servidor reproduce el mismo orden de magnitud sin HTTP (§5.1).
+| Escenario | Válidas con el guard anterior | Válidas con el guard de #20 | Motivo de las inválidas |
+| --- | --- | --- | --- |
+| race, ample, multi-uniform, multi-hotspot | 0/20 | 20/20 | — |
+| franja FISI 507 | 0/5 | 0/5 | `GEN_CPU`: k6 por encima del 85 % de 1 CPU durante 7–9 muestras seguidas (media del 62–74 %, p90 del 176–186 %) |
+| login 507 | 0/5 | 3/5 | `HTTP_BLOCKED` en las repeticiones 2 y 3: 262 y 227 ms, por encima del 10 % del p95 (183 y 165 ms) |
 
-Las cifras de las filas inválidas sirven como **indicativas** de la latencia del servidor, no como medición aceptada. Para cumplir el criterio hace falta una de dos cosas: corregir el guard para que distinga el modelo de una iteración por VU (y fije un límite propio para `blocked`), o cambiar la medición (§6).
+mixed y stress (modelo cerrado con keepalive) eran ya válidas y siguen siéndolo. Las dos jornadas y las repeticiones 4–5 de stress, ejecutadas con el guard de #20, son válidas.
 
+La franja FISI sigue sin una medición válida en ENV-H: con 507 VUs, k6 compite por las 2 CPU con el servidor (H6). Es una limitación del entorno, no del criterio.
 ## 4. Errores HTTP y su causa
 
-Fuente: [`http-errors.json`](../../evidence/local/simulador-produccion/perf-baseline/http-errors.json): `simulator_http_metrics` por ventana de cada bloque y el log de PostgreSQL (`observed`).
+Fuentes: [`http-errors.json`](../../evidence/local/simulador-produccion/perf-baseline/http-errors.json) y, para las ejecuciones complementarias, [`http-errors-p0b.json`](../../evidence/local/simulador-produccion/perf-baseline/http-errors-p0b.json): `simulator_http_metrics` por ventana de cada bloque y el log de PostgreSQL (`observed`).
 
 | Ventana | Ruta | Estado | Peticiones | Máximo (ms) |
 | --- | --- | --- | --- | --- |
@@ -81,14 +90,28 @@ Fuente: [`http-errors.json`](../../evidence/local/simulador-produccion/perf-base
 | mixed rep. 1 | consultas de perfil + `solicitudes` | 503 | 3 + 1 | 6339 |
 | mixed rep. 2 | consultas de perfil / `contextos` / `solicitudes` | 503 | 1943 / 500 / 14 | 12580 |
 | mixed rep. 4 | consultas de perfil / `contextos` / `solicitudes` | 503 | 2557 / 628 / 18 | 12903 |
+| jornada `WAVE_FRONTLOAD=1` | `contextos` / `sesiones` / `solicitudes` | 503 | 452 / 18 / 156 | 10082 |
+| jornada `WAVE_FRONTLOAD=0` | `contextos` / `sesiones` / `solicitudes` / login | 503 | 57 / 84 / 51 / 76 | 14302 |
 
-El conteo de 503 coincide exactamente con las solicitudes no aceptadas: ample 224 = 35 + 51 + 54 + 19 + 65 y franja FISI 563 = 96 + 154 + 139 + 116 + 58.
+stress (las cinco repeticiones) no tiene respuestas ≥ 400.
 
-**El 503 no procede de `lock_timeout`.** Entre las 02:40 y las 11:49 el log de PostgreSQL registra 0 cancelaciones por lock timeout (`observed`). Las únicas cancelaciones son 2 por statement timeout, a las 11:44:22. Fueron sobre una consulta de monitorización a `pg_stat_activity`, durante el episodio de memoria de la jornada (§5.5) y fuera de cualquier ejecución medida. En el código, un `55P03` se reintenta hasta tres veces antes del 503 (`backend/src/persistence/postgres-enrollment.store.ts:99-106`, `code`), así que ese camino no produce un 503 a los 5–6,5 s.
+El conteo de 503 coincide exactamente con las solicitudes no aceptadas en ample (224 = 35 + 51 + 54 + 19 + 65), en la franja FISI (563 = 96 + 154 + 139 + 116 + 58) y en la jornada con `WAVE_FRONTLOAD=1` (626 = 1422 − 796). En la jornada con `WAVE_FRONTLOAD=0` hay 268 respuestas 503, 270 inesperadas en k6 y 269 no aceptadas; 1–2 quedan sin atribuir.
+
+**Ningún 503 viene de un `lock_timeout`.** En las dos ventanas registradas (02:40–11:49 y 12:09–12:55), el log de PostgreSQL tiene 0 cancelaciones por lock timeout (`observed`). `lock_timeout=5000` y `statement_timeout=20000` se aplican en cada conexión a través de las opciones del pool (`backend/src/persistence/postgres.ts:14`), sin ningún override en la configuración del runtime (`code`). En el código, un `55P03` se reintenta hasta tres veces antes del 503 (`backend/src/persistence/postgres-enrollment.store.ts:99-106`, `code`), así que ese camino no produce un 503 a los 5–6,5 s.
 
 En cambio, `pool.connect()` con `connectionTimeoutMillis=5000` (`backend/src/persistence/postgres.ts:11`) lanza un error sin código SQL, que `submitTransaction` traduce directamente a `503 STORAGE_UNAVAILABLE` (`postgres-enrollment.store.ts:153-156`, `code`).
 
-La interpretación (`inferred`, confirmable con E5) es que las transacciones que esperan el `FOR UPDATE` de las secciones calientes retienen sus conexiones. Los 12 slots de cada réplica se agotan y las peticiones siguientes esperan más de 5 s para obtener una. Es el patrón **H1 → H3** de la evaluación. Corrige la lectura previa de este trabajo, que atribuía los 503 de ample al `lock_timeout`. Las colas de 9,5 s (franja FISI) y de 12–13 s (lecturas de mixed, con varios checkouts por petición) no están desglosadas.
+**Cancelaciones por statement timeout.**
+- **Línea base:** 2, a las 11:44:22, sobre una consulta de monitorización a `pg_stat_activity`. Fue durante el episodio de memoria de la jornada original, fuera de cualquier ejecución medida.
+- **Jornada con `WAVE_FRONTLOAD=0`:** 5, entre las 12:50:32 y las 12:51:25, todas sobre `SELECT … FROM simulator_sections … FOR UPDATE` (`observed`).
+
+Es decir, un `FOR UPDATE` sobre una sección estuvo 20 s sin terminar, sin que se disparase el `lock_timeout` de 5 s. Esto **matiza la lectura anterior**: «0 lock timeouts» no implica que la espera de locks sea corta. `lock_timeout` acota cada adquisición de lock, no la espera total. Dos explicaciones posibles (`inferred`; P1-01 las separa):
+- con varias transacciones esperando la misma fila, una petición puede encadenar varias esperas de menos de 5 s;
+- PostgreSQL estaba saturado de CPU (p90 del 182 % en esa ejecución) y la sentencia avanzaba despacio.
+
+Además, `57014` está en la lista de reintentos. Una petición cancelada así puede retener conexiones más de 20 s antes de obtener su respuesta: el p99 del envío en esa jornada es de 26 s (`observed`).
+
+La interpretación (`inferred`, confirmable con E5 y P1-01) es que las transacciones que esperan el `FOR UPDATE` de las secciones calientes retienen sus conexiones. Los 12 slots de cada réplica se agotan y las peticiones siguientes esperan más de 5 s para obtener una. Es el patrón **H1 → H3** de la evaluación. Corrige la lectura previa de este trabajo, que atribuía los 503 de ample al `lock_timeout`. Las colas de 9,5 s (franja FISI), de 10–14 s (jornada) y de 12–13 s (lecturas de mixed, con varios checkouts por petición) no están desglosadas.
 
 ## 5. Hallazgos
 
@@ -146,26 +169,31 @@ El escaneo coincide con **H7** de la evaluación, que suponía un impacto probab
 
 ### 5.4 Deadlocks en el volcado de métricas HTTP (H12, `observed`)
 
-El log de PostgreSQL registra 8 `deadlock detected`, todos sobre `simulator_http_metrics`, al insertar o bloquear tuplas. Cada proceso de API vuelca cada segundo un `INSERT … ON CONFLICT DO UPDATE` de varias filas, en el orden de inserción del `Map` (`backend/src/auth/simulator-metrics.interceptor.ts:59-72`, `code`). Los procesos implicados no están atribuidos a una réplica concreta. Uno de los casos es una cadena de tres procesos.
+El log de PostgreSQL registra 11 `deadlock detected`: 8 en la línea base y 3 en las ejecuciones complementarias. Todos son sobre `simulator_http_metrics`, al insertar o bloquear tuplas. Cada proceso de API vuelca cada segundo un `INSERT … ON CONFLICT DO UPDATE` de varias filas, en el orden de inserción del `Map` (`backend/src/auth/simulator-metrics.interceptor.ts:59-72`, `code`). Los procesos implicados no están atribuidos a una réplica concreta. Uno de los casos es una cadena de tres procesos.
 
 Comparando la hora de cada deadlock con las ventanas medidas:
 - 6 ocurrieron durante la rotación o el precalentamiento (02:48:23, 02:48:27, 02:53:42, 04:50:28, 11:27:31 y 11:30:37). En la rotación se recrean api-a y api-b, y el volcado final de las instancias salientes (`onModuleDestroy`) puede solaparse con las nuevas (`inferred`).
-- 1 cayó dentro de una medición válida: 04:08:47, en mixed rep. 5.
+- 4 cayeron dentro de mediciones válidas: 04:08:47 (mixed rep. 5), 12:10:41 y 12:11:34 (stress rep. 4, cuyo precalentamiento terminó hacia las 12:10:17) y 12:48:43 (jornada con `WAVE_FRONTLOAD=0`).
 - 1 cayó en la ejecución excluida de stress: 04:50:55.
 
-El efecto sobre las cifras de esta línea base es, por tanto, marginal.
-
-El `catch` reencola el lote, así que no se pierden muestras. Pero cada deadlock retiene una conexión del pool hasta que se detecta (`deadlock_timeout`). El impacto en la latencia **no está medido**.
+Cuatro de 11 caen dentro de mediciones válidas, así que **no se pueden descartar como marginales**. El `catch` reencola el lote, así que no se pierden muestras. Pero cada deadlock retiene una conexión del pool hasta que se detecta (`deadlock_timeout`). El impacto en la latencia **no está medido**.
 
 Corrección candidata (fuera de P0): ordenar las filas por la clave del conflicto antes del upsert.
 
-### 5.5 La jornada de 1422 no se puede ejecutar en ENV-H con el arnés actual (`observed` + `code`)
+### 5.5 Jornada de 1422 (`observed`; causas `inferred`)
 
-Con `WAVE_FRONTLOAD=1`, el kernel mató a k6 por falta de memoria global durante la inicialización: llevaba ≈605 de 1422 VUs y 5,6 GB de RSS (`dmesg`), unos 9 MB por VU. No hubo summary-export y la ejecución queda **excluida**.
+**Primer intento, sobre `c29b9d5`.** Con `WAVE_FRONTLOAD=1`, el kernel mató a k6 por falta de memoria global durante la inicialización: llevaba ≈605 de 1422 VUs y 5,6 GB de RSS (`dmesg`). Cada VU parseaba su propia copia del manifiesto (`load/common.js:30`), ≈9,9 MB por VU medidos. La variante `WAVE_FRONTLOAD=0` se detuvo en el precalentamiento para no provocar otro OOM. Ambas quedan **excluidas**.
 
-La causa probable (`code`) es que cada VU parsea su propia copia del manifiesto de 0,7 MB (`load/common.js:30`, `JSON.parse(open(file))` en el contexto de inicialización) en lugar de compartirlo con `SharedArray`.
+**Segundo intento, sobre `d4b4a7f`.** El manifiesto se comparte entre VUs con `SharedArray` (#20) y k6 ocupa ≈600 MiB con 1422 VUs. Las dos variantes terminan y son válidas para el guard:
 
-La variante `WAVE_FRONTLOAD=0` se detuvo durante su precalentamiento, antes de lanzar la carga, para no provocar otro OOM global que podía alcanzar a PostgreSQL. También queda **excluida**.
+| Variante | Aceptadas | 503 | p95 / p99 del envío (ms) | p95 / p99 del login (ms) | CPU de PostgreSQL (media / p90) |
+| --- | --- | --- | --- | --- | --- |
+| `WAVE_FRONTLOAD=1` (cada ola llega de golpe) | 796 / 1422 | 626 | 10918 / 12749 | 1680 / 1812 | 31 % / 167 % |
+| `WAVE_FRONTLOAD=0` (cada ola se reparte en su minuto) | 1153 / 1422 | 268 | 19018 / 26025 | 11827 / 13043 | 59 % / 182 % |
+
+Las dos fallan la corrección y el SLO del envío. Las invariantes SQL pasan en ambas: no hay efectos parciales; la auditoría marca integridad falsa porque hay menos inscripciones de las esperadas. Los 503 caen también sobre las lecturas de contexto, las sesiones académicas y, en la segunda, el login (§4).
+
+**La comparación entre variantes está confundida** y no confirma ninguna hipótesis. Con llegadas repartidas hay menos 503 (268 frente a 626), pero la latencia del envío y del login sube mucho y aparecen statement timeouts (§4). Además, `WAVE_FRONTLOAD=0` se ejecutó siempre después, sobre una base más grande (112 campañas y unas 36 000 sesiones, frente a 111 y unas 34 600). Separar el efecto del patrón de llegada y el del tamaño de la base exige repetirlas en orden alterno y con el mismo estado inicial (§7).
 
 ### 5.6 Generador en el límite de CPU
 
@@ -177,29 +205,43 @@ En la franja FISI y en login (507 VUs) sí se supera de forma sostenida. Es la l
 
 | Requisito | Estado |
 | --- | --- |
-| n = 5 de race, ample, multi-uniform, multi-hotspot y mixed a 400 | Cumplido |
-| n = 5 de stress a 400 | Parcial: n = 3 (interrupción por reinicio; §1) |
-| franja FISI 507 y login 507 | Ejecutados, n = 5 |
-| una jornada | **No cumplido**: OOM de k6 (§5.5) |
+| n = 5 de race, ample, multi-uniform, multi-hotspot y mixed a 400 | Cumplido; válidas 5/5 |
+| n = 5 de stress a 400 | Cumplido con salvedad: 5 válidas que cumplen el SLO, pero las repeticiones 4–5 parten de otro estado inicial y otro commit del arnés (§1, §2); la distribución de latencias se da por grupos |
+| franja FISI 507 y login 507 | Ejecutados, n = 5. Válidas: franja 0/5 (`GEN_CPU`, limitación de ENV-H) y login 3/5 |
+| una jornada | Cumplido: dos variantes válidas, sobre `d4b4a7f` (§5.5) |
 | `submit-bench` 100/200/400/507 | Cumplido, n = 5 |
 | rangos registrados por escenario | Cumplido (§2 y §5.1) |
-| guard válido | **No cumplido** en las 30 ejecuciones de una iteración por VU (§3); cumplido en mixed y stress |
-| ejecuciones válidas o excluidas con motivo | Cumplido: inválidas marcadas y exclusiones explicadas (§1, §5.5) |
+| guard válido | Cumplido en todos los escenarios salvo la franja FISI y 2 repeticiones de login, con el criterio de #20 (§3) |
+| ejecuciones válidas o excluidas con motivo | Cumplido: inválidas marcadas y exclusiones explicadas (§1, §3, §5.5) |
 
-**P0-06 queda como línea base parcial.** Basta para orientar P1, porque el bench es válido y coherente con k6. Pero no basta para declarar mejoras P2 contra los escenarios k6 inválidos ni contra la jornada.
+**P0-06 queda completa con dos salvedades:**
+- la franja FISI no tiene una medición válida en ENV-H, porque el generador satura su CPU;
+- el estado inicial creció durante la ejecución, de 48 a 112 campañas, y las comparaciones dentro de esta línea base entre bloques ejecutados en momentos distintos están confundidas por ese crecimiento.
 
-## 7. Tareas que se proponen (no ejecutadas)
+Basta como referencia para P1. Para comparaciones A/B de P2 hace falta controlar el estado inicial (§7).
 
-1. **Guard:** distinguir el modelo de una iteración por VU, sin exigir `connecting = 0`, y definir para `blocked` un umbral relativo al p95 medido. Requiere cambiar la estrategia §5.3 con aprobación, porque es un criterio de validez, no un umbral de SLO.
-2. **Arnés de jornada:** cargar el manifiesto con `SharedArray` y medir la memoria por VU con 1422 VUs antes de repetir la jornada.
-3. **P1-01/P1-02** (ya planificadas): fases de la transacción, espera del pool y `pg_stat_statements`, para confirmar H1/H3, H7 y H13.
-4. **Deadlock de métricas:** ordenar las filas del upsert (cambio pequeño; candidato a P2 con su prueba).
-5. **Estado inicial:** las tablas crecieron de 48 a 86 campañas durante la línea base. Para las comparaciones P2, usar un volumen nuevo o registrar el tamaño, como pide la estrategia §8.2, y evaluar H13 con el mismo número de campañas en A y B.
+## 7. Tareas que se proponen
+
+Hechas en #20:
+1. **Guard:** modelo de una iteración por VU, aprobado y documentado en la estrategia §5.3.
+2. **Arnés de jornada:** manifiesto compartido con `SharedArray` y offsets por ola calculados una sola vez.
+
+Pendientes:
+3. **P1-01/P1-02** (ya planificadas): fases de la transacción, espera del pool y `pg_stat_statements`, para confirmar H1/H3, H7 y H13 y separar las dos explicaciones de los statement timeouts (§4).
+4. **Deadlock de métricas:** ordenar las filas del upsert (cambio pequeño; candidato a P2 con su prueba). Ya afecta a 4 mediciones válidas (§5.4).
+5. **Estado inicial:** las tablas crecieron de 48 a 112 campañas. Para las comparaciones P2, usar un volumen nuevo o registrar el tamaño (estrategia §8.2), y evaluar H7/H13 con el mismo número de campañas en A y B. Las dos variantes de jornada deben repetirse en orden alterno y desde el mismo estado.
+6. **`sessions_unexpected` en stress:** 3 de 5 repeticiones fallan la corrección sin respuestas HTTP ≥ 400. Hay que localizar qué comprobación del cliente falla.
 
 ## 8. Reproducción
 
 1. Stack del simulador en `c29b9d5`, Grafana detenido. Variables: `SCENARIO_ENV=H SCENARIO_WARMUP=1 SIMULATOR_RECREATE=app`. En cada bloque: `SCENARIO_REPEATS=5 SCENARIO_ACTORS=400 bash load/scenarios.sh <escenario>`; para la franja, `bash load/scenarios.sh fisi-franja`; para login, `SCENARIO_ACTORS=507 … login`.
 2. Bench: `docker compose run --rm --no-deps migrate node dist/scripts/bench-submit.js --actors <N> --profile shared --budget-ms 2000 --out /runtime/results/bench-shared-<N>-r<R>.json`.
-3. Agregados: `node evidence/local/simulador-produccion/perf-baseline/aggregate.mjs infra/simulator/runtime/results c29b9d5 normal <salida>.json`. El script filtra por `gitSha` y modo, y sustituye los testids.
+3. Ejecuciones complementarias, con el stack en `d4b4a7f` y las mismas variables: `SCENARIO_REP=4 bash load/scenarios.sh stress` (y `SCENARIO_REP=5`), y luego `WAVE_FRONTLOAD=1 bash load/scenarios.sh jornada` y `WAVE_FRONTLOAD=0 bash load/scenarios.sh jornada`.
+4. Agregados, desde la carpeta de evidencia:
+   - `node aggregate.mjs infra/simulator/runtime/results c29b9d5 normal aggregate.json`
+   - `node aggregate.mjs infra/simulator/runtime/results d4b4a7f normal aggregate-p0b.json variants-p0b.json --no-bench`
+
+   El script filtra por `gitSha` y modo, y sustituye los testids. `variants-p0b.json` separa las dos jornadas por su hora de inicio, porque `run-meta` no registra `WAVE_FRONTLOAD`.
+5. Re-evaluación del guard: `node guard-reeval.mjs infra/simulator/runtime/results c29b9d5 load/check-generator-guard.mjs > guard-reeval.json`, con el guard de #20.
 
 Los resultados privados por `testid` (summary-export, auditorías, CSV de recursos, run-meta) quedan en `infra/simulator/runtime/results/`, fuera de Git.

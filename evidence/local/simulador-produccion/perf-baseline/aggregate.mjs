@@ -1,9 +1,15 @@
 // Aggregates P0-06 baseline runs into sanitized per-run rows and per-scenario medians/ranges (no identities, no secrets).
-// Usage: node aggregate.mjs <results-dir> <gitSha-prefix> <normal|quick> <out.json>
+// Usage: node aggregate.mjs <results-dir> <gitSha-prefix> <normal|quick> <out.json> [variants.json] [--no-bench]
+// variants.json: [{ "scenario", "label", "fromIso", "toIso" }] labels runs started in that window (e.g. WAVE_FRONTLOAD, which run-meta does not record)
+// and groups them apart. --no-bench leaves out the bench files, which carry no commit.
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-const [dir, sha, mode = 'normal', out] = process.argv.slice(2)
+const [dir, sha, mode = 'normal', out, ...extra] = process.argv.slice(2)
+const noBench = extra.includes('--no-bench')
+const variantsFile = extra.find(arg => arg !== '--no-bench')
+const variants = variantsFile ? JSON.parse(readFileSync(variantsFile, 'utf8')) : []
+const variantOf = (scenario, startedAtMs) => variants.find(v => v.scenario === scenario && startedAtMs >= Date.parse(v.fromIso) && startedAtMs < Date.parse(v.toIso))?.label ?? null
 const read = file => { try { return JSON.parse(readFileSync(join(dir, file), 'utf8')) } catch { return null } }
 const files = readdirSync(dir)
 const metricValues = (summary, name) => {
@@ -40,7 +46,7 @@ for (const file of files.filter(f => /-result\.json$/.test(f))) {
   const durations = {}
   for (const name of Object.keys(summary?.metrics ?? {}).filter(n => n.startsWith('http_req_duration'))) durations[name] = metricValues(summary, name)
   runs.push({
-    scenario: result.scenario, rep: meta.rep ?? null, actors: result.actors, profile: result.profile,
+    scenario: result.scenario, variant: variantOf(result.scenario, result.startedAtMs), rep: meta.rep ?? null, actors: result.actors, profile: result.profile,
     startedAtMs: result.startedAtMs, wallMs: result.endedAtMs - result.startedAtMs,
     k6Exit: result.k6Exit, integrity: result.integrity, correctnessPassed: result.correctnessPassed,
     performancePassed: result.performancePassed, runValid: result.runValid, guardReasons: result.generatorGuard?.reasons ?? [],
@@ -58,7 +64,7 @@ const range = xs => { const s = xs.filter(x => typeof x === 'number'); return s.
 const keyMetric = { login: 'http_req_duration{name:auth-login}', stress: 'http_req_duration{operation:read}' }
 const scenarios = {}
 for (const run of runs) {
-  const key = `${run.scenario}@${run.actors}`
+  const key = `${run.scenario}${run.variant ? `[${run.variant}]` : ''}@${run.actors}`
   ;(scenarios[key] ??= []).push(run)
 }
 const aggregate = Object.fromEntries(Object.entries(scenarios).map(([key, list]) => {
@@ -76,7 +82,7 @@ const aggregate = Object.fromEntries(Object.entries(scenarios).map(([key, list])
     metrics,
   }]
 }))
-const bench = files.filter(f => /^bench-shared-\d+-r\d+\.json$/.test(f)).map(f => ({ file: f, ...read(f) })).filter(b => b && b.actors)
+const bench = noBench ? [] : files.filter(f => /^bench-shared-\d+-r\d+\.json$/.test(f)).map(f => ({ file: f, ...read(f) })).filter(b => b && b.actors)
 const benchAgg = {}
 for (const b of bench) (benchAgg[b.actors] ??= []).push(b)
 const benchSummary = Object.fromEntries(Object.entries(benchAgg).map(([n, list]) => [n, {

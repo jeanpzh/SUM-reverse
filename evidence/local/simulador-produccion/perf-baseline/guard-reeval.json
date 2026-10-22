@@ -1,0 +1,471 @@
+{
+  "source": "aggregate rows of commit c29b9d5 re-evaluated offline with load/check-generator-guard.mjs --connection-model per-vu (PR #20, commit d4b4a7f); same resources CSV, summary-export and k6 log as the original guard",
+  "status": "local-only",
+  "evaluatedAt": "2026-10-22",
+  "rule": "per-vu: http_req_connecting ignored; http_req_blocked p95 must not exceed max(50 ms, 10% of the http_req_duration p95); other rules unchanged",
+  "runs": [
+    {
+      "scenario": "race",
+      "rep": 1,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 101,
+      "durationP95": 2140,
+      "correctness": true,
+      "performance": false
+    },
+    {
+      "scenario": "race",
+      "rep": 2,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 47,
+      "durationP95": 2322,
+      "correctness": true,
+      "performance": false
+    },
+    {
+      "scenario": "race",
+      "rep": 3,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 102,
+      "durationP95": 2161,
+      "correctness": true,
+      "performance": false
+    },
+    {
+      "scenario": "race",
+      "rep": 4,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 67,
+      "durationP95": 2249,
+      "correctness": true,
+      "performance": false
+    },
+    {
+      "scenario": "race",
+      "rep": 5,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 125,
+      "durationP95": 2406,
+      "correctness": true,
+      "performance": false
+    },
+    {
+      "scenario": "ample",
+      "rep": 1,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 107,
+      "durationP95": 5661,
+      "correctness": false,
+      "performance": false
+    },
+    {
+      "scenario": "ample",
+      "rep": 2,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 41,
+      "durationP95": 5698,
+      "correctness": false,
+      "performance": false
+    },
+    {
+      "scenario": "ample",
+      "rep": 3,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 94,
+      "durationP95": 5394,
+      "correctness": false,
+      "performance": false
+    },
+    {
+      "scenario": "ample",
+      "rep": 4,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 60,
+      "durationP95": 5440,
+      "correctness": false,
+      "performance": false
+    },
+    {
+      "scenario": "ample",
+      "rep": 5,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 28,
+      "durationP95": 5250,
+      "correctness": false,
+      "performance": false
+    },
+    {
+      "scenario": "multi-uniform",
+      "rep": 1,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 75,
+      "durationP95": 2506,
+      "correctness": true,
+      "performance": false
+    },
+    {
+      "scenario": "multi-uniform",
+      "rep": 2,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 48,
+      "durationP95": 2288,
+      "correctness": true,
+      "performance": false
+    },
+    {
+      "scenario": "multi-uniform",
+      "rep": 3,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 165,
+      "durationP95": 2487,
+      "correctness": true,
+      "performance": false
+    },
+    {
+      "scenario": "multi-uniform",
+      "rep": 4,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 117,
+      "durationP95": 2469,
+      "correctness": true,
+      "performance": false
+    },
+    {
+      "scenario": "multi-uniform",
+      "rep": 5,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 55,
+      "durationP95": 2333,
+      "correctness": true,
+      "performance": false
+    },
+    {
+      "scenario": "multi-hotspot",
+      "rep": 1,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 97,
+      "durationP95": 2714,
+      "correctness": true,
+      "performance": false
+    },
+    {
+      "scenario": "multi-hotspot",
+      "rep": 2,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 46,
+      "durationP95": 2519,
+      "correctness": true,
+      "performance": false
+    },
+    {
+      "scenario": "multi-hotspot",
+      "rep": 3,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 106,
+      "durationP95": 2562,
+      "correctness": true,
+      "performance": false
+    },
+    {
+      "scenario": "multi-hotspot",
+      "rep": 4,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 75,
+      "durationP95": 2540,
+      "correctness": true,
+      "performance": false
+    },
+    {
+      "scenario": "multi-hotspot",
+      "rep": 5,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 50,
+      "durationP95": 2491,
+      "correctness": true,
+      "performance": false
+    },
+    {
+      "scenario": "fisi-franja",
+      "rep": 1,
+      "oldValid": false,
+      "oldCodes": [
+        "GEN_CPU",
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": false,
+      "newReasons": [
+        "GEN_CPU: sum-load-<testid> superó 85% de CPU (85% de 1 CPU) durante 8 muestras consecutivas (máximo 5); generador saturado"
+      ],
+      "blockedP95": 52,
+      "durationP95": 5728,
+      "correctness": false,
+      "performance": false
+    },
+    {
+      "scenario": "fisi-franja",
+      "rep": 2,
+      "oldValid": false,
+      "oldCodes": [
+        "GEN_CPU",
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": false,
+      "newReasons": [
+        "GEN_CPU: sum-load-<testid> superó 85% de CPU (85% de 1 CPU) durante 9 muestras consecutivas (máximo 5); generador saturado"
+      ],
+      "blockedP95": 53,
+      "durationP95": 6967,
+      "correctness": false,
+      "performance": false
+    },
+    {
+      "scenario": "fisi-franja",
+      "rep": 3,
+      "oldValid": false,
+      "oldCodes": [
+        "GEN_CPU",
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": false,
+      "newReasons": [
+        "GEN_CPU: sum-load-<testid> superó 85% de CPU (85% de 1 CPU) durante 8 muestras consecutivas (máximo 5); generador saturado"
+      ],
+      "blockedP95": 129,
+      "durationP95": 5618,
+      "correctness": false,
+      "performance": false
+    },
+    {
+      "scenario": "fisi-franja",
+      "rep": 4,
+      "oldValid": false,
+      "oldCodes": [
+        "GEN_CPU",
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": false,
+      "newReasons": [
+        "GEN_CPU: sum-load-<testid> superó 85% de CPU (85% de 1 CPU) durante 7 muestras consecutivas (máximo 5); generador saturado"
+      ],
+      "blockedP95": 84,
+      "durationP95": 5454,
+      "correctness": false,
+      "performance": false
+    },
+    {
+      "scenario": "fisi-franja",
+      "rep": 5,
+      "oldValid": false,
+      "oldCodes": [
+        "GEN_CPU",
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": false,
+      "newReasons": [
+        "GEN_CPU: sum-load-<testid> superó 85% de CPU (85% de 1 CPU) durante 7 muestras consecutivas (máximo 5); generador saturado"
+      ],
+      "blockedP95": 50,
+      "durationP95": 7049,
+      "correctness": false,
+      "performance": false
+    },
+    {
+      "scenario": "login",
+      "rep": 1,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 156,
+      "durationP95": 1587,
+      "correctness": true,
+      "performance": true
+    },
+    {
+      "scenario": "login",
+      "rep": 2,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": false,
+      "newReasons": [
+        "HTTP_BLOCKED: http_req_blocked p(95)=262.469812 ms supera 183.3761939 ms (máx. de 50 ms y 10% del p(95) de http_req_duration); el cliente retrasa las llegadas"
+      ],
+      "blockedP95": 262,
+      "durationP95": 1834,
+      "correctness": true,
+      "performance": false
+    },
+    {
+      "scenario": "login",
+      "rep": 3,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": false,
+      "newReasons": [
+        "HTTP_BLOCKED: http_req_blocked p(95)=227.062094 ms supera 164.52604920000002 ms (máx. de 50 ms y 10% del p(95) de http_req_duration); el cliente retrasa las llegadas"
+      ],
+      "blockedP95": 227,
+      "durationP95": 1645,
+      "correctness": true,
+      "performance": true
+    },
+    {
+      "scenario": "login",
+      "rep": 4,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 70,
+      "durationP95": 1769,
+      "correctness": true,
+      "performance": true
+    },
+    {
+      "scenario": "login",
+      "rep": 5,
+      "oldValid": false,
+      "oldCodes": [
+        "HTTP_BLOCKED",
+        "HTTP_CONNECTING"
+      ],
+      "newValid": true,
+      "newReasons": [],
+      "blockedP95": 105,
+      "durationP95": 1811,
+      "correctness": true,
+      "performance": true
+    }
+  ]
+}
