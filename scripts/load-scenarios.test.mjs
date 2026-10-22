@@ -100,7 +100,7 @@ test('load scenarios retain distinct actors, bounded transient failures, and saf
   ])
   assert.match(common, /validateManifest\(JSON\.parse\(open\(file\)\)\)/)
   const config = await readFile(new URL('../load/profile-config.mjs', import.meta.url), 'utf8')
-  assert.match(config, /actorCount < 1 \|\| actorCount > 1000/)
+  assert.match(config, /actorCount < 1 \|\| actorCount > 2000/)
   assert.match(common, /RENEW_BEFORE_MS = 90 \* 1000/)
   assert.match(mixed, /actorPhase/)
   assert.match(mixed, /mixed_submit_actions: \[`count==\$\{actors\.length\}`\]/)
@@ -115,14 +115,14 @@ test('load scenarios retain distinct actors, bounded transient failures, and saf
   }
 })
 
-test('population boundaries admit 1000 distinct students and reject 1001', () => {
+test('population boundaries admit 1000 distinct students and still reject above 2000', () => {
   const value = manifest(1000, {
     actorCount: 1000, scenarioProfile: 'ample', expectedAccepted: 1000, expectedRejected: 0,
     initialEnrollments: 0, initialRequests: 0,
     capacityBySection: selection.map(item => ({ ...item, capacity: 1000, initialOccupied: 0 })),
   })
   assert.equal(validateManifest(value).actors.length, 1000)
-  assert.throws(() => validateManifest(manifest(1001)), /actorCount/)
+  assert.throws(() => validateManifest(manifest(2001)), /actorCount/)
 })
 
 test('fault runner restores owned services with supported Compose commands', async () => {
@@ -132,4 +132,93 @@ test('fault runner restores owned services with supported Compose commands', asy
   assert.match(runner, /docker compose up -d --wait --no-deps postgres/)
   assert.doesNotMatch(runner, /docker compose start --wait/)
   assert.doesNotMatch(runner, /down\s+-v|docker\.sock|datos-reales/)
+})
+
+test('actor count accepts 1422 and rejects 2001', () => {
+  assert.equal(validateManifest(manifest(1422)).actorCount, 1422)
+  assert.throws(() => validateManifest(manifest(2001)), /1\.\.2000/)
+})
+
+// Mirrors the backend fisi-schools manifest shape: one shared selection per cohort, disjoint by section.
+function fisiManifest(cells, { jornada = false, scarce = false } = {}) {
+  const courses = ['C1', 'C2', 'C3']
+  const sizes = {}
+  for (const [, cohort, size] of cells) sizes[cohort] = (sizes[cohort] ?? 0) + size
+  const capacityOf = (cohort, course) => (scarce && course === 0 ? Math.max(1, Math.floor(sizes[cohort] * 0.5)) : sizes[cohort])
+  const sectionIds = cohort => courses.map(course => `${course}-FISI-${cohort}`)
+  const actors = []
+  for (const [wave, cohort, size] of cells) {
+    for (let n = 0; n < size; n++) {
+      const index = actors.length + 1
+      actors.push({ actorId: `SYN-SIS-U${String(index).padStart(4, '0')}`, credential: `${String(index).padStart(4, '0')}${'B'.repeat(39)}`, cohort, ...(jornada ? { wave } : {}), selection: courses.map(courseId => ({ courseId, sectionId: `${courseId}-FISI-${cohort}` })) })
+    }
+  }
+  const cohorts = Object.keys(sizes).map(cohort => ({ cohort, size: sizes[cohort], capacity: capacityOf(cohort, 0), sectionIds: sectionIds(cohort), expectedAccepted: Math.min(sizes[cohort], capacityOf(cohort, 0)) }))
+  const expectedAccepted = cohorts.reduce((sum, cohort) => sum + cohort.expectedAccepted, 0)
+  const waveTotals = new Map()
+  for (const [wave, , size] of cells) waveTotals.set(wave, (waveTotals.get(wave) ?? 0) + size)
+  return {
+    campaignId: '00000000-0000-4000-8000-000000000001',
+    runId: '00000000-0000-4000-8000-000000000002',
+    actorCount: actors.length, actors, contention: 'shared', scenarioProfile: 'fisi-schools',
+    expectedAccepted, expectedRejected: actors.length - expectedAccepted, initialEnrollments: 0, initialRequests: 0,
+    capacityBySection: cohorts.flatMap(({ cohort }) => courses.map((courseId, course) => ({ courseId, sectionId: `${courseId}-FISI-${cohort}`, capacity: capacityOf(cohort, course), initialOccupied: 0 }))),
+    fisi: jornada ? { mode: 'jornada', iaActors: 0, capacityMode: scarce ? 'scarce' : 'ample' } : { mode: 'franja', franja: 4, iaActors: 0, capacityMode: scarce ? 'scarce' : 'ample' },
+    cohorts,
+    hotCohortSize: Math.max(...cells.map(cell => cell[2])),
+    ...(jornada ? { waves: [...waveTotals].map(([wave, size]) => ({ wave, label: `W${wave}`, ppFrom: 10, size })) } : {}),
+  }
+}
+const franja4 = [[4, 'SIS', 286], [4, 'SOFT', 203], [4, 'CC', 18]]
+const jornadaCells = [[1, 'SIS', 16], [1, 'SOFT', 7], [2, 'SIS', 67], [2, 'SOFT', 40], [2, 'CC', 6]]
+
+test('fisi-schools franja manifest passes and exposes per-actor selection and cohort', () => {
+  const validated = validateManifest(fisiManifest(franja4))
+  assert.equal(validated.scenarioProfile, 'fisi-schools')
+  assert.equal(validated.actors.length, 507)
+  assert.equal(validated.expectedAccepted, 507)
+  assert.ok(validated.actors.every(actor => actor.cohort && actor.selection.length === 3 && actor.wave === undefined))
+  assert.equal(validateManifest(fisiManifest(franja4, { scarce: true })).expectedAccepted, 143 + 101 + 9)
+})
+
+test('fisi-schools jornada manifest passes with waves', () => {
+  const validated = validateManifest(fisiManifest(jornadaCells, { jornada: true }))
+  assert.deepEqual(validated.waves.map(wave => wave.size), [23, 113])
+  assert.ok(validated.actors.every(actor => actor.wave >= 1 && actor.wave <= 9))
+})
+
+test('fisi-schools preflight rejects overlapping cohorts, selection drift and wave mismatches', () => {
+  const overlap = fisiManifest(franja4)
+  overlap.cohorts[1].sectionIds = [...overlap.cohorts[0].sectionIds]
+  assert.throws(() => validateManifest(overlap), /disjoint/)
+
+  const drift = fisiManifest(franja4)
+  drift.actors[0].selection = drift.actors[300].selection.map(item => ({ ...item }))
+  assert.throws(() => validateManifest(drift), /selection differs from its cohort/)
+
+  const noSelection = fisiManifest(franja4)
+  delete noSelection.actors[5].selection
+  assert.throws(() => validateManifest(noSelection), /selection/)
+
+  const sizes = fisiManifest(franja4)
+  sizes.cohorts[2].size = 19
+  assert.throws(() => validateManifest(sizes), /sum to the actor count|size/)
+
+  const accepted = fisiManifest(franja4, { scarce: true })
+  accepted.expectedAccepted -= 1
+  accepted.expectedRejected += 1
+  assert.throws(() => validateManifest(accepted), /expectedAccepted/)
+
+  const badWaves = fisiManifest(jornadaCells, { jornada: true })
+  badWaves.waves[0].size = 22
+  badWaves.waves[1].size = 114
+  assert.throws(() => validateManifest(badWaves), /wave 1 size differs/)
+
+  const missingWave = fisiManifest(jornadaCells, { jornada: true })
+  delete missingWave.actors[0].wave
+  assert.throws(() => validateManifest(missingWave), /declared waves/)
+
+  const unexpectedWave = fisiManifest(franja4)
+  unexpectedWave.actors[0].wave = 4
+  assert.throws(() => validateManifest(unexpectedWave), /only valid in jornada/)
 })

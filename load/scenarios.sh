@@ -6,7 +6,7 @@ cd "$ROOT"
 scenario=${1:-all}
 ACTORS=${SCENARIO_ACTORS:-400}
 QUICK=${SCENARIO_QUICK:-0}
-if ! [[ "$ACTORS" =~ ^[1-9][0-9]{0,3}$ ]] || (( ACTORS > 1000 )); then echo 'SCENARIO_ACTORS must be 1..1000' >&2; exit 2; fi
+if ! [[ "$ACTORS" =~ ^[1-9][0-9]{0,3}$ ]] || (( ACTORS > 2000 )); then echo 'SCENARIO_ACTORS must be 1..2000' >&2; exit 2; fi
 ENV_LABEL=${SCENARIO_ENV:-H}
 REP=${SCENARIO_REP:-1}
 REPEATS=${SCENARIO_REPEATS:-1}
@@ -21,7 +21,20 @@ if [[ "$WARMUP" != 0 && "$WARMUP" != 1 ]]; then echo 'SCENARIO_WARMUP must be 0 
 if [[ "$ORDER" != fixed && "$ORDER" != shuffle ]]; then echo 'SCENARIO_ORDER must be fixed or shuffle' >&2; exit 2; fi
 if [[ -n "$SEED" ]] && ! [[ "$SEED" =~ ^[0-9]{1,9}$ ]]; then echo 'SCENARIO_SEED must be an integer with at most 9 digits' >&2; exit 2; fi
 if [[ "${SIMULATOR_RECREATE:-full}" != full && "${SIMULATOR_RECREATE:-full}" != app ]]; then echo 'SIMULATOR_RECREATE must be full or app' >&2; exit 2; fi
-case "$scenario" in all|login|race|last-seat|ample|mixed|multi-uniform|multi-hotspot|retry|resilience|stress|soak|reads) ;; *) echo 'Usage: bash load/scenarios.sh all|login|race|last-seat|ample|mixed|multi-uniform|multi-hotspot|retry|resilience|stress|soak|reads' >&2; exit 2 ;; esac
+case "$scenario" in all|login|race|last-seat|ample|mixed|multi-uniform|multi-hotspot|fisi-franja|retry|resilience|stress|soak|reads) ;; *) echo 'Usage: bash load/scenarios.sh all|login|race|last-seat|ample|mixed|multi-uniform|multi-hotspot|fisi-franja|retry|resilience|stress|soak|reads' >&2; exit 2 ;; esac
+# fisi-franja: one FISI franja (1..9) as a single burst; the full day (jornada) belongs to a separate k6 script.
+FISI_FRANJA=${SCENARIO_FISI_FRANJA:-4}
+fisi_env=()
+if [[ "$scenario" == fisi-franja ]]; then
+  if ! [[ "$FISI_FRANJA" =~ ^[1-9]$ ]]; then echo 'SCENARIO_FISI_FRANJA must be 1..9' >&2; exit 2; fi
+  # Real FISI new-student totals per franja (FISI-RANKING-2026-I); the default population when SCENARIO_ACTORS is unset.
+  fisi_totals=(24 113 293 507 313 117 31 13 11)
+  if [[ -z "${SCENARIO_ACTORS:-}" ]]; then ACTORS=${fisi_totals[FISI_FRANJA-1]}; fi
+  fisi_env=(SIMULATOR_FISI_FRANJA="$FISI_FRANJA")
+  if [[ -n "${SCENARIO_FISI_CAPACITY:-}" ]]; then fisi_env+=(SIMULATOR_FISI_CAPACITY="$SCENARIO_FISI_CAPACITY"); fi
+  if [[ -n "${SCENARIO_FISI_SCARCE_RATIO:-}" ]]; then fisi_env+=(SIMULATOR_FISI_SCARCE_RATIO="$SCENARIO_FISI_SCARCE_RATIO"); fi
+  if [[ -n "${SCENARIO_FISI_IA_ACTORS:-}" ]]; then fisi_env+=(SIMULATOR_FISI_IA_ACTORS="$SCENARIO_FISI_IA_ACTORS"); fi
+fi
 if [[ "$QUICK" != 0 && "$QUICK" != 1 ]]; then echo 'SCENARIO_QUICK must be 0 or 1' >&2; exit 2; fi
 if [[ ! -f infra/simulator/runtime/config.env ]]; then docker compose up --build -d --wait; fi
 exec 9>infra/simulator/runtime/scenarios.lock
@@ -79,8 +92,12 @@ run_one() {
   case "$item" in
     ample|retry|mixed) profile=ample ;;
     last-seat|multi-uniform|multi-hotspot) profile=$item ;;
+    fisi-franja) profile=fisi-schools ;;
   esac
-  if ! SIMULATOR_REBUILD=0 bash infra/simulator/rotate-campaign.sh "$current_enrollments" "$current_requests" shared "$ACTORS" "$profile" > "$RESULTS/prepare-$testid.log" 2>&1; then
+  # FISI values reach the rotation only for fisi-franja; inherited SIMULATOR_FISI_* never leak into other scenarios.
+  local -a rotate_env=(-u SIMULATOR_FISI_FRANJA -u SIMULATOR_FISI_IA_ACTORS -u SIMULATOR_FISI_CAPACITY -u SIMULATOR_FISI_SCARCE_RATIO)
+  if [[ "$item" == fisi-franja ]]; then rotate_env+=("${fisi_env[@]}"); fi
+  if ! env "${rotate_env[@]}" SIMULATOR_REBUILD=0 bash infra/simulator/rotate-campaign.sh "$current_enrollments" "$current_requests" shared "$ACTORS" "$profile" > "$RESULTS/prepare-$testid.log" 2>&1; then
     echo "Campaign preparation failed. Inspect $RESULTS/prepare-$testid.log; no load was started."
     return 1
   fi

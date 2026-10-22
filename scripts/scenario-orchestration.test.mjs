@@ -228,3 +228,122 @@ test('warm-up tolerates the threshold exit code 99 but aborts the measured run o
     assert.equal(checkCalls(failed.calls).length, 0)
   } finally { await rm(soft, { recursive: true, force: true }); await rm(hard, { recursive: true, force: true }) }
 })
+
+const configOf = root => readFile(join(root, 'infra/simulator/runtime/config.env'), 'utf8')
+
+test('the 2000 actor limit: 1422 and 2000 are accepted, 2001 exits 2 before any docker call', withTree(async root => {
+  const ok = await exec(root, 'infra/simulator/rotate-campaign.sh', ['0', '0', 'shared', '1422', 'shared'])
+  assert.equal(ok.code, 0, ok.stderr)
+  assert.match(await configOf(root), /SIMULATOR_ACTOR_COUNT=1422/)
+  const max = await exec(await tree(), 'infra/simulator/rotate-campaign.sh', ['0', '0', 'shared', '2000', 'shared'])
+  assert.equal(max.code, 0, max.stderr)
+  const rejected = await exec(await tree(), 'infra/simulator/rotate-campaign.sh', ['0', '0', 'shared', '2001', 'shared'])
+  assert.equal(rejected.code, 2)
+  assert.deepEqual(rejected.calls, [])
+  const scenario = await exec(await tree(), 'load/scenarios.sh', ['login'], { SCENARIO_ACTORS: '2001' })
+  assert.equal(scenario.code, 2)
+  assert.deepEqual(scenario.calls, [])
+  const accepted = await exec(await tree(), 'load/scenarios.sh', ['login'], { SCENARIO_ACTORS: '1422' })
+  assert.equal(accepted.code, 0, accepted.stderr)
+  assert.equal(tag(k6Calls(accepted.calls)[0], 'population'), '1422')
+}))
+
+test('rotation with fisi-schools writes the SIMULATOR_FISI_* lines and the next shared rotation removes them', withTree(async root => {
+  const fisi = await exec(root, 'infra/simulator/rotate-campaign.sh', ['0', '0', 'shared', '507', 'fisi-schools'], {
+    SIMULATOR_FISI_FRANJA: '4', SIMULATOR_FISI_IA_ACTORS: '7', SIMULATOR_FISI_CAPACITY: 'scarce', SIMULATOR_FISI_SCARCE_RATIO: '0.5',
+  })
+  assert.equal(fisi.code, 0, fisi.stderr)
+  const written = await configOf(root)
+  assert.match(written, /^SIMULATOR_SCENARIO_PROFILE=fisi-schools$/m)
+  assert.match(written, /^SIMULATOR_ACTOR_COUNT=507$/m)
+  for (const line of ['SIMULATOR_FISI_FRANJA=4', 'SIMULATOR_FISI_IA_ACTORS=7', 'SIMULATOR_FISI_CAPACITY=scarce', 'SIMULATOR_FISI_SCARCE_RATIO=0.5']) {
+    assert.equal(written.split('\n').filter(item => item === line).length, 1, line)
+  }
+  // The next rotation (even with the variables absent or a different value) never keeps stale FISI lines.
+  const shared = await exec(root, 'infra/simulator/rotate-campaign.sh', ['0', '0', 'shared', '400', 'shared'])
+  assert.equal(shared.code, 0, shared.stderr)
+  const cleaned = await configOf(root)
+  assert.doesNotMatch(cleaned, /SIMULATOR_FISI_/)
+  assert.match(cleaned, /^SIMULATOR_SCENARIO_PROFILE=shared$/m)
+  // A later fisi-schools rotation only writes what it is given: no carry-over from earlier values.
+  const again = await exec(root, 'infra/simulator/rotate-campaign.sh', ['0', '0', 'shared', '507', 'fisi-schools'], { SIMULATOR_FISI_FRANJA: 'jornada' })
+  assert.equal(again.code, 0, again.stderr)
+  const last = await configOf(root)
+  assert.match(last, /^SIMULATOR_FISI_FRANJA=jornada$/m)
+  assert.doesNotMatch(last, /SIMULATOR_FISI_(IA_ACTORS|CAPACITY|SCARCE_RATIO)/)
+}))
+
+test('invalid or misplaced SIMULATOR_FISI_* values exit 2 before any docker call', async () => {
+  const cases = [
+    ['fisi-schools', { SIMULATOR_FISI_FRANJA: '10' }], ['fisi-schools', { SIMULATOR_FISI_FRANJA: '0' }], ['fisi-schools', { SIMULATOR_FISI_FRANJA: '' }],
+    ['fisi-schools', { SIMULATOR_FISI_IA_ACTORS: '508' }], ['fisi-schools', { SIMULATOR_FISI_IA_ACTORS: '-1' }],
+    ['fisi-schools', { SIMULATOR_FISI_CAPACITY: 'tight' }],
+    ['fisi-schools', { SIMULATOR_FISI_SCARCE_RATIO: '0.5' }],
+    ['fisi-schools', { SIMULATOR_FISI_CAPACITY: 'scarce', SIMULATOR_FISI_SCARCE_RATIO: '1' }],
+    ['fisi-schools', { SIMULATOR_FISI_CAPACITY: 'scarce', SIMULATOR_FISI_SCARCE_RATIO: '0.0' }],
+    ['fisi-schools', { SIMULATOR_FISI_CAPACITY: 'scarce', SIMULATOR_FISI_SCARCE_RATIO: '0.1234567' }],
+    ['shared', { SIMULATOR_FISI_FRANJA: '4' }], ['ample', { SIMULATOR_FISI_CAPACITY: 'ample' }],
+  ]
+  for (const [profile, env] of cases) {
+    const root = await tree()
+    try {
+      const result = await exec(root, 'infra/simulator/rotate-campaign.sh', ['0', '0', 'shared', '507', profile], env)
+      assert.equal(result.code, 2, JSON.stringify([profile, env]))
+      assert.deepEqual(result.calls, [], JSON.stringify([profile, env]))
+    } finally { await rm(root, { recursive: true, force: true }) }
+  }
+})
+
+test('fisi-franja defaults to franja 4 with 507 actors and prepares a fisi-schools campaign', withTree(async root => {
+  const result = await exec(root, 'load/scenarios.sh', ['fisi-franja'])
+  assert.equal(result.code, 0, result.stderr)
+  assert.match(result.stdout, /Scenario=fisi-franja actors=507 profile=fisi-schools /)
+  const config = await configOf(root)
+  assert.match(config, /^SIMULATOR_SCENARIO_PROFILE=fisi-schools$/m)
+  assert.match(config, /^SIMULATOR_ACTOR_COUNT=507$/m)
+  assert.match(config, /^SIMULATOR_FISI_FRANJA=4$/m)
+  assert.doesNotMatch(config, /SIMULATOR_FISI_(IA_ACTORS|CAPACITY|SCARCE_RATIO)/)
+  const k6 = k6Calls(result.calls)
+  assert.equal(k6.length, 1)
+  assert.equal(tag(k6[0], 'load_scenario'), 'fisi-franja')
+  assert.equal(tag(k6[0], 'population'), '507')
+  assert.match(k6[0], /\/load\/enrollment\.js$/)
+  assert.match(k6[0], /-e SCENARIO_NAME=fisi-franja /)
+  assert.match(checkCalls(result.calls)[0], / fisi-franja /)
+  // Campaign preparation follows the same docker sequence as every other scenario.
+  assert.ok(result.calls.includes('compose up --force-recreate -d --wait'))
+  assert.equal(result.calls.filter(call => call.includes('close-simulator.js')).length, 1)
+}))
+
+test('fisi-franja honours SCENARIO_FISI_* and SCENARIO_ACTORS and rejects an invalid franja', async () => {
+  const root = await tree()
+  try {
+    const result = await exec(root, 'load/scenarios.sh', ['fisi-franja'], {
+      SCENARIO_FISI_FRANJA: '3', SCENARIO_ACTORS: '300', SCENARIO_FISI_CAPACITY: 'scarce', SCENARIO_FISI_SCARCE_RATIO: '0.25', SCENARIO_FISI_IA_ACTORS: '10',
+    })
+    assert.equal(result.code, 0, result.stderr)
+    const config = await configOf(root)
+    for (const line of ['SIMULATOR_ACTOR_COUNT=300', 'SIMULATOR_FISI_FRANJA=3', 'SIMULATOR_FISI_CAPACITY=scarce', 'SIMULATOR_FISI_SCARCE_RATIO=0.25', 'SIMULATOR_FISI_IA_ACTORS=10']) assert.ok(config.split('\n').includes(line), line)
+    assert.equal(tag(k6Calls(result.calls)[0], 'population'), '300')
+    const defaults = { 1: '24', 2: '113', 3: '293', 5: '313', 6: '117', 7: '31', 8: '13', 9: '11' }
+    for (const [franja, total] of Object.entries(defaults)) {
+      const other = await tree()
+      try {
+        const run = await exec(other, 'load/scenarios.sh', ['fisi-franja'], { SCENARIO_FISI_FRANJA: franja })
+        assert.equal(tag(k6Calls(run.calls)[0], 'population'), total, `franja ${franja}`)
+      } finally { await rm(other, { recursive: true, force: true }) }
+    }
+    for (const bad of ['0', '10', 'jornada', 'x']) {
+      const invalid = await exec(await tree(), 'load/scenarios.sh', ['fisi-franja'], { SCENARIO_FISI_FRANJA: bad })
+      assert.equal(invalid.code, 2, bad)
+      assert.deepEqual(invalid.calls, [], bad)
+    }
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('all keeps its twelve scenarios in order, without fisi-franja, even with FISI variables set', withTree(async root => {
+  const result = await exec(root, 'load/scenarios.sh', ['all'], { SCENARIO_FISI_FRANJA: '3', SIMULATOR_FISI_FRANJA: '3' })
+  assert.equal(result.code, 0, result.stderr)
+  assert.deepEqual(k6Calls(result.calls).map(call => tag(call, 'load_scenario')), ['login', 'race', 'last-seat', 'ample', 'mixed', 'multi-uniform', 'multi-hotspot', 'retry', 'resilience', 'stress', 'soak', 'reads'])
+  assert.doesNotMatch(await configOf(root), /SIMULATOR_FISI_/)
+}))
