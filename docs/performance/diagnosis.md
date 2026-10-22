@@ -81,42 +81,69 @@ Lecturas (`observed`):
 - **Límite del criterio P1 sobre el p95 (≥ 90 %):** con buckets de 500 ms a 1 s, el intervalo del p95 del servidor es ancho. El límite inferior alcanza el 90 % solo en race 400 (96 %); en race 100, race 200, ample y multi-uniform queda entre 78 y 87 %. Por la regla de §2.1, **el criterio del p95 no se da por cumplido** en esas filas: la cobertura exacta se cumple en la media, no en el percentil. No se cambia la regla.
 - **ample 400 acepta entre 322 y 400 de 400** según la repetición: hasta 78 envíos por ejecución terminan en `503` por timeout del pool (5 s). Es variabilidad del límite del pool, no un fallo de una repetición.
 
-## 4. Veredictos por hipótesis (bloques A–F; H8 y los experimentos con PostgreSQL desechable pendientes)
+## 4. Veredictos por hipótesis (bloques A–F; H2, H7 y H8 pendientes)
 
-Cada veredicto aplica los criterios «Confirma si» y «Descarta si» de la estrategia §6, declarados antes de ver los datos. Donde el resultado no encaja literalmente en el criterio, se dice. Mediana de n = 3 salvo indicación. `observed` en todos los casos; ningún veredicto vale fuera de ENV-H.
+Cada veredicto aplica **literalmente** los criterios «Confirma si» y «Descarta si» de la estrategia §6, declarados antes de ver los datos. Si el resultado no cumple un criterio, se dice, aunque haya otra lectura que parezca más natural: esa lectura se escribe aparte y con etiqueta `inferred`. Mediana de n = 3 salvo indicación; los runs que el guard del generador marcó inválidos se excluyen de las estadísticas (se indica el n usado). Todo es `observed` en ENV-H salvo donde se marca `inferred`.
 
-| Hipótesis | Veredicto | Evidencia | Límite |
+| Hipótesis | Veredicto | Evidencia (`observed`) | Límite |
 | --- | --- | --- | --- |
-| **H1** Serialización sobre la sección caliente | `confirmed` (con una desviación del criterio de E1) | **E2:** al pasar de 1 a 5 cohortes disjuntas, el bench sube de 121 a 181 envíos/s (+49 %) y el p95 baja de 3,1 a 2,1 s. **E5:** al agrandar el pool, la espera del bloqueo sube (100 → 645 ms) y la de conexión baja (1850 → 1224 ms) con la suma casi constante. **E1:** el p95 crece casi lineal con N (816 → 1753 → 3128 ms) y, con 24 esperando el bloqueo, 192 ms / 24 ≈ 8 ms por transacción ≈ `critical` + `commit` + traspaso | **Criterio literal de E1 no cumplido:** la espera de bloqueo medida es el 6 % del p95 (192 de 3128 ms), por debajo del 30 % que descartaría. La cola se mide casi toda en el pool porque solo 24 conexiones pueden esperar el bloqueo. Se confirma por E2 y E5, no por E1 |
-| **H2** Fsync del WAL en `COMMIT` | `inconclusive` (E3b pendiente) | `commit` medio de 1,3 ms; `pg_stat_io`/WAL: 2,27 s de fsync en 1198 flushes ≈ 1,9 ms por flush. Cae entre los dos criterios (confirma con commit ≥ 3 ms y fsync ≥ 2 ms; descarta con commit < 1 ms). E4 no la apoya (el aislamiento de CPU no baja t_cs) | El commit es ≈ 18 % de t_cs (1,3 de 7,1 ms). E3b (tmpfs) decide si t_cs baja ≥ 40 % |
-| **H3** Cabeza de cola en el pool | `confirmed` | **E5:** con pool 6 / 12 / 24 / 40 el p95 del envío no mejora (3379 / 3535 / 3372 / 3418 ms) mientras la espera de conexión baja y la del bloqueo sube. Cada petición de envío hace 3 checkouts (2 de autenticación y 1 del store) y cada uno espera ≈ 500 ms en la cola | Dos variantes tienen un run excluido por el guard (pool 40 en race; pool 24 en hotspot) |
-| **H4** Volumen leído por envío | `confirmed` (por E7); E6 solo en parte | **E7:** con un catálogo de 300 secciones el throughput cae a la mitad (56 frente a 119–125 envíos/s) y `critical` pasa de 20 ms (3 secciones) a 328 ms. **E6:** `FOR UPDATE` de secciones es el 54–69 % del tiempo total de sentencias; la consulta de sesiones académicas, el 17–28 %; el `SELECT` de campaña con `config` no llega al 1 % | El coste está en leer todas las secciones de la campaña dentro del bloqueo, no en `config`. Con 3 y 15 secciones no hay diferencia (el catálogo de 3 comparte secciones entre actores) |
-| **H5** Saturación de lecturas | `confirmed` | **E8:** rodilla entre 100 y 150 it/s. La tasa lograda se estanca en 64–71 it/s y el p95 pasa de 328 ms a 2232 ms; 0 fallos HTTP | Marcado ENV-H; en un host mayor la rodilla se mueve |
-| **H6** CPU compartida con k6 | `confirmed` (débil, solo race) | **E14 race:** con 1 réplica el p95 no empeora (3623 [3594–3692] frente a 3760 [3686–3914] ms con 2). **E4:** `inconclusive` por diseño (aislar k6 también reduce la CPU del SUT; p95 3886 frente a 3483 ms) | E14 stress no se ejecutó (decisión del operador). Los rangos de E14 casi se tocan |
-| **H7** Seq Scan en sesiones académicas | `inconclusive` (E9 pendiente) | `EXPLAIN` confirma Seq Scan (1,8 ms en reposo). Bajo carga la consulta pesa 10–12 ms de media y es el 17–28 % del tiempo de sentencias | Falta la parte «t_cs crece con las campañas retenidas» (E9). Los centinelas varían ±10 % entre bloques sin tendencia monótona (3338, 3434, 3199, 3782, 3564 ms) |
-| **H8** Oleadas de mixed | pendiente | Depende de E10 (mixed rápido frente a normal) y de mixed normal pool 12 | — |
-| **H9** Replays que bloquean antes de detectar idempotencia | `rejected` por el criterio de E11 | **E11:** con 50 % de replays, `critical` de los envíos nuevos no sube (7,9 frente a 8,4 ms) y la espera del bloqueo baja (188 frente a 240 ms) | E11 no mide el escenario retry; el efecto de resolver el replay antes de bloquear (P2-01) solo se puede medir con A/B |
-| **H10** Rate limit del login | `rejected` (con salvedad) | **E12:** sin esperas `Lock:tuple`; las dominantes son `LWLock:WALWrite` (hasta 16), `Lock:transactionid` (5–16) y `LWLock:LockManager`. Media de 758–923 ms, p95 en [1 s, 1,5 s] | Los 3 runs salieron `valid=false` del guard (`RESOURCES_MISSING`: login demasiado corto para 2 muestras de recursos). No se usan para un veredicto firme |
-| **H11** MultiXact por `FOR SHARE` de campaña | `rejected` | Ningún run muestra esperas `LWLock:MultiXact*` en el muestreo (0 de 87 runs con captura del servidor) | — |
-| **H12** Observabilidad en el pool | `rejected` | **E13:** exportador apagado 3660 [3629–3809] ms; activo 3715 [3710–3779] ms (+1,5 %, dentro del ruido) | El muestreador de 1 s y las consultas `pg_*` de P1-03 siguen activos en ambos brazos (no medidos) |
+| **H1** Serialización sobre la sección caliente | `inconclusive` por los criterios literales | **E1:** la espera medida del bloqueo es el 6 % del p95 (192 de 3128 ms en race 400), por debajo del 30 % que descartaría. **E2:** de 1 a 5 cohortes el vaciado baja de 3,28 s a 2,21 s (×1,5, no ×5) y de 5 a 20 sube a 2,55 s; no hay «cambio nulo» (descartaría), pero tampoco la proporcionalidad a 1/cohortes (confirmaría). | El mecanismo alternativo (cola en la sección caliente que se mide en el pool) está respaldado por E5 y por el ajuste de §4.1, pero es `inferred`. El criterio de E1 supone que la espera se ve como `section_lock_wait`; con un pool de 12 solo 24 peticiones pueden esperar ese bloqueo |
+| **H2** Fsync del WAL en `COMMIT` | `inconclusive` (E3b y `pg_test_fsync` pendientes) | `commit` medio de 1,3 ms y ≈ 1,9 ms por flush (2,27 s en 1198 flushes). Entre los dos criterios (confirma con commit ≥ 3 ms y fsync ≥ 2 ms; descarta con commit < 1 ms). El aislamiento de CPU de E4 no baja t_cs | El commit es ≈ 18 % de t_cs (1,3 de 7,1 ms). E3b decide si t_cs baja ≥ 40 % |
+| **H3** Cabeza de cola en el pool | `confirmed` para lecturas y envío; la autenticación no mejora | **E5 (n = 3; pool 40 con n = 2):** el p95 del envío no mejora con el pool (3379 / 3535 / 3372 / 3423 ms con 6 / 12 / 24 / 40) mientras la espera de conexión baja (1850 → 1224 ms) y la del bloqueo sube (100 → 650 ms). Espera por checkout con pool 6 → 40: `contextos` (lectura) 402 → 284 ms, `solicitudes` 617 → 408 ms; `sesiones` (autenticación) queda plana (204 → 194 ms) y `login` sube (184 → 255 ms) | El criterio nombra la espera de lectura y autenticación: la de lectura baja; la de autenticación no. Un run por variante en race pool 40 y en hotspot pool 24 se excluyó por el guard |
+| **H4** Volumen leído por envío | `confirmed` por E7 | **E7:** con 300 secciones el throughput es 56 envíos/s frente a 119–125 con 3 o 15 secciones. **E6:** `FOR UPDATE` de secciones es el 54–69 % del tiempo de sentencias; sesiones académicas, el 17–28 %; el `SELECT` de campaña con `config` no llega al 1 % | El coste está en leer todo el catálogo, no en `config`. El tiempo en `critical` con 300 secciones (328 ms) no se usa como evidencia: sin serialización hay hasta 24 transacciones simultáneas sobre 2 vCPU. El catálogo de 3 comparte secciones entre actores |
+| **H5** Saturación de lecturas | `confirmed` | **E8 (n = 3):** rodilla entre 100 y 150 it/s; la tasa lograda se estanca en 64–71 it/s y el p95 pasa de 328 a 2232 ms; 0 fallos HTTP | ENV-H; en un host mayor la rodilla se mueve |
+| **H6** CPU compartida con k6 | `inconclusive` | **E4:** inconcluyente por diseño (aislar k6 deja al SUT con una CPU; p95 3886 frente a 3483 ms, con un rango de 3189–3798 ms en el brazo de control, 19 %). **E14 race:** con 1 réplica el p95 no empeora (3623 [3594–3692] frente a 3760 [3686–3914] ms), pero los rangos se solapan y 1 réplica también reduce a la mitad las conexiones totales (12 frente a 24), igual que pool 6 frente a pool 12 en E5 | E14 no aísla la CPU. E14 stress no se ejecutó (decisión del operador) |
+| **H7** Seq Scan en sesiones académicas | `inconclusive` (E9 pendiente) | `EXPLAIN` confirma Seq Scan (1,8 ms en reposo). Bajo carga la consulta pesa 10–12 ms de media y es el 17–28 % del tiempo de sentencias | Falta «t_cs crece con las campañas retenidas» (E9) |
+| **H8** Oleadas de mixed | pendiente | Depende de E10 y de mixed normal con pool 12 | — |
+| **H9** Replays que bloquean antes de detectar idempotencia | `rejected` por el criterio de E11 | **E11:** con 50 % de replays, `critical` de los envíos nuevos no sube (7,9 frente a 8,4 ms) y la espera del bloqueo baja (188 frente a 240 ms) | E11 no mide el escenario retry; el efecto de resolver el replay antes de bloquear (P2-01) solo se mide con A/B |
+| **H10** Rate limit del login | `rejected` (con salvedad) | **E12:** sin esperas `Lock:tuple`; dominan `LWLock:WALWrite` (hasta 16), `Lock:transactionid` (5–16) y `LWLock:LockManager`. Media de 758–923 ms; p95 en [1 s, 1,5 s] | Los 3 runs salieron `valid=false` (`RESOURCES_MISSING`: el login es demasiado corto para 2 muestras de recursos). Evidencia con salvedad, no firme |
+| **H11** MultiXact por `FOR SHARE` de campaña | `rejected` | 0 de 87 runs con captura del servidor muestran esperas `LWLock:MultiXact*` en el muestreo | — |
+| **H12** Observabilidad en el pool | `rejected` | **E13:** exportador apagado 3660 [3629–3809] ms; activo 3715 [3710–3779] ms (+1,5 %, dentro del ruido) | El muestreador de 1 s y las consultas `pg_*` de P1-03 siguen activos en ambos brazos |
 
-### 4.1 Hallazgos que no estaban en las hipótesis
+### 4.1 Lecturas `inferred` (no son hallazgos medidos directamente)
 
-- **Cada envío paga la cola del pool tres veces.** La autenticación hace 2 checkouts del pool antes de la transacción y el store hace otro. Con las 24 conexiones ocupadas, cada checkout espera ≈ 500 ms de media. La reducción de checkouts por petición (P2-03) ataca directamente la mayor parte de la latencia medida.
-- **t_cs medido ≈ 8 ms**, sin variar con N (192 ms de espera del bloqueo / 24 esperando). Es mayormente fijo: `critical` ≈ 6 ms en la ruta de rechazo (≈ 10 sentencias), más `commit` 1,3 ms y el traspaso del bloqueo.
-- **El techo global (~120–180 envíos/s) coincide con CPU/WAL, no con bloqueos.** En E2 con 20 cohortes, `critical` de las aceptaciones sube a 118 ms (frente a 12 ms con una cohorte) y el throughput baja de 181 a 157 envíos/s: con transacciones en paralelo compiten por las 2 vCPU.
-- **Los 503 de ample** (0 a 78 por run) son timeouts del pool de 5 s, no de locks: el pico llega a ≈ 190 conexiones esperando por réplica.
+- **t_cs ≈ 8 ms.** La espera del bloqueo dividida por el número de peticiones que pueden esperarlo a la vez (2 réplicas × pool) da, en race 400 con pool 6 / 12 / 24 / 40: 100/12 ≈ 8,3, 213/24 ≈ 8,9, 402/48 ≈ 8,4 y 650/80 ≈ 8,1 ms. Es estable aunque la espera cambie por 6, y coincide con `critical` + `commit` (5,8 + 1,3 ms) más el traspaso del bloqueo.
+- **p95 ≈ 0,95 · N · t_cs.** Con t_cs = 8,2 ms, 0,95 × 400 × 8,2 = 3116 ms frente a 3128 ms medidos en race 400; race 100 y race 200 se ajustan igual salvo una constante pequeña. Esto es lo que respalda que la cola esté en la sección caliente, aunque el criterio literal de H1 no se cumpla.
+- **Quitar peticiones del pool solo mueve la espera.** E5 mostró que cambiar cuántas peticiones esperan en el pool desplaza la espera al bloqueo sin cambiar la suma. Por la misma razón, reducir los checkouts por petición (cada envío hace 3: 2 de autenticación y 1 del store) **no baja el p95 de race**: la palanca de race es t_cs o repartir la cohorte. Reducir checkouts sí ataca H3 (lecturas, autenticación y cohortes pequeñas que esperan detrás de la sección caliente).
+- **Techo global ~120–180 envíos/s.** Coincide con CPU/WAL y no con bloqueos (E2 con 20 cohortes), pero 2 vCPU compartidas con k6 no permiten separar ambos.
+- **Los 503 de ample** (0 a 78 por run) son timeouts del pool de 5 s (`observed`: causa `pool_timeout`); el pico llega a ≈ 190 conexiones esperando por réplica.
 
-## 5. Presupuesto recalculado (evaluación §3.2)
+## 5. Presupuesto recalculado (evaluación §3.2, `inferred`)
 
-Con t_cs medido de ≈ 8 ms (7,1 ms de `critical` + `commit`, más traspaso) y la fórmula «vaciado ≈ N × t_cs»:
+Con t_cs ≈ 8,2 ms (§4.1) y «vaciado ≈ N × t_cs», p95 < 2 s exige t_cs ≤ 2000 / (0,95 · N):
 
-| Cohorte caliente | t_cs máximo para p95 < 2 s | Medido hoy | Resultado |
+| Cohorte caliente | t_cs máximo | Medido hoy | Resultado (p95 medido en race) |
 | --- | --- | --- | --- |
-| 100 | 21 ms | ≈ 8 ms | cumple (p95 816 ms) |
-| 200 | 10,5 ms | ≈ 8 ms | cumple justo (p95 1753 ms) |
-| 286 (Sistemas, 12:00) | 7,4 ms | ≈ 8 ms | **no cumple por poco** |
-| 400 | 5,3 ms | ≈ 8 ms | no cumple (p95 3128 ms) |
-| 507 (pico FISI) | 4,2 ms | ≈ 8 ms | no cumple si todos disputan las mismas secciones |
+| 100 | 21 ms | ≈ 8 ms | cumple (816 ms) |
+| 200 | 10,5 ms | ≈ 8 ms | cumple justo (1753 ms) |
+| 286 (Sistemas, 12:00) | 7,4 ms | ≈ 8 ms | no cumple por poco (no medido con 286) |
+| 400 | 5,3 ms | ≈ 8 ms | no cumple (3128 ms) |
+| 507 (pico FISI) | 4,2 ms | ≈ 8 ms | no cumple; se cumpliría bajando t_cs a ≈ 4 ms, o repartiendo la disputa |
 
-El presupuesto se cumple hasta ≈ 250 alumnos en una sola cohorte. Para 507 haría falta bajar t_cs a ≈ 4 ms o repartir la disputa entre secciones.
+Hasta ≈ 250 alumnos en una sola cohorte el presupuesto se cumple. Si bajar t_cs a ≈ 4 ms es factible no está medido: `critical` es ≈ 6 ms con ≈ 10 sentencias en la ruta de rechazo.
+
+## 6. Estado de aceptación de P1 (estrategia §9)
+
+| Criterio | Estado |
+| --- | --- |
+| Desglose de §5.4 que cubre ≥ 90 % del p95 en race y ample | **Parcial.** La media se cubre al 99–99,9 % en ambos. El p95, con el intervalo de buckets, tiene límite inferior de 96 % en race 400 y de 87 % en ample 400: **no se cumple en ample** |
+| E1–E6 ejecutados | E1, E2, E4, E5 y E6 ejecutados. E3 y E3b pendientes (`pg_test_fsync` y tmpfs) |
+| H1–H6 confirmadas o descartadas con evidencia | **No cumplido todavía:** H3, H4 y H5 confirmadas; H1 y H6 `inconclusive` por los criterios literales; H2 pendiente de E3b |
+
+La puerta «sin evidencia suficiente de P1 no se ejecuta P2» **no está superada formalmente**. La evidencia sí identifica el mecanismo (cola en la sección caliente, t_cs ≈ 8 ms, 3 checkouts por petición), pero decidir si basta para activar P2 corresponde al operador.
+
+## 7. Tareas P2 recomendadas, por palanca (`inferred`; ninguna se implementa en P1-06)
+
+1. **Reducir t_cs** (P2-05, P2-04): menos sentencias bajo el bloqueo, no releer el catálogo completo. Es la palanca de race: pasar de 8 a ≈ 4 ms reduciría el p95 a la mitad en el modelo de §4.1. Debe preservar el orden de locks, la idempotencia y los cupos.
+2. **Menos checkouts por petición** (P2-03) y pool dimensionado (P2-07a): ataca H3. No se espera efecto en el p95 de race; sí en lecturas y autenticación.
+3. **Índice de sesiones académicas** (P2-02): barato; su impacto depende de E9.
+4. **Replay antes de bloquear** (P2-01): solo relevante para retry; H9 no se confirmó en E11.
+
+## 8. Huecos y límites de esta campaña
+
+- E14 stress no se ejecutó (decisión del operador); mixed con pool 40 tiene n = 2 (decisión del operador).
+- Runs excluidos por el guard: race pool 40 r2 y hotspot pool 24 r3 (`HTTP_BLOCKED`), y los 3 de login (`RESOURCES_MISSING`).
+- **Deriva entre bloques.** Los centinelas race 400 van de 3199 a 3782 ms (≈ 18 %), frente a ≈ 2 % entre repeticiones de E1. Por la regla de §2.2, **no se comparan cifras entre bloques**; todas las comparaciones de este informe son dentro de su bloque.
+- El coste del muestreador de 1 s y de las consultas `pg_*` no se midió (E13 solo apaga el exportador).
+- E8 se ejecutó en ENV-H (la estrategia lo sitúa en ENV-C).
+- Pendientes tras la campaña: `pg_test_fsync` (E3), E3b y E9 con PostgreSQL desechable, y E10 para H8.
