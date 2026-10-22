@@ -347,3 +347,63 @@ test('all keeps its twelve scenarios in order, without fisi-franja, even with FI
   assert.deepEqual(k6Calls(result.calls).map(call => tag(call, 'load_scenario')), ['login', 'race', 'last-seat', 'ample', 'mixed', 'multi-uniform', 'multi-hotspot', 'retry', 'resilience', 'stress', 'soak', 'reads'])
   assert.doesNotMatch(await configOf(root), /SIMULATOR_FISI_/)
 }))
+
+test('jornada defaults to 1422 actors on a fisi-schools jornada campaign and passes WAVE_* to k6', withTree(async root => {
+  const result = await exec(root, 'load/scenarios.sh', ['jornada'], { WAVE_INTERVAL: '30', WAVE_FRONTLOAD: '0.5', START_DELAY_MS: '5000', SCENARIO_FISI_CAPACITY: 'scarce', SCENARIO_FISI_IA_ACTORS: '20' })
+  assert.equal(result.code, 0, result.stderr)
+  assert.match(result.stdout, /Scenario=jornada actors=1422 profile=fisi-schools /)
+  const config = await configOf(root)
+  assert.match(config, /^SIMULATOR_SCENARIO_PROFILE=fisi-schools$/m)
+  assert.match(config, /^SIMULATOR_ACTOR_COUNT=1422$/m)
+  assert.match(config, /^SIMULATOR_FISI_FRANJA=jornada$/m)
+  assert.match(config, /^SIMULATOR_FISI_CAPACITY=scarce$/m)
+  assert.match(config, /^SIMULATOR_FISI_IA_ACTORS=20$/m)
+  const k6 = k6Calls(result.calls)
+  assert.equal(k6.length, 1)
+  assert.equal(tag(k6[0], 'load_scenario'), 'jornada')
+  assert.equal(tag(k6[0], 'population'), '1422')
+  assert.match(k6[0], /\/load\/jornada\.js$/)
+  assert.match(k6[0], /-e WAVE_INTERVAL=30 -e WAVE_FRONTLOAD=0\.5 -e START_DELAY_MS=5000 /)
+  assert.match(checkCalls(result.calls)[0], / jornada /)
+}))
+
+test('jornada uses a short WAVE_INTERVAL in quick mode unless set explicitly', async () => {
+  for (const [env, expected] of [[{}, /-e WAVE_INTERVAL=10 /], [{ WAVE_INTERVAL: '20' }, /-e WAVE_INTERVAL=20 /]]) {
+    const root = await tree()
+    try {
+      const result = await exec(root, 'load/scenarios.sh', ['jornada'], { SCENARIO_QUICK: '1', ...env })
+      assert.equal(result.code, 0, result.stderr)
+      assert.match(k6Calls(result.calls)[0], expected)
+    } finally { await rm(root, { recursive: true, force: true }) }
+  }
+})
+
+test('enrollment-open defaults to an ample campaign with 400 actors and passes RATE and DURATION', async () => {
+  const root = await tree()
+  try {
+    const result = await exec(root, 'load/scenarios.sh', ['enrollment-open'], { RATE: '5', SCENARIO_DURATION: '40s' })
+    assert.equal(result.code, 0, result.stderr)
+    assert.match(result.stdout, /Scenario=enrollment-open actors=400 profile=ample /)
+    const config = await configOf(root)
+    assert.match(config, /^SIMULATOR_SCENARIO_PROFILE=ample$/m)
+    assert.match(config, /^SIMULATOR_ACTOR_COUNT=400$/m)
+    assert.doesNotMatch(config, /SIMULATOR_FISI_/)
+    const k6 = k6Calls(result.calls)
+    assert.match(k6[0], /\/load\/enrollment-open\.js$/)
+    assert.match(k6[0], /-e DURATION=40s /)
+    assert.match(k6[0], /-e RATE=5 /)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('invalid WAVE_*, START_DELAY_MS and RATE values exit 2 before any docker call', async () => {
+  const cases = [['jornada', { WAVE_FRONTLOAD: '1.5' }], ['jornada', { WAVE_FRONTLOAD: '-1' }], ['jornada', { WAVE_FRONTLOAD: 'x' }], ['jornada', { WAVE_INTERVAL: '0' }], ['jornada', { WAVE_INTERVAL: '3601' }], ['jornada', { WAVE_INTERVAL: '1;ls' }], ['jornada', { START_DELAY_MS: '-5' }],
+    ['enrollment-open', { RATE: '0' }], ['enrollment-open', { RATE: '1001' }], ['enrollment-open', { RATE: 'abc' }], ['enrollment-open', { RATE: '10', SCENARIO_DURATION: '60s' }]]
+  for (const [scenario, env] of cases) {
+    const root = await tree()
+    try {
+      const result = await exec(root, 'load/scenarios.sh', [scenario], env)
+      assert.equal(result.code, 2, JSON.stringify(env))
+      assert.deepEqual(result.calls, [], JSON.stringify(env))
+    } finally { await rm(root, { recursive: true, force: true }) }
+  }
+})

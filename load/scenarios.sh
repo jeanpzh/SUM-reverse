@@ -21,7 +21,7 @@ if [[ "$WARMUP" != 0 && "$WARMUP" != 1 ]]; then echo 'SCENARIO_WARMUP must be 0 
 if [[ "$ORDER" != fixed && "$ORDER" != shuffle ]]; then echo 'SCENARIO_ORDER must be fixed or shuffle' >&2; exit 2; fi
 if [[ -n "$SEED" ]] && ! [[ "$SEED" =~ ^[0-9]{1,9}$ ]]; then echo 'SCENARIO_SEED must be an integer with at most 9 digits' >&2; exit 2; fi
 if [[ "${SIMULATOR_RECREATE:-full}" != full && "${SIMULATOR_RECREATE:-full}" != app ]]; then echo 'SIMULATOR_RECREATE must be full or app' >&2; exit 2; fi
-case "$scenario" in all|login|race|last-seat|ample|mixed|multi-uniform|multi-hotspot|fisi-franja|retry|resilience|stress|soak|reads) ;; *) echo 'Usage: bash load/scenarios.sh all|login|race|last-seat|ample|mixed|multi-uniform|multi-hotspot|fisi-franja|retry|resilience|stress|soak|reads' >&2; exit 2 ;; esac
+case "$scenario" in all|login|race|last-seat|ample|mixed|multi-uniform|multi-hotspot|fisi-franja|jornada|enrollment-open|retry|resilience|stress|soak|reads) ;; *) echo 'Usage: bash load/scenarios.sh all|login|race|last-seat|ample|mixed|multi-uniform|multi-hotspot|fisi-franja|jornada|enrollment-open|retry|resilience|stress|soak|reads' >&2; exit 2 ;; esac
 # fisi-franja: one FISI franja (1..9) as a single burst; the full day (jornada) belongs to a separate k6 script.
 FISI_FRANJA=${SCENARIO_FISI_FRANJA:-4}
 fisi_env=()
@@ -34,6 +34,33 @@ if [[ "$scenario" == fisi-franja ]]; then
   if [[ -n "${SCENARIO_FISI_CAPACITY:-}" ]]; then fisi_env+=(SIMULATOR_FISI_CAPACITY="$SCENARIO_FISI_CAPACITY"); fi
   if [[ -n "${SCENARIO_FISI_SCARCE_RATIO:-}" ]]; then fisi_env+=(SIMULATOR_FISI_SCARCE_RATIO="$SCENARIO_FISI_SCARCE_RATIO"); fi
   if [[ -n "${SCENARIO_FISI_IA_ACTORS:-}" ]]; then fisi_env+=(SIMULATOR_FISI_IA_ACTORS="$SCENARIO_FISI_IA_ACTORS"); fi
+fi
+# jornada: the whole FISI day (9 waves) compressed in time; enrollment-open: sustained submit arrival rate over an ample campaign.
+jornada_args=()
+if [[ "$scenario" == jornada ]]; then
+  if [[ -z "${SCENARIO_ACTORS:-}" ]]; then ACTORS=1422; fi
+  fisi_env=(SIMULATOR_FISI_FRANJA=jornada)
+  if [[ -n "${SCENARIO_FISI_CAPACITY:-}" ]]; then fisi_env+=(SIMULATOR_FISI_CAPACITY="$SCENARIO_FISI_CAPACITY"); fi
+  if [[ -n "${SCENARIO_FISI_SCARCE_RATIO:-}" ]]; then fisi_env+=(SIMULATOR_FISI_SCARCE_RATIO="$SCENARIO_FISI_SCARCE_RATIO"); fi
+  if [[ -n "${SCENARIO_FISI_IA_ACTORS:-}" ]]; then fisi_env+=(SIMULATOR_FISI_IA_ACTORS="$SCENARIO_FISI_IA_ACTORS"); fi
+  if [[ -n "${WAVE_INTERVAL:-}" ]] && { ! [[ "$WAVE_INTERVAL" =~ ^[1-9][0-9]{0,3}$ ]] || (( WAVE_INTERVAL > 3600 )); }; then echo 'WAVE_INTERVAL must be an integer of seconds 1..3600' >&2; exit 2; fi
+  if [[ -n "${WAVE_FRONTLOAD:-}" ]] && ! [[ "$WAVE_FRONTLOAD" =~ ^(0|1|0?\.[0-9]{1,6}|1\.0{1,6}|0\.0{1,6})$ ]]; then echo 'WAVE_FRONTLOAD must be a decimal between 0 and 1' >&2; exit 2; fi
+  if [[ -n "${START_DELAY_MS:-}" ]] && { ! [[ "$START_DELAY_MS" =~ ^[0-9]{1,6}$ ]] || (( 10#$START_DELAY_MS > 600000 )); }; then echo 'START_DELAY_MS must be an integer of milliseconds 0..600000' >&2; exit 2; fi
+  if [[ -n "${WAVE_INTERVAL:-}" ]]; then jornada_args+=(-e WAVE_INTERVAL="$WAVE_INTERVAL"); elif [[ "${SCENARIO_QUICK:-0}" == 1 ]]; then jornada_args+=(-e WAVE_INTERVAL=10); fi
+  if [[ -n "${WAVE_FRONTLOAD:-}" ]]; then jornada_args+=(-e WAVE_FRONTLOAD="$WAVE_FRONTLOAD"); fi
+  if [[ -n "${START_DELAY_MS:-}" ]]; then jornada_args+=(-e START_DELAY_MS="$START_DELAY_MS"); fi
+fi
+if [[ "$scenario" == enrollment-open ]]; then
+  if [[ -z "${SCENARIO_ACTORS:-}" ]]; then ACTORS=400; fi
+  if [[ -n "${RATE:-}" ]] && { ! [[ "$RATE" =~ ^[1-9][0-9]{0,3}$ ]] || (( RATE > 1000 )); }; then echo 'RATE must be an integer of submits per second 1..1000' >&2; exit 2; fi
+  if [[ -n "${RATE:-}" ]]; then jornada_args+=(-e RATE="$RATE"); fi
+  # An actor never submits twice: RATE x DURATION must fit in the population (default 10/s x 30s = 300 of 400).
+  open_duration=${SCENARIO_DURATION:-$([[ "$QUICK" == 1 ]] && echo 15s || echo 30s)}
+  if [[ "$open_duration" =~ ^([0-9]+)([sm])$ ]]; then
+    open_seconds=$(( 10#${BASH_REMATCH[1]} ))
+    if [[ ${BASH_REMATCH[2]} == m ]]; then open_seconds=$(( open_seconds * 60 )); fi
+    if (( ${RATE:-10} * open_seconds > ACTORS )); then echo 'RATE x DURATION must not exceed the actor population (SCENARIO_ACTORS)' >&2; exit 2; fi
+  fi
 fi
 if [[ "$QUICK" != 0 && "$QUICK" != 1 ]]; then echo 'SCENARIO_QUICK must be 0 or 1' >&2; exit 2; fi
 if [[ ! -f infra/simulator/runtime/config.env ]]; then docker compose up --build -d --wait; fi
@@ -90,13 +117,13 @@ run_one() {
   audit > "$RESULTS/preflight-$testid.json" || return 1
   read -r current_enrollments current_requests < <(helper audit-counts "preflight-$testid.json") || return 1
   case "$item" in
-    ample|retry|mixed) profile=ample ;;
+    ample|retry|mixed|enrollment-open) profile=ample ;;
     last-seat|multi-uniform|multi-hotspot) profile=$item ;;
-    fisi-franja) profile=fisi-schools ;;
+    fisi-franja|jornada) profile=fisi-schools ;;
   esac
   # FISI values reach the rotation only for fisi-franja; inherited SIMULATOR_FISI_* never leak into other scenarios.
   local -a rotate_env=(-u SIMULATOR_FISI_FRANJA -u SIMULATOR_FISI_IA_ACTORS -u SIMULATOR_FISI_CAPACITY -u SIMULATOR_FISI_SCARCE_RATIO)
-  if [[ "$item" == fisi-franja ]]; then rotate_env+=("${fisi_env[@]}"); fi
+  if [[ "$item" == fisi-franja || "$item" == jornada ]]; then rotate_env+=("${fisi_env[@]}"); fi
   if ! env "${rotate_env[@]}" SIMULATOR_REBUILD=0 bash infra/simulator/rotate-campaign.sh "$current_enrollments" "$current_requests" shared "$ACTORS" "$profile" > "$RESULTS/prepare-$testid.log" 2>&1; then
     echo "Campaign preparation failed. Inspect $RESULTS/prepare-$testid.log; no load was started."
     return 1
@@ -109,15 +136,18 @@ run_one() {
     stress) script=sessions; duration=10m ;;
     soak) script=sessions; duration=30m ;;
     reads) script=reads; duration=2m ;;
+    jornada) script=jornada ;;
+    enrollment-open) script=enrollment-open; duration=30s ;;
   esac
   if [[ "$QUICK" == 1 ]]; then
     mode=quick; stage=5s
-    case "$item" in mixed|stress|soak|reads) duration=30s ;; resilience) duration=60s ;; esac
+    case "$item" in mixed|stress|soak|reads) duration=30s ;; enrollment-open) duration=15s ;; resilience) duration=60s ;; esac
   fi
   duration=${SCENARIO_DURATION:-$duration}
   local -a args=(-e SCENARIO_NAME="$item" -e SCENARIO_RUN_MODE="$mode" -e LOAD_MODE="$mode" -e BARRIER_DELAY_MS="${SCENARIO_BARRIER_MS:-20000}" -e STAGE_DURATION="$stage")
   if [[ -n "$duration" ]]; then args+=(-e DURATION="$duration"); fi
   if [[ "$QUICK" == 1 ]]; then args+=(-e RAMP_10_DURATION=5s -e RAMP_25_DURATION=5s -e THINK_MIN_SECONDS=0.2 -e THINK_MAX_SECONDS=0.5); fi
+  if [[ "$item" == jornada || "$item" == enrollment-open ]]; then args+=("${jornada_args[@]}"); fi
   if [[ "$item" == resilience ]]; then args+=(-e RESILIENCE_API_DOWN_START_SECONDS=13 -e RESILIENCE_API_DOWN_DURATION_SECONDS=15 -e RESILIENCE_DB_DOWN_START_SECONDS=28 -e RESILIENCE_DB_DOWN_DURATION_SECONDS=20); fi
   container="sum-load-$testid"
   helper run-meta "$testid" "$ENV_LABEL" "$REP" "$(git rev-parse HEAD 2>/dev/null || echo unknown)" "$(cpuset_lines)" > /dev/null || return 1
