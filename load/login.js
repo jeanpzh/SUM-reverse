@@ -20,6 +20,7 @@ export const options = {
     login_iterations_completed: [`count==${actors.length}`],
     login_unexpected: ['count==0'],
     login_start_offset_ms: [`max<${startWindowMs}`],
+    'http_req_duration{name:auth-login}': [`p(95)<${Number(__ENV.LOGIN_P95_MS || 2000)}`, `p(99)<${Number(__ENV.LOGIN_P99_MS || 5000)}`],
   },
 }
 

@@ -222,3 +222,31 @@ test('fisi-schools preflight rejects overlapping cohorts, selection drift and wa
   unexpectedWave.actors[0].wave = 4
   assert.throws(() => validateManifest(unexpectedWave), /only valid in jornada/)
 })
+
+test('wave schedule opens each wave at its interval and keeps every actor once', async () => {
+  const { waveOffsets } = await import('../load/wave-schedule.mjs')
+  const actors = [1, 1, 1, 1, 2, 2, 3].map(wave => ({ wave }))
+  const base = { intervalMs: 60000, delayMs: 10000 }
+  assert.deepEqual(waveOffsets(actors, { ...base, frontload: 1 }), [10000, 10000, 10000, 10000, 70000, 70000, 130000])
+  assert.deepEqual(waveOffsets(actors, { ...base, frontload: 0 }), [10000, 25000, 40000, 55000, 70000, 100000, 130000])
+  assert.deepEqual(waveOffsets(actors, { ...base, frontload: 0.5 }), [10000, 10000, 10000, 40000, 70000, 70000, 130000])
+  assert.deepEqual(waveOffsets(actors, { ...base, frontload: 0.5 }), waveOffsets(actors, { ...base, frontload: 0.5 }))
+  const spread = waveOffsets(actors, { ...base, frontload: 0.3 })
+  assert.ok(spread.every((offset, index) => offset >= 10000 + (actors[index].wave - 1) * 60000 && offset < 10000 + actors[index].wave * 60000))
+  assert.throws(() => waveOffsets([{}], { ...base, frontload: 1 }), /wave/)
+  assert.throws(() => waveOffsets(actors, { ...base, frontload: 2 }), /WAVE_FRONTLOAD/)
+})
+
+test('jornada, enrollment-open and login declare the D-2 SLO thresholds and no identity tags', async () => {
+  const [jornada, open, login] = await Promise.all(['jornada', 'enrollment-open', 'login'].map(name => readFile(new URL(`../load/${name}.js`, import.meta.url), 'utf8')))
+  for (const source of [jornada, open, login]) {
+    assert.match(source, /'http_req_duration\{name:auth-login\}': \[`p\(95\)<\$\{Number\(__ENV\.LOGIN_P95_MS \|\| 2000\)\}`, `p\(99\)<\$\{Number\(__ENV\.LOGIN_P99_MS \|\| 5000\)\}`\]/)
+    assert.doesNotMatch(source, /tags:\s*\{[^}]*\b(?:actorId|credential|sessionId)\b/)
+  }
+  for (const source of [jornada, open]) assert.match(source, /'http_req_duration\{operation:submit\}': \[`p\(95\)<\$\{Number\(__ENV\.ENROLLMENT_P95_MS \|\| 2000\)\}`/)
+  assert.match(jornada, /per-vu-iterations/)
+  assert.match(jornada, /jornada_completed: \[`count==\$\{actors\.length\}`\]/)
+  assert.match(open, /constant-arrival-rate/)
+  assert.match(open, /open_population_exhausted: \['count==0'\]/)
+  assert.match(open, /exec\.scenario\.iterationInTest/)
+})

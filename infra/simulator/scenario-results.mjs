@@ -69,7 +69,7 @@ if (mode === 'audit-counts') {
   const initial = Number(manifest.initialEnrollments ?? 0)
   const initialRequests = Number(manifest.initialRequests ?? 0)
   let expectedEnrollments = initial, expectedRequests = initialRequests
-  if (['race', 'ample', 'last-seat', 'multi-uniform', 'multi-hotspot', 'fisi-franja'].includes(scenario)) {
+  if (['race', 'ample', 'last-seat', 'multi-uniform', 'multi-hotspot', 'fisi-franja', 'jornada'].includes(scenario)) {
     expectedEnrollments += manifest.expectedAccepted
     expectedRequests += manifest.actors.length
   } else if (scenario === 'retry') {
@@ -78,6 +78,9 @@ if (mode === 'audit-counts') {
   } else if (scenario === 'mixed') {
     expectedEnrollments += count('mixed_submissions_accepted')
     expectedRequests += count('mixed_submit_actions')
+  } else if (scenario === 'enrollment-open') {
+    expectedEnrollments += count('open_accepted')
+    expectedRequests += count('open_submits')
   }
   const actual = { enrollments: Number(audit.totals.enrollments), requests: Number(audit.totals.requests) }
   const integrity = audit.passed === true && actual.enrollments === expectedEnrollments && actual.requests === expectedRequests

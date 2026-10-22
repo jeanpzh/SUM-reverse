@@ -163,3 +163,46 @@ test('fisi-franja expects manifest.expectedAccepted enrollments and one request 
     await assert.rejects(run('node', args, { env: { ...process.env, SCENARIO_RUNTIME_DIR: dir } }))
   } finally { await rm(dir, { recursive: true, force: true }) }
 })
+
+async function checkScenario(dir, scenario, audit, summary, manifest) {
+  await writeFile(join(dir, 'manifest.json'), JSON.stringify(manifest))
+  await writeFile(join(dir, 'results', 'audit.json'), JSON.stringify({ passed: true, totals: audit }))
+  await writeFile(join(dir, 'results', `${scenario}-${testid}-summary.json`), JSON.stringify({ metrics: summary }))
+  const { stdout } = await run('node', [helper, 'check', 'audit.json', scenario, testid, '0', 'normal', '1000', '2000'], { env: { ...process.env, SCENARIO_RUNTIME_DIR: dir } })
+  return JSON.parse(stdout)
+}
+
+test('jornada expects manifest.expectedAccepted enrollments and one request per actor', async () => {
+  const dir = await fixture()
+  try {
+    const actors = Array.from({ length: 1422 }, (_, index) => ({ actorId: `SYN-SIS-U${index}` }))
+    const printed = await checkScenario(dir, 'jornada', { enrollments: 700, requests: 1422 }, {}, { actors, scenarioProfile: 'fisi-schools', expectedAccepted: 700, initialEnrollments: 0, initialRequests: 0 })
+    assert.deepEqual(printed.expected, { enrollments: 700, requests: 1422 })
+    assert.equal(printed.passed, true)
+  } finally { await rm(dir, { recursive: true, force: true }) }
+})
+
+test('enrollment-open expects the accepted and submitted counters', async () => {
+  const dir = await fixture()
+  try {
+    const manifest = { actors: Array.from({ length: 400 }, (_, index) => ({ actorId: `SYN-SIS-U${index}` })), scenarioProfile: 'ample', expectedAccepted: 400, initialEnrollments: 0, initialRequests: 0 }
+    const counters = { open_accepted: { count: 120 }, open_submits: { count: 120 } }
+    const printed = await checkScenario(dir, 'enrollment-open', { enrollments: 120, requests: 120 }, counters, manifest)
+    assert.deepEqual(printed.expected, { enrollments: 120, requests: 120 })
+    assert.equal(printed.passed, true)
+    await assert.rejects(checkScenario(dir, 'enrollment-open', { enrollments: 120, requests: 119 }, counters, manifest))
+  } finally { await rm(dir, { recursive: true, force: true }) }
+})
+
+test('a login result with an auth-login duration threshold reports a non-null performance verdict', async () => {
+  const dir = await fixture()
+  try {
+    const metrics = failed => ({ 'http_req_duration{name:auth-login}': { thresholds: { 'p(95)<2000': failed, 'p(99)<5000': false } } })
+    const manifest = { actors: [], scenarioProfile: 'shared' }
+    const ok = await checkScenario(dir, 'login', { enrollments: 0, requests: 0 }, metrics(false), manifest)
+    assert.equal(ok.performancePassed, true)
+    await writeFile(join(dir, 'results', `login-${testid}-summary.json`), JSON.stringify({ metrics: metrics(true) }))
+    const failed = await run('node', [helper, 'check', 'audit.json', 'login', testid, '99', 'normal', '1000', '2000'], { env: { ...process.env, SCENARIO_RUNTIME_DIR: dir } }).catch(error => error)
+    assert.equal(JSON.parse(failed.stdout).performancePassed, false)
+  } finally { await rm(dir, { recursive: true, force: true }) }
+})
