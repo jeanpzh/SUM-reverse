@@ -8,7 +8,7 @@ import type { ActorProfile, EnrollmentProfile, OfferedCourse } from '../src/matr
 import { PostgresEnrollmentStore } from '../src/persistence/postgres-enrollment.store.js'
 import { parseSubmissionRequest } from '../src/matricula-regular/dto/submission.dto.js'
 import { assertSyntheticDatabase } from './synthetic-database.js'
-import { capacityManifest, createSyntheticLoadProfile, parseActorCount, resolveScenarioProfile } from './synthetic-load-profile.js'
+import { capacityManifest, createSyntheticLoadProfile, parseActorCount, parseFisiConfig, resolveScenarioProfile } from './synthetic-load-profile.js'
 
 const connectionString = process.env.DATABASE_URL
 assertSyntheticDatabase(connectionString)
@@ -41,13 +41,15 @@ profiles[0]!.calendar.effectiveWindows = [{
   origin: 'synthetic',
   sourceIds: ['SYN-FIXTURE'],
 }]
-const load = createSyntheticLoadProfile(actorCount, scenarioProfile, fixture.actors, fixture.offer)
+const fisiConfig = parseFisiConfig(process.env, scenarioProfile, actorCount)
+const load = createSyntheticLoadProfile(actorCount, scenarioProfile, fixture.actors, fixture.offer, fisiConfig)
 const actors: ActorProfile[] = load.actors
 const offer: OfferedCourse[] = load.offer
 const credentials = actors.map((actor) => ({
   actorId: actor.actorId,
   credential: randomBytes(32).toString('base64url'),
   ...(load.actorSelections.has(actor.actorId) ? { selection: load.actorSelections.get(actor.actorId)! } : {}),
+  ...(load.fisi ? load.fisi.actorMeta.get(actor.actorId) : {}),
 }))
 const temporaryManifest = `${manifestPath}.${process.pid}.tmp`
 let publishedManifest = false
@@ -129,6 +131,19 @@ async function main() {
       initialRequests: load.initialRequests,
       expectedRejected: load.expectedRejected,
       capacityBySection: capacityManifest(offer, initialOccupied),
+      ...(load.fisi ? {
+        cohorts: load.fisi.cohorts,
+        fisi: {
+          mode: load.fisi.config.mode,
+          ...(load.fisi.config.franja !== undefined ? { franja: load.fisi.config.franja } : {}),
+          iaActors: load.fisi.config.iaActors,
+          capacityMode: load.fisi.config.capacityMode,
+          ...(load.fisi.config.scarceRatio !== undefined ? { scarceRatio: load.fisi.config.scarceRatio } : {}),
+          sourceId: 'FISI-RANKING-2026-I',
+        },
+        hotCohortSize: load.fisi.hotCohortSize,
+        ...(load.fisi.waves ? { waves: load.fisi.waves } : {}),
+      } : {}),
     }
     await writeFile(temporaryManifest, `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o600, flag: 'wx' })
     await link(temporaryManifest, manifestPath)
