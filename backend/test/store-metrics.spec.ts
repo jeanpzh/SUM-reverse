@@ -29,6 +29,28 @@ describe('StoreMetrics', () => {
     expect(snap.submitStatements.replay.count).toBe(1)
   })
 
+  it('records failed attempts with only the measured phases', () => {
+    const metrics = new StoreMetrics()
+    metrics.recordFailed(5001, 40, 4)
+    metrics.recordFailed(5001, undefined, 1)
+    const snap = metrics.snapshot()
+    expect(snap.submitPhaseMs.total.failed).toMatchObject({ count: 2, sum: 10002 })
+    expect(snap.submitPhaseMs.total.failed.buckets[DURATION_BUCKETS_MS.findIndex((b) => 5001 <= b)]).toBe(2)
+    expect(snap.submitPhaseMs.section_lock_wait.failed.count).toBe(1)
+    expect(snap.submitPhaseMs.commit.failed.count).toBe(0)
+    expect(snap.submitStatements.failed).toMatchObject({ count: 2, sum: 5 })
+    expect(snap.submitPhaseMs.total.accepted.count).toBe(0)
+  })
+
+  it('extends duration buckets to 30 s', () => {
+    expect(DURATION_BUCKETS_MS.at(-1)).toBe(30000)
+    const metrics = new StoreMetrics()
+    metrics.recordFailed(26000, undefined, 1)
+    const total = metrics.snapshot().submitPhaseMs.total.failed.buckets
+    expect(total[total.length - 1]).toBe(0)
+    expect(total[DURATION_BUCKETS_MS.indexOf(30000)]).toBe(1)
+  })
+
   it('records pool acquisition separately from the route histograms', () => {
     const metrics = new StoreMetrics()
     metrics.recordPoolAcquire(3)

@@ -16,6 +16,9 @@ describe('store metrics with a mocked pool', () => {
     const snap = metrics.snapshot()
     expect(snap.storageErrorsTotal.pool_timeout).toBe(1)
     expect(snap.poolAcquireMs.count).toBe(1)
+    expect(snap.submitPhaseMs.total.failed.count).toBe(1)
+    expect(snap.submitPhaseMs.section_lock_wait.failed.count).toBe(0)
+    expect(snap.submitStatements.failed.sum).toBe(0)
     expect(pool.connect).toHaveBeenCalledTimes(1)
   })
 
@@ -39,5 +42,7 @@ describe('store metrics with a mocked pool', () => {
     const snap = metrics.snapshot()
     expect(snap.storageErrorsTotal.deadlock).toBe(3)
     expect(snap.submitRetriesTotal['40P01']).toBe(2)
+    expect(snap.submitPhaseMs.total.failed.count).toBe(3)
+    expect(snap.submitStatements.failed.sum).toBe(3)
   })
 })

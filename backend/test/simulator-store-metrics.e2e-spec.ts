@@ -56,6 +56,9 @@ describe.skipIf(!enabled)('store metrics against PostgreSQL', () => {
       expect(failed.storageErrorsTotal.other).toBe(0)
       expect(failed.submitRetriesTotal['55P03']).toBe(2)
       expect(failed.submitPhaseMs.total.accepted.count).toBe(0)
+      expect(failed.submitPhaseMs.section_lock_wait.failed.count).toBe(3)
+      expect(failed.submitPhaseMs.total.failed.count).toBe(3)
+      expect(failed.submitPhaseMs.section_lock_wait.failed.sum).toBeGreaterThanOrEqual(3 * 30)
       await blocker.query('ROLLBACK')
       blockerHasTransaction = false
 

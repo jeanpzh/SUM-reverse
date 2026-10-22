@@ -119,29 +119,35 @@ export class PostgresEnrollmentStore implements EnrollmentStore, OnModuleInit {
     if (request.actorId !== principal.actorId || request.runId !== principal.runId) throw new MatriculaRegularError(403, principal.runId, 'SESSION_CONTEXT_MISMATCH')
     let client: PoolClient | undefined
     let statements = 0
+    const acquireStart = performance.now()
+    let t0: number | undefined
+    let lockStart: number | undefined
+    let lockEnd: number | undefined
     try {
-      const acquireStart = performance.now()
       try { client = await this.pool.connect() } finally { this.metrics.recordPoolAcquire(performance.now() - acquireStart) }
       const raw = client
       // Counts every statement of the transaction (BEGIN and COMMIT included) without altering it.
       const db: Queryable = { query: ((...args: unknown[]) => { statements += 1; return (raw.query as (...a: unknown[]) => unknown).apply(raw, args) }) as Queryable['query'] }
-      const t0 = performance.now()
+      t0 = performance.now()
+      const txStart = t0
       await db.query('BEGIN')
       const campaign = await db.query<CampaignRow>('SELECT run_id,status,config FROM simulator_campaigns WHERE campaign_id=$1 FOR SHARE', [principal.campaignId])
       const campaignRow = campaign.rows[0]
       if (!campaignRow || campaignRow.run_id !== principal.runId) throw new MatriculaRegularError(409, principal.runId, 'RUN_CHANGED')
       await db.query('SELECT actor_id FROM simulator_actors WHERE campaign_id=$1 AND actor_id=$2 FOR UPDATE', [principal.campaignId, principal.actorId])
       const keys = [...request.selection].sort((a, b) => a.courseId.localeCompare(b.courseId) || a.sectionId.localeCompare(b.sectionId))
-      const lockStart = performance.now()
+      lockStart = performance.now()
+      const lockBegin = lockStart
       let firstLockMs = 0
       for (const choice of keys) {
         const one = performance.now()
         await db.query('SELECT section_id FROM simulator_sections WHERE campaign_id=$1 AND course_id=$2 AND section_id=$3 FOR UPDATE', [principal.campaignId, choice.courseId, choice.sectionId])
         if (firstLockMs === 0) firstLockMs = performance.now() - one
       }
-      const lockEnd = performance.now()
+      lockEnd = performance.now()
+      const lockDone = lockEnd
       const record = (route: SubmitRoute, commitStart: number, commitEnd: number) => this.metrics.recordSubmit(route, {
-        preLock: lockStart - t0, sectionLockFirst: firstLockMs, sectionLockWait: lockEnd - lockStart, critical: commitStart - lockEnd, commit: commitEnd - commitStart, total: commitEnd - t0, statements,
+        preLock: lockBegin - txStart, sectionLockFirst: firstLockMs, sectionLockWait: lockDone - lockBegin, critical: commitStart - lockDone, commit: commitEnd - commitStart, total: commitEnd - txStart, statements,
       })
       const state = await this.loadRunState(db, principal, campaignRow)
       if (state.requests.has(`${request.actorId}:${request.requestId}`)) {
@@ -181,7 +187,9 @@ export class PostgresEnrollmentStore implements EnrollmentStore, OnModuleInit {
     } catch (error) {
       await client?.query('ROLLBACK').catch(() => undefined)
       if (error instanceof MatriculaRegularError) throw error
+      const failedAt = performance.now()
       this.metrics.recordStorageError(classifyStorageError(error))
+      this.metrics.recordFailed(failedAt - (t0 ?? acquireStart), lockStart === undefined ? undefined : (lockEnd ?? failedAt) - lockStart, statements)
       if (['40P01', '40001', '55P03', '57014'].includes((error as { code?: string }).code ?? '')) throw error
       throw new MatriculaRegularError(503, principal.runId, 'STORAGE_UNAVAILABLE')
     } finally { client?.release() }

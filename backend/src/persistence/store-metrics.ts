@@ -5,7 +5,7 @@ import { Injectable } from '@nestjs/common'
 // credential, campaign, run) can never become label values.
 
 export const SUBMIT_PHASES = ['pre_lock', 'section_lock_first', 'section_lock_wait', 'critical', 'commit', 'total'] as const
-export const SUBMIT_ROUTES = ['accepted', 'rejected', 'replay'] as const
+export const SUBMIT_ROUTES = ['accepted', 'rejected', 'replay', 'failed'] as const
 export const STORAGE_ERROR_CAUSES = ['lock_timeout', 'deadlock', 'serialization', 'statement_timeout', 'pool_timeout', 'other'] as const
 export const SUBMIT_RETRY_CODES = ['55P03', '40P01', '40001', '57014'] as const
 
@@ -14,7 +14,7 @@ export type SubmitRoute = (typeof SUBMIT_ROUTES)[number]
 export type StorageErrorCause = (typeof STORAGE_ERROR_CAUSES)[number]
 export type SubmitRetryCode = (typeof SUBMIT_RETRY_CODES)[number]
 
-export const DURATION_BUCKETS_MS = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000] as const
+export const DURATION_BUCKETS_MS = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 30000] as const
 export const STATEMENT_BUCKETS = [5, 8, 10, 12, 15, 20, 30, 50, 100] as const
 
 export type HistogramSnapshot = { count: number; sum: number; buckets: number[] }
@@ -82,6 +82,13 @@ export class StoreMetrics {
     this.phases.commit[route].observe(t.commit)
     this.phases.total[route].observe(t.total)
     statements.observe(t.statements)
+  }
+
+  // Failed storage attempt: only what was measured up to the failure. Phases not reached stay unobserved.
+  recordFailed(totalMs: number, sectionLockWaitMs: number | undefined, statements: number) {
+    this.phases.total.failed.observe(totalMs)
+    if (sectionLockWaitMs !== undefined) this.phases.section_lock_wait.failed.observe(sectionLockWaitMs)
+    this.statements.failed.observe(statements)
   }
 
   recordPoolAcquire(ms: number) { this.poolAcquire.observe(ms) }
