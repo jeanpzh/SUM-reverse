@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { Pool } from 'pg'
 
 /** Fixed bucket upper bounds in milliseconds shared by the pool-wait and HTTP histograms. */
-export const DURATION_BUCKETS_MS = [1, 2, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000] as const
+export const DURATION_BUCKETS_MS = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 30000] as const
 const MAX_SERIES = 64
 const OVERFLOW_LABEL = 'other'
 export const NO_ROUTE_GROUP = 'none'
@@ -10,9 +10,10 @@ export const NO_ROUTE_GROUP = 'none'
 export type HistogramSeries = { labels: Record<string, string>; buckets: number[]; count: number; sumMs: number; maxMs: number }
 
 /**
- * Cumulative histogram with a bounded number of label sets. Labels must be low-cardinality
+ * Histogram with a bounded number of label sets. Labels must be low-cardinality
  * (route templates, methods, status codes); callers never pass identities or concrete URLs.
- * `buckets[i]` counts observations <= bounds[i]; the last slot is the +Inf overflow.
+ * Non-cumulative counts per bucket: slot i counts bounds[i-1] < value <= bounds[i]
+ * (slot 0 counts value <= bounds[0]); the last slot is +Inf.
  */
 export class LabeledHistogram {
   private readonly series = new Map<string, HistogramSeries>()

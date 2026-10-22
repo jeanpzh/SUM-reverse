@@ -2,7 +2,7 @@ import { EventEmitter } from 'node:events'
 import { describe, expect, it, vi } from 'vitest'
 import { lastValueFrom, of } from 'rxjs'
 import { Pool } from 'pg'
-import { instrumentPool, LabeledHistogram, PoolMetricsCollector, runWithRouteGroup } from '../src/persistence/postgres.js'
+import { DURATION_BUCKETS_MS, instrumentPool, LabeledHistogram, PoolMetricsCollector, runWithRouteGroup } from '../src/persistence/postgres.js'
 import { SimulatorMetricsInterceptor } from '../src/auth/simulator-metrics.interceptor.js'
 
 // Synthetic client: no PostgreSQL involved. pg-pool only needs connect/query/end/on.
@@ -101,13 +101,23 @@ describe('instrumented simulator pool', () => {
 })
 
 describe('histogram buckets', () => {
-  it('places observations in cumulative-bound buckets with an overflow slot', () => {
+  it('places observations in non-cumulative buckets with an overflow slot', () => {
     const histogram = new LabeledHistogram(['route'], [10, 100])
     histogram.observe(['/a'], 5)
     histogram.observe(['/a'], 10)
     histogram.observe(['/a'], 50)
     histogram.observe(['/a'], 5000)
     expect(histogram.snapshot()[0]).toMatchObject({ buckets: [2, 1, 1], count: 4, maxMs: 5000 })
+  })
+
+  it('uses the shared bounds so a 26 s duration lands in the 30000 bucket, not +Inf', () => {
+    expect(DURATION_BUCKETS_MS).toEqual([0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 30000])
+    const histogram = new LabeledHistogram(['route'])
+    histogram.observe(['/slow'], 26000)
+    const buckets = histogram.snapshot()[0]?.buckets as number[]
+    expect(buckets).toHaveLength(DURATION_BUCKETS_MS.length + 1)
+    expect(buckets[DURATION_BUCKETS_MS.indexOf(30000)]).toBe(1)
+    expect(buckets[buckets.length - 1]).toBe(0)
   })
 })
 
