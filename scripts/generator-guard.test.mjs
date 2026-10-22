@@ -62,6 +62,24 @@ test('summary without http_req_blocked/connecting is unclassifiable; the .values
   assert.deepEqual(codes(evaluateGeneratorGuard({ resourcesCsv: csv([10, 10]), summary: nested })), ['HTTP_BLOCKED'])
 })
 
+test('per-vu model ignores connecting and bounds blocked by max(50 ms, 10% of the duration p95)', () => {
+  const perVu = (blocked, duration) => evaluateGeneratorGuard({
+    resourcesCsv: csv([10, 10]),
+    summary: { metrics: { ...okSummary.metrics, http_req_blocked: { 'p(95)': blocked }, http_req_connecting: { 'p(95)': 40 }, http_req_duration: { 'p(95)': duration } } },
+    options: { connectionModel: 'per-vu' }
+  })
+  assert.equal(perVu(40, 100).valid, true)
+  assert.equal(perVu(250, 2600).valid, true)
+  assert.deepEqual(codes(perVu(270, 2600)), ['HTTP_BLOCKED'])
+  assert.deepEqual(codes(perVu(51, 100)), ['HTTP_BLOCKED'])
+})
+
+test('per-vu model needs http_req_duration; an unknown model throws', () => {
+  const summary = { metrics: { http_req_blocked: { 'p(95)': 1 }, http_req_connecting: { 'p(95)': 1 } } }
+  assert.deepEqual(codes(evaluateGeneratorGuard({ resourcesCsv: csv([10, 10]), summary, options: { connectionModel: 'per-vu' } })), ['SUMMARY_UNCLASSIFIABLE'])
+  assert.throws(() => evaluateGeneratorGuard({ resourcesCsv: csv([10, 10]), summary: okSummary, options: { connectionModel: 'pooled' } }))
+})
+
 test('invalid by the remote-write failure line', () => {
   const log = 'time="x" level=error msg="Failed to send the time series data to the endpoint"'
   assert.deepEqual(codes(evaluateGeneratorGuard({ resourcesCsv: csv([10, 10]), summary: okSummary, log })), ['REMOTE_WRITE'])
@@ -85,4 +103,6 @@ test('CLI exit codes: 0 valid, 3 invalid, 2 usage', () => {
   assert.equal(run('--resources', join(dir, 'absent.csv'), '--summary', summary).status, 3)
   assert.equal(run('--summary', summary).status, 2)
   assert.equal(run('--resources', good, '--summary', summary, '--log', join(dir, 'typo.log')).status, 2)
+  assert.equal(run('--resources', good, '--summary', summary, '--connection-model', 'per-vu').status, 3)
+  assert.equal(run('--resources', good, '--summary', summary, '--connection-model', 'pooled').status, 2)
 })

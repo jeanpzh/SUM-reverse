@@ -114,6 +114,13 @@ Una ejecución es **inválida** (no cuenta ni a favor ni en contra) si se cumple
 - `dropped_iterations > 0` en un escenario abierto antes de alcanzar el SLO. En ese caso se registra como «cliente sin VU suficientes», no como un fallo del servidor.
 - Hay un fallo de remote write o falta el CSV de recursos.
 
+**Escenarios de una iteración por VU** (`per-vu-iterations` con `iterations: 1`: enrollment, login, retry y jornada). Cada VU abre su propia conexión por diseño, así que no hay keepalive que comprobar. La regla de conexión cambia (`--connection-model per-vu` del guard):
+
+- `http_req_connecting` no invalida la ejecución.
+- El p95 de `http_req_blocked` debe quedar por debajo de max(50 ms, 10 % del p95 de `http_req_duration`). `http_req_duration` no incluye el tiempo bloqueado: ese tiempo solo retrasa las llegadas, por eso se acota en proporción a la latencia medida.
+
+El resto de las reglas no cambia. Aprobado por el usuario el 2026-10-22, después de ver los datos de la línea base P0-06 (las 30 ejecuciones de una iteración por VU quedaban inválidas solo por esta regla). El umbral se eligió conociendo esos datos y por eso no es una predicción independiente.
+
 ### 5.4 Atribución de latencia (por petición de envío, a partir de las medianas y p95 de cada fase)
 
 ```

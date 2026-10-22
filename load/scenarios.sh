@@ -189,7 +189,10 @@ run_one() {
   if grep -Fq 'Failed to send the time series data to the endpoint' "$RESULTS/$item-$testid.log"; then status=1; fi
   tail -n 48 "$RESULTS/$item-$testid.log"
   # Informative validity of the load generator; it never changes the k6 or check exit status.
-  node load/check-generator-guard.mjs --resources "$RESULTS/resources-$testid.csv" --summary "$RESULTS/$item-$testid-summary.json" --log "$RESULTS/$item-$testid.log" > "$RESULTS/guard-$testid.json" 2>/dev/null || guard_status=$?
+  # Scripts that run one iteration per VU open one connection per VU by design (strategy §5.3).
+  local connection_model=keepalive
+  case "$script" in enrollment|login|retry|jornada) connection_model=per-vu ;; esac
+  node load/check-generator-guard.mjs --resources "$RESULTS/resources-$testid.csv" --summary "$RESULTS/$item-$testid-summary.json" --log "$RESULTS/$item-$testid.log" --connection-model "$connection_model" > "$RESULTS/guard-$testid.json" 2>/dev/null || guard_status=$?
   if [[ "$guard_status" != 0 && "$guard_status" != 3 ]] || ! node -e "const g=JSON.parse(require('node:fs').readFileSync(process.argv[1],'utf8'));if(typeof g.valid!=='boolean')process.exit(1)" "$RESULTS/guard-$testid.json" 2>/dev/null; then
     printf '{"valid":false,"reasons":["GUARD_FAILED: el validador del generador no produjo resultado (exit %s)"]}\n' "$guard_status" > "$RESULTS/guard-$testid.json"
   fi
