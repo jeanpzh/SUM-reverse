@@ -97,7 +97,7 @@ Cada veredicto aplica los criterios «Confirma si» y «Descarta si» de la estr
 | **H8** Oleadas de mixed | pendiente | Depende de E10 (mixed rápido frente a normal) y de mixed normal pool 12 | — |
 | **H9** Replays que bloquean antes de detectar idempotencia | `rejected` por el criterio de E11 | **E11:** con 50 % de replays, `critical` de los envíos nuevos no sube (7,9 frente a 8,4 ms) y la espera del bloqueo baja (188 frente a 240 ms) | E11 no mide el escenario retry; el efecto de resolver el replay antes de bloquear (P2-01) solo se puede medir con A/B |
 | **H10** Rate limit del login | `rejected` (con salvedad) | **E12:** sin esperas `Lock:tuple`; las dominantes son `LWLock:WALWrite` (hasta 16), `Lock:transactionid` (5–16) y `LWLock:LockManager`. Media de 758–923 ms, p95 en [1 s, 1,5 s] | Los 3 runs salieron `valid=false` del guard (`RESOURCES_MISSING`: login demasiado corto para 2 muestras de recursos). No se usan para un veredicto firme |
-| **H11** MultiXact por `FOR SHARE` de campaña | `rejected` | Ningún run muestra esperas `LWLock:MultiXact*` en el muestreo (0 de 107 runs) | — |
+| **H11** MultiXact por `FOR SHARE` de campaña | `rejected` | Ningún run muestra esperas `LWLock:MultiXact*` en el muestreo (0 de 87 runs con captura del servidor) | — |
 | **H12** Observabilidad en el pool | `rejected` | **E13:** exportador apagado 3660 [3629–3809] ms; activo 3715 [3710–3779] ms (+1,5 %, dentro del ruido) | El muestreador de 1 s y las consultas `pg_*` de P1-03 siguen activos en ambos brazos (no medidos) |
 
 ### 4.1 Hallazgos que no estaban en las hipótesis
