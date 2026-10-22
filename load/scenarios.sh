@@ -7,6 +7,10 @@ scenario=${1:-all}
 ACTORS=${SCENARIO_ACTORS:-400}
 QUICK=${SCENARIO_QUICK:-0}
 if ! [[ "$ACTORS" =~ ^[1-9][0-9]{0,3}$ ]] || (( ACTORS > 1000 )); then echo 'SCENARIO_ACTORS must be 1..1000' >&2; exit 2; fi
+ENV_LABEL=${SCENARIO_ENV:-H}
+REP=${SCENARIO_REP:-1}
+if [[ "$ENV_LABEL" != H && "$ENV_LABEL" != C ]]; then echo 'SCENARIO_ENV must be H or C' >&2; exit 2; fi
+if ! [[ "$REP" =~ ^[1-9][0-9]{0,5}$ ]]; then echo 'SCENARIO_REP must be a positive integer' >&2; exit 2; fi
 case "$scenario" in all|login|race|last-seat|ample|mixed|multi-uniform|multi-hotspot|retry|resilience|stress|soak|reads) ;; *) echo 'Usage: bash load/scenarios.sh all|login|race|last-seat|ample|mixed|multi-uniform|multi-hotspot|retry|resilience|stress|soak|reads' >&2; exit 2 ;; esac
 if [[ "$QUICK" != 0 && "$QUICK" != 1 ]]; then echo 'SCENARIO_QUICK must be 0 or 1' >&2; exit 2; fi
 if [[ ! -f infra/simulator/runtime/config.env ]]; then docker compose up --build -d --wait; fi
@@ -17,9 +21,21 @@ RESULTS=infra/simulator/runtime/results
 helper() { docker compose run --rm --no-deps migrate node /opt/simulator/scenario-results.mjs "$@"; }
 audit() { docker compose run --rm --no-deps audit env -u EXPECTED_ENROLLMENTS -u EXPECTED_REQUESTS node dist/scripts/audit-simulator.js; }
 restore() { docker compose up -d --wait --no-deps postgres api-a api-b >/dev/null; }
+export DOCKER_CMD=${DOCKER_CMD:-docker}
+PROJECT=${COMPOSE_PROJECT_NAME:-sum-simulator}
 fault_pid=''
 container=''
+sampler_pid=''
+stop_sampler() {
+  if [[ -n "$sampler_pid" ]]; then kill -TERM "$sampler_pid" 2>/dev/null || true; wait "$sampler_pid" 2>/dev/null || true; sampler_pid=''; fi
+}
+cpuset_lines() {
+  local ids
+  ids=$(docker compose ps -q 2>/dev/null) || return 0
+  if [[ -n "$ids" ]]; then docker inspect --format '{{.Name}} {{.HostConfig.CpusetCpus}}' $ids 2>/dev/null | sed 's#^/##' || true; fi
+}
 cleanup() {
+  stop_sampler
   if [[ -n "$fault_pid" ]]; then kill "$fault_pid" 2>/dev/null || true; wait "$fault_pid" 2>/dev/null || true; fi
   if [[ -n "$container" ]]; then docker stop -t 1 "$container" >/dev/null 2>&1 || true; fi
   if [[ "$scenario" == resilience || "$scenario" == all ]]; then restore || true; fi
@@ -37,7 +53,7 @@ fault_sequence() {
   docker compose up -d --wait --no-deps postgres >/dev/null || return 1
 }
 run_one() {
-  local item=$1 profile=shared script=enrollment duration='' stage='30s' mode=normal testid status=0 check_status=0
+  local item=$1 profile=shared script=enrollment duration='' stage='30s' mode=normal testid status=0 check_status=0 guard_status=0
   local current_enrollments current_requests
   local started_ms ended_ms
   testid=$(docker compose run --rm --no-deps migrate node -e "process.stdout.write(require('node:crypto').randomUUID())") || return 1
@@ -70,13 +86,16 @@ run_one() {
   if [[ "$QUICK" == 1 ]]; then args+=(-e RAMP_10_DURATION=5s -e RAMP_25_DURATION=5s -e THINK_MIN_SECONDS=0.2 -e THINK_MAX_SECONDS=0.5); fi
   if [[ "$item" == resilience ]]; then args+=(-e RESILIENCE_API_DOWN_START_SECONDS=13 -e RESILIENCE_API_DOWN_DURATION_SECONDS=15 -e RESILIENCE_DB_DOWN_START_SECONDS=28 -e RESILIENCE_DB_DOWN_DURATION_SECONDS=20); fi
   container="sum-load-$testid"
+  helper run-meta "$testid" "$ENV_LABEL" "$REP" "$(git rev-parse HEAD 2>/dev/null || echo unknown)" "$(cpuset_lines)" > /dev/null || return 1
   printf '\nScenario=%s actors=%s profile=%s mode=%s testid=%s\n' "$item" "$ACTORS" "$profile" "$mode" "$testid"
   started_ms=$(date +%s%3N)
+  bash load/resource-sampler.sh --project "$PROJECT" --duration "${SCENARIO_SAMPLER_MAX_SECONDS:-14400}" --out "$RESULTS/resources-$testid.csv" > /dev/null 2>&1 & sampler_pid=$!
   if [[ "$item" == resilience ]]; then fault_sequence & fault_pid=$!; fi
   docker compose run --rm --no-deps --name "$container" "${args[@]}" k6 run \
-    --tag "testid=$testid" --tag "load_scenario=$item" --tag "population=$ACTORS" --tag "run_mode=$mode" \
+    --tag "testid=$testid" --tag "load_scenario=$item" --tag "population=$ACTORS" --tag "run_mode=$mode" --tag "env=$ENV_LABEL" --tag "rep=$REP" \
     --out experimental-prometheus-rw --summary-export "/results/$item-$testid-summary.json" "/load/$script.js" > "$RESULTS/$item-$testid.log" 2>&1 || status=$?
   ended_ms=$(date +%s%3N)
+  stop_sampler
   container=''
   if [[ -n "$fault_pid" ]]; then
     wait "$fault_pid" || { echo 'Fault injection failed; this is not an accepted resilience run.'; status=1; }
@@ -85,8 +104,14 @@ run_one() {
   chmod 600 "$RESULTS/$item-$testid.log" "$RESULTS/$item-$testid-summary.json" 2>/dev/null || true
   if grep -Fq 'Failed to send the time series data to the endpoint' "$RESULTS/$item-$testid.log"; then status=1; fi
   tail -n 48 "$RESULTS/$item-$testid.log"
+  # Informative validity of the load generator; it never changes the k6 or check exit status.
+  node load/check-generator-guard.mjs --resources "$RESULTS/resources-$testid.csv" --summary "$RESULTS/$item-$testid-summary.json" --log "$RESULTS/$item-$testid.log" > "$RESULTS/guard-$testid.json" 2>/dev/null || guard_status=$?
+  if [[ "$guard_status" != 0 && "$guard_status" != 3 ]] || ! node -e "const g=JSON.parse(require('node:fs').readFileSync(process.argv[1],'utf8'));if(typeof g.valid!=='boolean')process.exit(1)" "$RESULTS/guard-$testid.json" 2>/dev/null; then
+    printf '{"valid":false,"reasons":["GUARD_FAILED: el validador del generador no produjo resultado (exit %s)"]}\n' "$guard_status" > "$RESULTS/guard-$testid.json"
+  fi
+  chmod 600 "$RESULTS/guard-$testid.json" "$RESULTS/resources-$testid.csv" 2>/dev/null || true
   audit > "$RESULTS/audit-$testid.json" || return 1
-  helper check "audit-$testid.json" "$item" "$testid" "$status" "$mode" "$started_ms" "$ended_ms" || check_status=$?
+  helper check "audit-$testid.json" "$item" "$testid" "$status" "$mode" "$started_ms" "$ended_ms" "guard-$testid.json" || check_status=$?
   printf 'Grafana: http://127.0.0.1:%s/d/sum-simulator-k6?var-testid=%s&from=%s&to=%s\n' "${SIMULATOR_GRAFANA_PORT:-5190}" "$testid" "$((started_ms - 15000))" "$((ended_ms + 15000))"
   if [[ "$status" != 0 || "$check_status" != 0 ]]; then return 1; fi
 }
