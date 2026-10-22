@@ -1,15 +1,16 @@
 import { Inject, Injectable, type CallHandler, type ExecutionContext, type NestInterceptor, OnModuleDestroy, OnModuleInit } from '@nestjs/common'
 import type { Request, Response } from 'express'
-import type { Observable } from 'rxjs'
+import { Observable } from 'rxjs'
 import { monitorEventLoopDelay } from 'node:perf_hooks'
 import type { Pool } from 'pg'
-import { SIMULATOR_POOL } from '../persistence/postgres.js'
+import { LabeledHistogram, runWithRouteGroup, SIMULATOR_POOL, simulatorPoolMetrics } from '../persistence/postgres.js'
 
 type MetricBucket = { method: string; route: string; status: number; count: number; durationTotal: number; durationMax: number }
 
 @Injectable()
 export class SimulatorMetricsInterceptor implements NestInterceptor, OnModuleInit, OnModuleDestroy {
-  private readonly loop = monitorEventLoopDelay({ resolution: 20 })
+  private readonly loop = monitorEventLoopDelay({ resolution: 5 })
+  private readonly httpHistogram = new LabeledHistogram(['method', 'route', 'status'])
   private readonly pending = new Map<string, MetricBucket>()
   private dropped = 0
   private flushing = false
@@ -30,6 +31,7 @@ export class SimulatorMetricsInterceptor implements NestInterceptor, OnModuleIni
       if (recorded) return
       recorded = true
       const elapsed = Math.max(0, performance.now() - started)
+      this.httpHistogram.observe([method, route, String(response.statusCode)], elapsed)
       const key = `${method}|${route}|${response.statusCode}`
       const bucket = this.pending.get(key)
       if (bucket) {
@@ -41,12 +43,23 @@ export class SimulatorMetricsInterceptor implements NestInterceptor, OnModuleIni
     }
     response.once('finish', record)
     response.once('close', record)
-    return next.handle()
+    return new Observable((subscriber) => runWithRouteGroup(route, () => next.handle().subscribe(subscriber)))
   }
 
+  /** Reads the event-loop window (resolution 5 ms) and pool peaks since the previous read, then resets both. */
   snapshot() {
     const cpu = process.cpuUsage()
-    return { cpuUserMicros: cpu.user, cpuSystemMicros: cpu.system, rssBytes: process.memoryUsage().rss, eventLoopP95Ms: Number(this.loop.percentile(95)) / 1e6, eventLoopMaxMs: Number(this.loop.max) / 1e6, droppedMetricSamples: this.dropped }
+    const loop = this.loop
+    const eventLoop = { p50Ms: Number(loop.percentile(50)) / 1e6, p95Ms: Number(loop.percentile(95)) / 1e6, p99Ms: Number(loop.percentile(99)) / 1e6, maxMs: Number(loop.max) / 1e6, samples: loop.count }
+    loop.reset()
+    return {
+      cpuUserMicros: cpu.user, cpuSystemMicros: cpu.system, rssBytes: process.memoryUsage().rss,
+      eventLoopP95Ms: eventLoop.p95Ms, eventLoopMaxMs: eventLoop.maxMs, droppedMetricSamples: this.dropped,
+      eventLoopWindow: eventLoop,
+      poolPeaks: simulatorPoolMetrics.readPeaksAndReset(),
+      poolWaitHistogram: simulatorPoolMetrics.waitHistogram.snapshot(),
+      httpDurationHistogram: this.httpHistogram.snapshot(),
+    }
   }
 
   async onModuleDestroy() {
