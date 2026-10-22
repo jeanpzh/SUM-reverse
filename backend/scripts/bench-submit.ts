@@ -10,23 +10,30 @@ import type { EnrollmentProfile } from '../src/matricula-regular/profile.types.j
 import { parseSubmissionRequest } from '../src/matricula-regular/dto/submission.dto.js'
 import { PostgresEnrollmentStore } from '../src/persistence/postgres-enrollment.store.js'
 import { createSimulatorPool } from '../src/persistence/postgres.js'
+import { StoreMetrics } from '../src/persistence/store-metrics.js'
+import { applyVariants, replayIndexes } from './bench-variants.js'
 import { assertSyntheticDatabase } from './synthetic-database.js'
 import { createSyntheticLoadProfile, parseActorCount, resolveScenarioProfile } from './synthetic-load-profile.js'
 import type { Choice, ScenarioProfile, SyntheticLoadProfile } from './synthetic-load-profile.js'
 
-export type BenchOptions = { actors: number; profile: ScenarioProfile; budgetMs: number; pools: number; poolMax: number; out?: string }
+export type BenchOptions = { actors: number; profile: ScenarioProfile; budgetMs: number; pools: number; poolMax: number; cohorts: number; catalogSections?: number; replayRatio: number; out?: string }
 export type Verdict = { status: 'green' | 'perf-red' | 'integrity-red'; exitCode: 0 | 1 | 2; reasons: string[] }
 
 const SLO_P95_MS = 2000
 const SLO_QUANTILE = 0.95
 const benchProfiles = ['shared', 'ample', 'multi-uniform', 'multi-hotspot', 'distributed']
-const flags = ['--actors', '--profile', '--budget-ms', '--pools', '--pool-max', '--out']
-const usage = 'Usage: bench-submit --actors <int, same range as SIMULATOR_ACTOR_COUNT> --profile <shared|ample|multi-uniform|multi-hotspot|distributed> [--budget-ms <int>] [--pools <1..4>] [--pool-max <int>] [--out <path>]'
+const flags = ['--actors', '--profile', '--budget-ms', '--pools', '--pool-max', '--cohorts', '--catalog-sections', '--replay-ratio', '--out']
+const usage = 'Usage: bench-submit --actors <int, same range as SIMULATOR_ACTOR_COUNT> --profile <shared|ample|multi-uniform|multi-hotspot|distributed> [--budget-ms <int>] [--pools <1..4>] [--pool-max <int>] [--cohorts <int, shared profile only>] [--catalog-sections <int, distributed profile only>] [--replay-ratio <0..1, ample profile only>] [--out <path>]'
 
 function integerOption(name: string, value: string | undefined, min: number, max: number): number {
   const parsed = value !== undefined && /^\d+$/.test(value) ? Number(value) : NaN
   if (!Number.isSafeInteger(parsed) || parsed < min || parsed > max) throw new Error(`${name} must be an integer from ${min} to ${max}`)
   return parsed
+}
+
+function ratioOption(name: string, value: string | undefined): number {
+  if (value === undefined || !/^(?:[01]|0?\.\d{1,6}|[01]\.0{1,6})$/.test(value)) throw new Error(`${name} must be a decimal from 0 to 1 (at most 6 decimals)`)
+  return Number(value)
 }
 
 export function parseBenchArgs(argv: string[]): BenchOptions {
@@ -42,12 +49,23 @@ export function parseBenchArgs(argv: string[]): BenchOptions {
   const profile = values.get('--profile') ?? 'shared'
   if (profile === 'last-seat') throw new Error(`Profile last-seat is not supported by bench-submit (it needs auxiliary enrollments); use one of: ${benchProfiles.join(', ')}`)
   if (!benchProfiles.includes(profile)) throw new Error(`--profile must be one of: ${benchProfiles.join(', ')}`)
+  const actors = parseActorCount(values.get('--actors'))
+  const cohorts = values.has('--cohorts') ? integerOption('--cohorts', values.get('--cohorts'), 1, 2000) : 1
+  if (cohorts > 1 && profile !== 'shared') throw new Error('--cohorts above 1 requires --profile shared')
+  if (cohorts > actors) throw new Error('--cohorts must not exceed --actors')
+  const catalogSections = values.has('--catalog-sections') ? integerOption('--catalog-sections', values.get('--catalog-sections'), 1, 2000) : undefined
+  if (catalogSections !== undefined && profile !== 'distributed') throw new Error('--catalog-sections requires --profile distributed')
+  const replayRatio = values.has('--replay-ratio') ? ratioOption('--replay-ratio', values.get('--replay-ratio')) : 0
+  if (replayRatio > 0 && profile !== 'ample') throw new Error('--replay-ratio above 0 requires --profile ample')
   return {
-    actors: parseActorCount(values.get('--actors')),
+    actors,
     profile: resolveScenarioProfile(profile, undefined).scenarioProfile,
     budgetMs: values.has('--budget-ms') ? integerOption('--budget-ms', values.get('--budget-ms'), 1, 3_600_000) : 2000,
     pools: values.has('--pools') ? integerOption('--pools', values.get('--pools'), 1, 4) : 2,
     poolMax: values.has('--pool-max') ? integerOption('--pool-max', values.get('--pool-max'), 1, 200) : 12,
+    cohorts,
+    ...(catalogSections !== undefined ? { catalogSections } : {}),
+    replayRatio,
     ...(values.has('--out') ? { out: values.get('--out')! } : {}),
   }
 }
@@ -133,7 +151,10 @@ async function run(options: BenchOptions): Promise<Verdict> {
   assertSyntheticDatabase(process.env.DATABASE_URL)
   process.env.SIMULATOR_DB_POOL_MAX = String(options.poolMax)
   const pools = Array.from({ length: options.pools }, () => createSimulatorPool())
-  const stores = pools.map((pool) => new PostgresEnrollmentStore(pool))
+  // Session creation and replay warm-up use private collectors so that `phases` only reflects the measured submits.
+  const prepStores = pools.map((pool) => new PostgresEnrollmentStore(pool, new StoreMetrics()))
+  const metrics = new StoreMetrics()
+  const stores = pools.map((pool) => new PostgresEnrollmentStore(pool, metrics))
   let seeded: string | undefined
   let finished = false
   try {
@@ -150,16 +171,17 @@ async function run(options: BenchOptions): Promise<Verdict> {
       origin: 'synthetic',
       sourceIds: ['SYN-FIXTURE'],
     }]
-    const load = createSyntheticLoadProfile(options.actors, options.profile, fixture.actors, fixture.offer)
+    const load = applyVariants(createSyntheticLoadProfile(options.actors, options.profile, fixture.actors, fixture.offer), options)
     await seedCampaign(pools[0]!, campaignId, runId, profiles, load)
     seeded = campaignId
 
-    const prepared: { store: PostgresEnrollmentStore; principal: { campaignId: string; runId: string; actorId: string }; request: MatriculaRegularSubmission }[] = []
+    const prepared: { store: PostgresEnrollmentStore; prepStore: PostgresEnrollmentStore; principal: { campaignId: string; runId: string; actorId: string }; request: MatriculaRegularSubmission }[] = []
     for (let start = 0; start < load.actors.length; start += 50) {
       prepared.push(...await Promise.all(load.actors.slice(start, start + 50).map(async (actor, offset) => {
         const store = stores[(start + offset) % stores.length]!
+        const prepStore = prepStores[(start + offset) % stores.length]!
         const principal = { campaignId, runId, actorId: actor.actorId }
-        const session = await store.createAcademicSession(principal) as { data: { sessionId: string } }
+        const session = await prepStore.createAcademicSession(principal) as { data: { sessionId: string } }
         const request = parseSubmissionRequest({
           actorId: actor.actorId,
           runId,
@@ -168,8 +190,18 @@ async function run(options: BenchOptions): Promise<Verdict> {
           profileRevision: profiles[0]!.profileRevision,
           selection: [...selectionFor(load, actor.actorId)].sort((a, b) => a.courseId.localeCompare(b.courseId) || a.sectionId.localeCompare(b.sectionId)),
         })
-        return { store, principal, request }
+        return { store, prepStore, principal, request }
       })))
+    }
+
+    // E11: process the replay candidates once before the barrier; the measured submit repeats the same (actorId, requestId) and payload.
+    const replaySet = replayIndexes(prepared.length, options.replayRatio)
+    for (let start = 0; start < prepared.length; start += 50) {
+      await Promise.all(prepared.slice(start, start + 50).map(async ({ prepStore, principal, request }, offset) => {
+        if (!replaySet.has(start + offset)) return
+        const outcome = await prepStore.submit(principal, request)
+        if (outcome.data.state !== 'accepted') throw new Error('Replay warm-up submit was not accepted')
+      }))
     }
 
     const startedAt = performance.now()
@@ -208,6 +240,10 @@ async function run(options: BenchOptions): Promise<Verdict> {
       actors: options.actors,
       pools: options.pools,
       poolMax: options.poolMax,
+      cohorts: options.cohorts,
+      catalogSections: options.catalogSections ?? null,
+      replayRatio: options.replayRatio,
+      replays: replaySet.size,
       budgetMs: options.budgetMs,
       campaignId,
       latencyMs: stats,
@@ -223,6 +259,7 @@ async function run(options: BenchOptions): Promise<Verdict> {
       budgetCriticalSectionMs: round(budget),
       audit: audit.report,
       verdict,
+      phases: metrics.snapshot(),
     }, null, 2)}\n`
     process.stdout.write(json)
     if (options.out) await writeFile(options.out, json)
