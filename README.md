@@ -372,3 +372,10 @@ dependencias de cada carpeta con `pnpm --dir <carpeta> install --frozen-lockfile
 
 Consulta [la documentación del backend](backend/README.md) y
 [el sistema de diseño](client/DESIGN_SYSTEM.md).
+
+## Contribuir y licencia
+
+Lee [CONTRIBUTING.md](CONTRIBUTING.md) antes de abrir un PR. El código se publica
+bajo la licencia [MIT](LICENSE). Este proyecto no está afiliado a la UNMSM; los
+nombres, logotipos y capturas del SUM pertenecen a sus titulares y no quedan
+cubiertos por esa licencia.
