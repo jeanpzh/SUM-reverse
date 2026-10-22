@@ -149,3 +149,18 @@ La puerta «sin evidencia suficiente de P1 no se ejecuta P2» **no está superad
 - E8 se ejecutó en ENV-H (la estrategia lo sitúa en ENV-C).
 - E3b y E9 se ejecutaron en una base desechable (sin API ni observabilidad): sus valores absolutos no se comparan con los del stack, con una excepción deliberada y declarada en §4.1 (mismos parámetros del bench, E9 frente a E5b). En E9, el brazo con 3 campañas no tiene `EXPLAIN` (error de ejecución) y las 20 campañas de relleno se generaron con el propio bench (algunas ejecuciones devolvieron un código de salida distinto de cero por la comparación con el presupuesto; todas crearon su campaña: 26 al final).
 - Los 3 runs de mixed rápido (E10) salieron inválidos por `HTTP_CONNECTING`.
+
+## 9. Actualización posterior: P2-02 medido en el stack (2026-10-22, 19:11–19:23 UTC)
+
+Después de mergear el índice de `simulator_academic_sessions` (PR #32), se midió en el stack (2 APIs, pool 12, race 400, base con 226 campañas y 83 790 sesiones académicas). Los dos brazos usan la **misma base de datos**: el índice se elimina o se crea por SQL entre ejecuciones, con el mismo `CREATE INDEX` de la migración 003. Orden A B B A A B (A = sin índice, B = con índice). Una ejecución A (A-4) salió inválida por `HTTP_BLOCKED` y se excluye. Detalle en `evidence/local/simulador-produccion/perf-diagnosis/p2-02/stack-ab.json`.
+
+| Brazo | n válidas | p95 del envío | Espera de conexión | Espera del bloqueo de sección | `critical` |
+| --- | --- | --- | --- | --- | --- |
+| Sin índice | 2 | 4010 y 4143 ms | 1925 y 2060 ms | 242 y 250 ms | 7,9 y 8,2 ms |
+| Con índice | 3 | 2543 / 2425 / 2421 ms | 1307 / 1157 / 1195 ms | 154 / 148 / 149 ms | 4,0 / 3,6 / 3,8 ms |
+
+- **`observed`:** con el índice, el p95 baja ≈ 40 % (de ≈ 4,1 s a ≈ 2,4 s), `critical` se reduce a la mitad (≈ 8 a ≈ 3,8 ms) y los rangos de los dos brazos no se solapan. La ejecución A inválida (3928 ms) va en la misma dirección.
+- **Efecto mucho mayor que en la base desechable** (−9 % de t_cs con 26 campañas): con 226 campañas la consulta sin índice recorre sesiones de todas las campañas retenidas. Esto es coherente con la hipótesis de §4.1 (la deriva por campañas retenidas explica una parte grande de t_cs en el stack), pero esa hipótesis era `inferred`; ahora hay una medición directa en el stack.
+- **El SLO sigue sin cumplirse en race 400** (p95 ≈ 2,4 s frente a 2 s), pero queda a ≈ 20 % del límite.
+- **Revisa las comparaciones de este informe:** las cifras de los bloques A–G se midieron con ≈ 120–135 campañas y sin el índice, es decir, con parte de la deriva incluida. La deriva entre bloques que se reportó (≈ 18 %) no se debía a azar sino, al menos en parte, a este efecto.
+- **Límites:** n = 2 válidas sin índice; un solo escenario (race 400); el índice recién creado en B no tiene bloat y el brazo A lleva el de la tabla; mismo host de 2 vCPU con k6 compartido.

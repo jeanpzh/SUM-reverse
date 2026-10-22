@@ -1,0 +1,76 @@
+{
+  "status": "local-only",
+  "note": "race 400 en el stack (2 APIs, pool 12, misma base de datos para ambos brazos; el indice se activa o desactiva por SQL entre corridas). Orden A B B A A B. Una corrida A (A-4) invalida por HTTP_BLOCKED y excluida de las estadisticas.",
+  "database": {
+    "campaignsAtStart": 226,
+    "academicSessionsAtStart": 83790
+  },
+  "runs": [
+    {
+      "run": "A-1",
+      "arm": "sin_indice",
+      "valid": true,
+      "p95Ms": 4009.9,
+      "avgMs": 2207.3,
+      "poolWaitMs": 1924.8,
+      "sectionLockWaitMs": 241.5,
+      "criticalMs": 7.9,
+      "campaigns": 228
+    },
+    {
+      "run": "A-4",
+      "arm": "sin_indice",
+      "valid": false,
+      "p95Ms": 3928.2,
+      "avgMs": 2147.5,
+      "poolWaitMs": 1876.7,
+      "sectionLockWaitMs": 239.2,
+      "criticalMs": 7.9,
+      "campaigns": 231
+    },
+    {
+      "run": "A-5",
+      "arm": "sin_indice",
+      "valid": true,
+      "p95Ms": 4143.1,
+      "avgMs": 2399.8,
+      "poolWaitMs": 2060.4,
+      "sectionLockWaitMs": 250,
+      "criticalMs": 8.2,
+      "campaigns": 232
+    },
+    {
+      "run": "B-2",
+      "arm": "con_indice",
+      "valid": true,
+      "p95Ms": 2543.1,
+      "avgMs": 1516.4,
+      "poolWaitMs": 1307.4,
+      "sectionLockWaitMs": 154.2,
+      "criticalMs": 4,
+      "campaigns": 229
+    },
+    {
+      "run": "B-3",
+      "arm": "con_indice",
+      "valid": true,
+      "p95Ms": 2425.2,
+      "avgMs": 1379.7,
+      "poolWaitMs": 1157.3,
+      "sectionLockWaitMs": 147.5,
+      "criticalMs": 3.6,
+      "campaigns": 230
+    },
+    {
+      "run": "B-6",
+      "arm": "con_indice",
+      "valid": true,
+      "p95Ms": 2421.3,
+      "avgMs": 1413.9,
+      "poolWaitMs": 1195.1,
+      "sectionLockWaitMs": 149.4,
+      "criticalMs": 3.8,
+      "campaigns": 233
+    }
+  ]
+}
