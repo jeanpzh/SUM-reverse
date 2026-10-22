@@ -1,0 +1,37 @@
+pg_test_fsync -s 5 on the volume holding /var/lib/postgresql/18/docker
+5 seconds per test
+O_DIRECT supported on this platform for open_datasync and open_sync.
+
+Compare file sync methods using one 8kB write:
+(in "wal_sync_method" preference order, except fdatasync is Linux's default)
+        open_datasync                      1066.035 ops/sec     938 usecs/op
+        fdatasync                          1051.862 ops/sec     951 usecs/op
+        fsync                               348.192 ops/sec    2872 usecs/op
+        fsync_writethrough                              n/a
+        open_sync                           350.544 ops/sec    2853 usecs/op
+
+Compare file sync methods using two 8kB writes:
+(in "wal_sync_method" preference order, except fdatasync is Linux's default)
+        open_datasync                       527.739 ops/sec    1895 usecs/op
+        fdatasync                           976.541 ops/sec    1024 usecs/op
+        fsync                               338.088 ops/sec    2958 usecs/op
+        fsync_writethrough                              n/a
+        open_sync                           174.447 ops/sec    5732 usecs/op
+
+Compare open_sync with different write sizes:
+(This is designed to compare the cost of writing 16kB in different write
+open_sync sizes.)
+         1 * 16kB open_sync write           339.741 ops/sec    2943 usecs/op
+         2 *  8kB open_sync writes          173.518 ops/sec    5763 usecs/op
+         4 *  4kB open_sync writes           88.108 ops/sec   11350 usecs/op
+         8 *  2kB open_sync writes           43.667 ops/sec   22901 usecs/op
+        16 *  1kB open_sync writes           22.023 ops/sec   45407 usecs/op
+
+Test if fsync on non-write file descriptor is honored:
+(If the times are similar, fsync() can sync data written on a different
+descriptor.)
+        write, fsync, close                 344.946 ops/sec    2899 usecs/op
+        write, close, fsync                 344.500 ops/sec    2903 usecs/op
+
+Non-sync'ed 8kB writes:
+        write                           2299314.601 ops/sec       0 usecs/op

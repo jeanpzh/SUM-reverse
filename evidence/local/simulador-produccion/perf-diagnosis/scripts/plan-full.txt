@@ -1,0 +1,135 @@
+sent-a k6 race 400
+e1-race-100-r1 k6 race 100
+e1-race-200-r1 k6 race 200
+e1-race-400-r1 k6 race 400
+attr-ample-400-r1 k6 ample 400
+e6-multiuniform-400-r1 k6 multi-uniform 400
+e1-race-200-r2 k6 race 200
+e1-race-400-r2 k6 race 400
+attr-ample-400-r2 k6 ample 400
+e6-multiuniform-400-r2 k6 multi-uniform 400
+e1-race-100-r2 k6 race 100
+e1-race-400-r3 k6 race 400
+attr-ample-400-r3 k6 ample 400
+e6-multiuniform-400-r3 k6 multi-uniform 400
+e1-race-100-r3 k6 race 100
+e1-race-200-r3 k6 race 200
+sent-b k6 race 400
+e4-pin-r1 k6 race 400 PERF_CPUSET_K6=0 PERF_CPUSET_POSTGRES=1 PERF_CPUSET_API_A=1 PERF_CPUSET_API_B=1 PERF_CPUSET_WEB=1
+e4-base-r1 k6 race 400
+e4-base-r2 k6 race 400
+e4-pin-r2 k6 race 400 PERF_CPUSET_K6=0 PERF_CPUSET_POSTGRES=1 PERF_CPUSET_API_A=1 PERF_CPUSET_API_B=1 PERF_CPUSET_WEB=1
+e4-pin-r3 k6 race 400 PERF_CPUSET_K6=0 PERF_CPUSET_POSTGRES=1 PERF_CPUSET_API_A=1 PERF_CPUSET_API_B=1 PERF_CPUSET_WEB=1
+e4-base-r3 k6 race 400
+sent-c k6 race 400
+e5-race-p6-r1 k6 race 400 SIMULATOR_DB_POOL_MAX=6
+e5-hotspot-p6-r1 k6 multi-hotspot 400 SIMULATOR_DB_POOL_MAX=6
+e5-race-p12-r1 k6 race 400 SIMULATOR_DB_POOL_MAX=12
+e5-hotspot-p12-r1 k6 multi-hotspot 400 SIMULATOR_DB_POOL_MAX=12
+e5-race-p24-r1 k6 race 400 SIMULATOR_DB_POOL_MAX=24
+e5-hotspot-p24-r1 k6 multi-hotspot 400 SIMULATOR_DB_POOL_MAX=24
+e5-race-p40-r1 k6 race 400 SIMULATOR_DB_POOL_MAX=40
+e5-hotspot-p40-r1 k6 multi-hotspot 400 SIMULATOR_DB_POOL_MAX=40
+e5-race-p12-r2 k6 race 400 SIMULATOR_DB_POOL_MAX=12
+e5-hotspot-p12-r2 k6 multi-hotspot 400 SIMULATOR_DB_POOL_MAX=12
+e5-race-p24-r2 k6 race 400 SIMULATOR_DB_POOL_MAX=24
+e5-hotspot-p24-r2 k6 multi-hotspot 400 SIMULATOR_DB_POOL_MAX=24
+e5-race-p40-r2 k6 race 400 SIMULATOR_DB_POOL_MAX=40
+e5-hotspot-p40-r2 k6 multi-hotspot 400 SIMULATOR_DB_POOL_MAX=40
+e5-race-p6-r2 k6 race 400 SIMULATOR_DB_POOL_MAX=6
+e5-hotspot-p6-r2 k6 multi-hotspot 400 SIMULATOR_DB_POOL_MAX=6
+e5-race-p24-r3 k6 race 400 SIMULATOR_DB_POOL_MAX=24
+e5-hotspot-p24-r3 k6 multi-hotspot 400 SIMULATOR_DB_POOL_MAX=24
+e5-race-p40-r3 k6 race 400 SIMULATOR_DB_POOL_MAX=40
+e5-hotspot-p40-r3 k6 multi-hotspot 400 SIMULATOR_DB_POOL_MAX=40
+e5-race-p6-r3 k6 race 400 SIMULATOR_DB_POOL_MAX=6
+e5-hotspot-p6-r3 k6 multi-hotspot 400 SIMULATOR_DB_POOL_MAX=6
+e5-race-p12-r3 k6 race 400 SIMULATOR_DB_POOL_MAX=12
+e5-hotspot-p12-r3 k6 multi-hotspot 400 SIMULATOR_DB_POOL_MAX=12
+sent-d k6 race 400
+e8-reads-25-r1 reads 25 60s
+e8-reads-50-r1 reads 50 60s
+e8-reads-100-r1 reads 100 60s
+e8-reads-150-r1 reads 150 60s
+e8-reads-200-r1 reads 200 60s
+e8-reads-300-r1 reads 300 60s
+e8-reads-100-r2 reads 100 60s
+e8-reads-150-r2 reads 150 60s
+e8-reads-200-r2 reads 200 60s
+e8-reads-300-r2 reads 300 60s
+e8-reads-25-r2 reads 25 60s
+e8-reads-50-r2 reads 50 60s
+e8-reads-200-r3 reads 200 60s
+e8-reads-300-r3 reads 300 60s
+e8-reads-25-r3 reads 25 60s
+e8-reads-50-r3 reads 50 60s
+e8-reads-100-r3 reads 100 60s
+e8-reads-150-r3 reads 150 60s
+sent-e k6 race 400
+e12-login-400-r1 k6 login 400
+e12-login-400-r2 k6 login 400
+e12-login-400-r3 k6 login 400
+e13-off-r1 k6 race 400 EXPORTER=stopped
+e13-on-r1 k6 race 400
+e13-on-r2 k6 race 400
+e13-off-r2 k6 race 400 EXPORTER=stopped
+e13-off-r3 k6 race 400 EXPORTER=stopped
+e13-on-r3 k6 race 400
+e14-race-1api-r1 k6 race 400 PERF_COMPOSE_FILE=compose.simulator.yaml:compose.perf.yaml:compose.e14.yaml
+e14-race-2api-r1 k6 race 400
+e14-race-2api-r2 k6 race 400
+e14-race-1api-r2 k6 race 400 PERF_COMPOSE_FILE=compose.simulator.yaml:compose.perf.yaml:compose.e14.yaml
+e14-race-1api-r3 k6 race 400 PERF_COMPOSE_FILE=compose.simulator.yaml:compose.perf.yaml:compose.e14.yaml
+e14-race-2api-r3 k6 race 400
+e2-cohorts-5-r1 bench --actors 400 --profile shared --cohorts 5 --budget-ms 60000
+e2-cohorts-20-r1 bench --actors 400 --profile shared --cohorts 20 --budget-ms 60000
+e2-cohorts-1-r1 bench --actors 400 --profile shared --cohorts 1 --budget-ms 60000
+e5b-pool-12-r1 bench --actors 400 --profile shared --pool-max 12 --budget-ms 60000
+e5b-pool-24-r1 bench --actors 400 --profile shared --pool-max 24 --budget-ms 60000
+e5b-pool-48-r1 bench --actors 400 --profile shared --pool-max 48 --budget-ms 60000
+e5b-pool-6-r1 bench --actors 400 --profile shared --pool-max 6 --budget-ms 60000
+e7-catalog-15-r1 bench --actors 100 --profile distributed --catalog-sections 15 --budget-ms 60000
+e7-catalog-300-r1 bench --actors 100 --profile distributed --catalog-sections 300 --budget-ms 60000
+e7-catalog-3-r1 bench --actors 100 --profile distributed --catalog-sections 3 --budget-ms 60000
+e11-replay-0.5-r1 bench --actors 400 --profile ample --replay-ratio 0.5 --budget-ms 60000
+e11-replay-0-r1 bench --actors 400 --profile ample --replay-ratio 0 --budget-ms 60000
+e2-cohorts-20-r2 bench --actors 400 --profile shared --cohorts 20 --budget-ms 60000
+e2-cohorts-1-r2 bench --actors 400 --profile shared --cohorts 1 --budget-ms 60000
+e2-cohorts-5-r2 bench --actors 400 --profile shared --cohorts 5 --budget-ms 60000
+e5b-pool-24-r2 bench --actors 400 --profile shared --pool-max 24 --budget-ms 60000
+e5b-pool-48-r2 bench --actors 400 --profile shared --pool-max 48 --budget-ms 60000
+e5b-pool-6-r2 bench --actors 400 --profile shared --pool-max 6 --budget-ms 60000
+e5b-pool-12-r2 bench --actors 400 --profile shared --pool-max 12 --budget-ms 60000
+e7-catalog-300-r2 bench --actors 100 --profile distributed --catalog-sections 300 --budget-ms 60000
+e7-catalog-3-r2 bench --actors 100 --profile distributed --catalog-sections 3 --budget-ms 60000
+e7-catalog-15-r2 bench --actors 100 --profile distributed --catalog-sections 15 --budget-ms 60000
+e11-replay-0-r2 bench --actors 400 --profile ample --replay-ratio 0 --budget-ms 60000
+e11-replay-0.5-r2 bench --actors 400 --profile ample --replay-ratio 0.5 --budget-ms 60000
+e2-cohorts-1-r3 bench --actors 400 --profile shared --cohorts 1 --budget-ms 60000
+e2-cohorts-5-r3 bench --actors 400 --profile shared --cohorts 5 --budget-ms 60000
+e2-cohorts-20-r3 bench --actors 400 --profile shared --cohorts 20 --budget-ms 60000
+e5b-pool-48-r3 bench --actors 400 --profile shared --pool-max 48 --budget-ms 60000
+e5b-pool-6-r3 bench --actors 400 --profile shared --pool-max 6 --budget-ms 60000
+e5b-pool-12-r3 bench --actors 400 --profile shared --pool-max 12 --budget-ms 60000
+e5b-pool-24-r3 bench --actors 400 --profile shared --pool-max 24 --budget-ms 60000
+e7-catalog-3-r3 bench --actors 100 --profile distributed --catalog-sections 3 --budget-ms 60000
+e7-catalog-15-r3 bench --actors 100 --profile distributed --catalog-sections 15 --budget-ms 60000
+e7-catalog-300-r3 bench --actors 100 --profile distributed --catalog-sections 300 --budget-ms 60000
+e11-replay-0.5-r3 bench --actors 400 --profile ample --replay-ratio 0.5 --budget-ms 60000
+e11-replay-0-r3 bench --actors 400 --profile ample --replay-ratio 0 --budget-ms 60000
+sent-g k6 race 400
+e5-mixed-p12-r1 k6 mixed 400
+e5-mixed-p40-r1 k6 mixed 400 SIMULATOR_DB_POOL_MAX=40
+e5-mixed-p40-r2 k6 mixed 400 SIMULATOR_DB_POOL_MAX=40
+e5-mixed-p12-r2 k6 mixed 400
+e5-mixed-p12-r3 k6 mixed 400
+e5-mixed-p40-r3 k6 mixed 400 SIMULATOR_DB_POOL_MAX=40
+e10-mixed-quick-r1 k6 mixed 400 SCENARIO_QUICK=1
+e10-mixed-quick-r2 k6 mixed 400 SCENARIO_QUICK=1
+e10-mixed-quick-r3 k6 mixed 400 SCENARIO_QUICK=1
+e14-stress-1api-r1 k6 stress 400 PERF_COMPOSE_FILE=compose.simulator.yaml:compose.perf.yaml:compose.e14.yaml
+e14-stress-2api-r1 k6 stress 400
+e14-stress-2api-r2 k6 stress 400
+e14-stress-1api-r2 k6 stress 400 PERF_COMPOSE_FILE=compose.simulator.yaml:compose.perf.yaml:compose.e14.yaml
+e14-stress-1api-r3 k6 stress 400 PERF_COMPOSE_FILE=compose.simulator.yaml:compose.perf.yaml:compose.e14.yaml
+e14-stress-2api-r3 k6 stress 400

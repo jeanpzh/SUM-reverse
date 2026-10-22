@@ -1,0 +1,3580 @@
+{
+  "attr-ample-400": {
+    "kind": "k6",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "attr-ample-400-r1",
+      "attr-ample-400-r2",
+      "attr-ample-400-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 5777.2,
+      "min": 4547.9,
+      "max": 5989.3
+    },
+    "p99": {
+      "median": 6259.8,
+      "min": 4735.4,
+      "max": 6524.5
+    },
+    "avg": {
+      "median": 3333.6,
+      "min": 2585.1,
+      "max": 3366.3
+    },
+    "server": {
+      "median": 3218,
+      "min": 2426.5,
+      "max": 3248.4
+    },
+    "poolWait": {
+      "median": 2838.6,
+      "min": 2139.1,
+      "max": 2874.7
+    },
+    "lockWait": {
+      "median": 352.7,
+      "min": 269.5,
+      "max": 356.5
+    },
+    "critical": {
+      "median": 13.8,
+      "min": 9,
+      "max": 13.9
+    },
+    "commit": {
+      "median": 1.2,
+      "min": 1.1,
+      "max": 1.5
+    },
+    "preLock": {
+      "median": 3.3,
+      "min": 2.4,
+      "max": 3.6
+    },
+    "gap": {
+      "median": 118,
+      "min": 115.6,
+      "max": 158.5
+    },
+    "residual": {
+      "median": 4.1,
+      "min": 3.7,
+      "max": 4.2
+    },
+    "coverage": {
+      "median": 99.9,
+      "min": 99.8,
+      "max": 99.9
+    },
+    "poolTimeouts": {
+      "median": 73,
+      "min": 0,
+      "max": 78
+    },
+    "accepted": {
+      "median": 327,
+      "min": 322,
+      "max": 400
+    },
+    "httpFailed": {
+      "median": 73,
+      "min": 0,
+      "max": 78
+    },
+    "campaigns": {
+      "median": 124,
+      "min": 120,
+      "max": 128
+    }
+  },
+  "e1-race-100": {
+    "kind": "k6",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e1-race-100-r1",
+      "e1-race-100-r2",
+      "e1-race-100-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 815.9,
+      "min": 741.1,
+      "max": 962.1
+    },
+    "p99": {
+      "median": 840.1,
+      "min": 765.9,
+      "max": 1007.4
+    },
+    "avg": {
+      "median": 543,
+      "min": 452.8,
+      "max": 718.6
+    },
+    "server": {
+      "median": 503.5,
+      "min": 449.4,
+      "max": 692.7
+    },
+    "poolWait": {
+      "median": 299,
+      "min": 266.1,
+      "max": 439.4
+    },
+    "lockWait": {
+      "median": 185.6,
+      "min": 170.3,
+      "max": 231.3
+    },
+    "critical": {
+      "median": 6.4,
+      "min": 5.8,
+      "max": 7.7
+    },
+    "commit": {
+      "median": 1.3,
+      "min": 1.2,
+      "max": 1.6
+    },
+    "preLock": {
+      "median": 5.3,
+      "min": 2.9,
+      "max": 5.4
+    },
+    "gap": {
+      "median": 25.9,
+      "min": 3.4,
+      "max": 39.5
+    },
+    "residual": {
+      "median": 5.8,
+      "min": 3.1,
+      "max": 7.3
+    },
+    "coverage": {
+      "median": 99,
+      "min": 98.9,
+      "max": 99.3
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 126,
+      "min": 117,
+      "max": 130
+    }
+  },
+  "e1-race-200": {
+    "kind": "k6",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e1-race-200-r1",
+      "e1-race-200-r2",
+      "e1-race-200-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 1753.1,
+      "min": 1586.4,
+      "max": 1978.1
+    },
+    "p99": {
+      "median": 1855.9,
+      "min": 1656.5,
+      "max": 2034.8
+    },
+    "avg": {
+      "median": 978,
+      "min": 977.2,
+      "max": 1169.3
+    },
+    "server": {
+      "median": 950.5,
+      "min": 896.7,
+      "max": 1130.7
+    },
+    "poolWait": {
+      "median": 725.7,
+      "min": 694.5,
+      "max": 878.3
+    },
+    "lockWait": {
+      "median": 209.1,
+      "min": 186.3,
+      "max": 235.6
+    },
+    "critical": {
+      "median": 6.7,
+      "min": 6,
+      "max": 7.4
+    },
+    "commit": {
+      "median": 1.3,
+      "min": 1.3,
+      "max": 1.5
+    },
+    "preLock": {
+      "median": 3.7,
+      "min": 3.4,
+      "max": 4.2
+    },
+    "gap": {
+      "median": 38.7,
+      "min": 27.5,
+      "max": 80.5
+    },
+    "residual": {
+      "median": 4.2,
+      "min": 4.2,
+      "max": 4.4
+    },
+    "coverage": {
+      "median": 99.6,
+      "min": 99.5,
+      "max": 99.6
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 122,
+      "min": 118,
+      "max": 131
+    }
+  },
+  "e1-race-400": {
+    "kind": "k6",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e1-race-400-r1",
+      "e1-race-400-r2",
+      "e1-race-400-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 3127.8,
+      "min": 3099.9,
+      "max": 3161.8
+    },
+    "p99": {
+      "median": 3244.1,
+      "min": 3236.2,
+      "max": 3279
+    },
+    "avg": {
+      "median": 1802.8,
+      "min": 1728,
+      "max": 1820
+    },
+    "server": {
+      "median": 1764.4,
+      "min": 1706,
+      "max": 1778.6
+    },
+    "poolWait": {
+      "median": 1560,
+      "min": 1503.7,
+      "max": 1570.6
+    },
+    "lockWait": {
+      "median": 191.5,
+      "min": 189.7,
+      "max": 195.1
+    },
+    "critical": {
+      "median": 5.8,
+      "min": 5.8,
+      "max": 5.8
+    },
+    "commit": {
+      "median": 1.3,
+      "min": 1.3,
+      "max": 1.3
+    },
+    "preLock": {
+      "median": 2.5,
+      "min": 2.3,
+      "max": 2.7
+    },
+    "gap": {
+      "median": 38.4,
+      "min": 22,
+      "max": 41.3
+    },
+    "residual": {
+      "median": 3.2,
+      "min": 3.2,
+      "max": 3.3
+    },
+    "coverage": {
+      "median": 99.8,
+      "min": 99.8,
+      "max": 99.8
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 123,
+      "min": 119,
+      "max": 127
+    }
+  },
+  "e10-mixed-quick": {
+    "kind": "k6",
+    "n": 0,
+    "nTotal": 3,
+    "excluded": [
+      "e10-mixed-quick-r1",
+      "e10-mixed-quick-r2",
+      "e10-mixed-quick-r3"
+    ],
+    "labels": [
+      "e10-mixed-quick-r1",
+      "e10-mixed-quick-r2",
+      "e10-mixed-quick-r3"
+    ],
+    "allValid": false
+  },
+  "e11-replay-0": {
+    "kind": "bench",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e11-replay-0-r1",
+      "e11-replay-0-r2",
+      "e11-replay-0-r3"
+    ],
+    "allValid": true,
+    "p50": {
+      "median": 2263.1,
+      "min": 2185.6,
+      "max": 2271
+    },
+    "p95": {
+      "median": 4088.6,
+      "min": 4036.6,
+      "max": 4164.4
+    },
+    "p99": {
+      "median": 4276.1,
+      "min": 4187.7,
+      "max": 4324.8
+    },
+    "drainMs": {
+      "median": 4314.8,
+      "min": 4224.6,
+      "max": 4365.2
+    },
+    "sps": {
+      "median": 92.7,
+      "min": 91.6,
+      "max": 94.7
+    },
+    "accepted": {
+      "median": 400,
+      "min": 400,
+      "max": 400
+    },
+    "errors": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "poolAcquire": {
+      "median": 1989.6,
+      "min": 1941.1,
+      "max": 2014.8
+    },
+    "campaigns": {
+      "median": 203,
+      "min": 192,
+      "max": 216
+    }
+  },
+  "e11-replay-0.5": {
+    "kind": "bench",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e11-replay-0.5-r1",
+      "e11-replay-0.5-r2",
+      "e11-replay-0.5-r3"
+    ],
+    "allValid": true,
+    "p50": {
+      "median": 1860.2,
+      "min": 1815.1,
+      "max": 1900.7
+    },
+    "p95": {
+      "median": 3410.6,
+      "min": 3350.4,
+      "max": 3447.4
+    },
+    "p99": {
+      "median": 3515.1,
+      "min": 3469.8,
+      "max": 3564
+    },
+    "drainMs": {
+      "median": 3540.9,
+      "min": 3503.1,
+      "max": 3590.8
+    },
+    "sps": {
+      "median": 113,
+      "min": 111.4,
+      "max": 114.2
+    },
+    "accepted": {
+      "median": 400,
+      "min": 400,
+      "max": 400
+    },
+    "errors": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "poolAcquire": {
+      "median": 1655.4,
+      "min": 1618.9,
+      "max": 1658.5
+    },
+    "campaigns": {
+      "median": 204,
+      "min": 191,
+      "max": 215
+    }
+  },
+  "e12-login-400": {
+    "kind": "k6",
+    "n": 0,
+    "nTotal": 3,
+    "excluded": [
+      "e12-login-400-r1",
+      "e12-login-400-r2",
+      "e12-login-400-r3"
+    ],
+    "labels": [
+      "e12-login-400-r1",
+      "e12-login-400-r2",
+      "e12-login-400-r3"
+    ],
+    "allValid": false
+  },
+  "e13-off": {
+    "kind": "k6",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e13-off-r1",
+      "e13-off-r2",
+      "e13-off-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 3659.7,
+      "min": 3629.1,
+      "max": 3809.4
+    },
+    "p99": {
+      "median": 3833.3,
+      "min": 3801,
+      "max": 3926.2
+    },
+    "avg": {
+      "median": 2067.8,
+      "min": 2039.6,
+      "max": 2224.9
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 172,
+      "min": 169,
+      "max": 173
+    }
+  },
+  "e13-on": {
+    "kind": "k6",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e13-on-r1",
+      "e13-on-r2",
+      "e13-on-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 3715,
+      "min": 3709.8,
+      "max": 3778.6
+    },
+    "p99": {
+      "median": 3851.6,
+      "min": 3838.4,
+      "max": 3902.6
+    },
+    "avg": {
+      "median": 2134.5,
+      "min": 2104.3,
+      "max": 2184
+    },
+    "server": {
+      "median": 2043.7,
+      "min": 2040.6,
+      "max": 2051.3
+    },
+    "poolWait": {
+      "median": 1803.4,
+      "min": 1798.7,
+      "max": 1809.5
+    },
+    "lockWait": {
+      "median": 226.7,
+      "min": 220.3,
+      "max": 229.9
+    },
+    "critical": {
+      "median": 7.2,
+      "min": 7.2,
+      "max": 7.3
+    },
+    "commit": {
+      "median": 1.3,
+      "min": 1.3,
+      "max": 1.4
+    },
+    "preLock": {
+      "median": 2.8,
+      "min": 2.8,
+      "max": 2.9
+    },
+    "gap": {
+      "median": 93.9,
+      "min": 53,
+      "max": 140.3
+    },
+    "residual": {
+      "median": 3.7,
+      "min": 3.7,
+      "max": 5.3
+    },
+    "coverage": {
+      "median": 99.8,
+      "min": 99.8,
+      "max": 99.8
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 171,
+      "min": 170,
+      "max": 174
+    }
+  },
+  "e14-race-1api": {
+    "kind": "k6",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e14-race-1api-r1",
+      "e14-race-1api-r2",
+      "e14-race-1api-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 3623.1,
+      "min": 3593.5,
+      "max": 3691.8
+    },
+    "p99": {
+      "median": 3738.9,
+      "min": 3731.5,
+      "max": 3818.2
+    },
+    "avg": {
+      "median": 2016.7,
+      "min": 1980.6,
+      "max": 2111.1
+    },
+    "server": {
+      "median": 1921.9,
+      "min": 1894,
+      "max": 1997.7
+    },
+    "poolWait": {
+      "median": 1806.1,
+      "min": 1778.3,
+      "max": 1879.6
+    },
+    "lockWait": {
+      "median": 103.6,
+      "min": 103.6,
+      "max": 105
+    },
+    "critical": {
+      "median": 6.8,
+      "min": 6.8,
+      "max": 6.8
+    },
+    "commit": {
+      "median": 1.3,
+      "min": 1.3,
+      "max": 1.3
+    },
+    "preLock": {
+      "median": 1.8,
+      "min": 1.6,
+      "max": 1.9
+    },
+    "gap": {
+      "median": 94.7,
+      "min": 86.5,
+      "max": 113.4
+    },
+    "residual": {
+      "median": 2.6,
+      "min": 2.2,
+      "max": 3.2
+    },
+    "coverage": {
+      "median": 99.9,
+      "min": 99.9,
+      "max": 99.9
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 178,
+      "min": 175,
+      "max": 179
+    }
+  },
+  "e14-race-2api": {
+    "kind": "k6",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e14-race-2api-r1",
+      "e14-race-2api-r2",
+      "e14-race-2api-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 3759.7,
+      "min": 3686.3,
+      "max": 3914.2
+    },
+    "p99": {
+      "median": 3875,
+      "min": 3818,
+      "max": 4053.2
+    },
+    "avg": {
+      "median": 2199.7,
+      "min": 2073.5,
+      "max": 2232.2
+    },
+    "server": {
+      "median": 2055,
+      "min": 2011.5,
+      "max": 2129
+    },
+    "poolWait": {
+      "median": 1816,
+      "min": 1771.7,
+      "max": 1876.6
+    },
+    "lockWait": {
+      "median": 224.7,
+      "min": 222.1,
+      "max": 236.3
+    },
+    "critical": {
+      "median": 7.3,
+      "min": 7.2,
+      "max": 7.7
+    },
+    "commit": {
+      "median": 1.3,
+      "min": 1.3,
+      "max": 1.4
+    },
+    "preLock": {
+      "median": 3.1,
+      "min": 2.5,
+      "max": 3.8
+    },
+    "gap": {
+      "median": 103.2,
+      "min": 18.5,
+      "max": 188.2
+    },
+    "residual": {
+      "median": 3.8,
+      "min": 3.3,
+      "max": 5.3
+    },
+    "coverage": {
+      "median": 99.8,
+      "min": 99.8,
+      "max": 99.8
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 177,
+      "min": 176,
+      "max": 180
+    }
+  },
+  "e2-cohorts-1": {
+    "kind": "bench",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e2-cohorts-1-r1",
+      "e2-cohorts-1-r2",
+      "e2-cohorts-1-r3"
+    ],
+    "allValid": true,
+    "p50": {
+      "median": 1730.1,
+      "min": 1648.5,
+      "max": 1738.5
+    },
+    "p95": {
+      "median": 3116.1,
+      "min": 3035.8,
+      "max": 3174.6
+    },
+    "p99": {
+      "median": 3231.3,
+      "min": 3149.9,
+      "max": 3284
+    },
+    "drainMs": {
+      "median": 3262.9,
+      "min": 3180.8,
+      "max": 3314.2
+    },
+    "sps": {
+      "median": 122.6,
+      "min": 120.7,
+      "max": 125.8
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "errors": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "poolAcquire": {
+      "median": 1518.1,
+      "min": 1474.5,
+      "max": 1541.3
+    },
+    "campaigns": {
+      "median": 194,
+      "min": 183,
+      "max": 205
+    }
+  },
+  "e2-cohorts-20": {
+    "kind": "bench",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e2-cohorts-20-r1",
+      "e2-cohorts-20-r2",
+      "e2-cohorts-20-r3"
+    ],
+    "allValid": true,
+    "p50": {
+      "median": 1542.5,
+      "min": 1486.4,
+      "max": 1597.2
+    },
+    "p95": {
+      "median": 2488.9,
+      "min": 2449.8,
+      "max": 2527.4
+    },
+    "p99": {
+      "median": 2547.2,
+      "min": 2519.6,
+      "max": 2613.5
+    },
+    "drainMs": {
+      "median": 2550.1,
+      "min": 2547.1,
+      "max": 2630.2
+    },
+    "sps": {
+      "median": 156.9,
+      "min": 152.1,
+      "max": 157
+    },
+    "accepted": {
+      "median": 200,
+      "min": 200,
+      "max": 200
+    },
+    "errors": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "poolAcquire": {
+      "median": 1306.8,
+      "min": 1284.2,
+      "max": 1341.7
+    },
+    "campaigns": {
+      "median": 193,
+      "min": 182,
+      "max": 207
+    }
+  },
+  "e2-cohorts-5": {
+    "kind": "bench",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e2-cohorts-5-r1",
+      "e2-cohorts-5-r2",
+      "e2-cohorts-5-r3"
+    ],
+    "allValid": true,
+    "p50": {
+      "median": 1228.5,
+      "min": 1157,
+      "max": 1236.4
+    },
+    "p95": {
+      "median": 2120.4,
+      "min": 2093.2,
+      "max": 2160.3
+    },
+    "p99": {
+      "median": 2191.1,
+      "min": 2160.4,
+      "max": 2224.9
+    },
+    "drainMs": {
+      "median": 2211.1,
+      "min": 2176.6,
+      "max": 2249.3
+    },
+    "sps": {
+      "median": 180.9,
+      "min": 177.8,
+      "max": 183.8
+    },
+    "accepted": {
+      "median": 50,
+      "min": 50,
+      "max": 50
+    },
+    "errors": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "poolAcquire": {
+      "median": 1090.5,
+      "min": 1055.2,
+      "max": 1094.8
+    },
+    "campaigns": {
+      "median": 195,
+      "min": 181,
+      "max": 206
+    }
+  },
+  "e4-base": {
+    "kind": "k6",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e4-base-r1",
+      "e4-base-r2",
+      "e4-base-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 3482.6,
+      "min": 3188.5,
+      "max": 3797.5
+    },
+    "p99": {
+      "median": 3586.8,
+      "min": 3316.2,
+      "max": 3944.1
+    },
+    "avg": {
+      "median": 2208.6,
+      "min": 1797.2,
+      "max": 2299.3
+    },
+    "server": {
+      "median": 2024.3,
+      "min": 1774.9,
+      "max": 2269
+    },
+    "poolWait": {
+      "median": 1789,
+      "min": 1567.8,
+      "max": 2021.6
+    },
+    "lockWait": {
+      "median": 217.5,
+      "min": 193.9,
+      "max": 232
+    },
+    "critical": {
+      "median": 6.7,
+      "min": 5.9,
+      "max": 7.3
+    },
+    "commit": {
+      "median": 1.4,
+      "min": 1.3,
+      "max": 1.5
+    },
+    "preLock": {
+      "median": 3,
+      "min": 2.7,
+      "max": 4.1
+    },
+    "gap": {
+      "median": 30.3,
+      "min": 22.4,
+      "max": 184.3
+    },
+    "residual": {
+      "median": 4,
+      "min": 3,
+      "max": 5.6
+    },
+    "coverage": {
+      "median": 99.8,
+      "min": 99.7,
+      "max": 99.8
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 135,
+      "min": 134,
+      "max": 138
+    }
+  },
+  "e4-pin": {
+    "kind": "k6",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e4-pin-r1",
+      "e4-pin-r2",
+      "e4-pin-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 3885.7,
+      "min": 3832.5,
+      "max": 3975.3
+    },
+    "p99": {
+      "median": 3995.7,
+      "min": 3951,
+      "max": 4090.6
+    },
+    "avg": {
+      "median": 2297.6,
+      "min": 2246.3,
+      "max": 2377
+    },
+    "server": {
+      "median": 2187.5,
+      "min": 2136.4,
+      "max": 2264.8
+    },
+    "poolWait": {
+      "median": 1943.1,
+      "min": 1896.4,
+      "max": 2014
+    },
+    "lockWait": {
+      "median": 220.6,
+      "min": 218.7,
+      "max": 230.2
+    },
+    "critical": {
+      "median": 7.6,
+      "min": 7.6,
+      "max": 7.9
+    },
+    "commit": {
+      "median": 2.4,
+      "min": 2.3,
+      "max": 2.5
+    },
+    "preLock": {
+      "median": 4.5,
+      "min": 4,
+      "max": 5.2
+    },
+    "gap": {
+      "median": 110.2,
+      "min": 109.9,
+      "max": 112.2
+    },
+    "residual": {
+      "median": 7.2,
+      "min": 5.2,
+      "max": 9.4
+    },
+    "coverage": {
+      "median": 99.7,
+      "min": 99.6,
+      "max": 99.8
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 136,
+      "min": 133,
+      "max": 137
+    }
+  },
+  "e5-hotspot-p12": {
+    "kind": "k6",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e5-hotspot-p12-r1",
+      "e5-hotspot-p12-r2",
+      "e5-hotspot-p12-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 3383.8,
+      "min": 3164.1,
+      "max": 3505
+    },
+    "p99": {
+      "median": 3553.1,
+      "min": 3344.9,
+      "max": 3644.7
+    },
+    "avg": {
+      "median": 1906.3,
+      "min": 1824.7,
+      "max": 1963.7
+    },
+    "server": {
+      "median": 1799.9,
+      "min": 1747.1,
+      "max": 1846.4
+    },
+    "poolWait": {
+      "median": 1574.7,
+      "min": 1540.6,
+      "max": 1624.6
+    },
+    "lockWait": {
+      "median": 200.6,
+      "min": 188.4,
+      "max": 206
+    },
+    "critical": {
+      "median": 10.8,
+      "min": 9.9,
+      "max": 11.1
+    },
+    "commit": {
+      "median": 1.5,
+      "min": 1.5,
+      "max": 1.6
+    },
+    "preLock": {
+      "median": 3,
+      "min": 2.9,
+      "max": 3.8
+    },
+    "gap": {
+      "median": 106.5,
+      "min": 77.6,
+      "max": 117.2
+    },
+    "residual": {
+      "median": 3.8,
+      "min": 3.6,
+      "max": 5
+    },
+    "coverage": {
+      "median": 99.8,
+      "min": 99.7,
+      "max": 99.8
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 100,
+      "min": 100,
+      "max": 100
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 149,
+      "min": 143,
+      "max": 163
+    }
+  },
+  "e5-hotspot-p24": {
+    "kind": "k6",
+    "n": 2,
+    "nTotal": 3,
+    "excluded": [
+      "e5-hotspot-p24-r3"
+    ],
+    "labels": [
+      "e5-hotspot-p24-r1",
+      "e5-hotspot-p24-r2",
+      "e5-hotspot-p24-r3"
+    ],
+    "allValid": false,
+    "p95": {
+      "median": 3359.5,
+      "min": 3232.5,
+      "max": 3486.5
+    },
+    "p99": {
+      "median": 3484.3,
+      "min": 3350.3,
+      "max": 3618.3
+    },
+    "avg": {
+      "median": 1916.6,
+      "min": 1842.6,
+      "max": 1990.6
+    },
+    "server": {
+      "median": 1832.2,
+      "min": 1693.8,
+      "max": 1970.5
+    },
+    "poolWait": {
+      "median": 1405.6,
+      "min": 1305.4,
+      "max": 1505.7
+    },
+    "lockWait": {
+      "median": 400.9,
+      "min": 365.9,
+      "max": 435.9
+    },
+    "critical": {
+      "median": 11.2,
+      "min": 10.1,
+      "max": 12.3
+    },
+    "commit": {
+      "median": 1.5,
+      "min": 1.5,
+      "max": 1.5
+    },
+    "preLock": {
+      "median": 5.2,
+      "min": 4.8,
+      "max": 5.5
+    },
+    "gap": {
+      "median": 84.4,
+      "min": 20,
+      "max": 148.7
+    },
+    "residual": {
+      "median": 7.9,
+      "min": 6.2,
+      "max": 9.6
+    },
+    "coverage": {
+      "median": 99.6,
+      "min": 99.5,
+      "max": 99.7
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 100,
+      "min": 100,
+      "max": 100
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 148,
+      "min": 145,
+      "max": 151
+    }
+  },
+  "e5-hotspot-p40": {
+    "kind": "k6",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e5-hotspot-p40-r1",
+      "e5-hotspot-p40-r2",
+      "e5-hotspot-p40-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 3362.3,
+      "min": 3290.4,
+      "max": 3773.8
+    },
+    "p99": {
+      "median": 3495.1,
+      "min": 3482.1,
+      "max": 3885.1
+    },
+    "avg": {
+      "median": 1963,
+      "min": 1957.1,
+      "max": 2257.7
+    },
+    "server": {
+      "median": 1810.8,
+      "min": 1799.7,
+      "max": 2015.1
+    },
+    "poolWait": {
+      "median": 1153.9,
+      "min": 1147.6,
+      "max": 1242.6
+    },
+    "lockWait": {
+      "median": 627.4,
+      "min": 623.9,
+      "max": 724.9
+    },
+    "critical": {
+      "median": 12.9,
+      "min": 11.9,
+      "max": 17.1
+    },
+    "commit": {
+      "median": 1.6,
+      "min": 1.5,
+      "max": 1.7
+    },
+    "preLock": {
+      "median": 7.2,
+      "min": 7,
+      "max": 13.1
+    },
+    "gap": {
+      "median": 157.4,
+      "min": 152.3,
+      "max": 242.6
+    },
+    "residual": {
+      "median": 7.7,
+      "min": 7.6,
+      "max": 15.9
+    },
+    "coverage": {
+      "median": 99.6,
+      "min": 99.3,
+      "max": 99.6
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 100,
+      "min": 100,
+      "max": 100
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 153,
+      "min": 147,
+      "max": 159
+    }
+  },
+  "e5-hotspot-p6": {
+    "kind": "k6",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e5-hotspot-p6-r1",
+      "e5-hotspot-p6-r2",
+      "e5-hotspot-p6-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 3302.3,
+      "min": 3061,
+      "max": 3346.3
+    },
+    "p99": {
+      "median": 3504.1,
+      "min": 3175.3,
+      "max": 3550
+    },
+    "avg": {
+      "median": 1868.1,
+      "min": 1785.8,
+      "max": 2037.3
+    },
+    "server": {
+      "median": 1824.9,
+      "min": 1719.7,
+      "max": 1911.9
+    },
+    "poolWait": {
+      "median": 1711,
+      "min": 1618.5,
+      "max": 1799.9
+    },
+    "lockWait": {
+      "median": 94.2,
+      "min": 84.6,
+      "max": 95.2
+    },
+    "critical": {
+      "median": 9.6,
+      "min": 9.4,
+      "max": 10.7
+    },
+    "commit": {
+      "median": 1.5,
+      "min": 1.4,
+      "max": 1.6
+    },
+    "preLock": {
+      "median": 2.3,
+      "min": 2.3,
+      "max": 2.4
+    },
+    "gap": {
+      "median": 66.1,
+      "min": 43.2,
+      "max": 125.4
+    },
+    "residual": {
+      "median": 4.2,
+      "min": 3.4,
+      "max": 4.5
+    },
+    "coverage": {
+      "median": 99.8,
+      "min": 99.8,
+      "max": 99.8
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 100,
+      "min": 100,
+      "max": 100
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 155,
+      "min": 141,
+      "max": 161
+    }
+  },
+  "e5-mixed-p12": {
+    "kind": "k6",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e5-mixed-p12-r1",
+      "e5-mixed-p12-r2",
+      "e5-mixed-p12-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 2068.3,
+      "min": 1809,
+      "max": 2404.1
+    },
+    "p99": {
+      "median": 2736.1,
+      "min": 2366.2,
+      "max": 3287
+    },
+    "avg": {
+      "median": 878.2,
+      "min": 716.8,
+      "max": 1133
+    },
+    "server": {
+      "median": 876.2,
+      "min": 714.5,
+      "max": 1130.9
+    },
+    "poolWait": {
+      "median": 84.7,
+      "min": 58.1,
+      "max": 129.5
+    },
+    "lockWait": {
+      "median": 697.4,
+      "min": 571.1,
+      "max": 914
+    },
+    "critical": {
+      "median": 70,
+      "min": 65.6,
+      "max": 73.6
+    },
+    "commit": {
+      "median": 4.6,
+      "min": 4.4,
+      "max": 4.9
+    },
+    "preLock": {
+      "median": 6.5,
+      "min": 5.7,
+      "max": 7
+    },
+    "gap": {
+      "median": 2.1,
+      "min": 2,
+      "max": 2.3
+    },
+    "residual": {
+      "median": 8.5,
+      "min": 7.2,
+      "max": 8.7
+    },
+    "coverage": {
+      "median": 99,
+      "min": 98.8,
+      "max": 99.4
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 400,
+      "min": 400,
+      "max": 400
+    },
+    "httpFailed": {
+      "median": 1,
+      "min": 0,
+      "max": 1
+    },
+    "campaigns": {
+      "median": 221,
+      "min": 218,
+      "max": 222
+    }
+  },
+  "e5-mixed-p40": {
+    "kind": "k6",
+    "n": 2,
+    "nTotal": 2,
+    "excluded": [],
+    "labels": [
+      "e5-mixed-p40-r1",
+      "e5-mixed-p40-r2"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 8020.7,
+      "min": 4092.7,
+      "max": 11948.6
+    },
+    "p99": {
+      "median": 12833.8,
+      "min": 6394.1,
+      "max": 19273.4
+    },
+    "avg": {
+      "median": 2759.9,
+      "min": 1559.5,
+      "max": 3960.2
+    },
+    "server": {
+      "median": 2757.7,
+      "min": 1557.3,
+      "max": 3958
+    },
+    "poolWait": {
+      "median": 13.9,
+      "min": 7.2,
+      "max": 20.6
+    },
+    "lockWait": {
+      "median": 2638.8,
+      "min": 1449.3,
+      "max": 3828.3
+    },
+    "critical": {
+      "median": 74.9,
+      "min": 70.3,
+      "max": 79.5
+    },
+    "commit": {
+      "median": 5.6,
+      "min": 5.2,
+      "max": 5.9
+    },
+    "preLock": {
+      "median": 11.7,
+      "min": 11.4,
+      "max": 12
+    },
+    "gap": {
+      "median": 2.2,
+      "min": 2.2,
+      "max": 2.2
+    },
+    "residual": {
+      "median": 12.8,
+      "min": 12.3,
+      "max": 13.2
+    },
+    "coverage": {
+      "median": 99.5,
+      "min": 99.2,
+      "max": 99.7
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 400,
+      "min": 400,
+      "max": 400
+    },
+    "httpFailed": {
+      "median": 0.5,
+      "min": 0,
+      "max": 1
+    },
+    "campaigns": {
+      "median": 219.5,
+      "min": 219,
+      "max": 220
+    }
+  },
+  "e5-race-p12": {
+    "kind": "k6",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e5-race-p12-r1",
+      "e5-race-p12-r2",
+      "e5-race-p12-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 3534.7,
+      "min": 3255.5,
+      "max": 4155.2
+    },
+    "p99": {
+      "median": 3677.7,
+      "min": 3351.9,
+      "max": 4320.6
+    },
+    "avg": {
+      "median": 2065.5,
+      "min": 1891.3,
+      "max": 2409
+    },
+    "server": {
+      "median": 1957.8,
+      "min": 1780.6,
+      "max": 2247.7
+    },
+    "poolWait": {
+      "median": 1730.1,
+      "min": 1572.7,
+      "max": 1979.2
+    },
+    "lockWait": {
+      "median": 212.5,
+      "min": 193.9,
+      "max": 251.4
+    },
+    "critical": {
+      "median": 6.6,
+      "min": 6,
+      "max": 8.1
+    },
+    "commit": {
+      "median": 1.4,
+      "min": 1.3,
+      "max": 1.4
+    },
+    "preLock": {
+      "median": 3.1,
+      "min": 2.8,
+      "max": 3.4
+    },
+    "gap": {
+      "median": 110.7,
+      "min": 107.6,
+      "max": 161.3
+    },
+    "residual": {
+      "median": 4.2,
+      "min": 3.9,
+      "max": 4.3
+    },
+    "coverage": {
+      "median": 99.8,
+      "min": 99.8,
+      "max": 99.8
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 148,
+      "min": 142,
+      "max": 162
+    }
+  },
+  "e5-race-p24": {
+    "kind": "k6",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e5-race-p24-r1",
+      "e5-race-p24-r2",
+      "e5-race-p24-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 3372.4,
+      "min": 3366.9,
+      "max": 3392.5
+    },
+    "p99": {
+      "median": 3492.1,
+      "min": 3489.4,
+      "max": 3565.6
+    },
+    "avg": {
+      "median": 1934.1,
+      "min": 1909.7,
+      "max": 2047.4
+    },
+    "server": {
+      "median": 1858.5,
+      "min": 1824,
+      "max": 1889.2
+    },
+    "poolWait": {
+      "median": 1447.7,
+      "min": 1401.8,
+      "max": 1463.5
+    },
+    "lockWait": {
+      "median": 401.9,
+      "min": 393,
+      "max": 405.5
+    },
+    "critical": {
+      "median": 6.3,
+      "min": 6.3,
+      "max": 6.4
+    },
+    "commit": {
+      "median": 1.3,
+      "min": 1.3,
+      "max": 1.3
+    },
+    "preLock": {
+      "median": 4.6,
+      "min": 4.3,
+      "max": 5.3
+    },
+    "gap": {
+      "median": 85.7,
+      "min": 45,
+      "max": 188.9
+    },
+    "residual": {
+      "median": 7.3,
+      "min": 5.8,
+      "max": 8
+    },
+    "coverage": {
+      "median": 99.6,
+      "min": 99.6,
+      "max": 99.7
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 150,
+      "min": 144,
+      "max": 156
+    }
+  },
+  "e5-race-p40": {
+    "kind": "k6",
+    "n": 2,
+    "nTotal": 3,
+    "excluded": [
+      "e5-race-p40-r2"
+    ],
+    "labels": [
+      "e5-race-p40-r1",
+      "e5-race-p40-r2",
+      "e5-race-p40-r3"
+    ],
+    "allValid": false,
+    "p95": {
+      "median": 3422.5,
+      "min": 3417.7,
+      "max": 3427.2
+    },
+    "p99": {
+      "median": 3577.3,
+      "min": 3524.7,
+      "max": 3629.9
+    },
+    "avg": {
+      "median": 1982.8,
+      "min": 1968.7,
+      "max": 1996.9
+    },
+    "server": {
+      "median": 1881.7,
+      "min": 1864.4,
+      "max": 1898.9
+    },
+    "poolWait": {
+      "median": 1206.9,
+      "min": 1190.2,
+      "max": 1223.5
+    },
+    "lockWait": {
+      "median": 649.7,
+      "min": 644.9,
+      "max": 654.5
+    },
+    "critical": {
+      "median": 6.7,
+      "min": 6.5,
+      "max": 6.9
+    },
+    "commit": {
+      "median": 1.3,
+      "min": 1.3,
+      "max": 1.3
+    },
+    "preLock": {
+      "median": 7.5,
+      "min": 5.7,
+      "max": 9.3
+    },
+    "gap": {
+      "median": 101.2,
+      "min": 98,
+      "max": 104.3
+    },
+    "residual": {
+      "median": 9.7,
+      "min": 5.8,
+      "max": 13.5
+    },
+    "coverage": {
+      "median": 99.5,
+      "min": 99.3,
+      "max": 99.7
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 152,
+      "min": 146,
+      "max": 158
+    }
+  },
+  "e5-race-p6": {
+    "kind": "k6",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e5-race-p6-r1",
+      "e5-race-p6-r2",
+      "e5-race-p6-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 3379.1,
+      "min": 3115.3,
+      "max": 3650.6
+    },
+    "p99": {
+      "median": 3501.2,
+      "min": 3296.8,
+      "max": 3845
+    },
+    "avg": {
+      "median": 1991.2,
+      "min": 1754.4,
+      "max": 2154.2
+    },
+    "server": {
+      "median": 1963.9,
+      "min": 1715.6,
+      "max": 2052.7
+    },
+    "poolWait": {
+      "median": 1849.7,
+      "min": 1611.2,
+      "max": 1929.9
+    },
+    "lockWait": {
+      "median": 99.9,
+      "min": 92.4,
+      "max": 107.5
+    },
+    "critical": {
+      "median": 6.5,
+      "min": 6,
+      "max": 7.3
+    },
+    "commit": {
+      "median": 1.4,
+      "min": 1.3,
+      "max": 1.4
+    },
+    "preLock": {
+      "median": 2.1,
+      "min": 2,
+      "max": 2.7
+    },
+    "gap": {
+      "median": 38.8,
+      "min": 27.3,
+      "max": 101.4
+    },
+    "residual": {
+      "median": 4,
+      "min": 2.7,
+      "max": 4.3
+    },
+    "coverage": {
+      "median": 99.8,
+      "min": 99.8,
+      "max": 99.8
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 154,
+      "min": 140,
+      "max": 160
+    }
+  },
+  "e5b-pool-12": {
+    "kind": "bench",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e5b-pool-12-r1",
+      "e5b-pool-12-r2",
+      "e5b-pool-12-r3"
+    ],
+    "allValid": true,
+    "p50": {
+      "median": 1768.2,
+      "min": 1736.2,
+      "max": 1775
+    },
+    "p95": {
+      "median": 3181.8,
+      "min": 3125.6,
+      "max": 3206.9
+    },
+    "p99": {
+      "median": 3290.9,
+      "min": 3242.2,
+      "max": 3323.4
+    },
+    "drainMs": {
+      "median": 3323.5,
+      "min": 3274.6,
+      "max": 3356.1
+    },
+    "sps": {
+      "median": 120.4,
+      "min": 119.2,
+      "max": 122.2
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "errors": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "poolAcquire": {
+      "median": 1569,
+      "min": 1531.7,
+      "max": 1597.1
+    },
+    "campaigns": {
+      "median": 199,
+      "min": 184,
+      "max": 210
+    }
+  },
+  "e5b-pool-24": {
+    "kind": "bench",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e5b-pool-24-r1",
+      "e5b-pool-24-r2",
+      "e5b-pool-24-r3"
+    ],
+    "allValid": true,
+    "p50": {
+      "median": 1794.5,
+      "min": 1789.6,
+      "max": 1877.6
+    },
+    "p95": {
+      "median": 3164.2,
+      "min": 3138.2,
+      "max": 3426
+    },
+    "p99": {
+      "median": 3312.9,
+      "min": 3250,
+      "max": 3540.9
+    },
+    "drainMs": {
+      "median": 3343.8,
+      "min": 3280.3,
+      "max": 3572.2
+    },
+    "sps": {
+      "median": 119.6,
+      "min": 112,
+      "max": 121.9
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "errors": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "poolAcquire": {
+      "median": 1393.2,
+      "min": 1390.6,
+      "max": 1495.9
+    },
+    "campaigns": {
+      "median": 196,
+      "min": 185,
+      "max": 211
+    }
+  },
+  "e5b-pool-48": {
+    "kind": "bench",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e5b-pool-48-r1",
+      "e5b-pool-48-r2",
+      "e5b-pool-48-r3"
+    ],
+    "allValid": true,
+    "p50": {
+      "median": 2107.2,
+      "min": 2052.6,
+      "max": 2290.3
+    },
+    "p95": {
+      "median": 3514.1,
+      "min": 3464.4,
+      "max": 3926.3
+    },
+    "p99": {
+      "median": 3628.3,
+      "min": 3581,
+      "max": 4046.5
+    },
+    "drainMs": {
+      "median": 3660.1,
+      "min": 3612.3,
+      "max": 4079.9
+    },
+    "sps": {
+      "median": 109.3,
+      "min": 98,
+      "max": 110.7
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "errors": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "poolAcquire": {
+      "median": 1291.7,
+      "min": 1262.6,
+      "max": 1427.2
+    },
+    "campaigns": {
+      "median": 197,
+      "min": 186,
+      "max": 208
+    }
+  },
+  "e5b-pool-6": {
+    "kind": "bench",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e5b-pool-6-r1",
+      "e5b-pool-6-r2",
+      "e5b-pool-6-r3"
+    ],
+    "allValid": true,
+    "p50": {
+      "median": 1673.7,
+      "min": 1655.2,
+      "max": 1714.1
+    },
+    "p95": {
+      "median": 3114.2,
+      "min": 3062.9,
+      "max": 3151.1
+    },
+    "p99": {
+      "median": 3269,
+      "min": 3178,
+      "max": 3274.4
+    },
+    "drainMs": {
+      "median": 3301.7,
+      "min": 3209.8,
+      "max": 3305.2
+    },
+    "sps": {
+      "median": 121.2,
+      "min": 121,
+      "max": 124.6
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "errors": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "poolAcquire": {
+      "median": 1574.3,
+      "min": 1558.9,
+      "max": 1618.9
+    },
+    "campaigns": {
+      "median": 198,
+      "min": 187,
+      "max": 209
+    }
+  },
+  "e6-multiuniform-400": {
+    "kind": "k6",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e6-multiuniform-400-r1",
+      "e6-multiuniform-400-r2",
+      "e6-multiuniform-400-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 3348.9,
+      "min": 2411.7,
+      "max": 3492.2
+    },
+    "p99": {
+      "median": 3520.7,
+      "min": 2474.9,
+      "max": 3594.6
+    },
+    "avg": {
+      "median": 1959.2,
+      "min": 1566.5,
+      "max": 2022.8
+    },
+    "server": {
+      "median": 1779.7,
+      "min": 1416.8,
+      "max": 1893.9
+    },
+    "poolWait": {
+      "median": 1562.9,
+      "min": 1260.2,
+      "max": 1671.6
+    },
+    "lockWait": {
+      "median": 163.4,
+      "min": 115.7,
+      "max": 167.4
+    },
+    "critical": {
+      "median": 35.3,
+      "min": 25.2,
+      "max": 38.2
+    },
+    "commit": {
+      "median": 3.7,
+      "min": 3.3,
+      "max": 4.1
+    },
+    "preLock": {
+      "median": 5.6,
+      "min": 5.6,
+      "max": 6.2
+    },
+    "gap": {
+      "median": 149.7,
+      "min": 128.9,
+      "max": 179.6
+    },
+    "residual": {
+      "median": 7.1,
+      "min": 6.7,
+      "max": 8.1
+    },
+    "coverage": {
+      "median": 99.6,
+      "min": 99.6,
+      "max": 99.6
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 100,
+      "min": 100,
+      "max": 100
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 125,
+      "min": 121,
+      "max": 129
+    }
+  },
+  "e7-catalog-15": {
+    "kind": "bench",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e7-catalog-15-r1",
+      "e7-catalog-15-r2",
+      "e7-catalog-15-r3"
+    ],
+    "allValid": true,
+    "p50": {
+      "median": 500.7,
+      "min": 482.5,
+      "max": 517.3
+    },
+    "p95": {
+      "median": 810.5,
+      "min": 772.7,
+      "max": 860.8
+    },
+    "p99": {
+      "median": 826.4,
+      "min": 790.8,
+      "max": 885.6
+    },
+    "drainMs": {
+      "median": 839.1,
+      "min": 792.8,
+      "max": 890.1
+    },
+    "sps": {
+      "median": 119.2,
+      "min": 112.4,
+      "max": 126.1
+    },
+    "accepted": {
+      "median": 100,
+      "min": 100,
+      "max": 100
+    },
+    "errors": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "poolAcquire": {
+      "median": 322.3,
+      "min": 311.5,
+      "max": 327.3
+    },
+    "campaigns": {
+      "median": 202,
+      "min": 188,
+      "max": 213
+    }
+  },
+  "e7-catalog-3": {
+    "kind": "bench",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e7-catalog-3-r1",
+      "e7-catalog-3-r2",
+      "e7-catalog-3-r3"
+    ],
+    "allValid": true,
+    "p50": {
+      "median": 460.1,
+      "min": 435.4,
+      "max": 500.8
+    },
+    "p95": {
+      "median": 773.2,
+      "min": 769.6,
+      "max": 808.7
+    },
+    "p99": {
+      "median": 798.2,
+      "min": 796.2,
+      "max": 827.2
+    },
+    "drainMs": {
+      "median": 808.6,
+      "min": 800.5,
+      "max": 837.7
+    },
+    "sps": {
+      "median": 123.7,
+      "min": 119.4,
+      "max": 124.9
+    },
+    "accepted": {
+      "median": 100,
+      "min": 100,
+      "max": 100
+    },
+    "errors": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "poolAcquire": {
+      "median": 285.5,
+      "min": 265.6,
+      "max": 300
+    },
+    "campaigns": {
+      "median": 201,
+      "min": 190,
+      "max": 212
+    }
+  },
+  "e7-catalog-300": {
+    "kind": "bench",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e7-catalog-300-r1",
+      "e7-catalog-300-r2",
+      "e7-catalog-300-r3"
+    ],
+    "allValid": true,
+    "p50": {
+      "median": 1108.8,
+      "min": 1066.8,
+      "max": 1230.9
+    },
+    "p95": {
+      "median": 1768.2,
+      "min": 1759.3,
+      "max": 1801.8
+    },
+    "p99": {
+      "median": 1770.2,
+      "min": 1763.3,
+      "max": 1802.5
+    },
+    "drainMs": {
+      "median": 1772.8,
+      "min": 1764.3,
+      "max": 1804.8
+    },
+    "sps": {
+      "median": 56.4,
+      "min": 55.4,
+      "max": 56.7
+    },
+    "accepted": {
+      "median": 100,
+      "min": 100,
+      "max": 100
+    },
+    "errors": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "poolAcquire": {
+      "median": 732.7,
+      "min": 723.9,
+      "max": 743.4
+    },
+    "campaigns": {
+      "median": 200,
+      "min": 189,
+      "max": 214
+    }
+  },
+  "e8-reads-100": {
+    "kind": "reads",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e8-reads-100-r1",
+      "e8-reads-100-r2",
+      "e8-reads-100-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 328.3,
+      "min": 275.4,
+      "max": 363.6
+    },
+    "p99": {
+      "median": 501.3,
+      "min": 351.4,
+      "max": 550.4
+    },
+    "avg": {
+      "median": 71.3,
+      "min": 50.2,
+      "max": 72.2
+    },
+    "itps": {
+      "median": 55,
+      "min": 54.9,
+      "max": 55.1
+    },
+    "dropped": {
+      "median": 0,
+      "min": 0,
+      "max": 3
+    },
+    "failed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    }
+  },
+  "e8-reads-150": {
+    "kind": "reads",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e8-reads-150-r1",
+      "e8-reads-150-r2",
+      "e8-reads-150-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 2231.8,
+      "min": 2047.6,
+      "max": 2379
+    },
+    "p99": {
+      "median": 2410.1,
+      "min": 2199.1,
+      "max": 2536.5
+    },
+    "avg": {
+      "median": 714.3,
+      "min": 671.6,
+      "max": 950
+    },
+    "itps": {
+      "median": 64,
+      "min": 61.7,
+      "max": 65.1
+    },
+    "dropped": {
+      "median": 712,
+      "min": 647,
+      "max": 889
+    },
+    "failed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    }
+  },
+  "e8-reads-200": {
+    "kind": "reads",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e8-reads-200-r1",
+      "e8-reads-200-r2",
+      "e8-reads-200-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 2485.7,
+      "min": 2028.7,
+      "max": 2524.7
+    },
+    "p99": {
+      "median": 2666.5,
+      "min": 2218.5,
+      "max": 2956.2
+    },
+    "avg": {
+      "median": 1140.7,
+      "min": 1000.7,
+      "max": 1157.1
+    },
+    "itps": {
+      "median": 66.5,
+      "min": 65.7,
+      "max": 74.9
+    },
+    "dropped": {
+      "median": 2034,
+      "min": 1447,
+      "max": 2069
+    },
+    "failed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    }
+  },
+  "e8-reads-25": {
+    "kind": "reads",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e8-reads-25-r1",
+      "e8-reads-25-r2",
+      "e8-reads-25-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 14.3,
+      "min": 12,
+      "max": 15.7
+    },
+    "p99": {
+      "median": 23.4,
+      "min": 17.8,
+      "max": 28.9
+    },
+    "avg": {
+      "median": 9,
+      "min": 8.1,
+      "max": 9
+    },
+    "itps": {
+      "median": 23.4,
+      "min": 23.4,
+      "max": 23.4
+    },
+    "dropped": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "failed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    }
+  },
+  "e8-reads-300": {
+    "kind": "reads",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e8-reads-300-r1",
+      "e8-reads-300-r2",
+      "e8-reads-300-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 2457.1,
+      "min": 2388.6,
+      "max": 2585.5
+    },
+    "p99": {
+      "median": 2565.7,
+      "min": 2561.6,
+      "max": 2789.6
+    },
+    "avg": {
+      "median": 1459.8,
+      "min": 1444.7,
+      "max": 1470.5
+    },
+    "itps": {
+      "median": 71,
+      "min": 70.6,
+      "max": 72.1
+    },
+    "dropped": {
+      "median": 4708,
+      "min": 4596,
+      "max": 4709
+    },
+    "failed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    }
+  },
+  "e8-reads-50": {
+    "kind": "reads",
+    "n": 3,
+    "nTotal": 3,
+    "excluded": [],
+    "labels": [
+      "e8-reads-50-r1",
+      "e8-reads-50-r2",
+      "e8-reads-50-r3"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 15.7,
+      "min": 12.9,
+      "max": 20
+    },
+    "p99": {
+      "median": 36,
+      "min": 20.8,
+      "max": 43.3
+    },
+    "avg": {
+      "median": 8.8,
+      "min": 8.2,
+      "max": 9.5
+    },
+    "itps": {
+      "median": 34.1,
+      "min": 34.1,
+      "max": 34.1
+    },
+    "dropped": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "failed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    }
+  },
+  "pilot-ample-400": {
+    "kind": "k6",
+    "n": 1,
+    "nTotal": 1,
+    "excluded": [],
+    "labels": [
+      "pilot-ample-400"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 7080.2,
+      "min": 7080.2,
+      "max": 7080.2
+    },
+    "p99": {
+      "median": 7488.4,
+      "min": 7488.4,
+      "max": 7488.4
+    },
+    "avg": {
+      "median": 4382.8,
+      "min": 4382.8,
+      "max": 4382.8
+    },
+    "server": {
+      "median": 4301.3,
+      "min": 4301.3,
+      "max": 4301.3
+    },
+    "poolWait": {
+      "median": 3891,
+      "min": 3891,
+      "max": 3891
+    },
+    "lockWait": {
+      "median": 385.3,
+      "min": 385.3,
+      "max": 385.3
+    },
+    "critical": {
+      "median": 17,
+      "min": 17,
+      "max": 17
+    },
+    "commit": {
+      "median": 1.3,
+      "min": 1.3,
+      "max": 1.3
+    },
+    "preLock": {
+      "median": 2.5,
+      "min": 2.5,
+      "max": 2.5
+    },
+    "gap": {
+      "median": 81.6,
+      "min": 81.6,
+      "max": 81.6
+    },
+    "residual": {
+      "median": 4.2,
+      "min": 4.2,
+      "max": 4.2
+    },
+    "coverage": {
+      "median": 99.9,
+      "min": 99.9,
+      "max": 99.9
+    },
+    "poolTimeouts": {
+      "median": 149,
+      "min": 149,
+      "max": 149
+    },
+    "accepted": {
+      "median": 251,
+      "min": 251,
+      "max": 251
+    },
+    "httpFailed": {
+      "median": 149,
+      "min": 149,
+      "max": 149
+    },
+    "campaigns": {
+      "median": 115,
+      "min": 115,
+      "max": 115
+    }
+  },
+  "pilot-race-400": {
+    "kind": "k6",
+    "n": 1,
+    "nTotal": 1,
+    "excluded": [],
+    "labels": [
+      "pilot-race-400"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 3114.5,
+      "min": 3114.5,
+      "max": 3114.5
+    },
+    "p99": {
+      "median": 3241.9,
+      "min": 3241.9,
+      "max": 3241.9
+    },
+    "avg": {
+      "median": 1795.7,
+      "min": 1795.7,
+      "max": 1795.7
+    },
+    "server": {
+      "median": 1694.3,
+      "min": 1694.3,
+      "max": 1694.3
+    },
+    "poolWait": {
+      "median": 1494,
+      "min": 1494,
+      "max": 1494
+    },
+    "lockWait": {
+      "median": 187.5,
+      "min": 187.5,
+      "max": 187.5
+    },
+    "critical": {
+      "median": 5.6,
+      "min": 5.6,
+      "max": 5.6
+    },
+    "commit": {
+      "median": 1.3,
+      "min": 1.3,
+      "max": 1.3
+    },
+    "preLock": {
+      "median": 2.7,
+      "min": 2.7,
+      "max": 2.7
+    },
+    "gap": {
+      "median": 101.4,
+      "min": 101.4,
+      "max": 101.4
+    },
+    "residual": {
+      "median": 3.2,
+      "min": 3.2,
+      "max": 3.2
+    },
+    "coverage": {
+      "median": 99.8,
+      "min": 99.8,
+      "max": 99.8
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 114,
+      "min": 114,
+      "max": 114
+    }
+  },
+  "sent-a": {
+    "kind": "k6",
+    "n": 1,
+    "nTotal": 1,
+    "excluded": [],
+    "labels": [
+      "sent-a"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 3337.8,
+      "min": 3337.8,
+      "max": 3337.8
+    },
+    "p99": {
+      "median": 3526.8,
+      "min": 3526.8,
+      "max": 3526.8
+    },
+    "avg": {
+      "median": 1970.7,
+      "min": 1970.7,
+      "max": 1970.7
+    },
+    "server": {
+      "median": 1864.6,
+      "min": 1864.6,
+      "max": 1864.6
+    },
+    "poolWait": {
+      "median": 1647.3,
+      "min": 1647.3,
+      "max": 1647.3
+    },
+    "lockWait": {
+      "median": 202.8,
+      "min": 202.8,
+      "max": 202.8
+    },
+    "critical": {
+      "median": 6.1,
+      "min": 6.1,
+      "max": 6.1
+    },
+    "commit": {
+      "median": 1.3,
+      "min": 1.3,
+      "max": 1.3
+    },
+    "preLock": {
+      "median": 3.5,
+      "min": 3.5,
+      "max": 3.5
+    },
+    "gap": {
+      "median": 106,
+      "min": 106,
+      "max": 106
+    },
+    "residual": {
+      "median": 3.6,
+      "min": 3.6,
+      "max": 3.6
+    },
+    "coverage": {
+      "median": 99.8,
+      "min": 99.8,
+      "max": 99.8
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 116,
+      "min": 116,
+      "max": 116
+    }
+  },
+  "sent-b": {
+    "kind": "k6",
+    "n": 1,
+    "nTotal": 1,
+    "excluded": [],
+    "labels": [
+      "sent-b"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 3433.5,
+      "min": 3433.5,
+      "max": 3433.5
+    },
+    "p99": {
+      "median": 3657.3,
+      "min": 3657.3,
+      "max": 3657.3
+    },
+    "avg": {
+      "median": 2042.3,
+      "min": 2042.3,
+      "max": 2042.3
+    },
+    "server": {
+      "median": 1870.1,
+      "min": 1870.1,
+      "max": 1870.1
+    },
+    "poolWait": {
+      "median": 1648.7,
+      "min": 1648.7,
+      "max": 1648.7
+    },
+    "lockWait": {
+      "median": 204.9,
+      "min": 204.9,
+      "max": 204.9
+    },
+    "critical": {
+      "median": 6.6,
+      "min": 6.6,
+      "max": 6.6
+    },
+    "commit": {
+      "median": 1.3,
+      "min": 1.3,
+      "max": 1.3
+    },
+    "preLock": {
+      "median": 3.8,
+      "min": 3.8,
+      "max": 3.8
+    },
+    "gap": {
+      "median": 172.2,
+      "min": 172.2,
+      "max": 172.2
+    },
+    "residual": {
+      "median": 4.8,
+      "min": 4.8,
+      "max": 4.8
+    },
+    "coverage": {
+      "median": 99.8,
+      "min": 99.8,
+      "max": 99.8
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 132,
+      "min": 132,
+      "max": 132
+    }
+  },
+  "sent-c": {
+    "kind": "k6",
+    "n": 1,
+    "nTotal": 1,
+    "excluded": [],
+    "labels": [
+      "sent-c"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 3198.5,
+      "min": 3198.5,
+      "max": 3198.5
+    },
+    "p99": {
+      "median": 3378.7,
+      "min": 3378.7,
+      "max": 3378.7
+    },
+    "avg": {
+      "median": 1875,
+      "min": 1875,
+      "max": 1875
+    },
+    "server": {
+      "median": 1790.8,
+      "min": 1790.8,
+      "max": 1790.8
+    },
+    "poolWait": {
+      "median": 1581.7,
+      "min": 1581.7,
+      "max": 1581.7
+    },
+    "lockWait": {
+      "median": 194.9,
+      "min": 194.9,
+      "max": 194.9
+    },
+    "critical": {
+      "median": 6.1,
+      "min": 6.1,
+      "max": 6.1
+    },
+    "commit": {
+      "median": 1.4,
+      "min": 1.4,
+      "max": 1.4
+    },
+    "preLock": {
+      "median": 3.1,
+      "min": 3.1,
+      "max": 3.1
+    },
+    "gap": {
+      "median": 84.1,
+      "min": 84.1,
+      "max": 84.1
+    },
+    "residual": {
+      "median": 3.7,
+      "min": 3.7,
+      "max": 3.7
+    },
+    "coverage": {
+      "median": 99.8,
+      "min": 99.8,
+      "max": 99.8
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 139,
+      "min": 139,
+      "max": 139
+    }
+  },
+  "sent-d": {
+    "kind": "k6",
+    "n": 1,
+    "nTotal": 1,
+    "excluded": [],
+    "labels": [
+      "sent-d"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 3781.6,
+      "min": 3781.6,
+      "max": 3781.6
+    },
+    "p99": {
+      "median": 3900.4,
+      "min": 3900.4,
+      "max": 3900.4
+    },
+    "avg": {
+      "median": 2143.4,
+      "min": 2143.4,
+      "max": 2143.4
+    },
+    "server": {
+      "median": 2035,
+      "min": 2035,
+      "max": 2035
+    },
+    "poolWait": {
+      "median": 1795.4,
+      "min": 1795.4,
+      "max": 1795.4
+    },
+    "lockWait": {
+      "median": 223.1,
+      "min": 223.1,
+      "max": 223.1
+    },
+    "critical": {
+      "median": 7,
+      "min": 7,
+      "max": 7
+    },
+    "commit": {
+      "median": 1.4,
+      "min": 1.4,
+      "max": 1.4
+    },
+    "preLock": {
+      "median": 3.4,
+      "min": 3.4,
+      "max": 3.4
+    },
+    "gap": {
+      "median": 108.5,
+      "min": 108.5,
+      "max": 108.5
+    },
+    "residual": {
+      "median": 4.7,
+      "min": 4.7,
+      "max": 4.7
+    },
+    "coverage": {
+      "median": 99.8,
+      "min": 99.8,
+      "max": 99.8
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 164,
+      "min": 164,
+      "max": 164
+    }
+  },
+  "sent-e": {
+    "kind": "k6",
+    "n": 1,
+    "nTotal": 1,
+    "excluded": [],
+    "labels": [
+      "sent-e"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 3564.2,
+      "min": 3564.2,
+      "max": 3564.2
+    },
+    "p99": {
+      "median": 3691.7,
+      "min": 3691.7,
+      "max": 3691.7
+    },
+    "avg": {
+      "median": 1990.1,
+      "min": 1990.1,
+      "max": 1990.1
+    },
+    "server": {
+      "median": 1884.8,
+      "min": 1884.8,
+      "max": 1884.8
+    },
+    "poolWait": {
+      "median": 1658,
+      "min": 1658,
+      "max": 1658
+    },
+    "lockWait": {
+      "median": 212.1,
+      "min": 212.1,
+      "max": 212.1
+    },
+    "critical": {
+      "median": 6.8,
+      "min": 6.8,
+      "max": 6.8
+    },
+    "commit": {
+      "median": 1.3,
+      "min": 1.3,
+      "max": 1.3
+    },
+    "preLock": {
+      "median": 2.7,
+      "min": 2.7,
+      "max": 2.7
+    },
+    "gap": {
+      "median": 105.3,
+      "min": 105.3,
+      "max": 105.3
+    },
+    "residual": {
+      "median": 3.9,
+      "min": 3.9,
+      "max": 3.9
+    },
+    "coverage": {
+      "median": 99.8,
+      "min": 99.8,
+      "max": 99.8
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 165,
+      "min": 165,
+      "max": 165
+    }
+  },
+  "sent-g": {
+    "kind": "k6",
+    "n": 1,
+    "nTotal": 1,
+    "excluded": [],
+    "labels": [
+      "sent-g"
+    ],
+    "allValid": true,
+    "p95": {
+      "median": 3886.4,
+      "min": 3886.4,
+      "max": 3886.4
+    },
+    "p99": {
+      "median": 4041.9,
+      "min": 4041.9,
+      "max": 4041.9
+    },
+    "avg": {
+      "median": 2214,
+      "min": 2214,
+      "max": 2214
+    },
+    "server": {
+      "median": 2085.7,
+      "min": 2085.7,
+      "max": 2085.7
+    },
+    "poolWait": {
+      "median": 1838.5,
+      "min": 1838.5,
+      "max": 1838.5
+    },
+    "lockWait": {
+      "median": 231.1,
+      "min": 231.1,
+      "max": 231.1
+    },
+    "critical": {
+      "median": 7.5,
+      "min": 7.5,
+      "max": 7.5
+    },
+    "commit": {
+      "median": 1.3,
+      "min": 1.3,
+      "max": 1.3
+    },
+    "preLock": {
+      "median": 3.6,
+      "min": 3.6,
+      "max": 3.6
+    },
+    "gap": {
+      "median": 128.4,
+      "min": 128.4,
+      "max": 128.4
+    },
+    "residual": {
+      "median": 3.7,
+      "min": 3.7,
+      "max": 3.7
+    },
+    "coverage": {
+      "median": 99.8,
+      "min": 99.8,
+      "max": 99.8
+    },
+    "poolTimeouts": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "accepted": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "httpFailed": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "campaigns": {
+      "median": 217,
+      "min": 217,
+      "max": 217
+    }
+  }
+}
