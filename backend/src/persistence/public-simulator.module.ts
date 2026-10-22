@@ -9,11 +9,13 @@ import { SimulatorPublicDashboardController } from '../auth/simulator-public-das
 import { APP_INTERCEPTOR } from '@nestjs/core'
 import { SimulatorMetricsInterceptor } from '../auth/simulator-metrics.interceptor.js'
 import { IDENTITY_PROVIDER } from '../auth/identity-provider.js'
+import { StoreMetrics } from './store-metrics.js'
 
 @Module({
   controllers: [SimulatorAuthController, SimulatorPublicApiController, SimulatorPublicDashboardController, SimulatorOperationsController],
   providers: [
     { provide: SIMULATOR_POOL, useFactory: createSimulatorPool },
+    StoreMetrics,
     PostgresEnrollmentStore,
     SimulatorAuthService,
     SimulatorMetricsInterceptor,
@@ -21,6 +23,6 @@ import { IDENTITY_PROVIDER } from '../auth/identity-provider.js'
     { provide: ENROLLMENT_STORE, useExisting: PostgresEnrollmentStore },
     { provide: IDENTITY_PROVIDER, useExisting: PostgresEnrollmentStore },
   ],
-  exports: [SIMULATOR_POOL, ENROLLMENT_STORE],
+  exports: [SIMULATOR_POOL, ENROLLMENT_STORE, StoreMetrics],
 })
 export class PublicSimulatorPersistenceModule {}
