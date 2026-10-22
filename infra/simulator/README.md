@@ -176,3 +176,19 @@ El runner necesita Bash, Docker Compose y `flock`; los UUID, lectores de JSON y 
 Los paneles k6 filtran por `testid`. Los nuevos paneles operativos muestran el despliegue durante el intervalo elegido: CPU y memoria de cada API, demora del event loop, conexiones y espera del pool, categorías de espera en PostgreSQL y disponibilidad del colector. Estas series operativas son comunes a las ejecuciones; no incluyen identificadores de alumnos. El colector usa internamente el endpoint protegido y no publica ningún puerto al host. Las esperas globales de PostgreSQL se combinan con `max` entre observadores para no contarlas dos veces. El p95 de event loop corresponde a la vida del proceso; no es el p95 de solicitudes.
 
 La CPU indicada por el usuario al 100 % correspondía a GitHub Codespaces. Los resultados de otro host se informan con sus propios recursos y no se extrapolan a Codespaces ni al SUM. Para medir capacidad del servidor sin que el generador compita por CPU, ejecutar k6 en un host separado requiere una configuración explícita de entorno sintético; los scripts actuales mantienen el guard de destino local/Docker.
+
+## Rendimiento
+
+`compose.perf.yaml` es un override de diagnóstico (P0-01 de `docs/performance/plan.md`). Se aplica encima del simulador y no modifica ningún archivo Compose existente:
+
+```sh
+docker compose -f compose.simulator.yaml -f compose.perf.yaml up -d
+```
+
+Sin el override, la configuración renderizada es idéntica a la actual.
+
+- **`cpuset` por servicio**, parametrizado por variables de entorno. Por defecto, para el experimento E4 en ENV-H (2 vCPU): `PERF_CPUSET_K6=0` y `PERF_CPUSET_POSTGRES`, `PERF_CPUSET_API_A`, `PERF_CPUSET_API_B`, `PERF_CPUSET_WEB` en `1`.
+- **ENV-H**: los cpusets se usan SOLO en el experimento E4. Las corridas normales en ENV-H no usan el override, porque fijar CPUs deja al SUT con una sola CPU.
+- **ENV-C** (host opcional con 8 vCPU o más): `PERF_CPUSET_K6=0-1`, `PERF_CPUSET_POSTGRES=2-3`, `PERF_CPUSET_API_A=4`, `PERF_CPUSET_API_B=5`, `PERF_CPUSET_WEB=6-7`.
+- **Pool de conexiones**: `SIMULATOR_DB_POOL_MAX` explícito en `api-a` y `api-b` (por defecto 12, igual que el valor actual del backend).
+- **PostgreSQL (solo diagnóstico)**: `shared_preload_libraries=pg_stat_statements`, `track_io_timing=on` y `track_wal_io_timing=on`, pasados como `-c` al servidor. El override no crea la extensión ni cambia migraciones; consultar `pg_stat_statements` requiere `CREATE EXTENSION`, que corresponde a una tarea posterior (P1).
