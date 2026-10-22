@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Inject, Param, Post, Req, UseFilters, HttpException } from '@nestjs/common'
+import { Body, Controller, Get, HttpCode, Inject, Param, Post, Req, UseFilters, HttpException, OnModuleDestroy, OnModuleInit } from '@nestjs/common'
 import type { Request } from 'express'
 import { validateEnrollmentId, validateRequestId, validateSessionId } from '../../../shared/matricula-regular.mjs'
 import type { MatriculaRegularId } from '../../../shared/matricula-regular.mjs'
@@ -10,6 +10,8 @@ import { SimulatorAuthService } from './simulator-auth.service.js'
 import { PostgresEnrollmentStore } from '../persistence/postgres-enrollment.store.js'
 import { SIMULATOR_POOL } from '../persistence/postgres.js'
 import { SimulatorMetricsInterceptor } from './simulator-metrics.interceptor.js'
+import { StoreMetrics } from '../persistence/store-metrics.js'
+import { activeCampaignId, PgWaitEventSampler, readDatabaseStats, readLocksWaiting, readWalStats } from './simulator-pg-stats.js'
 
 function token(request: Request) {
   const name = process.env.SIMULATOR_INSECURE_COOKIE === '1' && ['localhost', '127.0.0.1', '[::1]'].includes(request.hostname) ? 'simulator-session' : '__Host-simulator-session'
@@ -118,8 +120,14 @@ export class SimulatorPublicApiController {
 }
 
 @Controller('simulator')
-export class SimulatorOperationsController {
-  constructor(@Inject(SIMULATOR_POOL) private readonly pool: import('pg').Pool, private readonly metricsSnapshot: SimulatorMetricsInterceptor) {}
+export class SimulatorOperationsController implements OnModuleInit, OnModuleDestroy {
+  private readonly waitSampler = new PgWaitEventSampler()
+
+  constructor(@Inject(SIMULATOR_POOL) private readonly pool: import('pg').Pool, private readonly metricsSnapshot: SimulatorMetricsInterceptor, @Inject(StoreMetrics) private readonly storeMetrics: StoreMetrics) {}
+
+  onModuleInit() { this.waitSampler.start() }
+
+  async onModuleDestroy() { await this.waitSampler.stop() }
 
   @Get('health')
   async health() {
@@ -137,12 +145,18 @@ export class SimulatorOperationsController {
     const authorized = secret !== undefined && request.get('authorization') === `Bearer ${secret}`
     if (!authorized) throw new HttpException({ error: { code: 'FORBIDDEN', fields: [] } }, 403)
     const totals = await this.pool.query<{ requests: string; enrollments: string; active_sessions: string }>(`SELECT
-      (SELECT count(*) FROM simulator_requests)::text requests,
-      (SELECT count(*) FROM simulator_enrollments)::text enrollments,
-      (SELECT count(*) FROM simulator_sessions WHERE revoked_at IS NULL AND expires_at>now())::text active_sessions`)
+      (SELECT count(*) FROM simulator_requests WHERE campaign_id=$1)::text requests,
+      (SELECT count(*) FROM simulator_enrollments WHERE campaign_id=$1)::text enrollments,
+      (SELECT count(*) FROM simulator_sessions WHERE campaign_id=$1 AND revoked_at IS NULL AND expires_at>now())::text active_sessions`, [activeCampaignId()])
     const routes = await this.pool.query('SELECT method,route,status,sum(count)::bigint count,round((sum(duration_total_ms)/greatest(sum(count),1))::numeric,2) avg_ms,round(max(duration_max_ms)::numeric,2) max_ms FROM simulator_http_metrics WHERE bucket_start>now()-interval \'15 minutes\' GROUP BY method,route,status ORDER BY method,route,status')
     const waits = await this.pool.query("SELECT coalesce(wait_event_type,'active') wait_event_type,count(*)::int count FROM pg_stat_activity WHERE application_name='sum-simulator' GROUP BY wait_event_type ORDER BY wait_event_type")
     const row = totals.rows[0]!
-    return { data: { requests: Number(row.requests), enrollments: Number(row.enrollments), activeSessions: Number(row.active_sessions), pool: { waiting: this.pool.waitingCount, total: this.pool.totalCount, idle: this.pool.idleCount }, routes: routes.rows, databaseWaitEvents: waits.rows, process: this.metricsSnapshot.snapshot() } }
+    const database = {
+      waitEventsMax: this.waitSampler.readAndReset(),
+      locksWaiting: await readLocksWaiting(this.pool),
+      stats: await readDatabaseStats(this.pool),
+      wal: await readWalStats(this.pool),
+    }
+    return { data: { requests: Number(row.requests), enrollments: Number(row.enrollments), activeSessions: Number(row.active_sessions), pool: { waiting: this.pool.waitingCount, total: this.pool.totalCount, idle: this.pool.idleCount }, routes: routes.rows, databaseWaitEvents: waits.rows, process: this.metricsSnapshot.snapshot(), store: this.storeMetrics.snapshot(), database } }
   }
 }
