@@ -6,7 +6,7 @@ import { buildBuiltInEnrollmentScenarioBundles } from '../backend/dist/matricula
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const OUTPUT = resolve(ROOT, 'evidence/local/perfiles-escenarios-matricula/generated')
-const ids = ['regular', 'repitencia', 'tutoria', 'prerrequisito', 'cruce', 'cupo', 'deuda', 'gap-horario', 'prioridad']
+const ids = ['regular', 'repitencia', 'tutoria', 'prerrequisito', 'cruce', 'cupo', 'deuda', 'docente-no-asignado', 'prioridad']
 
 async function ensureOutputDirectory() {
   const segments = ['evidence', 'local', 'perfiles-escenarios-matricula', 'generated']

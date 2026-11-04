@@ -24,7 +24,7 @@ export const dashboardKeys = Object.freeze([
 
 const actorIds = Object.freeze(['SYN-SIS-A', 'SYN-SIS-B', 'SYN-SOFT-A', 'SYN-SOFT-B'])
 export const scenarioIds = Object.freeze([
-  'regular', 'repitencia', 'tutoria', 'prerrequisito', 'cruce', 'cupo', 'deuda', 'gap-horario', 'prioridad',
+  'regular', 'repitencia', 'tutoria', 'prerrequisito', 'cruce', 'cupo', 'deuda', 'docente-no-asignado', 'prioridad',
 ])
 const objectPrototype = Object.prototype
 

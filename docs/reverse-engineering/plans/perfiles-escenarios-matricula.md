@@ -69,7 +69,7 @@ Añadir a cada `profile.sources` fuente `PEM-LOCAL-1` con `origin:'local-decisio
 | cruce | Horario de C10 igual al de C09, ambos 08:00–09:00 miércoles | A0 → rejected, solo SCHEDULE_CONFLICT(C09,C10) | B0 → mismo rechazo |
 | cupo | C09 occupied=capacity=10 | A0 → rejected, solo SECTION_FULL(C09, sección C09-S1) | B0 → mismo rechazo |
 | deuda | Solo B: institutional.debt=`unmet` | A0 → accepted | B0 → rejected, solo DEBT_REQUIREMENT_UNMET, IDs vacíos |
-| gap-horario | C09 schedule=null | A0 → configuration-pending, solo SCHEDULE_UNKNOWN(C09) | B0 → mismo pending |
+| docente-no-asignado | C09 con horario y teacher=null (testimonio 2026-10-22: se publica el horario antes que el docente) | A0 → accepted | B0 → accepted |
 | prioridad | Ninguno; B omite ambas repitencias y elige C11 sin aprobar C07 | A0 → accepted | C09,C10,C11 → rejected, RETAKE_PRIORITY(C07), RETAKE_PRIORITY(C08) y PREREQUISITE_UNMET(C07,C11), tres causas |
 
 `regular` y `repitencia` comparten estado deliberadamente: la segunda guía enseña el significado de B, no fabrica otro perfil. Cada actor tiene un caso explícito. Códigos y conjuntos indicados son exactos; `sourceIds=['PEM-LOCAL-1']` para estas causas/gaps. IDs de cursos completos y arrays ordenados/deduplicados según wire. Causa de cruce/prerrequisito/tutoría/prioridad no tiene sectionIds; SECTION_FULL sí. Ausencia de gaps y causas se verifica como `[]`. Nunca convertir pending en rechazo. Resultados definidos sobre corrida recién creada: los casos se ejecutan con reset por actor, evitando que un accepted anterior produzca ALREADY_ENROLLED.
@@ -86,7 +86,7 @@ Formato de exportación exacto, local y ajeno al wire HTTP:
 type EnrollmentScenarioBundle = {
   seedRevision: 'PEM-SEED-1'
   scenarioId: 'regular' | 'repitencia' | 'tutoria' | 'prerrequisito' |
-    'cruce' | 'cupo' | 'deuda' | 'gap-horario' | 'prioridad'
+    'cruce' | 'cupo' | 'deuda' | 'docente-no-asignado' | 'prioridad'
   clockBase: '2026-08-11T14:00:00.000Z'
   source: {
     path: 'datos-sinteticos/plan-estudios.json'

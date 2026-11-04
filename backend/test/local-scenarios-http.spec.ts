@@ -41,7 +41,7 @@ it('lists nine profiles and metadata in fixed order, including safe prerequisite
   expect(response.status).toBe(200)
   expect(() => validateScenarioCatalogResponse(response.body)).not.toThrow()
   expect(response.body.data.scenarios.map(({ scenarioId }: { scenarioId: string }) => scenarioId)).toEqual([
-    'regular', 'repitencia', 'tutoria', 'prerrequisito', 'cruce', 'cupo', 'deuda', 'gap-horario', 'prioridad',
+    'regular', 'repitencia', 'tutoria', 'prerrequisito', 'cruce', 'cupo', 'deuda', 'docente-no-asignado', 'prioridad',
   ])
   const prerequisite = response.body.data.scenarios[3]
   expect(prerequisite.description).toContain('C13 queda fuera')

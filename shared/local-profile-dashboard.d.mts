@@ -45,7 +45,7 @@ export interface ProfileCatalog {
   profiles: ProfileChoice[]
 }
 
-export declare const scenarioIds: readonly ['regular', 'repitencia', 'tutoria', 'prerrequisito', 'cruce', 'cupo', 'deuda', 'gap-horario', 'prioridad']
+export declare const scenarioIds: readonly ['regular', 'repitencia', 'tutoria', 'prerrequisito', 'cruce', 'cupo', 'deuda', 'docente-no-asignado', 'prioridad']
 export type ScenarioId = (typeof scenarioIds)[number]
 export interface ScenarioProfile {
   actorId: ActorId

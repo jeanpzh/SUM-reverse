@@ -65,7 +65,7 @@ it('models the nine scenario oracles and the four picks per actor without mutati
     ['cruce', ['rejected', 'rejected', 'rejected', 'rejected']],
     ['cupo', ['rejected', 'rejected', 'rejected', 'rejected']],
     ['deuda', ['accepted', 'rejected', 'accepted', 'rejected']],
-    ['gap-horario', ['configuration-pending', 'configuration-pending', 'configuration-pending', 'configuration-pending']],
+    ['docente-no-asignado', ['accepted', 'accepted', 'accepted', 'accepted']],
     ['prioridad', ['accepted', 'rejected', 'accepted', 'rejected']],
   ])
   expect(bundles[3]!.cases[0]!.expected.causes.map(({ code, courseIds }) => [code, courseIds])).toEqual([

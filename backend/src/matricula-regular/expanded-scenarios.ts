@@ -109,11 +109,12 @@ export function expandScenarioBundle(bundle: EnrollmentScenarioBundle): Enrollme
           const start = number === 14 ? 720 : 480
           return {
             sectionId: `${course.courseId}-S${row.codSeccion}`, label: String(row.codSeccion),
-            teacher: `${row.apePatDocente} ${row.apeMatDocente}, ${row.nomDocente}`.trim(),
+            teacher: active && bundle.scenarioId === 'docente-no-asignado' && number === 9 ? null
+              : `${row.apePatDocente} ${row.apeMatDocente}, ${row.nomDocente}`.trim(),
             room: row.horarios[0]?.codAula ?? null,
             capacity: row.topeAlumnos,
             occupied: active ? bundle.scenarioId === 'cupo' && number === 9 ? row.topeAlumnos : Math.max(0, row.topeAlumnos - 5) : row.matriculados,
-            schedule: active ? bundle.scenarioId === 'gap-horario' && number === 9 ? null : [
+            schedule: active ? [
               { day: bundle.scenarioId === 'cruce' && (number === 9 || number === 10) ? 3 : day, startMinute: start, endMinute: start + 120 },
               { day: bundle.scenarioId === 'cruce' && (number === 9 || number === 10) ? 3 : day, startMinute: start + 120, endMinute: start + 180 },
             ] : row.horarios.map((slot) => ({ day: (days.indexOf(slot.dia.normalize('NFD').replace(/[\u0300-\u036f]/g, '')) + 1) as Meeting['day'],

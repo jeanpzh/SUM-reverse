@@ -24,7 +24,7 @@ const labels: Record<ScenarioId, { label: string; description: string }> = {
   cruce: { label: 'Cruce de horario', description: 'La selección del perfil A contiene un cruce de horario.' },
   cupo: { label: 'Cupo', description: 'La sección de C09 está llena en estos perfiles.' },
   deuda: { label: 'Deuda', description: 'El perfil B tiene una condición de deuda pendiente.' },
-  'gap-horario': { label: 'Horario no conocido', description: 'El horario de C09 no está disponible para evaluar la selección.' },
+  'docente-no-asignado': { label: 'Docente no asignado', description: 'La sección de C09 tiene horario publicado, pero aún no tiene docente asignado.' },
   prioridad: { label: 'Prioridad', description: 'Compara una selección que respeta la prioridad de repitencia con otra que la omite.' },
 }
 const causeText: Record<string, string> = {
