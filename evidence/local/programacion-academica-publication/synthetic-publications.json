@@ -1,0 +1,18 @@
+{
+  "first": {
+    "id": "11955d08-3156-47e0-9b0e-fc2dfd8c073a",
+    "version": 5,
+    "publicationVersion": 1
+  },
+  "second": {
+    "id": "343b1dd6-1a77-4089-9cdb-fd3b27625016",
+    "version": 6,
+    "publicationVersion": 2
+  },
+  "title": "Publicación sintética 1793839515824 · revisión 2",
+  "currentId": "343b1dd6-1a77-4089-9cdb-fd3b27625016",
+  "itemIds": [
+    "343b1dd6-1a77-4089-9cdb-fd3b27625016",
+    "11955d08-3156-47e0-9b0e-fc2dfd8c073a"
+  ]
+}

@@ -11,6 +11,8 @@ import { TutoriaModule } from './tutoria/tutoria.module.js'
 import { MatriculaRegularModule } from './matricula-regular/matricula-regular.module.js'
 import { LocalProfileDashboardModule } from './local-profile-dashboard/local-profile-dashboard.module.js'
 import { PublicSimulatorPersistenceModule } from './persistence/public-simulator.module.js'
+import { AcademicSchedulingModule } from './programacion-academica/demo-module.js'
+import { PrematriculaModule } from './prematricula/prematricula.module.js'
 
 const publicDeployment = process.env.SIMULATOR_DEPLOYMENT === 'public'
 if (publicDeployment) {
@@ -29,6 +31,8 @@ if (publicDeployment) {
     TutoriaModule,
     MatriculaRegularModule,
     LocalProfileDashboardModule,
+    ...(process.env.SUM_ACADEMIC_SCHEDULING === '1' ? [AcademicSchedulingModule] : []),
+    ...(process.env.SUM_ACADEMIC_SCHEDULING === '1' && process.env.SUM_LOCAL_SCENARIOS === '1' ? [PrematriculaModule] : []),
   ],
   controllers: [AppController],
   providers: [AppService],

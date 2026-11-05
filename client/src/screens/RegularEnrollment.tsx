@@ -22,6 +22,9 @@ import type { KeyValueStorage, PendingIntent, SubmitAttempt, UncertainReason } f
 import { formatOutcomeCauses, getDialogKind } from '../data/enrollmentResultDialog'
 import { REPORT_ROUTE_PATH, reportLinkFromOutcome } from '../data/regularEnrollmentReport'
 import { getLocalProfileActivation, localProfileSessionStore } from '../data/client'
+import { fetchIntentionImport } from '../data/prematricula-intention'
+import type { E2Identity } from '../data/prematricula'
+import type { E3ImportIssue } from '../../../shared/matricula-intention-import.mjs'
 import type { StudentSummaryData } from '../data/adapters'
 import type {
   MatriculaRegularChoice,
@@ -86,6 +89,17 @@ const DEFINITIVE_HANDLING: Record<string, DefinitiveHandling> = {
 
 const RUN_RESET_MESSAGE = 'La ejecución local cambió (reinicio del entorno). Se descartó la solicitud pendiente sin reenviarla; vuelva a ingresar y elegir.'
 
+const INTENTION_ISSUE_MESSAGES: Record<E3ImportIssue['code'], string> = {
+  SCOPE_MISMATCH: 'La intención pertenece a otro periodo, escuela o plan de estudios.',
+  PUBLICATION_UNAVAILABLE: 'La publicación de origen ya no está disponible.',
+  COURSE_UNAVAILABLE: 'La asignatura no está disponible en la oferta activa.',
+  SECTION_UNMAPPED: 'No se encontró una sección de destino asociada.',
+  AMBIGUOUS_MAPPING: 'Hay más de una sección de destino posible.',
+  SCHEDULE_CHANGED: 'El horario de la sección cambió; requiere elección manual.',
+  SECTION_FULL: 'La sección de destino no tiene vacantes aparentes; requiere elección manual.',
+  ACADEMIC_PENDING: 'La configuración académica requiere revisión; requiere elección manual.',
+}
+
 function browserStorage(): KeyValueStorage | null {
   try {
     return globalThis.sessionStorage ?? null
@@ -134,10 +148,18 @@ function LocalProfileEnrollmentScreen() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [pickerCourseId, setPickerCourseId] = useState<MatriculaRegularId | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [intentionImportBusy, setIntentionImportBusy] = useState(false)
+  const [intentionImportNotice, setIntentionImportNotice] = useState<Notice | null>(null)
+  const [intentionImportIssues, setIntentionImportIssues] = useState<E3ImportIssue[]>([])
   const [storage] = useState(browserStorage)
   const [flow] = useState(() => createSubmissionFlow({ api: createMatriculaRegularApi({ mode: 'local', publicAccess: import.meta.env.VITE_SUM_SIMULATOR === '1' }), storage }))
   const navigate = useNavigate()
   const submitControllerRef = useRef<AbortController | null>(null)
+  const intentionImportControllerRef = useRef<AbortController | null>(null)
+  const intentionImportTokenRef = useRef(0)
+  const intentionImportIdentityRef = useRef<{ runId: string; actorId: string; sessionId: string; generation: number } | null>(null)
+  const selectedChoicesRef = useRef(selectedChoices)
+  const contextEnvelopeRef = useRef(contextEnvelope)
   const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const uncertainRef = useRef<UncertainState | null>(null)
   const registerHeadingRef = useRef<HTMLHeadingElement>(null)
@@ -146,10 +168,29 @@ function LocalProfileEnrollmentScreen() {
     uncertainRef.current = value
     setUncertain(value)
   }, [])
+  const invalidateIntentionImport = useCallback(() => {
+    intentionImportTokenRef.current += 1
+    intentionImportControllerRef.current?.abort()
+    intentionImportControllerRef.current = null
+    intentionImportIdentityRef.current = null
+    setIntentionImportBusy(false)
+  }, [])
+  const updateSelectedChoices = useCallback((choices: MatriculaRegularChoice[]) => {
+    selectedChoicesRef.current = choices
+    setSelectedChoices(choices)
+  }, [])
 
   useEffect(() => localProfileSessionStore.subscribe(() => {
-    if (localProfileSessionStore.getSnapshot().status === 'expired') setSelectedChoices([])
-  }), [])
+    const current = localProfileSessionStore.getSnapshot()
+    const importIdentity = intentionImportIdentityRef.current
+    if (importIdentity && (current.status !== 'active' || current.runId !== importIdentity.runId
+      || current.actorId !== importIdentity.actorId || current.sessionId !== importIdentity.sessionId
+      || current.generation !== importIdentity.generation)) invalidateIntentionImport()
+    if (current.status === 'expired') {
+      invalidateIntentionImport()
+      updateSelectedChoices([])
+    }
+  }), [invalidateIntentionImport, updateSelectedChoices])
 
   useEffect(() => {
     if (localStatus !== 'active' || !profileRunId || !profileActorId || !profileSessionId) {
@@ -164,18 +205,25 @@ function LocalProfileEnrollmentScreen() {
         if (context.actorId !== profileActorId) {
           throw new Error('El contexto no corresponde al perfil activo.')
         }
+        invalidateIntentionImport()
+        setIntentionImportIssues([])
         const envelope = { runId: profileRunId, data: context }
-        if (context.eligibility.state !== 'eligible' || !context.preEnrollmentComplete || !context.offerKnown) setSelectedChoices([])
+        if (context.eligibility.state !== 'eligible' || !context.preEnrollmentComplete || !context.offerKnown) {
+          invalidateIntentionImport()
+          updateSelectedChoices([])
+        }
         if (!flow.isBusy()) {
           const restored = restoreIntent(storage, { runId: identity.runId, actorId: identity.actorId })
           if (restored.kind === 'restored' && uncertainRef.current?.intent.requestId !== restored.intent.requestId) {
             updateUncertain({ intent: restored.intent, reason: 'restored', lookup: 'none', persisted: true })
           } else if (restored.kind === 'reset') {
             updateUncertain(null)
-            setSelectedChoices([])
+            invalidateIntentionImport()
+            updateSelectedChoices([])
             setNotice({ tone: 'warning', message: RUN_RESET_MESSAGE })
           }
         }
+        contextEnvelopeRef.current = envelope
         setContextEnvelope(envelope)
         setError(null)
         setLoading(false)
@@ -186,10 +234,12 @@ function LocalProfileEnrollmentScreen() {
         setError(failure instanceof Error ? failure.message : 'No se pudo cargar el contexto local.')
       })
     return () => controller.abort()
-  }, [localStatus, profileRunId, profileActorId, profileSessionId, profileGeneration, contextRevision, flow, storage, updateUncertain])
+  }, [localStatus, profileRunId, profileActorId, profileSessionId, profileGeneration, contextRevision, flow, storage, updateUncertain, updateSelectedChoices, invalidateIntentionImport])
 
   useEffect(() => () => {
     submitControllerRef.current?.abort()
+    intentionImportTokenRef.current += 1
+    intentionImportControllerRef.current?.abort()
     if (redirectTimerRef.current !== null) clearTimeout(redirectTimerRef.current)
   }, [])
 
@@ -229,6 +279,7 @@ function LocalProfileEnrollmentScreen() {
   const handleSubmit = async () => {
     if (snapshot.status !== 'active' || !contextEnvelope || submitting || flow.isBusy() || uncertainRef.current) return
     if (!selectedChoices.length || contextEnvelope.data.eligibility.state !== 'eligible') return
+    invalidateIntentionImport()
     const generation = snapshot.generation
     const controller = new AbortController()
     submitControllerRef.current = controller
@@ -258,6 +309,79 @@ function LocalProfileEnrollmentScreen() {
     } else {
       updateUncertain({ intent: attempt.intent, reason: attempt.result.kind === 'conflict' ? 'conflict' : attempt.result.reason,
         lookup: 'none', persisted: attempt.persisted })
+    }
+  }
+
+  const handleLoadIntention = async () => {
+    const current = localProfileSessionStore.getSnapshot()
+    const configAllowsImport = import.meta.env.VITE_SUM_SIMULATOR !== '1'
+      && import.meta.env.VITE_SUM_ACADEMIC_SCHEDULING === '1'
+      && import.meta.env.VITE_SUM_DATA_MODE === 'local'
+      && import.meta.env.VITE_SUM_API_BASE_URL === '/api'
+      && import.meta.env.VITE_SUM_DEVTOOLS === '1'
+    if (!configAllowsImport || current.status !== 'active' || !contextEnvelope || intentionImportBusy
+      || submitting || lookupBusy || uncertainRef.current || resultOutcome !== null || dialogOpen || confirmOpen
+      || contextEnvelope.data.eligibility.state !== 'eligible'
+      || !['SYN-SIS-A', 'SYN-SIS-B'].includes(current.actorId)) return
+
+    invalidateIntentionImport()
+    const token = ++intentionImportTokenRef.current
+    const controller = new AbortController()
+    intentionImportControllerRef.current = controller
+    const identity: E2Identity = { runId: current.runId, actorId: current.actorId as E2Identity['actorId'], sessionId: current.sessionId }
+    const generation = current.generation
+    intentionImportIdentityRef.current = { ...identity, generation }
+    const profileRevision = contextEnvelope.data.profileRevision
+    const contextAtStart = contextEnvelope
+    const selectionAtStart = JSON.stringify(selectedChoicesRef.current
+      .map(({ courseId, sectionId }) => [courseId, sectionId]).sort(([a], [b]) => a.localeCompare(b)))
+    const requestIsCurrent = () => {
+      const latest = localProfileSessionStore.getSnapshot()
+      const latestSelection = JSON.stringify(selectedChoicesRef.current
+        .map(({ courseId, sectionId }) => [courseId, sectionId]).sort(([a], [b]) => a.localeCompare(b)))
+      return !controller.signal.aborted && token === intentionImportTokenRef.current && latest.status === 'active'
+        && latest.generation === generation && latest.runId === identity.runId && latest.actorId === identity.actorId
+        && latest.sessionId === identity.sessionId && latestSelection === selectionAtStart
+        && contextEnvelopeRef.current === contextAtStart && contextEnvelopeRef.current?.data.profileRevision === profileRevision
+    }
+    setIntentionImportBusy(true)
+    setIntentionImportNotice(null)
+    setIntentionImportIssues([])
+    try {
+      const result = await fetchIntentionImport(identity, fetch, controller.signal)
+      if (!requestIsCurrent()) return
+      if (result.profileRevision !== profileRevision) {
+        throw new Error('La intención trasladada pertenece a otra revisión de perfil; se conserva la selección actual.')
+      }
+      if (!result.selection.length) {
+        setIntentionImportNotice({ tone: 'info', message: result.intention
+          ? 'La intención no contiene secciones trasladables. Se conserva la selección actual.'
+          : 'No hay una intención registrada para este perfil. Se conserva la selección actual.' })
+        setIntentionImportIssues(result.issues)
+        return
+      }
+      const offeredCourses = new Map(contextEnvelope.data.offer.map((course) => [course.courseId, course]))
+      if (result.intention?.academicPeriod !== contextEnvelope.data.scope.period) {
+        throw new Error('La intención pertenece a otro periodo; se conserva la selección actual.')
+      }
+      const choicesExist = result.selection.every((choice) => offeredCourses.get(choice.courseId)?.sections
+        .some((section) => section.sectionId === choice.sectionId))
+      if (!choicesExist) throw new Error('La respuesta incluye cursos o secciones que no están en la oferta activa; se conserva la selección actual.')
+      if (selectedChoicesRef.current.length > 0
+        && !window.confirm('Cargar la intención reemplazará toda la selección actual de matrícula. ¿Continuar?')) return
+      if (!requestIsCurrent()) return
+      updateSelectedChoices(result.selection)
+      setIntentionImportIssues(result.issues)
+      setIntentionImportNotice({ tone: 'info', message: `Se cargaron ${result.selection.length} sección(es) compatibles de la intención. Revisa la selección antes de continuar.` })
+    } catch (failure) {
+      if (requestIsCurrent()) {
+        setIntentionImportNotice({ tone: 'warning', message: failure instanceof Error ? failure.message : 'No se pudo cargar la intención local.' })
+      }
+    } finally {
+      if (token === intentionImportTokenRef.current) {
+        intentionImportControllerRef.current = null
+        setIntentionImportBusy(false)
+      }
     }
   }
 
@@ -308,7 +432,8 @@ function LocalProfileEnrollmentScreen() {
   // L-06/L-08 (T-01): closing the rejection returns to the registration with an empty selection and fresh vacancies.
   const closeRejected = () => {
     setDialogOpen(false)
-    setSelectedChoices([])
+    invalidateIntentionImport()
+    updateSelectedChoices([])
     setResultOutcome(null)
     setContextRevision((value) => value + 1)
     setTimeout(() => registerHeadingRef.current?.focus(), 0)
@@ -348,11 +473,34 @@ function LocalProfileEnrollmentScreen() {
           {context.eligibility.state !== 'eligible' && (
             <p className="sum-enrollment__blocked" role="status">La matrícula no está habilitada para este perfil sintético en este momento.</p>
           )}
+          {import.meta.env.VITE_SUM_SIMULATOR !== '1' && import.meta.env.VITE_SUM_DATA_MODE === 'local'
+            && import.meta.env.VITE_SUM_ACADEMIC_SCHEDULING === '1'
+            && import.meta.env.VITE_SUM_API_BASE_URL === '/api' && import.meta.env.VITE_SUM_DEVTOOLS === '1'
+            && ['SYN-SIS-A', 'SYN-SIS-B'].includes(snapshot.status === 'active' ? snapshot.actorId : '') && (
+            <section className="regular-enrollment__panel" aria-labelledby="intention-import-heading">
+              <h3 id="intention-import-heading" className="regular-enrollment__section-title">Cargar mi intención</h3>
+              <button type="button" disabled={snapshot.status !== 'active' || intentionImportBusy || submitting || lookupBusy
+                || uncertain !== null || resultOutcome !== null || dialogOpen || confirmOpen || context.eligibility.state !== 'eligible'}
+                onClick={() => void handleLoadIntention()}>
+                {intentionImportBusy ? 'Consultando intención…' : 'Cargar mi intención'}
+              </button>
+              {intentionImportNotice && <p role={intentionImportNotice.tone === 'warning' ? 'alert' : 'status'}>{intentionImportNotice.message}</p>}
+              {intentionImportIssues.length > 0 && <ul aria-label="Razones por curso y sección">
+                {intentionImportIssues.map((issue, index) => {
+                  const course = context.offer.find((item) => item.courseId === issue.courseId)
+                  const section = course?.sections.find((item) => item.sectionId === issue.sectionId)
+                  return <li key={`${issue.courseId}-${issue.sectionId}-${issue.code}-${index}`}>
+                    <strong>{course?.name ?? issue.courseId}</strong> · sección {section?.label ?? issue.sectionId}: {INTENTION_ISSUE_MESSAGES[issue.code]}
+                  </li>
+                })}
+              </ul>}
+            </section>
+          )}
           <SumEnrollmentTable context={context} choices={choices} disabled={selectionDisabled}
             executeDisabled={selectionDisabled || choices.length === 0 || phase !== 'idle'}
-            onPick={setPickerCourseId}
-            onRemove={(courseId) => setSelectedChoices((current) => removeChoice(current, courseId))}
-            onExecute={() => setConfirmOpen(true)}
+            onPick={(courseId) => { invalidateIntentionImport(); setPickerCourseId(courseId) }}
+            onRemove={(courseId) => { invalidateIntentionImport(); updateSelectedChoices(removeChoice(selectedChoicesRef.current, courseId)) }}
+            onExecute={() => { invalidateIntentionImport(); setConfirmOpen(true) }}
             executeRef={submitButtonRef} headingRef={registerHeadingRef} />
           <SubmissionRecoveryNotice phase={phase} uncertain={uncertain ? { reason: uncertain.reason, lookup: uncertain.lookup } : null}
             storageNotice={uncertain !== null && !uncertain.persisted} notice={notice} hasSession={snapshot.status === 'active'}
@@ -370,7 +518,8 @@ function LocalProfileEnrollmentScreen() {
         <SectionPickerDialog key={pickerCourse.courseId} course={pickerCourse}
           currentSectionId={choices.find((item) => item.courseId === pickerCourse.courseId)?.sectionId ?? null}
           onAccept={(sectionId) => {
-            setSelectedChoices((current) => chooseSection(current, pickerCourse.courseId, sectionId))
+            invalidateIntentionImport()
+            updateSelectedChoices(chooseSection(selectedChoicesRef.current, pickerCourse.courseId, sectionId))
             setPickerCourseId(null)
           }}
           onCancel={() => setPickerCourseId(null)} />

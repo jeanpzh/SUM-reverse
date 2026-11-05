@@ -147,11 +147,19 @@ export type ActorProfile = {
     programming: ProgramacionRow[]
     profile: PerfilAlumno
     courseCodes: Record<string, string>
+    sectionOrigins?: Array<{
+      publicationId: string
+      publicationVersion: number
+      courseId: string
+      sectionId: string
+      offeredSectionId: string
+    }>
   }
   academic?: SyntheticAcademicRecord
 }
 
 export type EnrollmentProfile = {
+  academicPolicy?: 'fisi-regular'
   profileRevision: string
   scope: ProfileScope
   sources: Source[]

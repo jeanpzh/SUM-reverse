@@ -1,0 +1,13 @@
+.student-intention { display: grid; gap: .65rem; padding: .85rem 1rem; border: 1px solid var(--color-sum-border); border-radius: .3rem; background: var(--color-sum-surface); }
+.student-intention__heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem; }
+.student-intention__heading h3 { margin: 0; color: var(--color-sum-accent); font-size: 1rem; }
+.student-intention > p { margin: 0; }
+.student-intention__summary { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin: 0; }
+.student-intention__summary div { display: grid; gap: .25rem; max-width: min(100%, 24rem); }
+.student-intention__summary dt { width: auto; font-weight: 600; }
+.student-intention__summary dd { margin: 0; overflow-wrap: anywhere; }
+.student-intention__blocked { display: grid; gap: .25rem; margin: 0; padding: .65rem .8rem; border-radius: .25rem; background: var(--color-sum-accent-soft); color: var(--color-sum-danger); }
+.student-intention__actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.student-intention__actions button { min-height: 2rem; padding: .35rem .65rem; }
+.student-intention__error { margin: 0; color: var(--color-sum-danger); }
+.student-intention__history ol { margin-bottom: 0; }

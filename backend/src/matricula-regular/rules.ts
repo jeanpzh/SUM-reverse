@@ -5,7 +5,7 @@ import type {
 } from '../../../shared/matricula-regular.mjs'
 import { validateCause, validateGap } from '../../../shared/matricula-regular.mjs'
 import { canonicalizeCauses } from './canonical-causes.js'
-import type { ActorProfile, Meeting, OfferedCourse } from './profile.types.js'
+import type { ActorProfile, EnrollmentProfile, Meeting, OfferedCourse } from './profile.types.js'
 import type { MatriculaRegularEligibility } from '../../../shared/matricula-regular.mjs'
 
 /** FISI 2026-II regular load (F1 art. 13.p, RN-01); also exposed as the context «Tope de créditos». */
@@ -17,6 +17,7 @@ type RuleInput = {
   selection: readonly MatriculaRegularChoice[]
   now: Date
   eligibility?: MatriculaRegularEligibility
+  profile?: EnrollmentProfile | null
   additionalCauses?: readonly MatriculaRegularCause[]
   additionalGaps?: readonly MatriculaRegularGap[]
 }
@@ -43,24 +44,21 @@ function fallbackAppliesToActor(actor: ActorProfile): boolean {
     && (actor.profileRevision === 'MR-FISI-2026-II-DOC-1' || actor.profileRevision === `MR-SYN-${suffix}-1`)
 }
 
-function sourceIds(actor: ActorProfile, ruleId: string, fallback: string): string[] {
-  const rule = actor.rules.find((item) => item.ruleId === ruleId)
-  if (rule !== undefined) return sortedUnique(rule.sourceIds)
-  return fallbackAppliesToActor(actor) ? [fallback] : []
+export function usesSharedRegularPolicy(actor: ActorProfile, profile?: EnrollmentProfile | null): boolean {
+  return profile?.academicPolicy === 'fisi-regular'
+    && profile.profileRevision === actor.profileRevision
+    && actor.scope.facultyId === 'FISI'
+    && actor.scope.modality === 'regular-virtual'
+    && (actor.scope.schoolId === 'SISTEMAS' || actor.scope.schoolId === 'SOFTWARE')
+    && (['facultyId', 'schoolId', 'period', 'planId', 'modality'] as const)
+      .every((key) => actor.scope[key] === profile.scope[key])
 }
 
-function ruleKnowledge(actor: ActorProfile, ruleId: string): ActorProfile['rules'][number]['knowledge'] | undefined {
-  return actor.rules.find((rule) => rule.ruleId === ruleId)?.knowledge
-}
-
-function canEvaluateRule(
-  actor: ActorProfile,
-  ruleId: string,
-  profileApplicable: boolean,
-): boolean {
-  const knowledge = ruleKnowledge(actor, ruleId)
-  return profileApplicable && (knowledge === undefined || knowledge === 'known')
-}
+const requiredRules = [
+  'PRE-ENROLLMENT-ENABLED', 'PLAN-AND-OFFER', 'ACADEMIC-HISTORY',
+  'INSTITUTIONAL-REQUIREMENTS', 'CREDIT-EXCEPTION',
+]
+const sharedDefaults = new Set(['EQUIVALENCES', 'CREDIT-LOAD', 'SCHEDULE', 'SECTION-CAPACITY'])
 
 function addCause(
   causes: MatriculaRegularCause[],
@@ -116,27 +114,50 @@ export function evaluateSubmissionRules(input: RuleInput): RuleEvaluation {
   const profileMissing = eligibility?.gaps.some((item) =>
     item.code === 'PROFILE_MISSING' && item.sourceIds.length === 0,
   ) ?? false
-  const profileApplicable = fallbackAppliesToActor(actor) && !profileMissing
+  const legacy = fallbackAppliesToActor(actor)
+  const shared = usesSharedRegularPolicy(actor, input.profile)
+  const profileApplicable = (legacy || shared) && !profileMissing
+  const rules = new Map((shared ? input.profile!.rules : []).map((rule) => [rule.ruleId, rule]))
+  for (const rule of [...actor.rules].reverse()) rules.set(rule.ruleId, rule)
+  const sourcesFor = (ruleId: string, fallback: string) =>
+    sortedUnique(rules.get(ruleId)?.sourceIds ?? (legacy || shared ? [fallback] : []))
+  const canEvaluate = (ruleId: string) => {
+    const knowledge = rules.get(ruleId)?.knowledge
+    return profileApplicable && (knowledge === 'known'
+      || (knowledge === undefined && (legacy || sharedDefaults.has(ruleId))))
+  }
   if (eligibility !== undefined) {
     causes.push(...structuredClone(eligibility.causes))
     gaps.push(...structuredClone(eligibility.gaps))
   }
   causes.push(...structuredClone(input.additionalCauses ?? []))
   gaps.push(...structuredClone(input.additionalGaps ?? []))
+  if (!legacy && !profileApplicable) addGap(gaps, 'PROFILE_MISSING', [])
+  if (shared && !legacy) {
+    for (const ruleId of [...requiredRules, ...sharedDefaults]) {
+      const rule = rules.get(ruleId)
+      if ((!rule && !sharedDefaults.has(ruleId))
+        || (rule?.knowledge === 'not-applicable' && ruleId !== 'CREDIT-EXCEPTION')) {
+        addGap(gaps, 'PROFILE_MISSING', rule?.sourceIds ?? [])
+      }
+    }
+  }
 
-  const preEnrollmentSource = sourceIds(actor, 'PRE-ENROLLMENT-ENABLED', 'F1')
-  if (canEvaluateRule(actor, 'PRE-ENROLLMENT-ENABLED', profileApplicable)) {
+  const preEnrollmentSource = sourcesFor('PRE-ENROLLMENT-ENABLED', 'F1')
+  if (canEvaluate('PRE-ENROLLMENT-ENABLED')) {
     if (actor.preEnrollmentEnabled === false) addCause(causes, 'PRE_ENROLLMENT_NOT_ENABLED', preEnrollmentSource)
     if (actor.preEnrollmentEnabled === null) addGap(gaps, 'PRE_ENROLLMENT_UNKNOWN', preEnrollmentSource)
   }
 
-  const planOfferSource = sourceIds(actor, 'PLAN-AND-OFFER', 'F1')
-  if (canEvaluateRule(actor, 'PLAN-AND-OFFER', profileApplicable)
+  const planOfferSource = sourcesFor('PLAN-AND-OFFER', 'F1')
+  if (canEvaluate('PLAN-AND-OFFER')
     && (!actor.planKnown || !actor.preEnrollmentComplete || !actor.offerKnown)) {
     addGap(gaps, 'PLAN_OR_OFFER_UNKNOWN', planOfferSource)
   }
 
-  for (const rule of profileApplicable ? actor.rules.filter((item) => item.knowledge === 'unknown') : []) {
+  const applicableRules = legacy ? actor.rules : [...rules.values()]
+    .filter((rule) => requiredRules.includes(rule.ruleId) || sharedDefaults.has(rule.ruleId))
+  for (const rule of profileApplicable ? applicableRules.filter((item) => item.knowledge === 'unknown') : []) {
     switch (rule.ruleId) {
       case 'PRE-ENROLLMENT-ENABLED':
         addGap(gaps, 'PRE_ENROLLMENT_UNKNOWN', rule.sourceIds)
@@ -164,8 +185,8 @@ export function evaluateSubmissionRules(input: RuleInput): RuleEvaluation {
     }
   }
 
-  const institutionalSource = sourceIds(actor, 'INSTITUTIONAL-REQUIREMENTS', 'F1')
-  if (canEvaluateRule(actor, 'INSTITUTIONAL-REQUIREMENTS', profileApplicable)) {
+  const institutionalSource = sourcesFor('INSTITUTIONAL-REQUIREMENTS', 'F1')
+  if (canEvaluate('INSTITUTIONAL-REQUIREMENTS')) {
     for (const [field, state] of Object.entries(actor.institutional)) {
       if (state === 'unmet') {
         const code = field === 'debt'
@@ -194,7 +215,7 @@ export function evaluateSubmissionRules(input: RuleInput): RuleEvaluation {
     addGap(gaps, 'EXCEPTION_UNKNOWN', sortedUnique(exception.sourceIds))
   }
 
-  const failed = canEvaluateRule(actor, 'ACADEMIC-HISTORY', profileApplicable)
+  const failed = canEvaluate('ACADEMIC-HISTORY')
     ? actor.failedCourses.filter((item) => item.failures > 0)
     : []
   const threeFailureCases = failed.filter((item) => item.failures === 3)
@@ -203,7 +224,7 @@ export function evaluateSubmissionRules(input: RuleInput): RuleEvaluation {
   const knownFourthBranches = threeFailureCases.length + fourFailureCases.length
   const unresolvedBranch = knownFourthBranches > 1
     || (knownFourthBranches > 0 && twoFailureCases.length > 0)
-  const repetitionSource = sourceIds(actor, 'ACADEMIC-HISTORY', 'F1')
+  const repetitionSource = sourcesFor('ACADEMIC-HISTORY', 'F1')
   if (unresolvedBranch) {
     addGap(gaps, 'REPETITION_OR_AUTHORIZATION_UNKNOWN', repetitionSource, failed.map(({ courseId }) => courseId))
   }
@@ -215,18 +236,18 @@ export function evaluateSubmissionRules(input: RuleInput): RuleEvaluation {
     }
   }
 
-  if (canEvaluateRule(actor, 'ACADEMIC-HISTORY', profileApplicable) && canEvaluateRule(actor, 'EQUIVALENCES', profileApplicable)
+  if (canEvaluate('ACADEMIC-HISTORY') && canEvaluate('EQUIVALENCES')
     && (!actor.historyKnown || !actor.equivalencesKnown)) {
     const prerequisiteIds = sortedUnique(selectedCourses.flatMap(({ course }) => course?.prerequisiteIds ?? []))
     if (!actor.historyKnown || prerequisiteIds.length > 0) {
       addGap(gaps, 'PREREQUISITE_OR_EQUIVALENCE_UNKNOWN', repetitionSource, courseIds)
     }
-  } else if (canEvaluateRule(actor, 'ACADEMIC-HISTORY', profileApplicable) && canEvaluateRule(actor, 'EQUIVALENCES', profileApplicable)) {
+  } else if (canEvaluate('ACADEMIC-HISTORY') && canEvaluate('EQUIVALENCES')) {
     for (const { course } of selectedCourses) {
       if (course === undefined) continue
       const unmet = course.prerequisiteIds.filter((prerequisiteId) => !actor.approvedCourseIds.includes(prerequisiteId))
       if (unmet.length > 0) {
-        addCause(causes, 'PREREQUISITE_UNMET', sourceIds(actor, 'ACADEMIC-HISTORY', 'F1'), [course.courseId, ...unmet])
+        addCause(causes, 'PREREQUISITE_UNMET', sourcesFor('ACADEMIC-HISTORY', 'F1'), [course.courseId, ...unmet])
       }
     }
   }
@@ -269,12 +290,12 @@ export function evaluateSubmissionRules(input: RuleInput): RuleEvaluation {
   }
 
   const hasKnownFourthBranch = threeFailureCases.length > 0 && !unresolvedBranch
-  if (canEvaluateRule(actor, 'CREDIT-LOAD', profileApplicable)
+  if (canEvaluate('CREDIT-LOAD')
     && !hasKnownFourthBranch && credits < REGULAR_CREDIT_LOAD.min && !exceptionApplies && !exceptionUnknown) {
-    addCause(causes, 'CREDIT_LOAD_INVALID', sourceIds(actor, 'CREDIT-LOAD', 'F1'), courseIds, sectionIds)
+    addCause(causes, 'CREDIT_LOAD_INVALID', sourcesFor('CREDIT-LOAD', 'F1'), courseIds, sectionIds)
   }
-  if (canEvaluateRule(actor, 'CREDIT-LOAD', profileApplicable) && credits > REGULAR_CREDIT_LOAD.max) {
-    addCause(causes, 'CREDIT_LOAD_INVALID', sourceIds(actor, 'CREDIT-LOAD', 'F1'), courseIds, sectionIds)
+  if (canEvaluate('CREDIT-LOAD') && credits > REGULAR_CREDIT_LOAD.max) {
+    addCause(causes, 'CREDIT_LOAD_INVALID', sourcesFor('CREDIT-LOAD', 'F1'), courseIds, sectionIds)
   }
 
   type CourseMeeting = Meeting & { courseId: MatriculaRegularChoice['courseId'] }
@@ -283,21 +304,21 @@ export function evaluateSubmissionRules(input: RuleInput): RuleEvaluation {
   for (const { choice, course } of selectedCourses) {
     const section = course?.sections.find(({ sectionId }) => sectionId === choice.sectionId)
     if (section === undefined) continue
-    if (section.schedule === null) {
+    if (section.schedule === null || (shared && !legacy && section.schedule.length === 0)) {
       unknownScheduleCourseIds.push(choice.courseId)
       continue
     }
     for (const meeting of section.schedule) knownMeetings.push({ ...meeting, courseId: choice.courseId })
   }
-  if (canEvaluateRule(actor, 'SCHEDULE', profileApplicable) && unknownScheduleCourseIds.length > 0) {
-    addGap(gaps, 'SCHEDULE_UNKNOWN', sourceIds(actor, 'SCHEDULE', 'P04-P05'), unknownScheduleCourseIds)
+  if (canEvaluate('SCHEDULE') && unknownScheduleCourseIds.length > 0) {
+    addGap(gaps, 'SCHEDULE_UNKNOWN', sourcesFor('SCHEDULE', 'P04-P05'), unknownScheduleCourseIds)
   }
-  for (let left = 0; canEvaluateRule(actor, 'SCHEDULE', profileApplicable) && left < knownMeetings.length; left += 1) {
+  for (let left = 0; canEvaluate('SCHEDULE') && left < knownMeetings.length; left += 1) {
     const first = knownMeetings[left]!
     for (let right = left + 1; right < knownMeetings.length; right += 1) {
       const second = knownMeetings[right]!
       if (overlap(first, second)) {
-        addCause(causes, 'SCHEDULE_CONFLICT', sourceIds(actor, 'SCHEDULE', 'P04-P05'), [first.courseId, second.courseId])
+        addCause(causes, 'SCHEDULE_CONFLICT', sourcesFor('SCHEDULE', 'P04-P05'), [first.courseId, second.courseId])
       }
     }
   }
@@ -305,7 +326,7 @@ export function evaluateSubmissionRules(input: RuleInput): RuleEvaluation {
   for (const { choice, course } of selectedCourses) {
     const section = course?.sections.find(({ sectionId }) => sectionId === choice.sectionId)
     if (section !== undefined && section.occupied >= section.capacity) {
-      addCause(causes, 'SECTION_FULL', sourceIds(actor, 'SECTION-CAPACITY', 'SYN-FIXTURE'), [course!.courseId], [section.sectionId])
+      addCause(causes, 'SECTION_FULL', sourcesFor('SECTION-CAPACITY', 'SYN-FIXTURE'), [course!.courseId], [section.sectionId])
     }
   }
 

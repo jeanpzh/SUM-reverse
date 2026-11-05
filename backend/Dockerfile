@@ -15,6 +15,7 @@ COPY --from=build --chown=node:node /app/backend/package.json ./package.json
 COPY --from=build --chown=node:node /app/backend/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/backend/dist ./dist
 COPY --from=build --chown=node:node /app/shared /app/shared
+RUN mkdir -p /app/backend/var/academic-drafts && chown node:node /app/backend/var/academic-drafts
 USER node
 EXPOSE 3000
 CMD ["node", "dist/main.js"]

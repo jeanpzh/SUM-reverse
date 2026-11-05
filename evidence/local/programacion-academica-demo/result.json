@@ -1,0 +1,52 @@
+{
+  "source": "local-only independently constructed synthetic data",
+  "route": "/local/programacion-academica",
+  "viewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "first": {
+    "status": "complete",
+    "counts": {
+      "sections": 3,
+      "requiredSessions": 6,
+      "scheduledSessions": 6
+    }
+  },
+  "empty": {
+    "status": "complete",
+    "counts": {
+      "sections": 0,
+      "requiredSessions": 0,
+      "scheduledSessions": 0
+    }
+  },
+  "invalid": {
+    "status": "invalid-input"
+  },
+  "impossible": {
+    "status": "impossible",
+    "counts": {
+      "sections": 2,
+      "requiredSessions": 4,
+      "scheduledSessions": 0
+    }
+  },
+  "recovery": "passed",
+  "originalAuthorityRetained": true,
+  "studentGuardPreserved": true,
+  "jsErrors": [],
+  "externalRequests": [],
+  "apiRequests": [
+    "/api/local/programacion-academica/v1/catalogo",
+    "/api/local/programacion-academica/v1/propuestas",
+    "/api/local/programacion-academica/v1/propuestas",
+    "/api/local/programacion-academica/v1/propuestas",
+    "/api/local/programacion-academica/v1/propuestas",
+    "/api/local/programacion-academica/v1/propuestas",
+    "/api/local/programacion-academica/v1/propuestas",
+    "/api/local/programacion-academica/v1/propuestas",
+    "/api/local/programacion-academica/v1/propuestas"
+  ],
+  "date": "2026-10-29T23:47:55.583Z"
+}

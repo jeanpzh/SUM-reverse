@@ -1,0 +1,267 @@
+// Run only against our freshly built, independently synthetic Compose acceptance project.
+import assert from 'node:assert/strict'
+import { mkdir, writeFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { chromium } from 'playwright'
+
+if (process.env.SUM_ACADEMIC_COMPOSE_SYNTHETIC !== '1') throw new Error('Se requiere una instancia propia explícitamente sintética')
+const url = new URL(process.env.SUM_ACADEMIC_COMPOSE_BASE || 'http://127.0.0.1:5280')
+if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || url.pathname !== '/' || url.search || url.hash || url.username || url.password) throw new Error('Base local sin rutas ni credenciales requerida')
+const base = url.origin
+const output = resolve(fileURLToPath(new URL('../../', import.meta.url)), 'evidence/local/programacion-academica-manual')
+await mkdir(output, { recursive: true })
+const browser = await chromium.launch({ headless: true, executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+  || (existsSync('C:/Program Files/Google/Chrome/Application/chrome.exe') ? 'C:/Program Files/Google/Chrome/Application/chrome.exe' : undefined) })
+const errors = [], external = []
+try {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } })
+  page.on('pageerror', (error) => errors.push(error.message))
+  page.on('request', (request) => { if (!request.url().startsWith(`${base}/`) && !request.url().startsWith('data:')) external.push(request.url()) })
+  const read = async (path) => {
+    const response = await page.request.get(`${base}/api${path}`)
+    assert.equal(response.status(), 200)
+    return response.json()
+  }
+  const beforeOffer = (await read('/local/matricula-regular/v1/contextos/SYN-SIS-A')).data.offer
+  const catalog = await read('/local/programacion-academica/v1/catalogo')
+  const course = catalog.courses.find((row) => row.courseId === '20118104')
+  assert.ok(course)
+  const classroomRoomIds = catalog.referenceRooms.filter((room) => room.kind === 'classroom' && room.capacity >= 45).slice(0, 2).map((room) => room.id)
+  assert.equal(classroomRoomIds.length, 2, 'El catálogo sintético debe ofrecer dos aulas de capacidad suficiente')
+  const pattern = course.planningPatterns.find((row) => row.weeklySessions.length === 2 && row.weeklySessions.every((session) => session.durationMinutes === 120))
+  assert.ok(pattern)
+  const teachers = catalog.referenceTeachers.slice(0, 2)
+  const teacherForm = page.locator('.academic-scheduling__resource-card--teacher')
+  const roomForm = page.locator('.academic-scheduling__resource-card--room')
+  const preferenceLabel = 'Preferencias semanales · prioridad blanda'
+  const setIntervals = async (label, days, start = '18:00', end = '22:00') => {
+    const group = page.getByRole('group', { name: new RegExp(`^${label}`) })
+    while (await group.getByRole('button', { name: new RegExp(`^Quitar ${label} intervalo`) }).count()) {
+      await group.getByRole('button', { name: new RegExp(`^Quitar ${label} intervalo`) }).first().click()
+    }
+    for (const [index, day] of days.entries()) {
+      await group.getByRole('button', { name: 'Agregar intervalo', exact: true }).click()
+      await page.getByLabel(`${label} día ${index + 1}`, { exact: true }).selectOption(String(day))
+      await page.getByLabel(`${label} inicio ${index + 1}`, { exact: true }).fill(start)
+      await page.getByLabel(`${label} fin ${index + 1}`, { exact: true }).fill(end)
+    }
+  }
+  const generate = async () => {
+    const pending = page.waitForResponse((response) => response.url().endsWith('/propuestas') && response.request().method() === 'POST')
+    await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
+    const response = await pending
+    assert.equal(response.status(), 200, await response.text())
+    const value = await response.json()
+    await page.getByRole('status').filter({ hasText: value.status }).waitFor()
+    return value
+  }
+  await page.goto(`${base}/local/programacion-academica`)
+  await page.getByLabel('Filtrar cursos por ciclo').selectOption('10')
+  await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).check()
+  await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).fill('180')
+  await page.getByLabel(`Capacidad ${course.courseId}`, { exact: true }).fill('45')
+  await page.getByLabel(`Patrón ${course.courseId}`).selectOption(pattern.id)
+  assert.equal(await page.getByLabel(`Modalidad de sesiones ${course.courseId}`).inputValue(), 'continuous')
+  while (await teacherForm.count()) await teacherForm.getByRole('button', { name: /^Quitar docente / }).click()
+  while (await roomForm.count()) await roomForm.getByRole('button', { name: /^Quitar ambiente / }).click()
+  for (const [index, teacher] of teachers.entries()) {
+    await page.getByLabel('Seleccionar o agregar docente').selectOption(teacher.id)
+    assert.equal(await teacherForm.count(), 1)
+    assert.equal(await page.getByLabel('Nombre docente', { exact: true }).inputValue(), teacher.name)
+    await page.getByLabel('Carga semanal docente', { exact: true }).fill('960')
+    await page.getByLabel('Buscar asignatura habilitada').fill(course.courseId)
+    await page.getByLabel(`${teacher.name} habilitado para ${course.courseId}`, { exact: true }).check()
+    await page.getByLabel(`Máximo de secciones ${course.courseId}`, { exact: true }).fill('4')
+    await setIntervals('Disponibilidad docente', [1, 2, 3, 4, 5], '16:00', '22:00')
+    await setIntervals(preferenceLabel, index === 0 ? [1, 2] : [3, 4])
+  }
+  await page.getByLabel('Seleccionar o agregar docente').selectOption(teachers[0].id)
+  assert.equal(await page.getByLabel('Carga semanal docente', { exact: true }).inputValue(), '960')
+  assert.equal(await page.getByLabel(`Máximo de secciones ${course.courseId}`, { exact: true }).inputValue(), '4')
+  assert.equal(await page.getByRole('group', { name: new RegExp(`^${preferenceLabel}`) }).getByRole('combobox').count(), 2)
+  assert.equal(await page.locator('[aria-label="Docentes incorporados"]').getByRole('button').count(), 2)
+  await page.getByLabel('Identificación docente', { exact: true }).fill(teachers[1].id)
+  assert.equal(await page.getByLabel('Identificación docente', { exact: true }).inputValue(), teachers[0].id)
+  await teacherForm.getByRole('alert').waitFor()
+  await page.getByLabel('Identificación docente', { exact: true }).fill(teachers[0].id)
+  for (const roomId of [...classroomRoomIds, 'LAB01NP']) {
+    await page.getByLabel('Seleccionar o agregar ambiente').selectOption(roomId)
+    assert.equal(await roomForm.count(), 1)
+    assert.equal(await page.getByLabel('Capacidad ambiente', { exact: true }).inputValue(), '45')
+    await setIntervals('Disponibilidad del ambiente', [1, 2, 3, 4, 5], '16:00', '22:00')
+  }
+  await page.getByLabel('Seleccionar o agregar ambiente').selectOption(classroomRoomIds[0])
+  assert.equal(await page.getByLabel('Disponibilidad del ambiente fin 5', { exact: true }).inputValue(), '22:00')
+  await page.getByLabel('Identificación ambiente', { exact: true }).fill('LAB01NP')
+  assert.equal(await page.getByLabel('Identificación ambiente', { exact: true }).inputValue(), classroomRoomIds[0])
+  await roomForm.getByRole('alert').waitFor()
+  await page.getByLabel('Identificación ambiente', { exact: true }).fill(classroomRoomIds[0])
+  const complete = await generate()
+  assert.equal(complete.status, 'complete')
+  assert.deepEqual(complete.counts, { sections: 4, requiredSessions: 8, scheduledSessions: 8 })
+  assert.equal(complete.preferenceReport.withinPreferenceSections, 4)
+  for (const teacher of teachers) assert.equal(new Set(complete.assignments.filter((row) => row.teacherId === teacher.id).map((row) => row.sectionId)).size, 2)
+  const table = page.getByRole('region', { name: 'Programación generada', exact: true })
+  const sectionsTable = page.locator('.academic-scheduling__sections-table')
+  assert.equal(await table.locator('tbody tr').count(), 4)
+  assert.equal(await page.locator('.academic-scheduling__manual-review').count(), 0, 'No editor appears before a section is selected')
+  assert.equal(await sectionsTable.getByRole('columnheader', { name: 'Acciones', exact: true }).count(), 1)
+  assert.equal(await sectionsTable.getByRole('button', { name: 'Editar horario', exact: true }).count(), 4)
+  for (const cell of await sectionsTable.locator('tbody tr td:nth-child(3)').all()) assert.match((await cell.innerText()).trim(), /^\d+$/, 'The section cell contains only its number')
+  assert.equal(await sectionsTable.getByRole('columnheader', { name: 'Modalidad', exact: true }).count(), 0)
+  assert.equal(await table.getByRole('columnheader', { name: 'Duración total', exact: true }).count(), 0)
+  assert.ok((await table.innerText()).includes('T · 2 h (120 min)'))
+  assert.ok((await table.innerText()).includes('L · 2 h (120 min)'))
+  await page.locator('.academic-scheduling__sections-table').screenshot({ path: resolve(output, 'sections-table.png') })
+  await table.screenshot({ path: resolve(output, 'assignments-table.png') })
+  const calendar = page.getByRole('region', { name: 'Calendario semanal con horas; desplázate horizontalmente para ver todos los días', exact: true })
+  assert.equal(await calendar.locator('.weekly-schedule__event').count(), 4)
+  const firstSectionId = complete.assignments[0].sectionId
+  const firstSectionRowIndex = complete.sections.findIndex((section) => section.sectionId === firstSectionId)
+  await sectionsTable.locator('tbody tr').nth(firstSectionRowIndex).getByRole('button', { name: 'Editar horario', exact: true }).click()
+  assert.equal(await page.locator('.academic-scheduling__manual-review').count(), 1)
+  assert.match(await page.locator('.academic-scheduling__manual-review h4').innerText(), new RegExp(`Sección ${firstSectionRowIndex + 1}`))
+  const otherSectionRowIndex = (firstSectionRowIndex + 1) % complete.sections.length
+  await sectionsTable.locator('tbody tr').nth(otherSectionRowIndex).getByRole('button', { name: 'Editar horario', exact: true }).click()
+  assert.equal(await page.locator('.academic-scheduling__manual-review').count(), 1, 'Switching sections retains one editor')
+  assert.match(await page.locator('.academic-scheduling__manual-review h4').innerText(), new RegExp(`Sección ${otherSectionRowIndex + 1}`))
+  await page.getByRole('button', { name: 'Cancelar', exact: true }).click()
+  assert.equal(await page.locator('.academic-scheduling__manual-review').count(), 0, 'Cancel closes the editor')
+  const targetAssignments = complete.assignments.filter((row) => row.sectionId === firstSectionId).sort((a, b) => a.startMinute - b.startMinute)
+  const targetIds = targetAssignments.map((row) => row.sessionId)
+  const slot = { day: 5, startMinute: 960 }
+  await sectionsTable.locator('tbody tr').nth(firstSectionRowIndex).getByRole('button', { name: 'Editar horario', exact: true }).click()
+  const firstTargetDay = page.getByLabel(`Día revisión ${firstSectionId}`, { exact: true })
+  await firstTargetDay.selectOption(String(slot.day))
+  await page.getByLabel(`Inicio revisión ${firstSectionId}`, { exact: true }).fill(`${String(Math.floor(slot.startMinute / 60)).padStart(2, '0')}:${String(slot.startMinute % 60).padStart(2, '0')}`)
+  const validAdjustmentPending = page.waitForResponse((response) => response.url().endsWith('/ajustes') && response.request().method() === 'POST')
+  await page.getByRole('button', { name: 'Aplicar ajuste', exact: true }).click()
+  const validAdjustmentResponse = await validAdjustmentPending
+  assert.equal(validAdjustmentResponse.status(), 200, await validAdjustmentResponse.text())
+  const adjustedProposal = await validAdjustmentResponse.json()
+  assert.equal(adjustedProposal.editVersion, 1)
+  assert.deepEqual(adjustedProposal.manuallyAdjustedSectionIds, [firstSectionId])
+  assert.deepEqual(adjustedProposal.assignments.filter((row) => targetIds.includes(row.sessionId)).map((row) => row.day), targetAssignments.map(() => slot.day))
+  assert.equal(await table.locator('tbody tr').count(), 4)
+  assert.match(await table.innerText(), /Ajustada manualmente/)
+  assert.equal(await calendar.locator('.weekly-schedule__event').count(), 4)
+  assert.equal(await calendar.locator('.weekly-schedule__event').filter({ hasText: 'Ajustada manualmente' }).count(), 1)
+
+  const collisionAssignment = complete.assignments.find((row) => row.sectionId !== firstSectionId
+    && row.teacherId !== targetAssignments[0].teacherId
+    && !complete.assignments.some((other) => other.sectionId !== firstSectionId && other.sectionId !== row.sectionId
+      && other.teacherId === row.teacherId && other.day === row.day && other.startMinute < row.endMinute && other.endMinute > row.startMinute))
+  assert.ok(collisionAssignment, 'Se requiere un bloque de otra sección para colisión sintética de docente')
+  const otherSection = complete.sections.find((section) => section.sectionId === collisionAssignment.sectionId)
+  const tableBeforeRejectedEdit = await table.innerText()
+  await sectionsTable.locator('tbody tr').nth(firstSectionRowIndex).getByRole('button', { name: 'Editar horario', exact: true }).click()
+  await page.getByLabel(`Docente revisión ${firstSectionId}`, { exact: true }).selectOption(collisionAssignment.teacherId)
+  await page.getByLabel(`Día revisión ${firstSectionId}`, { exact: true }).selectOption(String(collisionAssignment.day))
+  await page.getByLabel(`Inicio revisión ${firstSectionId}`, { exact: true }).fill(`${String(Math.floor(collisionAssignment.startMinute / 60)).padStart(2, '0')}:${String(collisionAssignment.startMinute % 60).padStart(2, '0')}`)
+  for (const roomSelect of await page.locator('.academic-scheduling__manual-components select').all()) await roomSelect.selectOption(classroomRoomIds[1])
+  const teacherCollisionPending = page.waitForResponse((response) => response.url().endsWith('/ajustes') && response.request().method() === 'POST')
+  await page.getByRole('button', { name: 'Aplicar ajuste', exact: true }).click()
+  const teacherCollision = await teacherCollisionPending
+  assert.equal(teacherCollision.status(), 422)
+  assert.match((await teacherCollision.json()).error.message, /TEACHER_CONFLICT/)
+  await page.getByRole('alert').filter({ hasText: 'No se aplicó el ajuste' }).waitFor()
+  assert.equal(await table.innerText(), tableBeforeRejectedEdit)
+  assert.equal((await read(`/local/programacion-academica/v1/propuestas/${complete.proposalId}`)).editVersion, 1)
+
+  await page.getByLabel(`Docente revisión ${firstSectionId}`, { exact: true }).selectOption(targetAssignments[0].teacherId)
+  const targetRoomSelects = page.locator('.academic-scheduling__manual-components select')
+  const collidingAssignments = complete.assignments.filter((row) => row.sectionId === collisionAssignment.sectionId).sort((a, b) => a.startMinute - b.startMinute)
+  for (const [index, assignment] of collidingAssignments.entries()) await targetRoomSelects.nth(index).selectOption(assignment.roomId)
+  const roomCollisionPending = page.waitForResponse((response) => response.url().endsWith('/ajustes') && response.request().method() === 'POST')
+  await page.getByRole('button', { name: 'Aplicar ajuste', exact: true }).click()
+  const roomCollision = await roomCollisionPending
+  assert.equal(roomCollision.status(), 422)
+  assert.match((await roomCollision.json()).error.message, /ROOM_CONFLICT/)
+  await page.getByRole('alert').filter({ hasText: 'No se aplicó el ajuste' }).waitFor()
+  assert.equal(await table.innerText(), tableBeforeRejectedEdit)
+  assert.equal((await read(`/local/programacion-academica/v1/propuestas/${complete.proposalId}`)).editVersion, 1)
+  await calendar.scrollIntoViewIfNeeded()
+  await page.screenshot({ path: resolve(output, 'erp-complete-calendar.png') })
+  await page.getByLabel('Seleccionar o agregar docente').selectOption(teachers[1].id)
+  await teacherForm.getByRole('button', { name: /^Quitar docente / }).click()
+  assert.equal(await page.locator('.academic-scheduling__result').count(), 0)
+  await page.getByLabel('Carga semanal docente', { exact: true }).fill('480')
+  await page.getByLabel(`Máximo de secciones ${course.courseId}`, { exact: true }).fill('2')
+  const insufficient = await generate()
+  // Broad editable resources may exhaust the bounded search before proving the
+  // shortage. A computational limit must retain its own status, never impossible.
+  assert.ok(['impossible', 'search-limit'].includes(insufficient.status))
+  assert.equal(insufficient.coverageComplete, false)
+  assert.equal(insufficient.counts.sections, 4)
+  assert.ok(insufficient.counts.scheduledSessions < 8)
+  for (const row of await sectionsTable.locator('tbody tr').all()) {
+    if ((await row.locator('td').nth(5).innerText()).includes('Sin asignaciones')) assert.equal(await row.getByRole('button', { name: 'Editar horario', exact: true }).count(), 0, 'Sections without assignments are not editable')
+  }
+  if (insufficient.status === 'search-limit') {
+    assert.ok(insufficient.diagnostics.some((row) => row.code === 'SEARCH_LIMIT'))
+    assert.ok(insufficient.stats.limitReason)
+    assert.match(await page.locator('.academic-scheduling__result').innerText(), /Búsqueda inconclusa por límite computacional/)
+  } else {
+    assert.ok(insufficient.diagnostics.every((row) => row.code !== 'SEARCH_LIMIT'))
+    assert.match(await page.locator('.academic-scheduling__result').innerText(), /Sin solución completa en el dominio configurado/)
+  }
+  assert.equal(await calendar.locator('.weekly-schedule__event').count(), insufficient.counts.scheduledSessions / 2)
+  await page.locator('.academic-scheduling__result').scrollIntoViewIfNeeded()
+  await page.screenshot({ path: resolve(output, 'erp-insufficient.png') })
+  await page.getByLabel('Carga semanal docente', { exact: true }).fill('960')
+  await page.getByLabel(`Máximo de secciones ${course.courseId}`, { exact: true }).fill('4')
+  const oneTeacher = await generate()
+  assert.equal(oneTeacher.status, 'complete')
+  assert.equal(new Set(oneTeacher.assignments.map((row) => row.teacherId)).size, 1)
+  assert.equal(oneTeacher.preferenceReport.outsidePreferenceSections, 2)
+  assert.ok(oneTeacher.diagnostics.some((row) => row.code === 'PREFERENCES_NOT_MET'))
+  assert.equal(await calendar.locator('.weekly-schedule__event').count(), 4)
+  await page.getByLabel('Seleccionar o agregar docente').selectOption(teachers[0].id)
+  await setIntervals('Disponibilidad docente', [1, 2], '16:00', '18:00')
+  for (const roomId of [...classroomRoomIds, 'LAB01NP']) {
+    await page.getByLabel('Seleccionar o agregar ambiente').selectOption(roomId)
+    await setIntervals('Disponibilidad del ambiente', [1, 2], '16:00', '18:00')
+  }
+  await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).fill('45')
+  await page.getByLabel(`Modalidad de sesiones ${course.courseId}`, { exact: true }).selectOption('split')
+  const splitProposal = await generate()
+  assert.equal(splitProposal.status, 'complete')
+  assert.equal(splitProposal.sections.length, 1)
+  assert.equal(splitProposal.sections[0].deliveryMode, 'split')
+  assert.equal(splitProposal.assignments.length, 2)
+  assert.equal(new Set(splitProposal.assignments.map((assignment) => assignment.day)).size, 2, 'Two 2-hour sessions must use the two 2-hour availability windows on different days')
+  const splitSectionRow = sectionsTable.locator('tbody tr').first()
+  await splitSectionRow.getByRole('button', { name: 'Editar horario', exact: true }).click()
+  assert.equal(await page.locator('.academic-scheduling__manual-review').count(), 1)
+  const splitBlockSelect = page.locator('.academic-scheduling__block-select select')
+  assert.equal(await splitBlockSelect.count(), 1, 'Two split days expose the compact block selector')
+  assert.equal(await splitBlockSelect.locator('option').count(), 2)
+  const originalValue = await splitBlockSelect.inputValue()
+  const nextValue = await splitBlockSelect.locator('option').evaluateAll((options, value) => options.map((option) => option.value).find((item) => item !== value), originalValue)
+  assert.ok(nextValue)
+  await splitBlockSelect.selectOption(nextValue)
+  assert.equal(await page.locator('.academic-scheduling__manual-review').count(), 1, 'Changing split block retains one editor')
+  assert.notEqual(await splitBlockSelect.inputValue(), originalValue)
+  const splitChoiceCount = await splitBlockSelect.locator('option').count()
+  await page.locator('.academic-scheduling__manual-review').screenshot({ path: resolve(output, 'split-editor.png') })
+  await page.getByRole('button', { name: 'Cancelar', exact: true }).click()
+  assert.equal(await page.locator('.academic-scheduling__manual-review').count(), 0)
+  assert.deepEqual(await read(`/local/programacion-academica/v1/propuestas/${complete.proposalId}`), adjustedProposal)
+  assert.deepEqual((await read('/local/matricula-regular/v1/contextos/SYN-SIS-A')).data.offer, beforeOffer)
+  assert.deepEqual(errors, [])
+  assert.deepEqual(external, [])
+  await writeFile(resolve(output, 'result.json'), JSON.stringify({ date: new Date().toISOString(), base, source: 'own synthetic Compose project',
+    courseId: course.courseId, demand: 180, capacity: 45, complete: complete.counts,
+    insufficient: { status: insufficient.status, counts: insufficient.counts, diagnostics: insufficient.diagnostics.map((row) => row.code) },
+    oneTeacher: { counts: oneTeacher.counts, preferences: oneTeacher.preferenceReport },
+    splitEditor: { sectionId: splitProposal.sections[0].sectionId, assignedSessions: splitProposal.assignments.length,
+      availableBlockChoices: splitChoiceCount }, compactEditors: true, retainedConfiguration: true,
+    manualAdjustment: { sectionId: firstSectionId, sessionIds: targetIds, version: adjustedProposal.editVersion, day: slot.day, startMinute: slot.startMinute },
+    teacherCollisionStatus: teacherCollision.status(), roomCollisionStatus: roomCollision.status(), rejectedEditsPreserveView: true,
+    duplicatePrevention: true, blocksInCalendar: 4, unchangedEnrollmentOffer: true, errors, external }, null, 2))
+  console.log('PASS ERP180: manual block review, coherent tables/calendar, collision rejection with prior view retained, compact editors, preferences, resource limits, unchanged enrollment offer')
+} finally {
+  await browser.close()
+}

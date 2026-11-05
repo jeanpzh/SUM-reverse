@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LocalLoginRouteImport } from './routes/local.login'
 import { Route as LocalMatriculaRegularRouteImport } from './routes/local.matricula-regular'
+import { Route as LocalModulosRouteImport } from './routes/local.modulos'
+import { Route as LocalProgramacionAcademicaRouteImport } from './routes/local.programacion-academica'
 import { Route as AlumnoWebSumV2AsistenciaRouteImport } from './routes/alumnoWebSum.v2.asistencia'
 import { Route as AlumnoWebSumV2InicioRouteImport } from './routes/alumnoWebSum.v2.inicio'
 import { Route as AlumnoWebSumV2ManualesRouteImport } from './routes/alumnoWebSum.v2.manuales'
@@ -45,6 +47,17 @@ const LocalMatriculaRegularRoute = LocalMatriculaRegularRouteImport.update({
   path: '/local/matricula-regular',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LocalModulosRoute = LocalModulosRouteImport.update({
+  id: '/local/modulos',
+  path: '/local/modulos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LocalProgramacionAcademicaRoute =
+  LocalProgramacionAcademicaRouteImport.update({
+    id: '/local/programacion-academica',
+    path: '/local/programacion-academica',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AlumnoWebSumV2AsistenciaRoute =
   AlumnoWebSumV2AsistenciaRouteImport.update({
     id: '/alumnoWebSum/v2/asistencia',
@@ -149,6 +162,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/local/login': typeof LocalLoginRoute
   '/local/matricula-regular': typeof LocalMatriculaRegularRouteWithChildren
+  '/local/modulos': typeof LocalModulosRoute
+  '/local/programacion-academica': typeof LocalProgramacionAcademicaRoute
   '/alumnoWebSum/v2/asistencia': typeof AlumnoWebSumV2AsistenciaRoute
   '/alumnoWebSum/v2/inicio': typeof AlumnoWebSumV2InicioRoute
   '/alumnoWebSum/v2/manuales': typeof AlumnoWebSumV2ManualesRoute
@@ -171,6 +186,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/local/login': typeof LocalLoginRoute
   '/local/matricula-regular': typeof LocalMatriculaRegularRouteWithChildren
+  '/local/modulos': typeof LocalModulosRoute
+  '/local/programacion-academica': typeof LocalProgramacionAcademicaRoute
   '/alumnoWebSum/v2/asistencia': typeof AlumnoWebSumV2AsistenciaRoute
   '/alumnoWebSum/v2/inicio': typeof AlumnoWebSumV2InicioRoute
   '/alumnoWebSum/v2/manuales': typeof AlumnoWebSumV2ManualesRoute
@@ -194,6 +211,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/local/login': typeof LocalLoginRoute
   '/local/matricula-regular': typeof LocalMatriculaRegularRouteWithChildren
+  '/local/modulos': typeof LocalModulosRoute
+  '/local/programacion-academica': typeof LocalProgramacionAcademicaRoute
   '/alumnoWebSum/v2/asistencia': typeof AlumnoWebSumV2AsistenciaRoute
   '/alumnoWebSum/v2/inicio': typeof AlumnoWebSumV2InicioRoute
   '/alumnoWebSum/v2/manuales': typeof AlumnoWebSumV2ManualesRoute
@@ -218,6 +237,8 @@ export interface FileRouteTypes {
     | '/'
     | '/local/login'
     | '/local/matricula-regular'
+    | '/local/modulos'
+    | '/local/programacion-academica'
     | '/alumnoWebSum/v2/asistencia'
     | '/alumnoWebSum/v2/inicio'
     | '/alumnoWebSum/v2/manuales'
@@ -240,6 +261,8 @@ export interface FileRouteTypes {
     | '/'
     | '/local/login'
     | '/local/matricula-regular'
+    | '/local/modulos'
+    | '/local/programacion-academica'
     | '/alumnoWebSum/v2/asistencia'
     | '/alumnoWebSum/v2/inicio'
     | '/alumnoWebSum/v2/manuales'
@@ -262,6 +285,8 @@ export interface FileRouteTypes {
     | '/'
     | '/local/login'
     | '/local/matricula-regular'
+    | '/local/modulos'
+    | '/local/programacion-academica'
     | '/alumnoWebSum/v2/asistencia'
     | '/alumnoWebSum/v2/inicio'
     | '/alumnoWebSum/v2/manuales'
@@ -285,6 +310,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LocalLoginRoute: typeof LocalLoginRoute
   LocalMatriculaRegularRoute: typeof LocalMatriculaRegularRouteWithChildren
+  LocalModulosRoute: typeof LocalModulosRoute
+  LocalProgramacionAcademicaRoute: typeof LocalProgramacionAcademicaRoute
   AlumnoWebSumV2AsistenciaRoute: typeof AlumnoWebSumV2AsistenciaRoute
   AlumnoWebSumV2InicioRoute: typeof AlumnoWebSumV2InicioRoute
   AlumnoWebSumV2ManualesRoute: typeof AlumnoWebSumV2ManualesRoute
@@ -324,6 +351,20 @@ declare module '@tanstack/react-router' {
       path: '/local/matricula-regular'
       fullPath: '/local/matricula-regular'
       preLoaderRoute: typeof LocalMatriculaRegularRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/local/modulos': {
+      id: '/local/modulos'
+      path: '/local/modulos'
+      fullPath: '/local/modulos'
+      preLoaderRoute: typeof LocalModulosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/local/programacion-academica': {
+      id: '/local/programacion-academica'
+      path: '/local/programacion-academica'
+      fullPath: '/local/programacion-academica'
+      preLoaderRoute: typeof LocalProgramacionAcademicaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/alumnoWebSum/v2/asistencia': {
@@ -466,6 +507,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LocalLoginRoute: LocalLoginRoute,
   LocalMatriculaRegularRoute: LocalMatriculaRegularRouteWithChildren,
+  LocalModulosRoute: LocalModulosRoute,
+  LocalProgramacionAcademicaRoute: LocalProgramacionAcademicaRoute,
   AlumnoWebSumV2AsistenciaRoute: AlumnoWebSumV2AsistenciaRoute,
   AlumnoWebSumV2InicioRoute: AlumnoWebSumV2InicioRoute,
   AlumnoWebSumV2ManualesRoute: AlumnoWebSumV2ManualesRoute,

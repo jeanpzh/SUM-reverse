@@ -1,0 +1,309 @@
+{
+  "phase": "resume",
+  "source": "own synthetic Compose5280",
+  "pubA": {
+    "revision": "PA-PUBLICATION-1",
+    "id": "a1acb5af-20f3-4c72-9bfa-81bc44e1f78e",
+    "publicationVersion": 8,
+    "title": "Prueba E2 sintética 1793845871470 (nuevo borrador) (nuevo borrador) (nuevo borrador) (nuevo borrador",
+    "sourceProposalVersion": 4,
+    "approvedVersion": 5,
+    "approvedAt": "2026-11-05T09:39:10.091Z",
+    "publishedAt": "2026-11-05T09:39:10.469Z",
+    "schedule": {
+      "schoolId": "SISTEMAS",
+      "academicPeriod": "2027-I",
+      "courses": [
+        {
+          "courseId": "20118091",
+          "name": "DESARROLLO DE PROYECTOS DE TESIS I",
+          "cycle": 9,
+          "credits": 2
+        },
+        {
+          "courseId": "20118094",
+          "name": "INNOVACIÓN, CAMBIO ORGANIZACIONAL Y EMPRENDIMIENTO",
+          "cycle": 9,
+          "credits": 4
+        }
+      ],
+      "sections": [
+        {
+          "sectionId": "section:[\"20118091\",1]",
+          "courseId": "20118091",
+          "courseName": "DESARROLLO DE PROYECTOS DE TESIS I",
+          "capacity": 45,
+          "deliveryMode": "continuous"
+        },
+        {
+          "sectionId": "section:[\"20118091\",2]",
+          "courseId": "20118091",
+          "courseName": "DESARROLLO DE PROYECTOS DE TESIS I",
+          "capacity": 45,
+          "deliveryMode": "continuous"
+        },
+        {
+          "sectionId": "section:[\"20118094\",1]",
+          "courseId": "20118094",
+          "courseName": "INNOVACIÓN, CAMBIO ORGANIZACIONAL Y EMPRENDIMIENTO",
+          "capacity": 45,
+          "deliveryMode": "continuous"
+        }
+      ],
+      "assignments": [
+        {
+          "sessionId": "session:[\"section:[\\\"20118091\\\",1]\",\"weekly-1\"]",
+          "sectionId": "section:[\"20118091\",1]",
+          "courseId": "20118091",
+          "courseName": "DESARROLLO DE PROYECTOS DE TESIS I",
+          "teacherId": "E2-DEMO-0",
+          "teacherName": "PABLO JESUS ROMERO NAUPARI",
+          "roomId": "101AP",
+          "roomName": "101AP",
+          "sessionType": "T",
+          "day": 1,
+          "startMinute": 480,
+          "endMinute": 540
+        },
+        {
+          "sessionId": "session:[\"section:[\\\"20118091\\\",1]\",\"weekly-2\"]",
+          "sectionId": "section:[\"20118091\",1]",
+          "courseId": "20118091",
+          "courseName": "DESARROLLO DE PROYECTOS DE TESIS I",
+          "teacherId": "E2-DEMO-0",
+          "teacherName": "PABLO JESUS ROMERO NAUPARI",
+          "roomId": "101AP",
+          "roomName": "101AP",
+          "sessionType": "L",
+          "day": 1,
+          "startMinute": 540,
+          "endMinute": 660
+        },
+        {
+          "sessionId": "session:[\"section:[\\\"20118091\\\",2]\",\"weekly-1\"]",
+          "sectionId": "section:[\"20118091\",2]",
+          "courseId": "20118091",
+          "courseName": "DESARROLLO DE PROYECTOS DE TESIS I",
+          "teacherId": "E2-DEMO-0",
+          "teacherName": "PABLO JESUS ROMERO NAUPARI",
+          "roomId": "101AP",
+          "roomName": "101AP",
+          "sessionType": "T",
+          "day": 1,
+          "startMinute": 660,
+          "endMinute": 720
+        },
+        {
+          "sessionId": "session:[\"section:[\\\"20118091\\\",2]\",\"weekly-2\"]",
+          "sectionId": "section:[\"20118091\",2]",
+          "courseId": "20118091",
+          "courseName": "DESARROLLO DE PROYECTOS DE TESIS I",
+          "teacherId": "E2-DEMO-0",
+          "teacherName": "PABLO JESUS ROMERO NAUPARI",
+          "roomId": "101AP",
+          "roomName": "101AP",
+          "sessionType": "L",
+          "day": 1,
+          "startMinute": 720,
+          "endMinute": 840
+        },
+        {
+          "sessionId": "session:[\"section:[\\\"20118094\\\",1]\",\"weekly-1\"]",
+          "sectionId": "section:[\"20118094\",1]",
+          "courseId": "20118094",
+          "courseName": "INNOVACIÓN, CAMBIO ORGANIZACIONAL Y EMPRENDIMIENTO",
+          "teacherId": "E2-DEMO-1",
+          "teacherName": "CARMEN VIOLETA DIONICIO MEJÍA",
+          "roomId": "102AP",
+          "roomName": "102AP",
+          "sessionType": "T",
+          "day": 1,
+          "startMinute": 480,
+          "endMinute": 660
+        },
+        {
+          "sessionId": "session:[\"section:[\\\"20118094\\\",1]\",\"weekly-2\"]",
+          "sectionId": "section:[\"20118094\",1]",
+          "courseId": "20118094",
+          "courseName": "INNOVACIÓN, CAMBIO ORGANIZACIONAL Y EMPRENDIMIENTO",
+          "teacherId": "E2-DEMO-1",
+          "teacherName": "CARMEN VIOLETA DIONICIO MEJÍA",
+          "roomId": "102AP",
+          "roomName": "102AP",
+          "sessionType": "P",
+          "day": 1,
+          "startMinute": 660,
+          "endMinute": 780
+        }
+      ]
+    }
+  },
+  "pubB": {
+    "revision": "PA-PUBLICATION-1",
+    "id": "f52fd8ce-d3a9-4a56-b4b3-71e9d1f84a40",
+    "publicationVersion": 9,
+    "title": "Prueba E2 sintética 1793845871470 (nuevo borrador) (nuevo borrador) (nuevo borrador) (nuevo borrador",
+    "sourceProposalVersion": 4,
+    "approvedVersion": 5,
+    "approvedAt": "2026-11-05T09:39:18.520Z",
+    "publishedAt": "2026-11-05T09:39:18.908Z",
+    "schedule": {
+      "schoolId": "SISTEMAS",
+      "academicPeriod": "2027-I",
+      "courses": [
+        {
+          "courseId": "20118091",
+          "name": "DESARROLLO DE PROYECTOS DE TESIS I",
+          "cycle": 9,
+          "credits": 2
+        },
+        {
+          "courseId": "20118094",
+          "name": "INNOVACIÓN, CAMBIO ORGANIZACIONAL Y EMPRENDIMIENTO",
+          "cycle": 9,
+          "credits": 4
+        }
+      ],
+      "sections": [
+        {
+          "sectionId": "section:[\"20118091\",1]",
+          "courseId": "20118091",
+          "courseName": "DESARROLLO DE PROYECTOS DE TESIS I",
+          "capacity": 45,
+          "deliveryMode": "continuous"
+        },
+        {
+          "sectionId": "section:[\"20118091\",2]",
+          "courseId": "20118091",
+          "courseName": "DESARROLLO DE PROYECTOS DE TESIS I",
+          "capacity": 45,
+          "deliveryMode": "continuous"
+        },
+        {
+          "sectionId": "section:[\"20118094\",1]",
+          "courseId": "20118094",
+          "courseName": "INNOVACIÓN, CAMBIO ORGANIZACIONAL Y EMPRENDIMIENTO",
+          "capacity": 45,
+          "deliveryMode": "continuous"
+        }
+      ],
+      "assignments": [
+        {
+          "sessionId": "session:[\"section:[\\\"20118091\\\",1]\",\"weekly-1\"]",
+          "sectionId": "section:[\"20118091\",1]",
+          "courseId": "20118091",
+          "courseName": "DESARROLLO DE PROYECTOS DE TESIS I",
+          "teacherId": "E2-DEMO-0",
+          "teacherName": "PABLO JESUS ROMERO NAUPARI",
+          "roomId": "101AP",
+          "roomName": "101AP",
+          "sessionType": "T",
+          "day": 1,
+          "startMinute": 480,
+          "endMinute": 540
+        },
+        {
+          "sessionId": "session:[\"section:[\\\"20118091\\\",1]\",\"weekly-2\"]",
+          "sectionId": "section:[\"20118091\",1]",
+          "courseId": "20118091",
+          "courseName": "DESARROLLO DE PROYECTOS DE TESIS I",
+          "teacherId": "E2-DEMO-0",
+          "teacherName": "PABLO JESUS ROMERO NAUPARI",
+          "roomId": "101AP",
+          "roomName": "101AP",
+          "sessionType": "L",
+          "day": 1,
+          "startMinute": 540,
+          "endMinute": 660
+        },
+        {
+          "sessionId": "session:[\"section:[\\\"20118091\\\",2]\",\"weekly-1\"]",
+          "sectionId": "section:[\"20118091\",2]",
+          "courseId": "20118091",
+          "courseName": "DESARROLLO DE PROYECTOS DE TESIS I",
+          "teacherId": "E2-DEMO-0",
+          "teacherName": "PABLO JESUS ROMERO NAUPARI",
+          "roomId": "101AP",
+          "roomName": "101AP",
+          "sessionType": "T",
+          "day": 1,
+          "startMinute": 660,
+          "endMinute": 720
+        },
+        {
+          "sessionId": "session:[\"section:[\\\"20118091\\\",2]\",\"weekly-2\"]",
+          "sectionId": "section:[\"20118091\",2]",
+          "courseId": "20118091",
+          "courseName": "DESARROLLO DE PROYECTOS DE TESIS I",
+          "teacherId": "E2-DEMO-0",
+          "teacherName": "PABLO JESUS ROMERO NAUPARI",
+          "roomId": "101AP",
+          "roomName": "101AP",
+          "sessionType": "L",
+          "day": 1,
+          "startMinute": 720,
+          "endMinute": 840
+        },
+        {
+          "sessionId": "session:[\"section:[\\\"20118094\\\",1]\",\"weekly-1\"]",
+          "sectionId": "section:[\"20118094\",1]",
+          "courseId": "20118094",
+          "courseName": "INNOVACIÓN, CAMBIO ORGANIZACIONAL Y EMPRENDIMIENTO",
+          "teacherId": "E2-DEMO-1",
+          "teacherName": "CARMEN VIOLETA DIONICIO MEJÍA",
+          "roomId": "102AP",
+          "roomName": "102AP",
+          "sessionType": "T",
+          "day": 1,
+          "startMinute": 480,
+          "endMinute": 660
+        },
+        {
+          "sessionId": "session:[\"section:[\\\"20118094\\\",1]\",\"weekly-2\"]",
+          "sectionId": "section:[\"20118094\",1]",
+          "courseId": "20118094",
+          "courseName": "INNOVACIÓN, CAMBIO ORGANIZACIONAL Y EMPRENDIMIENTO",
+          "teacherId": "E2-DEMO-1",
+          "teacherName": "CARMEN VIOLETA DIONICIO MEJÍA",
+          "roomId": "102AP",
+          "roomName": "102AP",
+          "sessionType": "P",
+          "day": 1,
+          "startMinute": 660,
+          "endMinute": 780
+        }
+      ]
+    }
+  },
+  "expectedDemands": [
+    {
+      "courseId": "20118091",
+      "estimatedDemand": 46,
+      "targetCapacity": 45,
+      "deliveryMode": "continuous",
+      "patternId": "pattern-1"
+    },
+    {
+      "courseId": "20118094",
+      "estimatedDemand": 1,
+      "targetCapacity": 45,
+      "deliveryMode": "continuous",
+      "patternId": "pattern-1"
+    }
+  ],
+  "actorA": {
+    "id": "74382108-2d2e-4ad0-97c3-586080d4295f",
+    "draftVersion": 13,
+    "intentionVersion": 8
+  },
+  "actorB": {
+    "id": "bee19766-fdf7-4925-afa5-b91edabe35f8",
+    "draftVersion": 3,
+    "intentionVersion": 2
+  },
+  "errors": [],
+  "external": [],
+  "recoveredAfterRestart": true,
+  "aggregatesVerified": true,
+  "newDraftCreated": true
+}

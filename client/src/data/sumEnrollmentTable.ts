@@ -105,15 +105,17 @@ export function buildSectionOptions(course: MatriculaRegularOfferedCourse): Sect
   }))
 }
 
-export function chooseSection(
-  choices: readonly MatriculaRegularChoice[],
-  courseId: MatriculaRegularId,
-  sectionId: MatriculaRegularId,
-): MatriculaRegularChoice[] {
+export function chooseSection<CourseId extends string, SectionId extends string>(
+  choices: readonly { courseId: CourseId; sectionId: SectionId }[],
+  courseId: CourseId,
+  sectionId: SectionId,
+): Array<{ courseId: CourseId; sectionId: SectionId }> {
   return [...choices.filter((item) => item.courseId !== courseId), { courseId, sectionId }]
 }
 
-export function removeChoice(choices: readonly MatriculaRegularChoice[], courseId: MatriculaRegularId): MatriculaRegularChoice[] {
+export function removeChoice<CourseId extends string, SectionId extends string>(
+  choices: readonly { courseId: CourseId; sectionId: SectionId }[], courseId: CourseId,
+): Array<{ courseId: CourseId; sectionId: SectionId }> {
   return choices.filter((item) => item.courseId !== courseId)
 }
 

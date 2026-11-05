@@ -20,6 +20,7 @@ import type { ServerClock } from './clock.js'
 import { MatriculaRegularError } from './matricula-regular-error.filter.js'
 import { MatriculaRegularRepository } from './matricula-regular.repository.js'
 import type { RunState } from './store.types.js'
+import { findProfile } from './profiles.js'
 
 const canonicalSelection = (selection: MatriculaRegularSubmission['selection']) =>
   structuredClone(selection).sort((left, right) =>
@@ -105,6 +106,7 @@ function commit(state: RunState, request: MatriculaRegularSubmission, clockNow: 
     selection: request.selection,
     now: clockNow,
     eligibility,
+    profile: findProfile(state.profiles, actor.scope, actor.profileRevision),
     additionalCauses: admission.causes,
     additionalGaps: admission.gaps,
   })

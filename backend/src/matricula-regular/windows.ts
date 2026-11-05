@@ -4,7 +4,7 @@ import type {
   MatriculaRegularGap,
   MatriculaRegularId,
 } from '../../../shared/matricula-regular.mjs'
-import { findProfile } from './profiles.js'
+import { findProfile, regularTurnBands } from './profiles.js'
 import type {
   ActorProfile,
   EffectiveWindow,
@@ -49,20 +49,32 @@ function utcFromLimaDateTime(date: string, time: string): Date {
   return limaLocalAsUtc
 }
 
-function toPublishedWindow(row: PublishedRow): EffectiveWindow {
-  const start = utcFromLimaDateTime(row.day, row.startLocal)
-  const nextLimaMidnight = new Date(`${row.day}T00:00:00.000Z`)
+function boundsForTurn(day: string, startLocal: string) {
+  const start = utcFromLimaDateTime(day, startLocal)
+  const nextLimaMidnight = new Date(`${day}T00:00:00.000Z`)
   nextLimaMidnight.setUTCDate(nextLimaMidnight.getUTCDate() + 1)
   const end = utcFromLimaDateTime(nextLimaMidnight.toISOString().slice(0, 10), '00:00')
+  return { startsAt: start.toISOString(), endsAt: end.toISOString() }
+}
 
+function toPublishedWindow(row: PublishedRow): EffectiveWindow {
   return {
     id: `SYN-PUBLISHED-ROW-${row.row}`,
-    startsAt: start.toISOString(),
-    endsAt: end.toISOString(),
+    ...boundsForTurn(row.day, row.startLocal),
     minPp: row.ppMin,
     origin: 'published-derived',
     sourceIds: [row.sourceId],
   }
+}
+
+export function regularTurnWindowsForDate(day: string, sourceIds: string[]): EffectiveWindow[] {
+  return regularTurnBands().map(({ row, startLocal, ppMin }) => ({
+    id: `SYN-REGULAR-${day}-${row}`,
+    ...boundsForTurn(day, startLocal),
+    minPp: ppMin,
+    origin: 'synthetic',
+    sourceIds: [...sourceIds],
+  }))
 }
 
 function isApplicableOnDate(window: EffectiveWindow, day: string): boolean {
@@ -75,6 +87,12 @@ function applicableWindow(
   ponderado: number | null,
 ): EffectiveWindow | null {
   const utcDay = now.toISOString().slice(0, 10)
+  if (profile.academicPolicy === 'fisi-regular' && profile.scope.period !== '2026-II') {
+    return profile.calendar.effectiveWindows
+      .filter((window) => limaDate(new Date(window.startsAt)) === limaDate(now)
+        && ponderado !== null && ponderado >= window.minPp)
+      .sort((left, right) => left.startsAt.localeCompare(right.startsAt))[0] ?? null
+  }
   const explicit = profile.calendar.effectiveWindows.filter((window) => isApplicableOnDate(window, utcDay))
 
   if (explicit.length > 0) {
@@ -106,17 +124,23 @@ function evaluateWindow(
   const day = limaDate(now)
   const window = applicableWindow(profile, now, actor.ponderado)
   const hasExplicitSynthetic = profile.calendar.effectiveWindows.some((item) =>
-    item.origin === 'synthetic' && isApplicableOnDate(item, now.toISOString().slice(0, 10)),
+    item.origin === 'synthetic' && (profile.academicPolicy === 'fisi-regular' && profile.scope.period !== '2026-II'
+      ? limaDate(new Date(item.startsAt)) === day
+      : isApplicableOnDate(item, now.toISOString().slice(0, 10))),
   )
   const unknownDate = profile.calendar.unknownDates.includes(day)
   const gaps: MatriculaRegularGap[] = []
+  const sharedCalendar = profile.academicPolicy === 'fisi-regular' && profile.scope.period !== '2026-II'
+  if (sharedCalendar && profile.calendar.effectiveWindows.length === 0) {
+    gaps.push(gap('WINDOW_UNSPECIFIED', sourceIdsForRule(profile, 'ENROLLMENT-WINDOW')))
+  }
 
   if (actor.ponderado === null) {
     gaps.push(gap('PROFILE_MISSING', sourceIdsForRule(profile, 'PP-ABOVE-19-TESTIMONY')))
   }
 
   if (unknownDate && !hasExplicitSynthetic) {
-    const ruleId = day === '2026-08-11'
+    const ruleId = sharedCalendar ? 'ENROLLMENT-WINDOW' : day === '2026-08-11'
       ? 'AUGUST-11-OPERATING-HOURS'
       : 'AUGUST-12-OPERATING-HOURS'
     gaps.push(gap('WINDOW_UNSPECIFIED', sourceIdsForRule(profile, ruleId)))

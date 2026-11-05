@@ -23,6 +23,7 @@
     "**/datos-sinteticos/**",
     "**/*.log",
     "**/exports/**",
-    "**/snapshots/**"
+    "**/snapshots/**",
+    "**/.pnpm-store/**"
   ]
 }

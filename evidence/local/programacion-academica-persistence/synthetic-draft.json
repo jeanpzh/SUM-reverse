@@ -1,0 +1,14 @@
+{
+  "id": "45462c60-ec6f-4fb5-8795-66ebce5e984e",
+  "version": 2,
+  "title": "Persistencia E1 sintética",
+  "courseId": "INE002",
+  "finalDemand": 1,
+  "baseDemand": 0,
+  "proposalStatus": "complete",
+  "editVersion": 1,
+  "runtimeProposalId": "b6b7f57a-c9b1-4383-a4c9-a60a8c001493",
+  "manuallyAdjustedSectionIds": [
+    "section:[\"INE002\",1]"
+  ]
+}

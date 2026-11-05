@@ -1,0 +1,19 @@
+{
+  "date": "2026-11-05T10:31:45.689Z",
+  "base": "http://127.0.0.1:5280",
+  "source": "fresh isolated compose.local.yaml with independently synthetic built-in fixtures",
+  "selector": "passed",
+  "studentLoginAndScreens": "passed",
+  "sameOriginProxy": "passed",
+  "proposal": {
+    "status": "complete",
+    "sections": 3
+  },
+  "enrollmentOfferUnaffectedByAcademicGeneration": true,
+  "enrollmentAccepted": true,
+  "replayIdempotent": true,
+  "occupiedCountersChangedOnlyByEnrollment": true,
+  "studentMenuUnchanged": true,
+  "errors": [],
+  "remote": []
+}

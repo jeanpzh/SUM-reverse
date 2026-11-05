@@ -8,6 +8,9 @@ services:
     environment:
       NODE_ENV: production
       SUM_LOCAL_SCENARIOS: '1'
+      SUM_ACADEMIC_SCHEDULING: '1'
+      SUM_ACADEMIC_PROXY_HOST: frontend
+      SUM_ACADEMIC_DRAFT_DIR: /app/backend/var/academic-drafts
       HOST: 0.0.0.0
       PORT: '3000'
       REPORTES_FIXTURE: populated
@@ -16,6 +19,8 @@ services:
       MATRICULA_INFORMACION_FIXTURE: populated
       PROGRAMACION_FIXTURE: populated
       PLAN_ESTUDIOS_FIXTURE: populated
+    volumes:
+      - academic-drafts:/app/backend/var/academic-drafts
     init: true
     healthcheck:
       test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
@@ -29,8 +34,12 @@ services:
       dockerfile: client/Dockerfile
       args:
         SUM_DEVTOOLS: '1'
+        SUM_ACADEMIC_SCHEDULING: '1'
     ports:
       - '127.0.0.1:${SUM_PORT:-5180}:8080'
     depends_on:
       backend:
         condition: service_healthy
+
+volumes:
+  academic-drafts:

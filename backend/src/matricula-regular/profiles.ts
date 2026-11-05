@@ -74,6 +74,11 @@ const documentaryRules = [
 
 const clone = <T>(value: T): T => structuredClone(value)
 
+/** Reuse the approved threshold and start-time pattern with an independently supplied date. */
+export function regularTurnBands() {
+  return publishedRows.map(({ row, startLocal, ppMin }) => ({ row, startLocal, ppMin }))
+}
+
 function createScope(school: School): ProfileScope {
   return {
     facultyId: 'FISI',

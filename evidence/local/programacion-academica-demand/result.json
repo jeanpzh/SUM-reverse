@@ -1,0 +1,134 @@
+{
+  "date": "2026-11-03T02:28:44.138Z",
+  "source": "own independently synthetic Docker Compose acceptance project",
+  "regular": {
+    "revision": "PA-DEMO-1",
+    "source": {
+      "id": "existing-regular-v1",
+      "label": "Escenario regular sintético existente (Sistemas)",
+      "revision": "DEMAND-SYN-1",
+      "kind": "synthetic",
+      "targetPeriod": "2027-I",
+      "cutoffPeriod": "2026-1",
+      "schoolId": "SISTEMAS",
+      "planId": "SYN-SIS-PLAN",
+      "populationSize": 2,
+      "recordCount": 2,
+      "duplicateRecords": 0,
+      "reference": "backend/src/matricula-regular/enrollment-scenarios.ts:regular/SISTEMAS",
+      "limitations": [
+        "La base es habilitación académica potencial de una muestra sintética, no intención ni pronóstico de matrícula.",
+        "La fuente independiente se construye por fórmula para demostración y no representa la distribución real de estudiantes.",
+        "La fuente independiente contiene 132 registros: 120 identidades y 12 copias idénticas para probar deduplicación.",
+        "Las equivalencias de la fuente independiente son reconocimientos sintéticos explícitos; la fuente regular usa lista de equivalencias conocida y vacía. No se importa una tabla institucional.",
+        "Solo se evalúan cursos del plan sintético de Sistemas; prerequisiteIds expresa una conjunción simple.",
+        "No se consideran continuidad futura, cursos en progreso, reglas administrativas, horarios, cupos ni elección conjunta de carga."
+      ]
+    },
+    "rows": [
+      {
+        "courseId": "20118104",
+        "eligible": 0,
+        "retakeEligible": 0,
+        "nonEligible": 2,
+        "insufficient": 0,
+        "baseDemand": 0,
+        "targetCapacity": 45,
+        "suggestedSections": 0,
+        "reasons": [
+          {
+            "category": "non-eligible",
+            "code": "PREREQUISITE_NOT_MET",
+            "message": "No consta aprobado un prerrequisito requerido al corte.",
+            "count": 2
+          }
+        ]
+      }
+    ]
+  },
+  "independent": {
+    "revision": "PA-DEMO-1",
+    "source": {
+      "id": "independent-120-v1",
+      "label": "Población independiente sintética de 120 perfiles (Sistemas)",
+      "revision": "DEMAND-SYN-1",
+      "kind": "synthetic",
+      "targetPeriod": "2027-I",
+      "cutoffPeriod": "2026-1",
+      "schoolId": "SISTEMAS",
+      "planId": "SYN-SIS-PLAN",
+      "populationSize": 120,
+      "recordCount": 132,
+      "duplicateRecords": 12,
+      "reference": "local-only: fórmula independiente sobre el catálogo y plan sintéticos existentes",
+      "limitations": [
+        "La base es habilitación académica potencial de una muestra sintética, no intención ni pronóstico de matrícula.",
+        "La fuente independiente se construye por fórmula para demostración y no representa la distribución real de estudiantes.",
+        "La fuente independiente contiene 132 registros: 120 identidades y 12 copias idénticas para probar deduplicación.",
+        "Las equivalencias de la fuente independiente son reconocimientos sintéticos explícitos; la fuente regular usa lista de equivalencias conocida y vacía. No se importa una tabla institucional.",
+        "Solo se evalúan cursos del plan sintético de Sistemas; prerequisiteIds expresa una conjunción simple.",
+        "No se consideran continuidad futura, cursos en progreso, reglas administrativas, horarios, cupos ni elección conjunta de carga."
+      ]
+    },
+    "rows": [
+      {
+        "courseId": "20118104",
+        "eligible": 60,
+        "retakeEligible": 24,
+        "nonEligible": 36,
+        "insufficient": 24,
+        "baseDemand": 60,
+        "targetCapacity": 45,
+        "suggestedSections": 2,
+        "reasons": [
+          {
+            "category": "non-eligible",
+            "code": "COURSE_ALREADY_APPROVED",
+            "message": "El curso ya figura aprobado al corte.",
+            "count": 12
+          },
+          {
+            "category": "non-eligible",
+            "code": "COURSE_RECOGNIZED",
+            "message": "El curso figura reconocido por una equivalencia explícita.",
+            "count": 12
+          },
+          {
+            "category": "non-eligible",
+            "code": "PREREQUISITE_NOT_MET",
+            "message": "No consta aprobado un prerrequisito requerido al corte.",
+            "count": 12
+          },
+          {
+            "category": "insufficient",
+            "code": "UNKNOWN_EQUIVALENCES",
+            "message": "El estado de equivalencias no está confirmado.",
+            "count": 12
+          },
+          {
+            "category": "insufficient",
+            "code": "UNKNOWN_HISTORY",
+            "message": "El historial académico no está confirmado.",
+            "count": 12
+          }
+        ]
+      }
+    ]
+  },
+  "manualDemandPreserved": true,
+  "staleEstimateDiscarded": true,
+  "adoptionWithUnknownDisabled": true,
+  "generated": {
+    "status": "complete",
+    "counts": {
+      "sections": 4,
+      "requiredSessions": 8,
+      "scheduledSessions": 8
+    },
+    "finalDemand": 180,
+    "targetCapacity": 45
+  },
+  "unchangedEnrollmentOffer": true,
+  "errors": [],
+  "external": []
+}

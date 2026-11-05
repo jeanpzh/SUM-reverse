@@ -1,0 +1,46 @@
+{
+  "date": "2026-11-03T01:01:11.664Z",
+  "base": "http://127.0.0.1:5280",
+  "source": "own synthetic Compose project",
+  "courseId": "20118104",
+  "demand": 180,
+  "capacity": 45,
+  "complete": {
+    "sections": 4,
+    "requiredSessions": 8,
+    "scheduledSessions": 8
+  },
+  "insufficient": {
+    "status": "impossible",
+    "counts": {
+      "sections": 4,
+      "requiredSessions": 8,
+      "scheduledSessions": 4
+    },
+    "diagnostics": [
+      "INSUFFICIENT_COURSE_TEACHER_LOAD"
+    ]
+  },
+  "oneTeacher": {
+    "counts": {
+      "sections": 4,
+      "requiredSessions": 8,
+      "scheduledSessions": 8
+    },
+    "preferences": {
+      "policy": "preferences",
+      "evaluatedSections": 4,
+      "withinPreferenceSections": 2,
+      "outsidePreferenceSections": 2,
+      "withoutPreferenceSections": 0,
+      "optimality": "not-proven"
+    }
+  },
+  "compactEditors": true,
+  "retainedConfiguration": true,
+  "duplicatePrevention": true,
+  "blocksInCalendar": 4,
+  "unchangedEnrollmentOffer": true,
+  "errors": [],
+  "external": []
+}

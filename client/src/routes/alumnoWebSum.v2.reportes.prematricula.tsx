@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { getLocalProfileActivation, readLocalProfileRoute, sumApi } from '../data/client'
 import { TableScreen } from '../screens/TableScreens'
 import { LocalAcademicView } from '../screens/LocalAcademicView'
+import { StudentPreEnrollment } from '../screens/StudentPreEnrollment'
 
 export const Route = createFileRoute('/alumnoWebSum/v2/reportes/prematricula')({
   loader: async ({ abortController }) => getLocalProfileActivation() === 'synthetic-actors'
@@ -11,7 +12,7 @@ export const Route = createFileRoute('/alumnoWebSum/v2/reportes/prematricula')({
   component: function RouteComponent() {
     const loaded = Route.useLoaderData()
     return loaded.mode === 'synthetic-actors'
-      ? <LocalAcademicView kind="prematricula" response={loaded.response.data.payload} />
+      ? <><LocalAcademicView kind="prematricula" response={loaded.response.data.payload} /><StudentPreEnrollment /></>
       : <TableScreen id="reportes-prematricula" response={loaded.response} />
   },
 })
