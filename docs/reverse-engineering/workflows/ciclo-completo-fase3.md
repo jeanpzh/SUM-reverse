@@ -197,3 +197,17 @@ Se publica el trabajo en `docs/fase3-propuesta`, sin merge a main/master ni camb
 a los dos documentos ajenos preexistentes. El informe distingue explícitamente la
 demo aceptada del cumplimiento parcial de toda la propuesta: núcleo sin IA,
 DFS TypeScript en lugar de CP-SAT y brechas de rondas, reajuste, roles y métricas.
+
+### PR36: preparación del merge y corrección CI
+
+Autorización explícita posterior: «pr y merge». PR36 hacia master, porque PR35
+ya integró schedule-pt1 mediante squash. Se comprobó igualdad exacta de árboles
+master/5f9083f antes de alinear historia; las resoluciones de add/add conservan
+exactamente el árbol probado de40bee2b. No se modificó funcionalidad al sincronizar.
+
+Primera ejecución CI42077824945: cliente y backend aprueban; navegador falla antes
+de ejecutar14 escenarios porque backend/dist no existe en su runner independiente.
+Los16 casos HTTP sí pasan. Corrección aislada del principal: añadir el comando de
+build backend después de instalar y antes de ejecutar navegador, conservando el
+guard de runtime compilado y todas las aserciones. No se interpreta como fallo
+funcional ni se reintenta sin corregir su causa. El siguiente CI decide la aceptación.

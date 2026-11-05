@@ -70,6 +70,7 @@ jobs:
       - run: pnpm --dir client install --frozen-lockfile
       - run: pnpm --dir client exec playwright install --with-deps chromium
       - run: pnpm --dir backend install --frozen-lockfile
+      - run: pnpm --dir backend build
       - run: >-
           pnpm --dir backend test --no-file-parallelism
           test/matricula-regular-us1
