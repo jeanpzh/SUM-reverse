@@ -94,6 +94,11 @@ export default defineConfig({
     port: 5741,
     strictPort: true,
     proxy: {
+      '/api/local/perfiles/v1': {
+        target: 'http://127.0.0.1:5742',
+        changeOrigin: false,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
       '/api/local/matricula-regular/v1': {
         target: 'http://127.0.0.1:5742',
         changeOrigin: false,

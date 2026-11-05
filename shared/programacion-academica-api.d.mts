@@ -1,12 +1,13 @@
+import type { PlanningPeriod, PlanningPolicy } from './academic-planning-policy.mjs'
 export const ACADEMIC_REVISION: 'PA-DEMO-1'
 export const ACADEMIC_ROUTE: '/local/programacion-academica'
 export const ACADEMIC_API: '/api/local/programacion-academica/v1'
 export type AcademicInterval = { day: number; startMinute: number; endMinute: number }
 export type AcademicAllocationPolicy = 'preferences' | 'balanced' | 'first-feasible'
-export type AcademicTeacherResource = { id: string; name: string; courseIds: string[]; maxWeeklyMinutes: number; availability: AcademicInterval[]; preferences?: AcademicInterval[]; sectionLimits?: Array<{ courseId: string; maxSections: number }> }
+export type AcademicTeacherResource = { id: string; name: string; courseIds: string[]; maxWeeklyMinutes: number; availability: AcademicInterval[]; preferences?: AcademicInterval[]; sectionLimits?: Array<{ courseId: string; maxSections: number }>; facultyId?: string; category?: 'principal' | 'asociado' | 'auxiliar'; qualificationSource?: 'synthetic' }
 export type AcademicRoomResource = { id: string; name: string; capacity: number; availability: AcademicInterval[]; kind?: 'classroom' | 'laboratory' }
 export type AcademicPlanningResources = { teachers: AcademicTeacherResource[]; rooms: AcademicRoomResource[] }
-export type AcademicRequest = { revision: string; demands: Array<{ courseId: string; estimatedDemand: number; targetCapacity?: number; patternId?: string; deliveryMode?: 'continuous' | 'split' }>; resources?: AcademicPlanningResources; allocationPolicy?: AcademicAllocationPolicy }
+export type AcademicRequest = { revision: string; demands: Array<{ courseId: string; estimatedDemand: number; targetCapacity?: number; patternId?: string; deliveryMode?: 'continuous' | 'split' }>; resources?: AcademicPlanningResources; allocationPolicy?: AcademicAllocationPolicy; planningPolicy?: PlanningPolicy }
 export type AcademicWeeklySession = { id: string; durationMinutes: number; type?: string }
 export type AcademicHistory = { sections: Array<{ sectionId: string; capacity: number; sessions: Array<AcademicInterval & { room: string; teacherId: string; teacherName?: string; type: string }> }> }
 export type AcademicCatalog = {
@@ -50,14 +51,14 @@ export type AcademicDemandEstimate = { revision: string; source: AcademicDemandS
 export function validateAcademicDemandRequest(value: unknown): asserts value is AcademicDemandRequest
 export function validateAcademicDemandEstimate(value: unknown): asserts value is AcademicDemandEstimate
 export type AcademicDraftState = 'draft' | 'ready-for-review' | 'in-review' | 'ready-for-approval' | 'approved' | 'published'
-export type AcademicWorkspace = { schoolId: 'SISTEMAS'; academicPeriod: '2027-I'; request: AcademicRequest & { resources: AcademicPlanningResources }; demandSourceId: AcademicDemandSourceId; demandBaseRequest: AcademicDemandRequest | null }
+export type AcademicWorkspace = { schoolId: 'SISTEMAS'; academicPeriod: PlanningPeriod; request: AcademicRequest & { resources: AcademicPlanningResources }; demandSourceId: AcademicDemandSourceId; demandBaseRequest: AcademicDemandRequest | null }
 export type AcademicDraftSaveRequest = { id: string | null; expectedVersion: number | null; title: string; state: 'draft' | 'ready-for-review'; configuration: AcademicWorkspace; proposalId: string | null; proposalEditVersion: number | null }
 export type AcademicSavedDraft = { id: string; version: number; title: string; state: AcademicDraftState; createdAt: string; updatedAt: string; configuration: AcademicWorkspace; demandBase: AcademicDemandEstimate | null; proposal: AcademicProposal | null; review?: AcademicTeacherReview; approval?: AcademicApproval; publication?: AcademicPublicationMetadata; origin?: AcademicDraftOrigin }
 export type AcademicApproval = { sourceVersion: number; approvedVersion: number; approvedAt: string; fingerprint: string }
 export type AcademicPublicationMetadata = { publicationVersion: number; publishedAt: string }
 export type AcademicDraftOrigin = { draftId: string; version: number; publicationVersion: number | null }
 export type AcademicPublicationRequest = { expectedVersion: number; expectedCurrentId: string | null }
-export type AcademicScheduleSnapshot = { schoolId: 'SISTEMAS'; academicPeriod: '2027-I'; courses: Array<{ courseId: string; name: string; cycle: number; credits: number }>; sections: AcademicProposal['sections']; assignments: AcademicProposal['assignments'] }
+export type AcademicScheduleSnapshot = { schoolId: 'SISTEMAS'; academicPeriod: PlanningPeriod; courses: Array<{ courseId: string; name: string; cycle: number; credits: number }>; sections: AcademicProposal['sections']; assignments: AcademicProposal['assignments'] }
 export type AcademicReleasePreview = { id: string; version: number; title: string; state: AcademicDraftState; schedule: AcademicScheduleSnapshot }
 export type AcademicPublication = { revision: 'PA-PUBLICATION-1'; id: string; publicationVersion: number; title: string; sourceProposalVersion: number; approvedVersion: number; approvedAt: string; publishedAt: string; schedule: AcademicScheduleSnapshot }
 export type AcademicPublicationList = { currentId: string | null; items: Array<Omit<AcademicPublication, 'revision' | 'schedule'>> }
@@ -74,7 +75,7 @@ export type AcademicTeacherReview = { round: number; submittedVersion: number; s
 export function validateAcademicReviewSubmission(value: unknown): asserts value is AcademicReviewSubmission
 export function validateAcademicReviewDecision(value: unknown): asserts value is AcademicReviewDecision
 export function validateAcademicTeacherReview(value: unknown, version?: number): asserts value is AcademicTeacherReview
-export type AcademicDraftList = { items: Array<Pick<AcademicSavedDraft, 'id' | 'version' | 'title' | 'state' | 'createdAt' | 'updatedAt'> & { schoolId: 'SISTEMAS'; academicPeriod: '2027-I'; hasSchedule: boolean }>; unavailableCount: number }
+export type AcademicDraftList = { items: Array<Pick<AcademicSavedDraft, 'id' | 'version' | 'title' | 'state' | 'createdAt' | 'updatedAt'> & { schoolId: 'SISTEMAS'; academicPeriod: PlanningPeriod; hasSchedule: boolean }>; unavailableCount: number }
 export type AcademicDraftResume = { draft: AcademicSavedDraft }
 export function validateAcademicWorkspace(value: unknown): asserts value is AcademicWorkspace
 export function validateAcademicDraftSaveRequest(value: unknown): asserts value is AcademicDraftSaveRequest

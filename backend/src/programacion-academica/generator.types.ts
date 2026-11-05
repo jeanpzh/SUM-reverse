@@ -1,5 +1,6 @@
 import type { CourseDemand } from './programacion-academica.types.js'
 import type { AcademicSchedule, AcademicTeacher, AcademicRoom, CompatibleCourseGroup, ScheduleIssueCode, TimeInterval } from './schedule.types.js'
+import type { PlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
 
 export type WeeklySession = {
   id: string
@@ -8,7 +9,7 @@ export type WeeklySession = {
 }
 export type DeliveryMode = 'continuous' | 'split'
 export type AllocationPolicy = 'preferences' | 'balanced' | 'first-feasible'
-export type GeneratorCourse = CourseDemand & { weeklySessions: WeeklySession[], deliveryMode?: DeliveryMode }
+export type GeneratorCourse = CourseDemand & { weeklySessions: WeeklySession[], deliveryMode?: DeliveryMode, cycle?: number }
 export type GeneratorInput = {
   courses: GeneratorCourse[]
   teachers: AcademicTeacher[]
@@ -18,6 +19,7 @@ export type GeneratorInput = {
   startStepMinutes: number
   maxExplorations: number
   allocationPolicy?: AllocationPolicy
+  planningPolicy?: PlanningPolicy
 }
 export type RequiredSession = {
   id: string

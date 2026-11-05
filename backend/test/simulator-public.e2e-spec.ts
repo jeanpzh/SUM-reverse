@@ -1,3 +1,4 @@
+import { validateChoice } from '../../shared/matricula-regular.mjs'
 import { readFile } from 'node:fs/promises'
 import { createHash, randomUUID } from 'node:crypto'
 import { Pool } from 'pg'
@@ -81,7 +82,7 @@ describe.skipIf(!enabled)('public simulator PostgreSQL integration', () => {
       const actor = structuredClone(sourceActor.rows[0]!.profile) as Record<string, unknown>
       actor['actorId'] = retryActorId
       actor['name'] = 'Estudiante sintético de reintento'
-      const offer = sourceSections.rows.map((row) => ({ ...row.course, sections: [{ sectionId: row.section_id, capacity: 1, occupied: 0, ...row.section }] }))
+      const offer: Array<Record<string, unknown> & { sections: Array<Record<string, unknown>> }> = sourceSections.rows.map((row) => ({ ...row.course, sections: [{ sectionId: row.section_id, capacity: 1, occupied: 0, ...row.section }] }))
       const config = { profiles: sourceCampaign.rows[0]!.config.profiles, offer }
       await pool.query("INSERT INTO simulator_campaigns(campaign_id,run_id,status,config) VALUES($1,$2,'open',$3)", [retryCampaignId, retryRunId, JSON.stringify(config)])
       for (const profile of sourceProfiles.rows) await pool.query('INSERT INTO simulator_profiles(campaign_id,profile_revision,profile) VALUES($1,$2,$3)', [retryCampaignId, String(profile.profile['profileRevision']), JSON.stringify(profile.profile)])
@@ -223,7 +224,7 @@ describe.skipIf(!enabled)('public simulator PostgreSQL integration', () => {
       requestId: crypto.randomUUID() as `${string}-${string}-${string}-${string}-${string}`,
       sessionId: created[index] as `${string}-${string}-${string}-${string}-${string}`,
       profileRevision: contexts[index]!.data.profileRevision,
-      selection: manifest.actors[index]!.selection ?? manifest.selection!,
+      selection: (actor.selection ?? manifest.selection!).map((choice) => { validateChoice(choice); return choice }),
     }))
     const outcomes = await Promise.all(submissions.map(async (submission, index) => {
       const response = await call(index % 2 ? baseB : baseA, '/local/matricula-regular/v1/solicitudes', { method: 'POST', headers: { Origin: origin, Cookie: authenticated[index]!.cookie }, body: JSON.stringify(submission) })

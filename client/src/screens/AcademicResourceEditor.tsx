@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { AcademicCatalog } from '../data/academicScheduling'
+import { filterAcademicResources, PLANNING_LIMITS } from '../data/academicScheduling'
 import type { AcademicPlanningResources, AcademicTeacherResource, AcademicRoomResource, AcademicInterval } from '../../../shared/programacion-academica-api.mjs'
 
 type Props = {
@@ -44,6 +45,7 @@ export function AcademicResourceEditor({ catalog, resources, onChange }: Props) 
   const [activeTeacherId, setActiveTeacherId] = useState(resources.teachers[0]?.id ?? '')
   const [activeRoomId, setActiveRoomId] = useState(resources.rooms[0]?.id ?? '')
   const [courseSearch, setCourseSearch] = useState('')
+  const [teacherSearch, setTeacherSearch] = useState('')
   const [teacherIdError, setTeacherIdError] = useState('')
   const [roomIdError, setRoomIdError] = useState('')
   const [teacherReferenceIds, setTeacherReferenceIds] = useState<Record<string, string>>(() => Object.fromEntries(
@@ -58,6 +60,8 @@ export function AcademicResourceEditor({ catalog, resources, onChange }: Props) 
     const query = courseSearch.trim().toLocaleLowerCase('es')
     return catalog.courses.filter((course) => !query || `${course.courseId} ${course.name}`.toLocaleLowerCase('es').includes(query))
   }, [catalog.courses, courseSearch])
+  const filteredReferenceTeachers = useMemo(() => filterAcademicResources(catalog.referenceTeachers ?? [], teacherSearch), [catalog.referenceTeachers, teacherSearch])
+  const filteredActiveTeachers = useMemo(() => filterAcademicResources(resources.teachers, teacherSearch), [resources.teachers, teacherSearch])
 
   const commit = (update: (draft: AcademicPlanningResources) => void) => {
     const draft = cloneResources(resources)
@@ -93,9 +97,9 @@ export function AcademicResourceEditor({ catalog, resources, onChange }: Props) 
     commit((draft) => { draft.rooms = draft.rooms.map((room) => room.id === oldId ? { ...room, ...patch } : room) })
   }
   const addTeacher = () => {
-    if (resources.teachers.length >= 32) return
+    if (resources.teachers.length >= PLANNING_LIMITS.teachers) return
     const teacher: AcademicTeacherResource = { id: nextId('DOC', resources.teachers), name: 'Docente de demostración', courseIds: [], maxWeeklyMinutes: 600,
-      availability: [{ day: 1, startMinute: 480, endMinute: 1020 }] }
+      availability: [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 })) }
     commit((draft) => { draft.teachers.push(teacher) })
     setTeacherIdError('')
     setActiveTeacherId(teacher.id)
@@ -106,18 +110,18 @@ export function AcademicResourceEditor({ catalog, resources, onChange }: Props) 
       ?? resources.teachers.find((teacher) => teacher.id === id)?.id
     if (existingId !== undefined) { setTeacherIdError(''); setActiveTeacherId(existingId); return }
     const reference = catalog.referenceTeachers?.find((teacher) => teacher.id === id)
-    if (!reference || resources.teachers.length >= 32) return
+    if (!reference || resources.teachers.length >= PLANNING_LIMITS.teachers) return
     const teacher: AcademicTeacherResource = { ...reference, courseIds: [...reference.courseIds], maxWeeklyMinutes: 600,
-      availability: [{ day: 1, startMinute: 480, endMinute: 1020 }] }
+      availability: [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 })) }
     commit((draft) => { draft.teachers.push(teacher) })
     setTeacherReferenceIds((current) => ({ ...current, [teacher.id]: id }))
     setTeacherIdError('')
     setActiveTeacherId(teacher.id)
   }
   const addRoom = (kind: 'classroom' | 'laboratory' = 'classroom') => {
-    if (resources.rooms.length >= 32) return
+    if (resources.rooms.length >= PLANNING_LIMITS.rooms) return
     const room: AcademicRoomResource = { id: nextId('AULA', resources.rooms), name: kind === 'laboratory' ? 'Laboratorio de demostración' : 'Aula de demostración', capacity: 45, kind,
-      availability: [{ day: 1, startMinute: 480, endMinute: 1020 }] }
+      availability: [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 })) }
     commit((draft) => { draft.rooms.push(room) })
     setRoomIdError('')
     setActiveRoomId(room.id)
@@ -128,7 +132,7 @@ export function AcademicResourceEditor({ catalog, resources, onChange }: Props) 
       ?? resources.rooms.find((room) => room.id === id)?.id
     if (existingId !== undefined) { setRoomIdError(''); setActiveRoomId(existingId); return }
     const reference = catalog.referenceRooms?.find((room) => room.id === id)
-    if (!reference || resources.rooms.length >= 32) return
+    if (!reference || resources.rooms.length >= PLANNING_LIMITS.rooms) return
     const room: AcademicRoomResource = { id: reference.id, name: reference.name, capacity: reference.capacity, kind: reference.kind,
       availability: [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 })) }
     commit((draft) => { draft.rooms.push(room) })
@@ -156,20 +160,22 @@ export function AcademicResourceEditor({ catalog, resources, onChange }: Props) 
       <div><h4>Docentes disponibles</h4>
         <p>Las habilitaciones de referencia son supuestos de demostración, no confirmaciones para el nuevo periodo.</p></div>
       <div className="academic-scheduling__editor-actions">
+        <input type="search" aria-label="Buscar docentes por nombre o código" placeholder="Buscar docente por nombre o código" value={teacherSearch} onChange={(event) => setTeacherSearch(event.currentTarget.value)} />
         <select aria-label="Seleccionar o agregar docente" value="" onChange={(event) => selectReferenceTeacher(event.currentTarget.value)}>
           <option value="">Seleccionar o agregar docente…</option>
-          {(catalog.referenceTeachers ?? []).map((teacher) => <option key={teacher.id} value={teacher.id}
-            disabled={resources.teachers.length >= 32 && !Object.values(teacherReferenceIds).includes(teacher.id) && !resources.teachers.some((item) => item.id === teacher.id)}>{teacher.name} · {teacher.id}</option>)}
+          {!filteredReferenceTeachers.length && <option value="" disabled>Sin docentes que coincidan</option>}
+          {filteredReferenceTeachers.map((teacher) => <option key={teacher.id} value={teacher.id}
+            disabled={resources.teachers.length >= PLANNING_LIMITS.teachers && !Object.values(teacherReferenceIds).includes(teacher.id) && !resources.teachers.some((item) => item.id === teacher.id)}>{teacher.name} · {teacher.id}</option>)}
         </select>
-        <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary" onClick={addTeacher} disabled={resources.teachers.length >= 32}>Agregar demostración</button>
+        <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary" onClick={addTeacher} disabled={resources.teachers.length >= PLANNING_LIMITS.teachers}>Agregar demostración</button>
       </div>
     </div>
     <div className="academic-scheduling__resource-roster" aria-label="Docentes incorporados">
-      {resources.teachers.map((teacher) => <button type="button" key={teacher.id} aria-pressed={selectedTeacher?.id === teacher.id}
+      {filteredActiveTeachers.map((teacher) => <button type="button" key={teacher.id} aria-pressed={selectedTeacher?.id === teacher.id}
         className="academic-scheduling__roster-item" onClick={() => { setTeacherIdError(''); setActiveTeacherId(teacher.id) }}>
         {teacher.name} <span>{teacher.id}</span>
       </button>)}
-      {!resources.teachers.length && <p className="academic-scheduling__resource-note">Sin docentes incorporados.</p>}
+      {!filteredActiveTeachers.length && <p className="academic-scheduling__resource-note">{resources.teachers.length ? 'No hay docentes que coincidan con la búsqueda.' : 'Sin docentes incorporados.'}</p>}
     </div>
     {selectedTeacher && <article className="academic-scheduling__resource-card academic-scheduling__resource-card--teacher">
       <div className="academic-scheduling__resource-card-heading"><strong>{teacherReferenceIds[selectedTeacher.id] ? 'Docente de referencia · no confirmado para el nuevo periodo' : 'Docente de demostración'}</strong>
@@ -182,6 +188,7 @@ export function AcademicResourceEditor({ catalog, resources, onChange }: Props) 
           value={Number.isFinite(selectedTeacher.maxWeeklyMinutes) ? selectedTeacher.maxWeeklyMinutes : ''}
           onChange={(event) => changeTeacher({ maxWeeklyMinutes: event.currentTarget.value === '' ? Number.NaN : Number(event.currentTarget.value) })} /></label>
       </div>
+      {selectedTeacher.qualificationSource === 'synthetic' && <p className="academic-scheduling__resource-note">Metadatos de habilitación locales sintéticos · {selectedTeacher.facultyId ?? 'sin facultad'} · categoría {selectedTeacher.category ?? 'sin especificar'}. No verifican afiliación ni categoría institucional.</p>}
       <fieldset className="academic-scheduling__course-eligibility"><legend>Asignaturas habilitadas · buscar y seleccionar</legend>
         <input type="search" aria-label="Buscar asignatura habilitada" placeholder="Buscar por código o nombre" value={courseSearch} onChange={(event) => setCourseSearch(event.currentTarget.value)} />
         <div className="academic-scheduling__course-options">{filteredCourses.map((course) => <label key={course.courseId}><input type="checkbox" checked={selectedTeacher.courseIds.includes(course.courseId)}
@@ -224,10 +231,10 @@ export function AcademicResourceEditor({ catalog, resources, onChange }: Props) 
         <select aria-label="Seleccionar o agregar ambiente" value="" onChange={(event) => selectReferenceRoom(event.currentTarget.value)}>
           <option value="">Seleccionar o agregar ambiente…</option>
           {(catalog.referenceRooms ?? []).map((room) => <option key={room.id} value={room.id}
-            disabled={resources.rooms.length >= 32 && !Object.values(roomReferenceIds).includes(room.id) && !resources.rooms.some((item) => item.id === room.id)}>{room.id} · {room.name} · {room.pavilion}</option>)}
+            disabled={resources.rooms.length >= PLANNING_LIMITS.rooms && !Object.values(roomReferenceIds).includes(room.id) && !resources.rooms.some((item) => item.id === room.id)}>{room.id} · {room.name} · {room.pavilion}</option>)}
         </select>
-        <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary" onClick={() => addRoom()} disabled={resources.rooms.length >= 32}>Agregar aula</button>
-        <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary" onClick={() => addRoom('laboratory')} disabled={resources.rooms.length >= 32}>Agregar laboratorio</button>
+        <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary" onClick={() => addRoom()} disabled={resources.rooms.length >= PLANNING_LIMITS.rooms}>Agregar aula</button>
+        <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary" onClick={() => addRoom('laboratory')} disabled={resources.rooms.length >= PLANNING_LIMITS.rooms}>Agregar laboratorio</button>
       </div>
     </div>
     {catalog.referenceRooms && <details className="academic-scheduling__reference-rooms">

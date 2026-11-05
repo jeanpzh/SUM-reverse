@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef } from 'react'
 import type { ReactNode } from 'react'
+import { containDialogTab } from '../data/dialogFocus'
 import './SumEnrollment.css'
 
 export type SumAlertKind = 'warning' | 'success' | 'error'
@@ -40,7 +41,8 @@ export function SumAlertDialog({ kind, children, actions, onDismiss }: SumAlertD
     return () => { if (dialog?.open) dialog.close() }
   }, [])
   return (
-    <dialog ref={dialogRef} className={`sum-alert sum-alert--${kind}`} aria-labelledby={titleId} aria-describedby={bodyId}
+    <dialog ref={dialogRef} tabIndex={-1} className={`sum-alert sum-alert--${kind}`} aria-labelledby={titleId} aria-describedby={bodyId}
+      onKeyDown={(event) => containDialogTab(event, event.currentTarget)}
       onCancel={(event) => { event.preventDefault(); onDismiss?.() }}>
       <div className="sum-alert__icon" aria-hidden="true">{ALERT_ICONS[kind]}</div>
       <h2 id={titleId} className="sum-alert__title">Aviso</h2>

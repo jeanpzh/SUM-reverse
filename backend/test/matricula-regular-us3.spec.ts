@@ -1,3 +1,4 @@
+import { validateChoice } from '../../shared/matricula-regular.mjs'
 import { describe, expect, it } from 'vitest'
 import { createSyntheticFixture } from '../src/matricula-regular/fixtures.js'
 import { evaluateSelectionAdmission } from '../src/matricula-regular/selection.rules.js'
@@ -21,7 +22,7 @@ describe.each(['SISTEMAS', 'SOFTWARE'] as const)('T023 L-05 catalog admission: %
     actor.preEnrollment = actor.preEnrollment.filter((course) => course.courseId !== omitted.courseId)
 
     const result = evaluateSelectionAdmission(actor, fixture.offer, [
-      { courseId: omitted.courseId, sectionId: omitted.sections[0]!.sectionId },
+      { courseId: checkedId(omitted.courseId), sectionId: checkedId(omitted.sections[0]!.sectionId) },
     ])
 
     expect(result.unknownChoices).toEqual([])
@@ -43,7 +44,7 @@ describe.each(['SISTEMAS', 'SOFTWARE'] as const)('T023 L-05 catalog admission: %
     actor.preEnrollment = []
 
     const result = evaluateSelectionAdmission(actor, fixture.offer, [
-      { courseId: omitted.courseId, sectionId: omitted.sections[0]!.sectionId },
+      { courseId: checkedId(omitted.courseId), sectionId: checkedId(omitted.sections[0]!.sectionId) },
     ])
 
     expect(result.causes).toEqual([])
@@ -61,7 +62,7 @@ describe.each(['SISTEMAS', 'SOFTWARE'] as const)('T023 L-05 catalog admission: %
     otherPlanCourse.sections[0]!.sectionId = school === 'SISTEMAS' ? 'SYN-SOFT-S1' : 'SYN-SIS-S1'
 
     const result = evaluateSelectionAdmission(actor, [otherPlanCourse, ...fixture.offer], [
-      { courseId: otherPlanCourse.courseId, sectionId: otherPlanCourse.sections[0]!.sectionId },
+      { courseId: checkedId(otherPlanCourse.courseId), sectionId: checkedId(otherPlanCourse.sections[0]!.sectionId) },
     ])
 
     expect(result.unknownChoices).toEqual([])
@@ -78,15 +79,17 @@ describe.each(['SISTEMAS', 'SOFTWARE'] as const)('T023 L-05 catalog admission: %
     const fixture = createSyntheticFixture(school)
     const course = fixture.offer[0]!
     const result = evaluateSelectionAdmission(fixture.actors[0]!, fixture.offer, [
-      { courseId: course.courseId, sectionId: 'SYN-UNKNOWN-SECTION' },
+      { courseId: checkedId(course.courseId), sectionId: 'SYN-UNKNOWN-SECTION' },
       { courseId: 'SYN-UNKNOWN-COURSE', sectionId: 'SYN-UNKNOWN-SECTION-2' },
     ])
 
     expect(result.unknownChoices).toEqual([
-      { courseId: course.courseId, sectionId: 'SYN-UNKNOWN-SECTION' },
+      { courseId: checkedId(course.courseId), sectionId: 'SYN-UNKNOWN-SECTION' },
       { courseId: 'SYN-UNKNOWN-COURSE', sectionId: 'SYN-UNKNOWN-SECTION-2' },
     ])
     expect(result.causes).toEqual([])
     expect(result.gaps).toEqual([])
   })
 })
+
+function checkedId(value: string) { const choice = { courseId: value, sectionId: value }; validateChoice(choice); return choice.courseId }

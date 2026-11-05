@@ -13,6 +13,7 @@ import { assessTeacherPreferences } from './teacher-preferences.js'
 import { createDemandSources } from './demand-fixtures.js'
 import { estimateAcademicDemand } from './demand-estimator.js'
 import { prepareGeneratorInput } from './generator-input.js'
+import { THESIS_COURSE_IDS } from '../../../shared/academic-planning-policy.mjs'
 
 type RetainedProposal = {
   request: AcademicRequest
@@ -133,6 +134,15 @@ export class DemoProposalService {
     if (view.preferenceReport && view.preferenceReport.outsidePreferenceSections > 0) {
       view.diagnostics.push({ code: 'PREFERENCES_NOT_MET', message: 'Hay secciones programadas fuera de sus preferencias. Las preferencias son orientativas; no se ha demostrado optimalidad global.', sessionIds: [] })
     }
+    if (request.planningPolicy) {
+      const exceptions = view.assignments.filter((assignment) => {
+        const cycle = this.catalog.courses.find((course) => course.courseId === assignment.courseId)?.cycle ?? 0
+        return assignment.day === 6 || (cycle >= 7 && assignment.startMinute < 18 * 60)
+      })
+      if (exceptions.length) view.diagnostics.push({ code: 'PLANNING_EXCEPTION',
+        message: `La propuesta incluye ${exceptions.length} sesión(es) fuera del horario preferido; requiere aceptación explícita. No se afirma optimalidad ni necesidad de la excepción.`,
+        sessionIds: exceptions.map((item) => item.sessionId) })
+    }
     validateAcademicProposal(view)
     const retainedInput = structuredClone(input)
     const retainedView = structuredClone(view)
@@ -193,6 +203,10 @@ export class DemoProposalService {
     if (!course || !targetTeacher.courseIds.includes(section.courseId)) {
       throw this.adjustmentRejected('teacher', targetTeacher.id, `TEACHER_NOT_QUALIFIED: no está habilitado para ${section.courseId}`)
     }
+    if (retained.request.planningPolicy && THESIS_COURSE_IDS.includes(section.courseId)
+      && (targetTeacher.facultyId !== 'FISI' || targetTeacher.qualificationSource !== 'synthetic')) {
+      throw this.adjustmentRejected('teacher', targetTeacher.id, `THESIS_TEACHER_NOT_ELIGIBLE: se requiere habilitación sintética FISI para ${section.courseId}`)
+    }
 
     const selectedIds = new Set(adjustment.sessionIds)
     const changeTeacherForSection = sectionAssignments.some((assignment) => assignment.teacherId !== adjustment.teacherId)
@@ -206,6 +220,9 @@ export class DemoProposalService {
       const requirement = retained.requirements.find((item) => item.id === assignment.sessionId)!
       const room = retained.resources.rooms.find((candidate) => candidate.id === selectedEdit.roomId)
       if (!room) throw this.adjustmentRejected('room', selectedEdit.roomId, 'Ambiente desconocido')
+      if (retained.request.planningPolicy && requirement.type === 'L' && room.kind !== 'laboratory') {
+        throw this.adjustmentRejected('room', room.id, `ROOM_KIND_MISMATCH: ${requirement.type} requiere laboratorio`)
+      }
       const automaticAssignment = retained.automaticView.assignments.find((candidate) => candidate.sessionId === assignment.sessionId)
       const oldRoom = retained.resources.rooms.find((candidate) => candidate.id === automaticAssignment?.roomId)
       if (oldRoom?.kind && room.kind !== oldRoom.kind) {
@@ -215,6 +232,9 @@ export class DemoProposalService {
         .reduce((total, id) => total + retained.requirements.find((item) => item.id === id)!.durationMinutes, 0)
       const startMinute = adjustment.startMinute + precedingDuration
       const interval = { day: adjustment.day as TimeInterval['day'], startMinute, endMinute: startMinute + requirement.durationMinutes }
+      if (retained.request.planningPolicy && !this.isAllowedPlanningInterval(course.cycle ?? 0, interval, retained.request.planningPolicy)) {
+        throw this.adjustmentRejected('window', assignment.sessionId, 'PLANNING_POLICY_WINDOW: la franja requiere una excepción habilitada y dentro de sus límites')
+      }
       if (!this.windowContains(retained.input.windows, interval)) {
         throw this.adjustmentRejected('window', assignment.sessionId, 'WINDOW_UNAVAILABLE: el componente queda fuera de las ventanas generales')
       }
@@ -228,7 +248,7 @@ export class DemoProposalService {
       assignments: assignments.map((assignment) => ({ id: assignment.sessionId, sectionId: assignment.sectionId, teacherId: assignment.teacherId,
         roomId: assignment.roomId, interval: { day: assignment.day as TimeInterval['day'], startMinute: assignment.startMinute, endMinute: assignment.endMinute } })),
     } as AcademicSchedule
-    const validation = validateAcademicSchedule(schedule)
+    const validation = validateAcademicSchedule(schedule, { planningPolicy: Boolean(retained.request.planningPolicy) })
     if (!validation.valid) {
       const issue = validation.issues[0]!
       throw this.adjustmentRejected(issue.resourceType, issue.resourceId ?? issue.field ?? 'schedule', `${issue.code}: ${issue.message}`)
@@ -471,21 +491,26 @@ export class DemoProposalService {
           courseId: course.courseId,
           estimatedDemand: demand.estimatedDemand,
           targetCapacity: demand.targetCapacity ?? course.targetCapacity,
+          ...(course.cycle !== undefined ? { cycle: course.cycle } : {}),
           weeklySessions: structuredClone(pattern?.weeklySessions ?? course.weeklySessions),
           deliveryMode: demand.deliveryMode ?? 'continuous',
         }
       }),
       teachers: resources.teachers.filter((teacher) => teacher.courseIds.length > 0)
-        .map(({ id, courseIds, maxWeeklyMinutes, availability, preferences, sectionLimits }) => ({ id, courseIds: [...courseIds], maxWeeklyMinutes, availability: this.toIntervals(availability),
+        .map(({ id, courseIds, maxWeeklyMinutes, availability, preferences, sectionLimits, facultyId, category, qualificationSource }) => ({ id, courseIds: [...courseIds], maxWeeklyMinutes, availability: this.toIntervals(availability),
           ...(preferences !== undefined ? { preferences: this.toIntervals(preferences) } : {}),
           ...(sectionLimits !== undefined ? { sectionLimits: sectionLimits.map((limit) => ({ ...limit })) } : {}),
+          ...(facultyId !== undefined ? { facultyId } : {}), ...(category !== undefined ? { category } : {}),
+          ...(qualificationSource !== undefined ? { qualificationSource } : {}),
         })),
-      rooms: resources.rooms.map(({ id, capacity, availability }) => ({ id, capacity, availability: this.toIntervals(availability) })),
+      rooms: resources.rooms.map(({ id, capacity, availability, kind }) => ({ id, capacity, availability: this.toIntervals(availability), ...(kind ? { kind } : {}) })),
       compatibleGroups: [],
-      windows: this.toIntervals(this.catalog.windows),
+      windows: [...this.toIntervals(this.catalog.windows), ...(request.planningPolicy?.allowSaturday
+        ? [{ day: 6 as TimeInterval['day'], startMinute: 8 * 60, endMinute: 13 * 60 }] : [])],
       startStepMinutes: this.catalog.startStepMinutes,
       maxExplorations: this.catalog.maxExplorations,
       allocationPolicy: request.allocationPolicy ?? 'preferences',
+      ...(request.planningPolicy ? { planningPolicy: structuredClone(request.planningPolicy) } : {}),
     }
   }
 
@@ -510,20 +535,31 @@ export class DemoProposalService {
   }
 
   private toSchedule(input: GeneratorInput, view: AcademicProposal) {
+    const sections = prepareGeneratorInput(input).schedule.sections
     return {
       courses: input.courses.map((course) => course.courseId),
       teachers: input.teachers,
       rooms: input.rooms,
       compatibleGroups: [],
-      sections: view.sections.map((section) => ({ id: section.sectionId, courseId: section.courseId, capacity: section.capacity })),
+      sections,
       assignments: view.assignments.map((assignment) => ({
         id: assignment.sessionId,
         sectionId: assignment.sectionId,
         teacherId: assignment.teacherId,
         roomId: assignment.roomId,
         interval: { day: assignment.day, startMinute: assignment.startMinute, endMinute: assignment.endMinute },
+        ...(assignment.sessionType ? { sessionType: assignment.sessionType } : {}),
       })),
     }
+  }
+
+  private isAllowedPlanningInterval(cycle: number, interval: TimeInterval, policy: NonNullable<AcademicRequest['planningPolicy']>): boolean {
+    if (interval.day === 7) return false
+    if (interval.day === 6) return policy.allowSaturday && interval.startMinute >= 8 * 60 && interval.endMinute <= 13 * 60
+    if (interval.day < 1 || interval.day > 5) return false
+    if (cycle >= 7) return (interval.startMinute >= 18 * 60 && interval.endMinute <= 22 * 60)
+      || (policy.allowAfternoon && interval.startMinute >= 14 * 60 && interval.endMinute <= 22 * 60)
+    return interval.startMinute >= 8 * 60 && interval.endMinute <= 22 * 60
   }
 
   private httpError(status: number, code: string, message: string): HttpException {

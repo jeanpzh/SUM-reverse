@@ -1030,6 +1030,7 @@ export function RegularEnrollmentBody({
         <span className="regular-enrollment__provenance-badge">local-only</span>
         <p className="regular-enrollment__note">
           Datos emitidos por la API local propia. No representan internos privados ni datos de producción de SUM.
+          {context.scope.period === '2027-I' && ' Oferta y calendario sintéticos 2027-I; el reloj mostrado corresponde a esta demostración.'}
         </p>
 
         <dl className="regular-enrollment__data-list">
@@ -1042,7 +1043,7 @@ export function RegularEnrollmentBody({
             <dd>{context.scope.modality}</dd>
           </div>
           <div>
-            <dt>Hora del servidor</dt>
+            <dt>{context.scope.period === '2027-I' ? 'Hora del reloj sintético' : 'Hora del servidor'}</dt>
             <dd>{context.serverNow}</dd>
           </div>
         </dl>

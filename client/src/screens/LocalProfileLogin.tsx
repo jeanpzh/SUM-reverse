@@ -4,11 +4,15 @@ import { accessProvider, localProfileDashboardApi, localProfileSessionStore } fr
 import type { ProfileCatalog, ScenarioCatalog } from '../data/localProfileDashboard'
 import './LocalProfileLogin.css'
 
-export function LocalProfileLogin() {
-  return import.meta.env.VITE_SUM_SIMULATOR === '1' ? <PublicSimulatorLogin /> : <LocalProfileChooser />
+export function LocalProfileLogin({ operationalRunId = null, invalidRunId = false }: {
+  operationalRunId?: string | null
+  invalidRunId?: boolean
+}) {
+  return import.meta.env.VITE_SUM_SIMULATOR === '1' ? <PublicSimulatorLogin />
+    : <LocalProfileChooser operationalRunId={operationalRunId} invalidRunId={invalidRunId} />
 }
 
-function LocalProfileChooser() {
+function LocalProfileChooser({ operationalRunId, invalidRunId }: { operationalRunId: string | null; invalidRunId: boolean }) {
   const [catalog, setCatalog] = useState<ProfileCatalog | null>(null)
   const [selectedActorId, setSelectedActorId] = useState('')
   const [scenarios, setScenarios] = useState<ScenarioCatalog | null>(null)
@@ -25,17 +29,19 @@ function LocalProfileChooser() {
 
   useEffect(() => {
     headingRef.current?.focus()
+    if (invalidRunId) return
     const controller = new AbortController()
-    Promise.all([
-      localProfileDashboardApi.catalog({ signal: controller.signal }),
-      localProfileDashboardApi.scenarios({ signal: controller.signal }),
-    ]).then(([response, scenarioResponse]) => {
+    const catalogRequest = localProfileDashboardApi.catalog({ signal: controller.signal, runId: operationalRunId ?? undefined })
+    const scenarioRequest = operationalRunId ? Promise.resolve(null)
+      : localProfileDashboardApi.scenarios({ signal: controller.signal })
+    Promise.all([catalogRequest, scenarioRequest]).then(([response, scenarioResponse]) => {
         if (controller.signal.aborted) return
-        if (response.runId !== scenarioResponse.runId) throw new Error('La prueba cambió durante la carga. Pulsa Reintentar.')
+        if (operationalRunId && response.runId !== operationalRunId) throw new Error('El catálogo no corresponde a la oferta solicitada.')
+        if (scenarioResponse && response.runId !== scenarioResponse.runId) throw new Error('La prueba cambió durante la carga. Pulsa Reintentar.')
         setCatalog(response.data)
-        setScenarios(scenarioResponse.data)
+        setScenarios(scenarioResponse?.data ?? null)
         setRunId(response.runId)
-        setSelectedScenarioId(scenarioResponse.data.currentScenarioId ?? 'regular')
+        if (scenarioResponse) setSelectedScenarioId(scenarioResponse.data.currentScenarioId ?? 'regular')
         setLoading(false)
       })
       .catch((error: unknown) => {
@@ -44,7 +50,7 @@ function LocalProfileChooser() {
         setLoading(false)
       })
     return () => controller.abort()
-  }, [retry])
+  }, [retry, operationalRunId, invalidRunId])
 
   async function enter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -62,7 +68,10 @@ function LocalProfileChooser() {
         setRunId(response.runId)
         setCatalog(response.data)
       }
-      await localProfileSessionStore.enter(selectedProfile.actorId, { expectedRunId })
+      await localProfileSessionStore.enter(selectedProfile.actorId, {
+        expectedRunId,
+        ...(operationalRunId ? { contextRunId: operationalRunId } : {}),
+      })
     } catch (error) {
       setStartError(error instanceof Error ? error.message : 'No se pudo iniciar la prueba.')
       if (error instanceof Error && 'code' in error && error.code === 'RUN_CHANGED') {
@@ -82,12 +91,17 @@ function LocalProfileChooser() {
       <section className={`local-profile-login-card${scenarios?.scenarios.length ? ' local-profile-login-card--scenarios' : ''}`} aria-labelledby="local-profile-login-heading">
         <p className="local-profile-login-eyebrow">Demostración local</p>
         <h1 id="local-profile-login-heading" ref={headingRef} tabIndex={-1}>
-          {scenarios?.scenarios.length ? 'Probar un escenario de matrícula' : 'Elegir perfil sintético'}
+          {operationalRunId ? 'Ingresar a matrícula 2027-I' : scenarios?.scenarios.length ? 'Probar un escenario de matrícula' : 'Elegir perfil sintético'}
         </h1>
         <p className="local-profile-login-description">
-          Elige una situación y un estudiante para recorrer el sistema con datos sintéticos.
+          {operationalRunId ? 'Selecciona un estudiante de la oferta local publicada. El catálogo se carga para esta ejecución sin reiniciar escenarios.'
+            : 'Elige una situación y un estudiante para recorrer el sistema con datos sintéticos.'}
         </p>
-        {loading && <p role="status">Cargando perfiles disponibles…</p>}
+        {operationalRunId && <p className="local-profile-login-notice" role="note">Oferta operativa · periodo 2027-I · datos y reloj sintéticos.</p>}
+        {loading && !invalidRunId && <p role="status">Cargando perfiles disponibles…</p>}
+        {invalidRunId && <div className="local-profile-login-error" role="alert">
+          <p>El identificador de la oferta no es válido. Abre el enlace de matrícula desde la publicación local.</p>
+        </div>}
         {loadError && (
           <div className="local-profile-login-error" role="alert">
             <p>{loadError}</p>
@@ -112,7 +126,7 @@ function LocalProfileChooser() {
               </fieldset>
             ) : null}
             <fieldset disabled={busy} className="local-student-options">
-              <legend>{selectedScenario ? '2. Perfil del estudiante' : 'Perfil para esta sesión local'}</legend>
+              <legend>{operationalRunId ? 'Estudiante de la oferta' : selectedScenario ? '2. Perfil del estudiante' : 'Perfil para esta sesión local'}</legend>
               <div className="local-student-grid">
               {catalog.profiles.map((profile) => (
                 <label className="local-profile-choice" key={profile.actorId}>
@@ -138,7 +152,7 @@ function LocalProfileChooser() {
             {snapshot.status === 'error' && <p className="local-profile-login-error" role="alert">{snapshot.message}</p>}
             {snapshot.status === 'anonymous' && snapshot.notice === 'reset'
               && <p className="local-profile-login-notice" role="status">La ejecución local cambió. Elija un perfil para continuar.</p>}
-            {selectedScenario && <p className="local-scenario-reset-note">Cada inicio prepara una prueba nueva y reinicia el escenario activo, también en otras pestañas locales.</p>}
+            {selectedScenario && !operationalRunId && <p className="local-scenario-reset-note">Cada inicio prepara una prueba nueva y reinicia el escenario activo, también en otras pestañas locales.</p>}
             <button className="local-profile-login-submit" type="submit"
               disabled={!selectedActorId || loading || busy || Boolean(loadError)}>
               {busy ? 'Preparando prueba…' : selectedScenario ? 'Iniciar prueba' : 'Ingresar'}

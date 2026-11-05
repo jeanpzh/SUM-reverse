@@ -21,7 +21,7 @@ async function open(fixtures: LocalProfileDashboardTestAppOptions['fixtures']) {
   return handle
 }
 
-type LocalProfileDashboardTestAppOptions = Parameters<typeof createLocalProfileDashboardTestApp>[0]
+type LocalProfileDashboardTestAppOptions = NonNullable<Parameters<typeof createLocalProfileDashboardTestApp>[0]>
 
 it('serves all 36 PEM cases over loopback HTTP, including lookup, report, idempotency and occupancy effects', async () => {
   for (const bundle of bundles) {

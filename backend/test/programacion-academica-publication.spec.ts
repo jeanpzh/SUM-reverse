@@ -234,7 +234,7 @@ describe('academic approval and publication', () => {
 
     const ready = await createApproved('Review invalidation')
     const changedConfiguration = structuredClone(ready.configuration)
-    changedConfiguration.request.resources.teachers = changedConfiguration.request.resources.teachers.map((resource) => ({
+    changedConfiguration.request.resources.teachers = changedConfiguration.request.resources.teachers.map((resource: { name: string }) => ({
       ...resource, name: `${resource.name} reviewed`,
     }))
     const changedProposal = await supertest(app.getHttpServer()).post(`${api}/propuestas`).send(changedConfiguration.request).expect(200)

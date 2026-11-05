@@ -149,7 +149,8 @@ describe('E1 teacher review persistence', () => {
     expect(completed.body.draft.state).toBe('ready-for-approval')
 
     const restarted = await new SavedDraftService(new FreshProposalService()).resume(saved.id, { expectedVersion: completed.body.draft.version })
-    expect(restarted.draft.review.history).toEqual(completed.body.draft.review.history)
+    expect(restarted.draft.review).toBeDefined()
+    expect(restarted.draft.review!.history).toEqual(completed.body.draft.review.history)
     expect(restarted.draft.state).toBe('ready-for-approval')
 
     const legacy = await createSavedDraft()

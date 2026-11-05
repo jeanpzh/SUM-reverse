@@ -171,6 +171,104 @@ export function registerGeneratorTests(test) {
     assert.equal(result.coverage, null)
     assert.equal(result.exploredCandidates, 0)
   })
+  test('FISI planning policy schedules senior courses at night and preserves the legacy window when omitted', () => {
+    const input = fixture()
+    input.courses[0].cycle = 8
+    input.teachers[0].availability = [interval(480, 1320)]
+    input.rooms[0].availability = [interval(480, 1320)]
+    input.windows = [interval(480, 1320)]
+    input.planningPolicy = { revision: 'FISI-PLANNING-1', period: '2026-II', allowAfternoon: false, allowSaturday: false }
+    const planned = generate(input)
+    assert.equal(planned.status, 'complete', JSON.stringify(planned))
+    assert.equal(planned.schedule.assignments[0].interval.startMinute, 1080)
+    delete input.planningPolicy
+    const legacy = generate(input)
+    assert.equal(legacy.status, 'complete')
+    assert.equal(legacy.schedule.assignments[0].interval.startMinute, 480)
+  })
+  test('afternoon and Saturday remain explicit exceptions and Sunday is never eligible', () => {
+    const input = fixture()
+    input.courses[0].cycle = 8
+    input.windows = [interval(840, 960)]
+    input.teachers[0].availability = [interval(840, 960)]
+    input.rooms[0].availability = [interval(840, 960)]
+    input.planningPolicy = { revision: 'FISI-PLANNING-1', period: '2026-I', allowAfternoon: false, allowSaturday: false }
+    assert.equal(generate(input).status, 'impossible')
+    input.planningPolicy.allowAfternoon = true
+    assert.equal(generate(input).schedule.assignments[0].interval.startMinute, 840)
+    input.windows = [{ day: 7, startMinute: 480, endMinute: 780 }]
+    input.teachers[0].availability = structuredClone(input.windows)
+    input.rooms[0].availability = structuredClone(input.windows)
+    input.planningPolicy.allowSaturday = true
+    assert.equal(generate(input).status, 'impossible')
+  })
+  test('thesis assignments require explicit synthetic FISI teacher metadata under the planning policy', () => {
+    const input = fixture()
+    input.courses[0].courseId = '20118081'
+    input.courses[0].cycle = 8
+    input.courses[0].estimatedDemand = 1
+    input.teachers[0].courseIds = ['20118081']
+    input.teachers[0].availability = [interval(1080, 1200)]
+    input.rooms[0].availability = [interval(1080, 1200)]
+    input.windows = [interval(1080, 1200)]
+    input.planningPolicy = { revision: 'FISI-PLANNING-1', period: '2026-II', allowAfternoon: false, allowSaturday: false }
+    assert.equal(generate(input).status, 'impossible')
+    input.teachers[0].facultyId = 'FISI'
+    input.teachers[0].qualificationSource = 'synthetic'
+    input.teachers[0].category = 'asociado'
+    assert.equal(generate(input).status, 'complete', JSON.stringify(generate(input)))
+  })
+  test('planning blocks must finish by 22:00 on weekdays and 13:00 on Saturday even in wider resource windows', () => {
+    for (const [day, startMinute, endMinute] of [[1, 1260, 1440], [6, 720, 900]]) {
+      const input = fixture()
+      input.courses[0].cycle = 8
+      input.courses[0].estimatedDemand = 1
+      input.courses[0].weeklySessions = [{ id: 'two-hours', durationMinutes: 120 }]
+      input.windows = [{ day, startMinute, endMinute }]
+      input.teachers[0].availability = structuredClone(input.windows)
+      input.rooms[0].availability = structuredClone(input.windows)
+      input.planningPolicy = { revision: 'FISI-PLANNING-1', period: '2027-I', allowAfternoon: true, allowSaturday: true }
+      const result = generate(input)
+      assert.notEqual(result.status, 'complete')
+      assert.equal(result.schedule?.assignments.length ?? 0, 0)
+    }
+  })
+  test('planning limits expand only on the explicit policy path', () => {
+    const input = { courses: Array.from({ length: 33 }, (_, index) => ({ courseId: `C${index}`, estimatedDemand: 0,
+      targetCapacity: 1, weeklySessions: [{ id: 'weekly', durationMinutes: 60 }] })), teachers: [], rooms: [], compatibleGroups: [],
+    windows: [], startStepMinutes: 60, maxExplorations: 0 }
+    assert.equal(generate(input).status, 'invalid-input')
+    input.planningPolicy = { revision: 'FISI-PLANNING-1', period: '2026-I', allowAfternoon: false, allowSaturday: false }
+    assert.equal(generate(input).status, 'complete')
+  })
+  test('cohort ordinals prevent cross-course clashes but keep alternative sections of one course', () => {
+    const schedule = {
+      courses: ['A', 'B'],
+      teachers: ['T1', 'T2'].map((id) => ({ id, courseIds: ['A', 'B'], availability: [interval(540, 600)], maxWeeklyMinutes: 60 })),
+      rooms: ['R1', 'R2'].map((id) => ({ id, capacity: 1, availability: [interval(540, 600)] })),
+      sections: [{ id: 'A1', courseId: 'A', capacity: 1, cycle: 8, ordinal: 1 },
+        { id: 'A2', courseId: 'A', capacity: 1, cycle: 8, ordinal: 2 },
+        { id: 'B1', courseId: 'B', capacity: 1, cycle: 8, ordinal: 1 }],
+      assignments: [
+        { id: 'a1', sectionId: 'A1', teacherId: 'T1', roomId: 'R1', interval: interval(540, 600) },
+        { id: 'a2', sectionId: 'A2', teacherId: 'T1', roomId: 'R2', interval: interval(540, 600) },
+        { id: 'b1', sectionId: 'B1', teacherId: 'T2', roomId: 'R2', interval: interval(540, 600) },
+      ], compatibleGroups: [],
+    }
+    const result = validateAcademicSchedule(schedule, { planningPolicy: true })
+    assert.equal(result.issues.filter((issue) => issue.code === 'COHORT_CONFLICT').length, 1)
+    assert.deepEqual(result.issues.find((issue) => issue.code === 'COHORT_CONFLICT').assignmentIds, ['a1', 'b1'])
+  })
+  test('laboratory sessions reject ordinary rooms when validating assignments', () => {
+    const schedule = {
+      courses: ['A'], teachers: [{ id: 'T1', courseIds: ['A'], availability: [interval(540, 600)], maxWeeklyMinutes: 60 }],
+      rooms: [{ id: 'R1', capacity: 1, availability: [interval(540, 600)], kind: 'classroom' }],
+      sections: [{ id: 'A1', courseId: 'A', capacity: 1 }],
+      assignments: [{ id: 'a1', sectionId: 'A1', teacherId: 'T1', roomId: 'R1', interval: interval(540, 600), sessionType: 'L' }],
+      compatibleGroups: [],
+    }
+    assert.ok(validateAcademicSchedule(schedule, { planningPolicy: true }).issues.some((issue) => issue.code === 'ROOM_KIND_MISMATCH'))
+  })
   /** @type {Array<[string, (input: any) => void]>} Invalid inputs are intentional. */
   const invalidInputCases = [
     ['zero capacity', (i) => { i.courses[0].targetCapacity = 0 }],

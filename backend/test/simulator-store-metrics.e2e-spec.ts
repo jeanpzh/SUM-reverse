@@ -31,7 +31,7 @@ describe.skipIf(!enabled)('store metrics against PostgreSQL', () => {
       const actor = structuredClone(sourceActor.rows[0]!.profile) as Record<string, unknown>
       actor['actorId'] = retryActorId
       actor['name'] = 'Estudiante sintético de métricas'
-      const offer = sourceSections.rows.map((row) => ({ ...row.course, sections: [{ sectionId: row.section_id, capacity: 1, occupied: 0, ...row.section }] }))
+      const offer: Array<Record<string, unknown> & { sections: Array<Record<string, unknown>> }> = sourceSections.rows.map((row) => ({ ...row.course, sections: [{ sectionId: row.section_id, capacity: 1, occupied: 0, ...row.section }] }))
       await pool.query("INSERT INTO simulator_campaigns(campaign_id,run_id,status,config) VALUES($1,$2,'open',$3)", [retryCampaignId, retryRunId, JSON.stringify({ profiles: sourceCampaign.rows[0]!.config.profiles, offer })])
       for (const profile of sourceProfiles.rows) await pool.query('INSERT INTO simulator_profiles(campaign_id,profile_revision,profile) VALUES($1,$2,$3)', [retryCampaignId, String(profile.profile['profileRevision']), JSON.stringify(profile.profile)])
       await pool.query('INSERT INTO simulator_actors(campaign_id,actor_id,profile) VALUES($1,$2,$3)', [retryCampaignId, retryActorId, JSON.stringify(actor)])

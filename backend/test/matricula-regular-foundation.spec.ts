@@ -38,7 +38,7 @@ function contextFor(
   now: Date,
   profiles: ReturnType<typeof createProfileCatalog> = [fixture.profile],
 ): MatriculaRegularContext {
-  return {
+  const context = {
     actorId: actor.actorId,
     scope: structuredClone(actor.scope),
     profileRevision: actor.profileRevision,
@@ -52,6 +52,8 @@ function contextFor(
     eligibility: evaluateContextEligibility(profiles, actor, now),
     sources: structuredClone(fixture.profile.sources),
   }
+  validateContext(context)
+  return context
 }
 
 describe('T012 foundation: synthetic profile factories and clock', () => {

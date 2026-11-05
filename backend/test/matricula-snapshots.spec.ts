@@ -26,7 +26,7 @@ function wireSnapshots(variant = false) {
     alumno.codAlumno = 'SYNTHETIC-002'
     alumno.periodo = '2099-1'
   }
-  const envelope = (data: unknown, message: string | null = null) => ({ message, codError: null, data })
+  const envelope = <T>(data: T, message: string | null = null) => ({ message, codError: null, data })
   return {
     matriculaInfo: envelope({
       codSemestre: '2099-1', codFacultad: 1, fechaDB: '2026-10-08T08:30:15-05:00',
@@ -70,7 +70,7 @@ describe('offline matrícula snapshots', () => {
       writeSnapshots(directory)
       const snapshots = loadMatriculaSnapshots(directory)
       expect(Object.keys(snapshots ?? {})).toEqual(Object.keys(filenames))
-      expect(snapshots?.matriculaInfo.data.fechaDB).toBe('2026-10-08T08:30:15-05:00')
+      expect(snapshots?.matriculaInfo.data).toMatchObject({ fechaDB: '2026-10-08T08:30:15-05:00' })
     } finally {
       rmSync(directory, { recursive: true, force: true })
     }
@@ -112,7 +112,7 @@ describe('offline matrícula snapshots', () => {
 
       writeSnapshots(directory)
       const malformed = wireSnapshots()
-      malformed.matriculaInfo.data.codFacultad = undefined
+      Reflect.set(malformed.matriculaInfo.data, 'codFacultad', undefined)
       writeSnapshots(directory, malformed)
       expect(() => loadMatriculaSnapshots(directory))
         .toThrow('matricula-info.json: matriculaInfo.data.codFacultad: se esperaba campo presente')
@@ -136,8 +136,7 @@ describe('offline matrícula snapshots', () => {
       expect(programacion).toEqual(wireSnapshots(true).programacion)
       expect(programacion.data.alumno.codAlumno).toBe('SYNTHETIC-002')
       expect(programacion.message).toBe('snapshot-programacion')
-      const mutated = programacion as { data: { extra: string } }
-      mutated.data.extra = 'mutated'
+      Reflect.set(programacion.data, 'extra', 'mutated')
       expect(programacionService.consultar().data.extra).toBe('preserved')
       expect(infoService.consultar()).toEqual(wireSnapshots(true).matriculaInfo)
       expect(reportesService.consultar('prematricula')).toEqual(wireSnapshots(true).prematricula)

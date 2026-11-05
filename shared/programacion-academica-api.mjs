@@ -1,3 +1,4 @@
+import { PLANNING_LIMITS, isPlanningPeriod, validatePlanningPolicy } from './academic-planning-policy.mjs'
 /** PA-DEMO-1: independent local synthetic planning wire contract. */
 export const ACADEMIC_REVISION = 'PA-DEMO-1'
 export const ACADEMIC_ROUTE = '/local/programacion-academica'
@@ -20,8 +21,9 @@ function draftDates(value) {
 }
 export function validateAcademicWorkspace(value) {
   object(value, ['schoolId', 'academicPeriod', 'request', 'demandSourceId', 'demandBaseRequest'], 'workspace')
-  if (value.schoolId !== 'SISTEMAS' || value.academicPeriod !== '2027-I' || !demandSources.includes(value.demandSourceId)) throw new TypeError('Ámbito local de propuesta no admitido')
+  if (value.schoolId !== 'SISTEMAS' || !isPlanningPeriod(value.academicPeriod) || !demandSources.includes(value.demandSourceId)) throw new TypeError('Ámbito local de propuesta no admitido')
   validateAcademicRequest(value.request)
+  if (value.request.planningPolicy && value.request.planningPolicy.period !== value.academicPeriod) throw new TypeError('El periodo de política no corresponde al borrador')
   if (!value.request.resources) throw new TypeError('Guardar requiere configuración explícita de docentes y ambientes')
   if (value.demandBaseRequest !== null) {
     validateAcademicDemandRequest(value.demandBaseRequest)
@@ -95,7 +97,7 @@ export function validateAcademicDraftList(value) {
     number(item.version, 'version', 1)
     draftTitle(item.title)
     draftDates(item)
-    if (ids.has(item.id) || !draftStates.includes(item.state) || item.schoolId !== 'SISTEMAS' || item.academicPeriod !== '2027-I'
+    if (ids.has(item.id) || !draftStates.includes(item.state) || item.schoolId !== 'SISTEMAS' || !isPlanningPeriod(item.academicPeriod)
       || typeof item.hasSchedule !== 'boolean' || (['ready-for-review', 'ready-for-approval', 'approved', 'published'].includes(item.state) && !item.hasSchedule)) throw new TypeError('Resumen de propuesta inválido')
     ids.add(item.id)
   })
@@ -115,7 +117,7 @@ export function validateAcademicPublicationRequest(value) {
 }
 export function validateAcademicScheduleSnapshot(value) {
   object(value, ['schoolId', 'academicPeriod', 'courses', 'sections', 'assignments'], 'scheduleSnapshot')
-  if (value.schoolId !== 'SISTEMAS' || value.academicPeriod !== '2027-I') throw new TypeError('Ámbito de publicación no admitido')
+  if (value.schoolId !== 'SISTEMAS' || !isPlanningPeriod(value.academicPeriod)) throw new TypeError('Ámbito de publicación no admitido')
   const courses = new Map()
   array(value.courses, 'publishedCourses', 256).forEach((course) => {
     object(course, ['courseId', 'name', 'cycle', 'credits'], 'publishedCourse')
@@ -216,7 +218,7 @@ function string(value, path) {
 function number(value, path, minimum = 0, maximum = Number.MAX_SAFE_INTEGER) {
   if (!Number.isSafeInteger(value) || value < minimum || value > maximum) throw new TypeError(`${path}: entero inválido`)
 }
-function array(value, path, max = 128) {
+function array(value, path, max = PLANNING_LIMITS.sessions) {
   if (!Array.isArray(value) || value.length > max || Array.from(value).some((item) => item === undefined)) throw new TypeError(`${path}: lista inválida`)
   return value
 }
@@ -280,12 +282,13 @@ export function validateAcademicDemandEstimate(value) {
   })
 }
 export function validateAcademicRequest(value) {
-  object(value, ['revision', 'demands'], 'request', ['resources', 'allocationPolicy'])
+  object(value, ['revision', 'demands'], 'request', ['resources', 'allocationPolicy', 'planningPolicy'])
+  if (Object.hasOwn(value, 'planningPolicy')) validatePlanningPolicy(value.planningPolicy)
   if (Object.hasOwn(value, 'allocationPolicy') && !['preferences', 'balanced', 'first-feasible'].includes(value.allocationPolicy)) throw new TypeError('Política docente inválida')
   if (Object.hasOwn(value, 'resources')) validateAcademicResources(value.resources)
   string(value.revision, 'revision')
   const seen = new Set()
-  array(value.demands, 'demands', 32).forEach((row) => {
+  array(value.demands, 'demands', PLANNING_LIMITS.courses).forEach((row) => {
     object(row, ['courseId', 'estimatedDemand'], 'demand', ['targetCapacity', 'patternId', 'deliveryMode'])
     if (Object.hasOwn(row, 'deliveryMode') && !['continuous', 'split'].includes(row.deliveryMode)) throw new TypeError('Modalidad de sección inválida')
     string(row.courseId, 'courseId')
@@ -301,8 +304,11 @@ function resourceId(value) {
   if (value.length > 80 || value.trim() !== value) throw new TypeError('Identificación de recurso inválida')
 }
 function teacherResource(row) {
-  object(row, ['id', 'name', 'courseIds', 'maxWeeklyMinutes', 'availability'], 'teacher', ['preferences', 'sectionLimits'])
+  object(row, ['id', 'name', 'courseIds', 'maxWeeklyMinutes', 'availability'], 'teacher', ['preferences', 'sectionLimits', 'facultyId', 'category', 'qualificationSource'])
   resourceId(row.id)
+  if (Object.hasOwn(row, 'facultyId')) resourceId(row.facultyId)
+  if (Object.hasOwn(row, 'category') && !['principal', 'asociado', 'auxiliar'].includes(row.category)) throw new TypeError('Categoría docente inválida')
+  if (Object.hasOwn(row, 'qualificationSource') && row.qualificationSource !== 'synthetic') throw new TypeError('Procedencia docente inválida')
   string(row.name, 'teacher.name')
   if (!row.name.trim()) throw new TypeError('Nombre de docente requerido')
   strings(row.courseIds, 'courseIds')
@@ -334,7 +340,7 @@ export function validateAcademicResources(value) {
   object(value, ['teachers', 'rooms'], 'resources')
   for (const [key, validate] of [['teachers', teacherResource], ['rooms', roomResource]]) {
     const ids = new Set()
-    array(value[key], key, 32).forEach((row) => {
+    array(value[key], key, PLANNING_LIMITS[key]).forEach((row) => {
       validate(row)
       if (ids.has(row.id)) throw new TypeError(`${key}: identificación repetida`)
       ids.add(row.id)
@@ -466,7 +472,7 @@ export function validateAcademicProposal(value) {
     strings(row.sessionIds, 'sessionIds')
   })
   object(value.counts, ['sections', 'requiredSessions', 'scheduledSessions'], 'counts')
-  for (const field of ['sections', 'requiredSessions', 'scheduledSessions']) number(value.counts[field], field, 0, 128)
+  for (const field of ['sections', 'requiredSessions', 'scheduledSessions']) number(value.counts[field], field, 0, PLANNING_LIMITS.sessions)
   if (value.counts.sections !== value.sections.length || value.counts.scheduledSessions !== value.assignments.length
     || value.counts.requiredSessions !== value.assignments.length + value.pending.length) throw new TypeError('Conteos inconsistentes')
   object(value.stats, ['exploredCandidates', 'candidateVisits', 'backtracks', 'limitReason'], 'stats')
@@ -494,7 +500,7 @@ export function validateAcademicProposal(value) {
     const report = value.preferenceReport
     object(report, ['policy', 'evaluatedSections', 'withinPreferenceSections', 'outsidePreferenceSections', 'withoutPreferenceSections', 'optimality'], 'preferenceReport')
     if (!['preferences', 'balanced', 'first-feasible'].includes(report.policy) || report.optimality !== 'not-proven') throw new TypeError('Informe de preferencias inválido')
-    for (const key of ['evaluatedSections', 'withinPreferenceSections', 'outsidePreferenceSections', 'withoutPreferenceSections']) number(report[key], key, 0, 128)
+    for (const key of ['evaluatedSections', 'withinPreferenceSections', 'outsidePreferenceSections', 'withoutPreferenceSections']) number(report[key], key, 0, PLANNING_LIMITS.sessions)
     if (report.evaluatedSections !== report.withinPreferenceSections + report.outsidePreferenceSections + report.withoutPreferenceSections
       || report.evaluatedSections > value.sections.length) throw new TypeError('Contadores de preferencias inconsistentes')
   }

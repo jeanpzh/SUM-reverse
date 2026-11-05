@@ -60,7 +60,7 @@ function setup() {
   actor.scenarioData!.sectionOrigins = [{ publicationId, publicationVersion: 1, courseId: sourceCourseId,
     sectionId: 'SEC-01', offeredSectionId: targetSection.sectionId }]
   const snapshot = () => ({ runId, actors: state.actors, sessions: [], profiles: [fixture.profile], offer: state.offer, requests: [], enrollments: [], reports: [] })
-  const repository = { readSnapshot: () => structuredClone(snapshot()) } as never
+  const repository = { hasOperationalRun: () => false, readSnapshot: () => structuredClone(snapshot()) } as never
   const sessions = { requireActive: vi.fn(() => { if (!state.sessionActive) throw new MatriculaRegularError(404, runId, 'SESSION_NOT_FOUND') }) } as never
   const context = { now: () => new Date('2026-11-04T12:00:00.000Z') } as never
   const scenarios = { catalog: () => ({ data: { currentScenarioId: state.scenario } }) } as never
@@ -149,11 +149,11 @@ describe('traslado local de intención E2 a E3', () => {
       return id === publicationId ? structuredClone(state.state.currentPublication) : Promise.reject(new HttpException({}, 404))
     })
     const changedService = new PrematriculaService(
-      { readSnapshot: () => ({ runId, actors: state.state.actors, sessions: [], profiles: [], offer: state.state.offer, requests: [], enrollments: [], reports: [] }) } as never,
+      { hasOperationalRun: () => false, readSnapshot: () => ({ runId, actors: state.state.actors, sessions: [], profiles: [], offer: state.state.offer, requests: [], enrollments: [], reports: [] }) } as never,
       { now: () => new Date('2026-11-04T12:00:00.000Z') } as never,
       { requireActive: vi.fn(() => { if (!state.state.sessionActive) throw new MatriculaRegularError(404, runId, 'SESSION_NOT_FOUND') }) } as never,
       { catalog: () => ({ data: { currentScenarioId: 'regular' } }) } as never,
-      { ...({} as never), getPublication } as never,
+      { getPublication } as never,
     )
     await expect(changedService.transferIntention({ identity: identity('SYN-SIS-A') })).rejects.toMatchObject({ status: 404 })
     expect(service).toBeDefined()

@@ -1,7 +1,44 @@
 import { ACADEMIC_API, ACADEMIC_REVISION, ACADEMIC_ROUTE, validateAcademicAdjustment, validateAcademicCatalog, validateAcademicDemandEstimate, validateAcademicDemandRequest, validateAcademicProposal, validateAcademicRequest, validateAcademicDraftList, validateAcademicDraftResume, validateAcademicDraftSaveRequest, validateAcademicSavedDraft, validateAcademicReviewSubmission, validateAcademicReviewDecision, validateAcademicPublicationRequest, validateAcademicReleasePreview, validateAcademicPublication, validateAcademicPublicationList } from '../../../shared/programacion-academica-api.mjs'
 import type { AcademicAdjustment, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest, AcademicProposal, AcademicRequest, AcademicInterval, AcademicDraftList, AcademicDraftResume, AcademicDraftSaveRequest, AcademicSavedDraft, AcademicReviewSubmission, AcademicReviewDecision, AcademicReleasePreview, AcademicPublication, AcademicPublicationList, AcademicPublicationRequest } from '../../../shared/programacion-academica-api.mjs'
+import { planningDefaults as getPlanningDefaults, PLANNING_LIMITS, syntheticTeachingMetadata, validatePlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
+import type { PlanningPeriod, PlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
 
 export type { AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest, AcademicProposal, AcademicRequest } from '../../../shared/programacion-academica-api.mjs'
+export { PLANNING_LIMITS, syntheticTeachingMetadata }
+export type { PlanningPeriod, PlanningPolicy }
+
+export function normalizeAcademicSearch(value: string) {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es').trim()
+}
+
+export function filterAcademicResources<T extends { id: string; name: string }>(resources: T[], query: string) {
+  const normalized = normalizeAcademicSearch(query)
+  if (!normalized) return resources
+  return resources.filter((resource) => normalizeAcademicSearch(`${resource.name} ${resource.id}`).includes(normalized))
+}
+
+export function createAcademicPlanningDefaults(catalog: AcademicCatalog, period: PlanningPeriod) {
+  const demands = Object.fromEntries(catalog.courses.map((course) => [course.courseId,
+    String(course.cycle === undefined ? course.estimatedDemand : getPlanningDefaults(course.cycle, period).estimatedDemand)]))
+  const capacities = Object.fromEntries(catalog.courses.map((course) => [course.courseId, '45']))
+  const resources = {
+    teachers: (catalog.referenceTeachers ?? []).map((teacher, index) => ({ ...teacher,
+      maxWeeklyMinutes: 600, ...syntheticTeachingMetadata(index),
+      availability: [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 })) })),
+    rooms: (catalog.referenceRooms ?? []).map((room) => ({ id: room.id, name: room.name,
+      capacity: room.capacity, kind: room.kind,
+      availability: [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 })) })),
+  }
+  return { demands, capacities, resources, planningPolicy: {
+    revision: 'FISI-PLANNING-1' as const, period, allowAfternoon: false, allowSaturday: false,
+  } }
+}
+
+export function buildAcademicPlanningRequest<T extends Omit<AcademicRequest, 'planningPolicy'>>(request: T,
+  planningPolicy: PlanningPolicy): T & { planningPolicy: PlanningPolicy } {
+  validatePlanningPolicy(planningPolicy)
+  return { ...request, planningPolicy: { ...planningPolicy } }
+}
 
 type AcademicSchedulingFlags = { VITE_SUM_ACADEMIC_SCHEDULING?: string; VITE_SUM_SIMULATOR?: string }
 

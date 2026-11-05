@@ -1,7 +1,12 @@
+import { Socket } from 'node:net'
 import { describe, expect, it, vi } from 'vitest'
 import { DemoAccessService } from '../src/programacion-academica/demo-access.js'
 
-const requestFrom = (remoteAddress: string) => ({ socket: { remoteAddress } })
+const requestFrom = (remoteAddress: string) => {
+  const socket = new Socket()
+  Object.defineProperty(socket, 'remoteAddress', { value: remoteAddress })
+  return { socket }
+}
 const localProxyEnv = { SUM_ACADEMIC_SCHEDULING: '1', SUM_ACADEMIC_PROXY_HOST: 'frontend' }
 
 describe('academic demo access policy', () => {

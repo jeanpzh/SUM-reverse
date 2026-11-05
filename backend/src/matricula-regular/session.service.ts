@@ -28,7 +28,7 @@ export class SessionService {
         throw new MatriculaRegularError(404, state.runId, 'ACTOR_NOT_FOUND')
       }
 
-      const now = this.clock.now()
+      const now = this.repository.clockFor(state.runId, this.clock).now()
       const session: MatriculaRegularSession = {
         runId: state.runId,
         actorId: request.actorId,
@@ -46,7 +46,7 @@ export class SessionService {
         sessionId: session.sessionId,
       })
       return response
-    })
+    }, request.runId)
   }
 
   renew(
@@ -67,7 +67,7 @@ export class SessionService {
         throw new MatriculaRegularError(409, state.runId, 'SESSION_CONTEXT_MISMATCH')
       }
 
-      const now = this.clock.now()
+      const now = this.repository.clockFor(state.runId, this.clock).now()
       if (now.getTime() >= Date.parse(session.expiresAt)) {
         throw new MatriculaRegularError(409, state.runId, 'SESSION_EXPIRED')
       }
@@ -88,6 +88,6 @@ export class SessionService {
         sessionId,
       })
       return response
-    })
+    }, request.runId)
   }
 }

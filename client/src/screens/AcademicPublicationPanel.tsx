@@ -2,6 +2,8 @@ import { useMemo, useRef, useState } from 'react'
 import type { AcademicDraftState, AcademicPublication, AcademicPublicationList, AcademicReleasePreview, AcademicScheduleSnapshot } from '../../../shared/programacion-academica-api.mjs'
 import { aggregateAcademicBlocks, academicSectionLabel, formatAcademicDuration, formatAcademicMinute } from '../data/academicScheduling'
 import { fetchAcademicPublication, fetchAcademicPublications, fetchAcademicReleasePreview, fetchCurrentAcademicPublication } from '../data/academicScheduling'
+import { activateEnrollmentOffer, fetchOperationalOffers } from '../data/enrollmentOffer'
+import type { OperationalOffer, OperationalOfferCatalog } from '../data/enrollmentOffer'
 import './AcademicPublicationPanel.css'
 
 type PreviewSource = { id: string; version: number; schedule: AcademicScheduleSnapshot; title: string; label: string; source: 'draft' | 'publication'; state: AcademicDraftState }
@@ -41,12 +43,17 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
   const [preview, setPreview] = useState<PreviewSource | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [workingScope, setWorkingScope] = useState<string | null>(null)
+  const [offerCatalog, setOfferCatalog] = useState<OperationalOfferCatalog | null>(null)
+  const [offerError, setOfferError] = useState<string | null>(null)
+  const [activation, setActivation] = useState<{ offer: OperationalOffer; reused: boolean } | null>(null)
+  const [activating, setActivating] = useState(false)
   const requestIntent = useRef(0)
   const listIntent = useRef(0)
   const scopeKey = `${draftId ?? ''}|${draftVersion ?? ''}|${dirty}|${selectedPublicationId}`
   const working = workingScope === scopeKey
-  const currentPreview = !dirty && preview && preview.source === 'draft' && preview.id === draftId && preview.version === draftVersion ? preview : null
   const selectedSummary = publicationList?.items.find((item) => item.id === selectedPublicationId) ?? null
+  const currentPreview = !dirty && preview && preview.source === 'draft' && preview.id === draftId && preview.version === draftVersion ? preview : null
+  const publicationPreview = selectedSummary && preview?.source === 'publication' && preview.id === selectedSummary.id ? preview : null
   const currentLabel = publicationList?.items.find((item) => item.id === publicationList.currentId)
   const frozen = draftState === 'approved' || draftState === 'published'
   const canUseRelease = Boolean(draftId && draftVersion && !dirty && !busy && !working)
@@ -149,6 +156,48 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
   }
 
   const displayPreview = selectedSummary ? preview?.source === 'publication' && preview.id === selectedSummary.id ? preview : null : currentPreview
+  const canActivate = Boolean(selectedSummary && publicationPreview?.schedule.schoolId === 'SISTEMAS'
+    && publicationPreview.schedule.academicPeriod === '2027-I' && !busy && !activating && !working)
+
+  const refreshOffers = async () => {
+    setOfferError(null)
+    setActivation(null)
+    try {
+      setOfferCatalog(await fetchOperationalOffers())
+    } catch (error) {
+      setOfferCatalog(null)
+      setOfferError(error instanceof Error ? error.message : 'No se pudo consultar las ofertas operativas locales.')
+    }
+  }
+
+  const activatePublication = async () => {
+    if (!selectedSummary || !publicationPreview || !canActivate) return
+    setActivating(true)
+    setOfferError(null)
+    setActivation(null)
+    try {
+      const publication = selectedSummary.id === publicationList?.currentId
+        ? await fetchCurrentAcademicPublication() : await fetchAcademicPublication(selectedSummary.id)
+      if (publication.id !== selectedSummary.id || publication.publicationVersion !== selectedSummary.publicationVersion
+        || publication.schedule.schoolId !== 'SISTEMAS' || publication.schedule.academicPeriod !== '2027-I') {
+        throw new Error('La publicación seleccionada cambió o no corresponde a la oferta Sistemas 2027-I.')
+      }
+      const current = await fetchOperationalOffers()
+      setOfferCatalog(current)
+      const existing = current.items.find((item) => item.publicationId === publication.id
+        && item.publicationVersion === publication.publicationVersion)
+      if (current.activeRunId && !existing && !window.confirm(
+        `Ya existe una oferta operativa activa (${current.activeRunId}). ¿Crear un contexto nuevo para publicación ${publication.publicationVersion}? Las ofertas anteriores conservarán sus matrículas.`)) return
+      const result = await activateEnrollmentOffer({ publicationId: publication.id,
+        publicationVersion: publication.publicationVersion, expectedActiveRunId: current.activeRunId })
+      setActivation(result)
+      setOfferCatalog(await fetchOperationalOffers())
+    } catch (error) {
+      setOfferError(error instanceof Error ? error.message : 'No se pudo activar la publicación local.')
+    } finally {
+      setActivating(false)
+    }
+  }
 
   return <details className="academic-publication" open={expanded} onToggle={(event) => setExpanded(event.currentTarget.open)}>
     <summary>Aprobación y publicación simuladas</summary>
@@ -201,6 +250,30 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
         <td>{block.componentDetails.map((component) => `${component.type} · ${formatAcademicDuration(component.durationMinutes)}`).join(' + ')}</td>
       </tr>)}</tbody></table></div>
     </section>}
+    <section className="academic-publication__metadata" aria-labelledby="academic-publication-activation">
+      <h3 id="academic-publication-activation">Matrícula local 2027-I</h3>
+      <p>La activación crea un contexto sintético para una publicación de Sistemas 2027-I. No modifica la publicación ni las matrículas de otras ofertas.</p>
+      <div className="academic-publication__actions">
+        <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary"
+          disabled={activating || busy} onClick={() => void refreshOffers()}>{activating ? 'Procesando…' : 'Actualizar ofertas operativas'}</button>
+        <button type="button" className="academic-scheduling__button" disabled={!canActivate}
+          onClick={() => void activatePublication()}>{activating ? 'Activando…' : 'Activar publicación seleccionada'}</button>
+      </div>
+      {!selectedSummary && <p className="academic-publication__status">Selecciona una publicación y actualiza su vista previa para habilitar la activación.</p>}
+      {selectedSummary && publicationPreview && !canActivate && <p className="academic-publication__status">La activación requiere una publicación de Sistemas 2027-I con vista previa vigente.</p>}
+      {offerError && <p className="academic-publication__error" role="alert">{offerError}</p>}
+      {activation && <p className="academic-publication__status" role="status">
+        {activation.reused ? 'La publicación ya tenía una oferta operativa.' : 'Oferta operativa creada.'} Origen: {activation.offer.publicationId} · publicación {activation.offer.publicationVersion} · oferta {activation.offer.offerVersion} · ejecución {activation.offer.runId}.
+        {' '}<a href={`/local/login?runId=${encodeURIComponent(activation.offer.runId)}`}>Abrir matrícula 2027-I</a>
+      </p>}
+      {offerCatalog && <div className="academic-publication__status" aria-label="Ofertas operativas disponibles">
+        <p>{offerCatalog.activeRunId ? `Ejecución activa: ${offerCatalog.activeRunId}.` : 'No hay oferta operativa activa.'}</p>
+        {offerCatalog.items.map((offer) => <p key={offer.runId}>
+          <a href={`/local/login?runId=${encodeURIComponent(offer.runId)}`}>Abrir matrícula 2027-I · oferta {offer.offerVersion}</a>
+          {' '}<span>Origen {offer.publicationId} · publicación {offer.publicationVersion} · {offer.courseCount} cursos · {offer.sectionCount} secciones</span>
+        </p>)}
+      </div>}
+    </section>
     {!displayPreview && <p className="academic-publication__status">{selectedSummary
       ? 'Actualiza la vista previa para consultar esta publicación sin editarla.'
       : draftId ? `Propuesta actual · ${draftTitle} · versión ${draftVersion} · ${stateLabels[draftState]}${dirty ? ' · cambios locales sin guardar' : ''}. Actualiza la vista previa para continuar.`

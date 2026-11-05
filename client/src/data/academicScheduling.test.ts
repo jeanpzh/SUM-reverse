@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { ACADEMIC_API, ACADEMIC_REVISION } from '../../../shared/programacion-academica-api.mjs'
-import { adjustAcademicProposal, calculatePresentedSections, createAcademicProposal, estimateAcademicDemand, fetchAcademicCatalog, fetchAcademicDrafts, saveAcademicDraft, resumeAcademicDraft, submitAcademicTeacherReview, respondAcademicTeacherReview, formatAcademicInterval, isAcademicSchedulingEnabled, isAcademicSchedulingRoute, isLocalAcademicArea, academicSectionLabel, toAcademicScheduleEvents, aggregateAcademicBlocks, academicSectionCoverage, fetchAcademicReleasePreview, approveAcademicDraft, publishAcademicDraft, forkAcademicDraft, fetchAcademicPublications, fetchAcademicPublication, fetchCurrentAcademicPublication } from './academicScheduling.ts'
+import { adjustAcademicProposal, calculatePresentedSections, createAcademicProposal, estimateAcademicDemand, fetchAcademicCatalog, fetchAcademicDrafts, saveAcademicDraft, resumeAcademicDraft, submitAcademicTeacherReview, respondAcademicTeacherReview, formatAcademicInterval, isAcademicSchedulingEnabled, isAcademicSchedulingRoute, isLocalAcademicArea, academicSectionLabel, toAcademicScheduleEvents, aggregateAcademicBlocks, academicSectionCoverage, fetchAcademicReleasePreview, approveAcademicDraft, publishAcademicDraft, forkAcademicDraft, fetchAcademicPublications, fetchAcademicPublication, fetchCurrentAcademicPublication, createAcademicPlanningDefaults, filterAcademicResources, buildAcademicPlanningRequest } from './academicScheduling.ts'
 
 const catalog = {
   revision: ACADEMIC_REVISION,
@@ -33,6 +33,44 @@ const emptyWorkspace = { schoolId: 'SISTEMAS' as const, academicPeriod: '2027-I'
 const savedDraft = { id: draftId, version: 1, title: 'Propuesta sintética', state: 'draft' as const,
   createdAt: '2026-11-04T10:00:00.000Z', updatedAt: '2026-11-04T10:00:00.000Z', configuration: emptyWorkspace,
   demandBase: null, proposal: null }
+
+test('academic planning defaults cover both parity patterns and build a synthetic reference pool', () => {
+  const source = { ...catalog,
+    courses: [{ ...catalog.courses[0], cycle: 1 }, { ...catalog.courses[0], courseId: 'CS102', cycle: 2 }],
+    referenceTeachers: [{ id: 'T-REF', name: 'Docente sintético', courseIds: ['CS101'] }],
+    referenceRooms: [{ id: 'R-REF', name: 'Aula sintética', capacity: 45, kind: 'classroom' as const, pavilion: 'AP' as const }],
+  }
+  const first = createAcademicPlanningDefaults(source, '2027-I')
+  assert.deepEqual(first.demands, { CS101: '180', CS102: '90' })
+  assert.deepEqual(first.capacities, { CS101: '45', CS102: '45' })
+  assert.deepEqual(createAcademicPlanningDefaults(source, '2026-II').demands, { CS101: '90', CS102: '180' })
+  assert.equal(first.resources.teachers[0].facultyId, 'FISI')
+  assert.equal(first.resources.teachers[0].qualificationSource, 'synthetic')
+  assert.equal(first.resources.rooms.length, 1)
+  assert.deepEqual(first.planningPolicy, { revision: 'FISI-PLANNING-1', period: '2027-I', allowAfternoon: false, allowSaturday: false })
+})
+
+test('academic resource search ignores accents and case while preserving the source list', () => {
+  const resources = [{ id: 'DOC-1', name: 'José Núñez' }, { id: 'DOC-2', name: 'Ana Pérez' }]
+  assert.deepEqual(filterAcademicResources(resources, 'jose nunez'), [resources[0]])
+  assert.deepEqual(filterAcademicResources(resources, 'DOC-2'), [resources[1]])
+  assert.deepEqual(filterAcademicResources(resources, 'sin resultados'), [])
+  assert.equal(resources.length, 2)
+})
+
+test('proposal adapter sends the selected period policy and rejects mismatches', async () => {
+  const policy = { revision: 'FISI-PLANNING-1' as const, period: '2026-II' as const, allowAfternoon: true, allowSaturday: false }
+  const request = buildAcademicPlanningRequest({ revision: ACADEMIC_REVISION, demands: [] }, policy)
+  let sent: unknown
+  const fetchMock: typeof fetch = async (_input, init) => {
+    sent = JSON.parse(String(init?.body))
+    return new Response(JSON.stringify(proposal), { status: 200 })
+  }
+  await createAcademicProposal(request, fetchMock)
+  assert.deepEqual((sent as typeof request).planningPolicy, policy)
+  assert.throws(() => buildAcademicPlanningRequest({ revision: ACADEMIC_REVISION, demands: [] },
+    { ...policy, period: '2025-III' as '2026-II' }), /Política local de planificación inválida/)
+})
 
 test('feature gate requires its flag and excludes simulator mode; path matching is exact except trailing slash', () => {
   assert.equal(isAcademicSchedulingEnabled({}), false)

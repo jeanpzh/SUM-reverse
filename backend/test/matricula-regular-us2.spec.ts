@@ -27,7 +27,7 @@ beforeEach(() => {
   testApp.reset()
 })
 
-async function jsonRequest(path: string, body: unknown) {
+async function jsonRequest(path: string, body: string | object) {
   const response = await supertest(testApp.app.getHttpServer()).post(path).send(body)
   return {
     response,

@@ -4,6 +4,7 @@ import {
   validateDashboardIdentity,
   validateDashboardKey,
 } from '../../../shared/local-profile-dashboard.mjs'
+import { validateSessionId } from '../../../shared/matricula-regular.mjs'
 import type { DashboardKey } from '../../../shared/local-profile-dashboard.mjs'
 import { MatriculaRegularError, MatriculaRegularErrorFilter } from '../matricula-regular/matricula-regular-error.filter.js'
 import { MatriculaRegularRepository } from '../matricula-regular/matricula-regular.repository.js'
@@ -24,13 +25,18 @@ export class LocalProfileDashboardController {
   @Get('perfiles')
   catalog(@Req() request: Request) {
     const url = new URL(request.originalUrl, 'http://127.0.0.1')
-    const fields = [...new Set([
-      ...[...url.searchParams.keys()].map((key) => `query.${key || 'empty'}`),
-      ...(this.hasBody(request) ? ['body'] : []),
-      ...(url.pathname === PROFILE_PATH ? [] : ['path']),
-    ])].sort()
-    if (fields.length > 0) this.invalid(fields)
-    return this.dashboard.catalog()
+    const fields = new Set<string>()
+    const queryKeys = [...url.searchParams.keys()]
+    if (queryKeys.some((key) => key !== 'runId') || url.searchParams.getAll('runId').length > 1) {
+      for (const key of queryKeys.filter((item) => item !== 'runId' || url.searchParams.getAll('runId').length > 1)) fields.add(`query.${key || 'empty'}`)
+    }
+    if (url.searchParams.has('runId')) {
+      try { validateSessionId(url.searchParams.get('runId')) } catch { fields.add('query.runId') }
+    }
+    if (this.hasBody(request)) fields.add('body')
+    if (url.pathname !== PROFILE_PATH) fields.add('path')
+    if (fields.size > 0) this.invalid([...fields])
+    return this.dashboard.catalog(url.searchParams.get('runId') ?? undefined)
   }
 
   @Get('consultas/:key')

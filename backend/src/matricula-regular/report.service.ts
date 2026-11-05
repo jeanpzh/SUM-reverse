@@ -18,7 +18,7 @@ export class ReportService {
     runId: MatriculaRegularUuid,
     actorId: MatriculaRegularId,
   ): MatriculaRegularEnvelope<MatriculaRegularEnrollmentReport> {
-    const snapshot = this.repository.readSnapshot()
+    const snapshot = this.repository.readSnapshot(runId)
     if (runId !== snapshot.runId) throw new MatriculaRegularError(409, snapshot.runId, 'RUN_CHANGED')
     if (!snapshot.actors.some((actor) => actor.actorId === actorId)) {
       throw new MatriculaRegularError(404, snapshot.runId, 'ACTOR_NOT_FOUND')

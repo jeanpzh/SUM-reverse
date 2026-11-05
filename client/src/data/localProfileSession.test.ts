@@ -19,6 +19,7 @@ import type { AccessProvider } from './accessProvider.ts'
 const BASE = Date.parse('2026-08-11T14:00:00.000Z')
 const runId = '10000000-0000-4000-8000-000000000001'
 const nextRunId = '10000000-0000-4000-8000-000000000002'
+const operationalRunId = '10000000-0000-4000-8000-000000000099'
 const iso = (ms: number) => new Date(ms).toISOString()
 const sessionIdFor = (n: number) => `20000000-0000-4000-8000-${String(n).padStart(12, '0')}`
 const scope = (school: 'SISTEMAS' | 'SOFTWARE') => ({
@@ -45,6 +46,8 @@ function harness(options: { identityStorage?: IdentityStorage | null } = {}) {
   const clock = { t: 0 }
   const counts = { catalog: 0, create: 0, renew: 0, read: 0 }
   const createdFor: string[] = []
+  const createdRuns: string[] = []
+  const catalogRuns: Array<string | undefined> = []
   const timers: Timer[] = []
   let timerId = 0
   let sessionCounter = 0
@@ -57,12 +60,15 @@ function harness(options: { identityStorage?: IdentityStorage | null } = {}) {
   }
   const sessions = new Map<string, { startedAt: string; expiresAt: string }>()
   const dashboardApi = {
-    async catalog() {
+    async catalog(requestOptions?: { runId?: string }) {
       counts.catalog += 1
+      catalogRuns.push(requestOptions?.runId)
+      const catalogRun = requestOptions?.runId ?? hooks.run
       return {
-        runId: hooks.run,
-        data: { serverNow: iso(BASE + clock.t), profiles: actors.map((actorId) => ({
-          actorId, name: `Nombre ${actorId}`, scope: scope(actorId.includes('SIS') ? 'SISTEMAS' : 'SOFTWARE'),
+        runId: catalogRun,
+        data: { serverNow: iso(BASE + clock.t), profiles: (requestOptions?.runId ? actors.slice(0, 2) : actors).map((actorId) => ({
+          actorId, name: `Nombre ${actorId}`, scope: { ...scope(actorId.includes('SIS') ? 'SISTEMAS' : 'SOFTWARE'),
+            period: catalogRun === operationalRunId ? '2027-I' : '2026-II' },
         })) },
       }
     },
@@ -79,6 +85,7 @@ function harness(options: { identityStorage?: IdentityStorage | null } = {}) {
     async createSession(request: { runId: string; actorId: string }) {
       counts.create += 1
       createdFor.push(request.actorId)
+      createdRuns.push(request.runId)
       if (hooks.create) return hooks.create(request) as never
       const startedAt = BASE + clock.t
       sessionCounter += 1
@@ -112,7 +119,7 @@ function harness(options: { identityStorage?: IdentityStorage | null } = {}) {
   store.onIdentityChange((kind) => identityEvents.push(kind))
   const snapshots: LocalProfileSnapshot[] = []
   store.subscribe(() => snapshots.push(store.getSnapshot()))
-  return { clock, counts, createdFor, timers, hooks, dashboardApi, enrollmentApi, scheduler, store, identityEvents, snapshots }
+  return { clock, counts, createdFor, createdRuns, catalogRuns, timers, hooks, dashboardApi, enrollmentApi, scheduler, store, identityEvents, snapshots }
 }
 
 const asActive = (snapshot: LocalProfileSnapshot) => {
@@ -146,6 +153,32 @@ test('entry for each of the four actors uses catalog -> one create -> formulario
     assert.deepEqual(h.createdFor, [actorId])
     assert.equal(h.counts.read, 1)
   }
+})
+
+test('operational context entry queries the requested run, skips scenario changes, and replaces a same-actor legacy run', async () => {
+  const h = harness()
+  await h.store.enter('SYN-SIS-A', { expectedRunId: runId })
+  const legacy = asActive(h.store.getSnapshot())
+  assert.equal(legacy.runId, runId)
+
+  await h.store.enter('SYN-SIS-A', { expectedRunId: operationalRunId, contextRunId: operationalRunId })
+  const operational = asActive(h.store.getSnapshot())
+  assert.notEqual(operational, legacy)
+  assert.equal(operational.actorId, 'SYN-SIS-A')
+  assert.equal(operational.runId, operationalRunId)
+  assert.deepEqual(h.catalogRuns, [undefined, operationalRunId])
+  assert.deepEqual(h.createdRuns, [runId, operationalRunId])
+  assert.equal(h.counts.create, 2)
+})
+
+test('operational context rejects a catalog response from another run before creating a session', async () => {
+  const h = harness()
+  h.dashboardApi.catalog = async () => ({ runId, data: { serverNow: iso(BASE), profiles: actors.map((actorId) => ({
+    actorId, name: `Nombre ${actorId}`, scope: scope(actorId.includes('SIS') ? 'SISTEMAS' : 'SOFTWARE'),
+  })) } })
+  await h.store.enter('SYN-SIS-A', { contextRunId: operationalRunId })
+  assert.equal(h.store.getSnapshot().status, 'error')
+  assert.equal(h.counts.create, 0)
 })
 
 test('public simulator entry uses the authenticated actor, skips catalog and caps academic expiry at access expiry', async () => {
@@ -645,6 +678,19 @@ test('expiry_clears_identity: an expired session is never resumed after a reload
   await h.store.enter('SYN-SIS-A')
   h.store.markExpired()
   assert.equal(storage.data.has(LOCAL_PROFILE_IDENTITY_KEY), false)
+})
+
+test('a restarted operational session retains its validated 2027-I context for explicit reentry without creating a session', async () => {
+  const storage = memoryStorage({ [LOCAL_PROFILE_IDENTITY_KEY]: JSON.stringify({ runId: operationalRunId, actorId: 'SYN-SIS-A', sessionId: sessionIdFor(9) }) })
+  const h = harness({ identityStorage: storage })
+  h.hooks.renew = async () => { throw new MatriculaRegularApiError({ kind: 'http', operation: 'renew', status: 404, code: 'SESSION_NOT_FOUND', message: 'Synthetic backend restarted' }) }
+  await h.store.resume()
+  assert.deepEqual(h.store.getSnapshot(), { status: 'anonymous', notice: null, generation: 0, reentryRunId: operationalRunId })
+  assert.deepEqual(h.catalogRuns, [operationalRunId])
+  assert.equal(h.counts.create, 0)
+  assert.equal(storage.data.has(LOCAL_PROFILE_IDENTITY_KEY), false)
+  h.store.logout()
+  assert.equal('reentryRunId' in h.store.getSnapshot(), false)
 })
 
 test('visibility_renewal: only a return to a visible tab renews; disposal removes the listener', () => {

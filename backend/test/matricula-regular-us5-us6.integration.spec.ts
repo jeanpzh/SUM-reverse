@@ -1,21 +1,35 @@
 import { beforeAll, afterAll, describe, expect, it } from 'vitest'
 import { resolve } from 'node:path'
-import { chromium, type Browser, type BrowserContext, type Page } from '../../client/node_modules/playwright/index.mjs'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
 import { createServer, type ViteDevServer } from '../../client/node_modules/vite/dist/node/index.js'
-import { createMatriculaRegularTestApp, type MatriculaRegularTestApp } from './matricula-regular-test-app.js'
+import { createLocalProfileDashboardTestApp, type LocalProfileDashboardTestApp } from './local-profile-dashboard-test-app.js'
 import { createSyntheticFixture } from '../src/matricula-regular/fixtures.js'
 import type { School, SyntheticFixture } from '../src/matricula-regular/profile.types.js'
 
 let now = new Date('2026-08-11T15:00:00.000Z')
-let app: MatriculaRegularTestApp | undefined
+let app: LocalProfileDashboardTestApp | undefined
 let client: ViteDevServer | undefined
+let syntheticDraftDir: string | undefined
 const origin = 'http://127.0.0.1:5741'
 
+async function loginAs(page: Page, runId: string, actorId: string) {
+  await page.goto(`${origin}/local/login?runId=${runId}`)
+  await page.locator(`input[name="profile"][value="${actorId}"]`).check()
+  await page.getByRole('button', { name: 'Ingresar', exact: true }).click()
+  await page.waitForURL(/\/alumnoWebSum\/v2\/inicio$/)
+  await page.goto(`${origin}/local/matricula-regular`)
+}
+
 beforeAll(async () => {
-  app = await createMatriculaRegularTestApp({ now: () => new Date(now) })
-  await app.listen()
+  syntheticDraftDir = await mkdtemp(resolve(tmpdir(), 'sum-matricula-us5-'))
+  process.env.SUM_ACADEMIC_DRAFT_DIR = syntheticDraftDir
+  app = await createLocalProfileDashboardTestApp({ clock: { now: () => new Date(now) } })
+  await app.listen(5742)
   process.env.VITE_SUM_DATA_MODE = 'local'
   process.env.VITE_SUM_API_BASE_URL = '/api'
+  process.env.VITE_SUM_LOCAL_PROFILE = 'synthetic-actors'
   const root = resolve(process.cwd(), '..')
   client = await createServer({
     root: resolve(root, 'client'),
@@ -28,6 +42,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await client?.close()
   await app?.close()
+  if (syntheticDraftDir) await rm(syntheticDraftDir, { recursive: true, force: true })
 })
 
 function buildFixtures(): SyntheticFixture[] {
@@ -45,16 +60,33 @@ async function createBrowserSession() {
   return { browser, browserContext, page }
 }
 
-async function openScreen(page: Page, actorId: string) {
-  await page.goto(`${origin}/local/matricula-regular`)
-  if (actorId !== 'SYN-SIS-A') {
-    await page.locator('.regular-enrollment select').selectOption(actorId)
-  }
+async function openScreen(page: Page, actorId: string, runId: string) {
+  await loginAs(page, runId, actorId)
+  await page.locator('.regular-enrollment__local-details > summary').click()
   await page.locator('.enrollment-calendar-panel').waitFor()
   await page.waitForFunction(
     (id) => document.querySelector('.student-summary')?.textContent?.includes(id),
     actorId.includes('SOFT') ? 'SYN-SOFT-PLAN' : 'SYN-SIS-PLAN',
   )
+}
+
+async function chooseSection(page: Page, courseId: string, sectionId: string) {
+  const row = page.locator('.sum-enrollment__table tbody tr').filter({ hasText: courseId })
+  await row.getByRole('button', { name: /^Elegir sección de / }).click()
+  const dialog = page.getByRole('dialog', { name: 'Secciones disponibles', exact: true })
+  await dialog.locator(`input[name="sum-section"][value="${sectionId}"]`).check()
+  await dialog.getByRole('button', { name: '✓ Aceptar', exact: true }).click()
+}
+
+async function chooseCourses(page: Page, courses: SyntheticFixture['offer']) {
+  for (const course of courses) await chooseSection(page, course.courseId, course.sections[0]!.sectionId)
+}
+
+async function confirmSubmission(page: Page) {
+  await page.getByRole('button', { name: 'Ejecutar Matrícula', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Aviso', exact: true })
+  await dialog.waitFor({ state: 'visible' })
+  return dialog
 }
 
 describe('Matricula Regular US5 & US6 Integration: 4 autonomous groups across both schools (12 recorridos)', () => {
@@ -81,88 +113,40 @@ describe('Matricula Regular US5 & US6 Integration: 4 autonomous groups across bo
           course1.sections[0]!.schedule = structuredClone(course0.sections[0]!.schedule)
           course1.sections[0]!.occupied = course1.sections[0]!.capacity
 
-          app!.repository.resetForTests(fixtures)
+          const runId = app!.repository.resetForTests(fixtures)
           const initialSnapshot = app!.repository.readSnapshot()
 
-          await openScreen(page, actor.actorId)
-
-          // Start local session
-          await page.getByRole('button', { name: 'Iniciar sesión local', exact: true }).click()
-          await page
-            .getByText('Sesión local iniciada. Elegir asignaturas no registra matrícula.', { exact: true })
-            .waitFor()
+          await openScreen(page, actor.actorId, runId)
 
           // Select both conflicting courses
-          const sec0 = page
-            .locator('.section-button')
-            .filter({ has: page.getByText(course0.sections[0]!.sectionId, { exact: true }) })
-          await sec0.click()
+          await chooseSection(page, course0.courseId, course0.sections[0]!.sectionId)
+          await chooseSection(page, course1.courseId, course1.sections[0]!.sectionId)
+          expect(await page.locator('.sum-enrollment__table .sum-enrollment__section-badge').count()).toBe(2)
 
-          const sec1 = page
-            .locator('.section-button')
-            .filter({ has: page.getByText(course1.sections[0]!.sectionId, { exact: true }) })
-          await sec1.click()
+          // The existing SUM flow opens its confirmation alert before submitting.
+          expect(await page.getByRole('button', { name: 'Ejecutar Matrícula', exact: true }).isEnabled()).toBe(true)
+          const confirmDialog = await confirmSubmission(page)
+          await confirmDialog.getByRole('button', { name: 'EJECUTAR', exact: true }).click()
 
-          await page.waitForFunction(
-            () => document.querySelectorAll('.section-button[aria-pressed="true"]').length === 2,
-          )
-
-          // Submit button should be enabled
-          const submitBtn = page.getByRole('button', { name: 'Enviar solicitud de matrícula', exact: true })
-          expect(await submitBtn.isEnabled()).toBe(true)
-
-          // Submit the invalid selection
-          await submitBtn.click()
-
-          // Dialog D2 appears
-          const dialog = page.locator('dialog.enrollment-result-dialog')
+          // The current SUM error alert is labelled «Aviso» and keeps its academic causes.
+          const dialog = page.locator('dialog.sum-alert--error')
           await dialog.waitFor({ state: 'visible' })
-
-          // D2: Heading check & real focus
-          const dialogTitle = page.locator('#result-dialog-title')
-          expect(await dialogTitle.isVisible()).toBe(true)
-          expect(await dialogTitle.textContent()).toBe('Solicitud de Matrícula Rechazada')
-
-          await page.waitForFunction(() => document.activeElement?.id === 'result-dialog-title')
-          const focusedId = await page.evaluate(() => document.activeElement?.id)
-          expect(focusedId).toBe('result-dialog-title')
+          expect(await dialog.getByRole('heading', { name: 'Aviso', exact: true }).isVisible()).toBe(true)
+          await page.waitForFunction(() => document.querySelector('dialog.sum-alert--error')?.contains(document.activeElement) === true)
 
           // D2: Verify multiple causes are displayed in the dialog
-          const causesList = dialog.locator('.enrollment-result-dialog__causes-list')
+          const causesList = dialog.locator('.sum-alert__causes')
           expect(await causesList.isVisible()).toBe(true)
           const causesText = await causesList.textContent()
           expect(causesText).toContain('Cruce de horarios detectado')
           expect(causesText).toContain('Carga de créditos fuera de rango')
           expect(causesText).toContain('Sección sin vacantes disponibles')
 
-          // D2: Focus trap verification - circular Tab and Shift+Tab wrapping at dialog boundaries
-          // 1. Shift+Tab from heading/firstElement wraps to the last focusable element in dialog
-          await page.keyboard.press('Shift+Tab')
-          const focusedOnLast = await page.evaluate(() =>
-            document.activeElement?.classList.contains('enrollment-result-dialog__btn--danger'),
-          )
-          expect(focusedOnLast).toBe(true)
-
-          // 2. Tab from last element wraps forward to the first focusable element (close button '×')
+          // Native modal focus remains inside the current dialog in both keyboard directions.
           await page.keyboard.press('Tab')
-          const focusedOnFirst = await page.evaluate(() =>
-            document.activeElement?.classList.contains('enrollment-result-dialog__close-btn'),
-          )
-          expect(focusedOnFirst).toBe(true)
-
-          // 3. Shift+Tab from first element wraps backward to the last element again
+          expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true)
           await page.keyboard.press('Shift+Tab')
-          const focusedOnLastAgain = await page.evaluate(() =>
-            document.activeElement?.classList.contains('enrollment-result-dialog__btn--danger'),
-          )
-          expect(focusedOnLastAgain).toBe(true)
-
-          // 4. Tab from last element wraps forward to first element again
-          await page.keyboard.press('Tab')
-          const focusedOnFirstAgain = await page.evaluate(() =>
-            document.activeElement?.classList.contains('enrollment-result-dialog__close-btn'),
-          )
-          expect(focusedOnFirstAgain).toBe(true)
+          expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true)
 
           // D2: Escape key closes the dialog
           await page.keyboard.press('Escape')
@@ -170,15 +154,13 @@ describe('Matricula Regular US5 & US6 Integration: 4 autonomous groups across bo
           expect(await dialog.isVisible()).toBe(false)
 
           // D2: Return to screen with EMPTY selection (L-06)
-          await page.waitForFunction(
-            () => document.querySelectorAll('.section-button[aria-pressed="true"]').length === 0,
-          )
-          const selectedAfterClose = await page.locator('.section-button[aria-pressed="true"]').count()
+          await page.waitForFunction(() => document.querySelectorAll('.sum-enrollment__table .sum-enrollment__section-badge').length === 0)
+          const selectedAfterClose = await page.locator('.sum-enrollment__table .sum-enrollment__section-badge').count()
           expect(selectedAfterClose).toBe(0)
 
           // D2: Return focus lands on registration heading because opener (submit button) is disabled
-          await page.waitForFunction(() => document.activeElement?.id === 'registration-heading')
-          expect(await page.evaluate(() => document.activeElement?.id)).toBe('registration-heading')
+          await page.waitForFunction(() => document.activeElement?.id === 'sum-enrollment-heading')
+          expect(await page.evaluate(() => document.activeElement?.id)).toBe('sum-enrollment-heading')
 
           // Snapshot verification:
           // 1. requests contains the rejected outcome with causes
@@ -217,7 +199,7 @@ describe('Matricula Regular US5 & US6 Integration: 4 autonomous groups across bo
   // =========================================================================
   describe('Group 2: US6 Real Acceptance UI -> Nest -> State/Report', () => {
     it.each(['SISTEMAS', 'SOFTWARE'] as const)(
-      '%s: double click & same identity creates single enrollment/quota, D1 close/opener without canceling commit, P1 heading focus, rows/total, single .csv extension, reload without writes',
+      '%s: repeated confirmation creates one enrollment/quota, automatic accepted report, P1 report focus, rows/total, single .csv extension, reload without writes',
       async (school: School) => {
         const { browser, browserContext, page } = await createBrowserSession()
         try {
@@ -227,45 +209,27 @@ describe('Matricula Regular US5 & US6 Integration: 4 autonomous groups across bo
           const actor = fixture.actors[0]!
 
           // Valid selection: all courses in offer of the plan (which sum to valid credits >= 12, <= 26 without conflicts)
-          app!.repository.resetForTests(fixtures)
+          const runId = app!.repository.resetForTests(fixtures)
 
-          await openScreen(page, actor.actorId)
-
-          // Start local session
-          await page.getByRole('button', { name: 'Iniciar sesión local', exact: true }).click()
-          await page
-            .getByText('Sesión local iniciada. Elegir asignaturas no registra matrícula.', { exact: true })
-            .waitFor()
+          await openScreen(page, actor.actorId, runId)
 
           // Select courses to form a valid enrollment (all available offered courses)
           const planCourses = fixture.offer.filter((c) => c.planId === actor.scope.planId)
-          for (const course of planCourses) {
-            const sec = page
-              .locator('.section-button')
-              .filter({ has: page.getByText(course.sections[0]!.sectionId, { exact: true }) })
-            await sec.click()
-          }
+          await chooseCourses(page, planCourses)
+          expect(await page.locator('.sum-enrollment__table .sum-enrollment__section-badge').count()).toBe(planCourses.length)
+          expect(await page.getByRole('button', { name: 'Ejecutar Matrícula', exact: true }).isEnabled()).toBe(true)
 
-          await page.waitForFunction(
-            (count) => document.querySelectorAll('.section-button[aria-pressed="true"]').length === count,
-            planCourses.length,
-          )
+          // Exercise duplicate confirmation events through the current SUM confirmation alert.
+          const confirmDialog = await confirmSubmission(page)
+          const execute = confirmDialog.getByRole('button', { name: 'EJECUTAR', exact: true })
+          await execute.evaluate((button) => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click() })
 
-          const submitBtn = page.getByRole('button', { name: 'Enviar solicitud de matrícula', exact: true })
-          expect(await submitBtn.isEnabled()).toBe(true)
-
-          // DOUBLE CLICK / simultaneous click simulation:
-          // Single-flight and idempotent queue ensure exactly one submission POST
-          await Promise.all([submitBtn.click(), submitBtn.click()])
-
-          // Wait for acceptance outcome: dialog D1 appears with "Matrícula Regular Aceptada"
-          const dialog = page.locator('dialog.enrollment-result-dialog')
+          // Accepted outcomes show the current «Aviso» alert before the automatic report navigation.
+          const dialog = page.locator('dialog.sum-alert--success')
           await dialog.waitFor({ state: 'visible' })
-          expect(await page.locator('#result-dialog-title').textContent()).toBe('Matrícula Regular Aceptada')
-
-          // Focus lands on heading #result-dialog-title
-          await page.waitForFunction(() => document.activeElement?.id === 'result-dialog-title')
-          expect(await page.evaluate(() => document.activeElement?.id)).toBe('result-dialog-title')
+          expect(await dialog.getByRole('heading', { name: 'Aviso', exact: true }).isVisible()).toBe(true)
+          await page.waitForURL(/\/local\/matricula-regular\/reporte\//)
+          await page.locator('#regular-enrollment-report-heading').waitFor({ state: 'visible' })
 
           // Snapshot check immediately after submit:
           // Exactly 1 enrollment, exactly 1 request outcome, quota incremented by 1 per section
@@ -283,25 +247,11 @@ describe('Matricula Regular US5 & US6 Integration: 4 autonomous groups across bo
             expect(section.occupied).toBe(course.sections[0]!.occupied + 1)
           }
 
-          // D1 close without canceling commit:
-          // Close D1 using the "Cerrar" secondary button
-          const closeBtn = dialog.getByRole('button', { name: 'Cerrar', exact: true })
-          await closeBtn.click()
-          await dialog.waitFor({ state: 'hidden' })
+          // The accepted alert redirects automatically; the committed report remains available after navigation.
           expect(await dialog.isVisible()).toBe(false)
-
-          // Closing D1 must NOT cancel the committed enrollment or alter quotas
-          const snapAfterD1Close = app!.repository.readSnapshot()
-          expect(snapAfterD1Close.enrollments).toHaveLength(1)
-          expect(snapAfterD1Close.reports).toHaveLength(1)
-
-          // Return of focus: focus lands on accepted section heading in SubmissionPanel
-          await page.waitForFunction(() => document.activeElement?.id === 'accepted-result-heading')
-          expect(await page.evaluate(() => document.activeElement?.id)).toBe('accepted-result-heading')
-
-          // On screen opener: user clicks "Ver reporte local" in the accepted section
-          const viewReportOnScreen = page.locator('.regular-enrollment__accepted button:has-text("Ver reporte local")')
-          await viewReportOnScreen.click()
+          const snapAfterRedirect = app!.repository.readSnapshot()
+          expect(snapAfterRedirect.enrollments).toHaveLength(1)
+          expect(snapAfterRedirect.reports).toHaveLength(1)
 
           // URL navigates to child route / Outlet
           expect(page.url()).toContain(`/local/matricula-regular/reporte/${enrolled.enrollmentId}`)
@@ -311,7 +261,7 @@ describe('Matricula Regular US5 & US6 Integration: 4 autonomous groups across bo
           // Report view is rendered inside <Outlet />
           const reportHeading = page.locator('#regular-enrollment-report-heading')
           await reportHeading.waitFor({ state: 'visible' })
-          expect(await reportHeading.textContent()).toBe('Reporte local de matrícula regular')
+          expect(await reportHeading.textContent()).toBe('ASIGNATURAS MATRICULADAS')
 
           // P1: Real programmatic focus on heading
           await page.waitForFunction(() => document.activeElement?.id === 'regular-enrollment-report-heading')
@@ -323,16 +273,16 @@ describe('Matricula Regular US5 & US6 Integration: 4 autonomous groups across bo
 
           const totalCreditsExpected = planCourses.reduce((sum, c) => sum + c.credits, 0)
           const totalCreditsText = await page
-            .locator('.regular-enrollment-report__facts dt:has-text("Total de créditos") + dd')
+            .locator('.regular-enrollment-report__totals p').first()
             .textContent()
-          expect(totalCreditsText).toBe(String(totalCreditsExpected))
+          expect(totalCreditsText).toBe(`Créditos matriculados : ${totalCreditsExpected}`)
 
           // CSV Download: filename must have exactly ONE extension (.csv) without -demo in local mode
           const downloadPromise = page.waitForEvent('download')
           await page.getByRole('button', { name: 'Descargar', exact: true }).click()
           const download = await downloadPromise
           const filename = download.suggestedFilename()
-          expect(filename).toBe(`reporte-matricula-regular-local-${actor.actorId}.csv`)
+          expect(filename).toBe(`reporte-matricula-${actor.actorId}.csv`)
           expect(filename.endsWith('.csv')).toBe(true)
           expect(filename.split('.').length).toBe(2)
 
@@ -373,7 +323,7 @@ describe('Matricula Regular US5 & US6 Integration: 4 autonomous groups across bo
             knowledge: 'unknown',
           })
 
-          app!.repository.resetForTests(fixtures)
+          const runId = app!.repository.resetForTests(fixtures)
           const initialSnapshot = app!.repository.readSnapshot()
 
           let requestCount = 0
@@ -383,30 +333,16 @@ describe('Matricula Regular US5 & US6 Integration: 4 autonomous groups across bo
             }
           })
 
-          await openScreen(page, actor.actorId)
-
-          // Verify context access is eligible
-          await page.getByRole('button', { name: 'Iniciar sesión local', exact: true }).click()
-          await page
-            .getByText('Sesión local iniciada. Elegir asignaturas no registra matrícula.', { exact: true })
-            .waitFor()
+          await openScreen(page, actor.actorId, runId)
 
           // Select courses
           const planCourses = fixture.offer.filter((c) => c.planId === actor.scope.planId)
-          for (const course of planCourses) {
-            const sec = page
-              .locator('.section-button')
-              .filter({ has: page.getByText(course.sections[0]!.sectionId, { exact: true }) })
-            await sec.click()
-          }
+          await chooseCourses(page, planCourses)
+          expect(await page.locator('.sum-enrollment__table .sum-enrollment__section-badge').count()).toBe(planCourses.length)
 
-          await page.waitForFunction(
-            (count) => document.querySelectorAll('.section-button[aria-pressed="true"]').length === count,
-            planCourses.length,
-          )
-
-          // Submit
-          await page.getByRole('button', { name: 'Enviar solicitud de matrícula', exact: true }).click()
+          // Submit through the existing confirmation alert.
+          const confirmDialog = await confirmSubmission(page)
+          await confirmDialog.getByRole('button', { name: 'EJECUTAR', exact: true }).click()
 
           // Notice must be NON-MODAL (no dialog open)
           const dialogs = await page.locator('dialog[open]').count()
@@ -416,8 +352,7 @@ describe('Matricula Regular US5 & US6 Integration: 4 autonomous groups across bo
           const notice = page.locator('.regular-enrollment__notice--warning')
           await notice.waitFor({ state: 'visible' })
           const noticeText = await notice.textContent()
-          expect(noticeText).toContain('Solicitud pendiente de configuración')
-          expect(noticeText).toContain('no se registró matrícula')
+          expect(noticeText).toBe('La solicitud requiere configuración local y no se presenta como matrícula.')
 
           // Zero writes verification:
           // - 0 enrollments created
@@ -467,33 +402,25 @@ describe('Matricula Regular US5 & US6 Integration: 4 autonomous groups across bo
           const actor = fixture.actors[0]!
           const planCourses = fixture.offer.filter((c) => c.planId === actor.scope.planId)
 
-          app!.repository.resetForTests(fixtures)
+          const runId = app!.repository.resetForTests(fixtures)
 
-          await openScreen(page, actor.actorId)
-          await page.getByRole('button', { name: 'Iniciar sesión local', exact: true }).click()
-          await page.getByText('Sesión local iniciada.', { exact: false }).waitFor()
+          await openScreen(page, actor.actorId, runId)
 
-          // Select courses
-          for (const course of planCourses) {
-            await page
-              .locator('.section-button')
-              .filter({ has: page.getByText(course.sections[0]!.sectionId, { exact: true }) })
-              .click()
-          }
+          await chooseCourses(page, planCourses)
 
           // Cut transport BEFORE reaching Nest for the POST submit
           let dropSubmitOnce = true
           await page.route('**/solicitudes', (route) => {
             if (dropSubmitOnce && route.request().method() === 'POST') {
               dropSubmitOnce = false
-              route.abort('failed')
+              return route.abort('failed')
             } else {
-              route.continue()
+              return route.continue()
             }
           })
 
-          // Submit
-          await page.getByRole('button', { name: 'Enviar solicitud de matrícula', exact: true }).click()
+          const confirmDialog = await confirmSubmission(page)
+          await confirmDialog.getByRole('button', { name: 'EJECUTAR', exact: true }).click()
 
           // UI enters uncertain state: "Resultado no confirmado"
           const uncertainBlock = page.locator('.regular-enrollment__uncertain')
@@ -531,9 +458,8 @@ describe('Matricula Regular US5 & US6 Integration: 4 autonomous groups across bo
           // Click "Repetir el mismo envío" -> Manual replay sends same UUID and payload with active session
           await page.getByRole('button', { name: 'Repetir el mismo envío', exact: true }).click()
 
-          // Accepted dialog appears
-          await page.locator('dialog.enrollment-result-dialog').waitFor({ state: 'visible' })
-          expect(await page.locator('#result-dialog-title').textContent()).toBe('Matrícula Regular Aceptada')
+          // Manual replay succeeds and the current screen navigates to the accepted report.
+          await page.waitForURL(/\/local\/matricula-regular\/reporte\//)
 
           // Snapshot has exactly 1 enrollment
           const snap = app!.repository.readSnapshot()
@@ -560,18 +486,11 @@ describe('Matricula Regular US5 & US6 Integration: 4 autonomous groups across bo
           const actor = fixture.actors[0]!
           const planCourses = fixture.offer.filter((c) => c.planId === actor.scope.planId)
 
-          app!.repository.resetForTests(fixtures)
+          const runId = app!.repository.resetForTests(fixtures)
 
-          await openScreen(page, actor.actorId)
-          await page.getByRole('button', { name: 'Iniciar sesión local', exact: true }).click()
-          await page.getByText('Sesión local iniciada.', { exact: false }).waitFor()
+          await openScreen(page, actor.actorId, runId)
 
-          for (const course of planCourses) {
-            await page
-              .locator('.section-button')
-              .filter({ has: page.getByText(course.sections[0]!.sectionId, { exact: true }) })
-              .click()
-          }
+          await chooseCourses(page, planCourses)
 
           // Cut transport AFTER real commit: server executes and commits, but response is dropped
           let dropAfterCommit = true
@@ -586,7 +505,8 @@ describe('Matricula Regular US5 & US6 Integration: 4 autonomous groups across bo
             }
           })
 
-          await page.getByRole('button', { name: 'Enviar solicitud de matrícula', exact: true }).click()
+          const confirmDialog = await confirmSubmission(page)
+          await confirmDialog.getByRole('button', { name: 'EJECUTAR', exact: true }).click()
 
           // UI received network error and shows uncertain
           const uncertainBlock = page.locator('.regular-enrollment__uncertain')
@@ -615,9 +535,8 @@ describe('Matricula Regular US5 & US6 Integration: 4 autonomous groups across bo
 
           // Reload page to verify sessionStorage restore
           await page.reload()
-          if (actor.actorId !== 'SYN-SIS-A') {
-            await page.locator('.regular-enrollment select').selectOption(actor.actorId)
-          }
+          await page.locator('.regular-enrollment__local-details > summary').click()
+          await page.locator('.enrollment-calendar-panel').waitFor()
           await page.locator('.regular-enrollment__uncertain').waitFor({ state: 'visible' })
 
           // Verify sessionStorage exact 5 keys restored after reload
@@ -637,9 +556,8 @@ describe('Matricula Regular US5 & US6 Integration: 4 autonomous groups across bo
           // User clicks "Consultar resultado" -> GET known -> returns stored outcome
           await page.getByRole('button', { name: 'Consultar resultado', exact: true }).click()
 
-          // Dialog opens with accepted result
-          await page.locator('dialog.enrollment-result-dialog').waitFor({ state: 'visible' })
-          expect(await page.locator('#result-dialog-title').textContent()).toBe('Matrícula Regular Aceptada')
+          // Known accepted result opens the current report after the alert's automatic navigation.
+          await page.waitForURL(/\/local\/matricula-regular\/reporte\//)
 
           // Snapshot must NOT have duplicate enrollment or double occupied quota!
           const snapFinal = app!.repository.readSnapshot()
@@ -660,7 +578,7 @@ describe('Matricula Regular US5 & US6 Integration: 4 autonomous groups across bo
     )
 
     it.each(['SISTEMAS', 'SOFTWARE'] as const)(
-      '%s: clears stored intent and shows warning without POST when environment run changes (app.reset)',
+      '%s: clears stored intent after synthetic run reset and re-entry without resubmitting it',
       async (school: School) => {
         const { browser, browserContext, page } = await createBrowserSession()
         try {
@@ -670,26 +588,20 @@ describe('Matricula Regular US5 & US6 Integration: 4 autonomous groups across bo
           const actor = fixture.actors[0]!
           const planCourses = fixture.offer.filter((c) => c.planId === actor.scope.planId)
 
-          app!.repository.resetForTests(fixtures)
+          const runId = app!.repository.resetForTests(fixtures)
 
-          await openScreen(page, actor.actorId)
-          await page.getByRole('button', { name: 'Iniciar sesión local', exact: true }).click()
-          await page.getByText('Sesión local iniciada.', { exact: false }).waitFor()
+          await openScreen(page, actor.actorId, runId)
 
-          for (const course of planCourses) {
-            await page
-              .locator('.section-button')
-              .filter({ has: page.getByText(course.sections[0]!.sectionId, { exact: true }) })
-              .click()
-          }
+          await chooseCourses(page, planCourses)
 
           // Abort POST to leave an uncertain intent in sessionStorage
           await page.route('**/solicitudes', (route) => {
-            if (route.request().method() === 'POST') route.abort('failed')
-            else route.continue()
+            if (route.request().method() === 'POST') return route.abort('failed')
+            else return route.continue()
           })
 
-          await page.getByRole('button', { name: 'Enviar solicitud de matrícula', exact: true }).click()
+          const confirmDialog = await confirmSubmission(page)
+          await confirmDialog.getByRole('button', { name: 'EJECUTAR', exact: true }).click()
           await page.locator('.regular-enrollment__uncertain').waitFor({ state: 'visible' })
 
           const oldRunId = app!.repository.runId
@@ -707,8 +619,10 @@ describe('Matricula Regular US5 & US6 Integration: 4 autonomous groups across bo
             }
           })
 
-          // Click "Actualizar contexto" to fetch new context with new runId
-          await page.getByRole('button', { name: 'Actualizar contexto', exact: true }).click()
+          // Enter the new run through the existing synthetic-profile login.
+          await page.getByRole('button', { name: 'Salir', exact: true }).click()
+          await loginAs(page, newRunId, actor.actorId)
+          await page.locator('.regular-enrollment__local-details > summary').click()
 
           // UI resets uncertain intent with warning notice without sending POST
           const notice = page.locator('.regular-enrollment__notice--warning')

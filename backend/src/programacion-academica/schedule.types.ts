@@ -8,16 +8,22 @@ export type AcademicTeacher = {
   maxWeeklyMinutes: number
   preferences?: TimeInterval[]
   sectionLimits?: Array<{ courseId: string, maxSections: number }>
+  facultyId?: string
+  category?: 'principal' | 'asociado' | 'auxiliar'
+  qualificationSource?: 'synthetic'
 }
 export type AcademicRoom = {
   id: string
   capacity: number
   availability: TimeInterval[]
+  kind?: 'classroom' | 'laboratory'
 }
 export type AcademicSection = {
   id: string
   courseId: string
   capacity: number
+  cycle?: number
+  ordinal?: number
 }
 /** One scheduled session, not the entire weekly load of a section. */
 export type AcademicAssignment = {
@@ -26,6 +32,7 @@ export type AcademicAssignment = {
   teacherId: string
   roomId: string
   interval: TimeInterval
+  sessionType?: string
 }
 export type CompatibleCourseGroup = {
   id: string
@@ -42,7 +49,7 @@ export type AcademicSchedule = {
 export type ScheduleIssueCode = 'INVALID_INPUT' | 'RESOURCE_NOT_FOUND'
   | 'TEACHER_CONFLICT' | 'ROOM_CONFLICT' | 'SECTION_CONFLICT' | 'COURSE_GROUP_CONFLICT'
   | 'ROOM_CAPACITY' | 'TEACHER_UNAVAILABLE' | 'ROOM_UNAVAILABLE'
-  | 'TEACHER_NOT_QUALIFIED' | 'TEACHER_LOAD_EXCEEDED' | 'TEACHER_SECTION_LIMIT' | 'SECTION_TEACHER_MISMATCH'
+  | 'TEACHER_NOT_QUALIFIED' | 'TEACHER_LOAD_EXCEEDED' | 'TEACHER_SECTION_LIMIT' | 'SECTION_TEACHER_MISMATCH' | 'ROOM_KIND_MISMATCH' | 'COHORT_CONFLICT'
 export type ScheduleIssue = {
   code: ScheduleIssueCode
   resourceType: 'input' | 'course' | 'teacher' | 'room' | 'section' | 'group'
