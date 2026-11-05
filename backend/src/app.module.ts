@@ -13,6 +13,7 @@ import { LocalProfileDashboardModule } from './local-profile-dashboard/local-pro
 import { PublicSimulatorPersistenceModule } from './persistence/public-simulator.module.js'
 import { AcademicSchedulingModule } from './programacion-academica/demo-module.js'
 import { PrematriculaModule } from './prematricula/prematricula.module.js'
+import { OperationalOfferModule } from './matricula-regular/operational-offer.module.js'
 
 const publicDeployment = process.env.SIMULATOR_DEPLOYMENT === 'public'
 if (publicDeployment) {
@@ -33,6 +34,7 @@ if (publicDeployment) {
     LocalProfileDashboardModule,
     ...(process.env.SUM_ACADEMIC_SCHEDULING === '1' ? [AcademicSchedulingModule] : []),
     ...(process.env.SUM_ACADEMIC_SCHEDULING === '1' && process.env.SUM_LOCAL_SCENARIOS === '1' ? [PrematriculaModule] : []),
+    ...(process.env.SUM_ACADEMIC_SCHEDULING === '1' && process.env.SUM_LOCAL_SCENARIOS === '1' ? [OperationalOfferModule] : []),
   ],
   controllers: [AppController],
   providers: [AppService],

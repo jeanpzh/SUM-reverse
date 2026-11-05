@@ -26,6 +26,10 @@ const profiles = [
   { actorId: 'SYN-SOFT-B', name: 'Estudiante sintético B', scope: scope('SOFTWARE') },
 ]
 const catalogBody = () => ({ runId, data: { serverNow, profiles: structuredClone(profiles) } })
+const operationalCatalogBody = (catalogRunId = otherRunId) => ({ runId: catalogRunId, data: {
+  serverNow, profiles: structuredClone(profiles.slice(0, 2)).map((profile) => ({ ...profile,
+    scope: { ...profile.scope, period: '2027-I' } })),
+} })
 const scenariosBody = () => ({ runId, data: {
   serverNow, currentScenarioId: 'regular',
   scenarios: scenarioIds.map((scenarioId) => ({
@@ -95,6 +99,23 @@ test('catalog is one credential-free GET without query or body and is validated 
   const broken = recorder(() => jsonResponse(five))
   await assert.rejects(broken.api.catalog(), (error) =>
     error instanceof LocalProfileApiError && error.kind === 'protocol' && error.operation === 'catalog')
+})
+
+test('catalog can load an exact operational run without changing the legacy catalog request', async () => {
+  const { calls, api } = recorder(() => jsonResponse(operationalCatalogBody()))
+  const response = await api.catalog({ runId: otherRunId })
+  assert.equal(response.runId, otherRunId)
+  assert.deepEqual(response.data.profiles.map((profile) => [profile.actorId, profile.scope.period]), [
+    ['SYN-SIS-A', '2027-I'], ['SYN-SIS-B', '2027-I'],
+  ])
+  assert.equal(calls[0]!.url, `/api/local/perfiles/v1/perfiles?runId=${otherRunId}`)
+  assert.equal(calls[0]!.init?.method, 'GET')
+  assert.equal(calls[0]!.init?.credentials, 'omit')
+  assert.equal(calls[0]!.init?.body, undefined)
+  await assert.rejects(recorder(() => jsonResponse(operationalCatalogBody(runId))).api.catalog({ runId: otherRunId }), /otra ejecución/)
+  const invalid = recorder(() => jsonResponse(catalogBody()))
+  await assert.rejects(invalid.api.catalog({ runId: 'bad' }), /no es válida/)
+  assert.equal(invalid.calls.length, 0)
 })
 
 test('scenario catalog validates all nine cases and rejects duplicated or cross-school recommendations', async () => {

@@ -3,6 +3,7 @@ import { LocalProfileApiError } from './localProfileDashboard.ts'
 import type { LocalProfilePayloadMap } from './localProfileDashboard.ts'
 import type { DashboardKey, Identity } from '../../../shared/local-profile-dashboard.mjs'
 import { validateDashboardIdentity } from '../../../shared/local-profile-dashboard.mjs'
+import { validateSessionId } from '../../../shared/matricula-regular.mjs'
 import type { MatriculaRegularSession, MatriculaRegularUuid } from '../../../shared/matricula-regular.mjs'
 import type { AccessPrincipal, AccessProvider } from './accessProvider.ts'
 
@@ -36,7 +37,7 @@ export function bindVisibilityRenewal(doc: VisibilitySource, renew: () => Promis
 type Formulario = ApiResponseMap['formulario']
 type SnapshotBase = { generation: number }
 export type LocalProfileSnapshot =
-  | (SnapshotBase & { status: 'anonymous'; notice: 'reset' | null })
+  | (SnapshotBase & { status: 'anonymous'; notice: 'reset' | null; reentryRunId?: string })
   | (SnapshotBase & { status: 'entering' })
   | (SnapshotBase & { status: 'error'; message: string; retryable: boolean })
   | (SnapshotBase & ActiveProfile & { status: 'active'; renewing: boolean; renewError: string | null })
@@ -55,7 +56,7 @@ type ActiveProfile = {
 
 type ReadResult<K extends DashboardKey> = { runId: string; data: { serverNow: string; payload: LocalProfilePayloadMap[K] } }
 type DashboardApi = {
-  catalog(options?: { signal?: AbortSignal }): Promise<{ runId: string; data: { serverNow: string; profiles: Array<{ actorId: string }> } }>
+  catalog(options?: { signal?: AbortSignal; runId?: string }): Promise<{ runId: string; data: { serverNow: string; profiles: Array<{ actorId: string; scope?: { period: string } }> } }>
   read<K extends DashboardKey>(key: K, identity: Identity, options?: { signal?: AbortSignal }): Promise<{
     runId: string; data: { actorId: Identity['actorId']; sessionId: string; key: K; serverNow: string; payload: LocalProfilePayloadMap[K] }
   }>
@@ -184,9 +185,20 @@ export function createLocalProfileSessionStore(options: {
       if (snapshot.status === 'active') scheduleExpiry()
     }
   }
-  async function enter(actorId?: Identity['actorId'], entryOptions: { expectedRunId?: string } = {}): Promise<void> {
+  async function enter(actorId?: Identity['actorId'], entryOptions: { expectedRunId?: string; contextRunId?: string } = {}): Promise<void> {
     if (entryPromise) return entryPromise
+    if (entryOptions.contextRunId !== undefined) {
+      try { validateSessionId(entryOptions.contextRunId) } catch {
+        setError(new LocalProfileApiError({ kind: 'protocol', operation: 'catalog', message: 'La ejecución solicitada no es válida.' }))
+        return
+      }
+      if (options.publicAccess) {
+        setError(new LocalProfileApiError({ kind: 'configuration', operation: 'catalog', message: 'El acceso público no admite cambiar la ejecución local.' }))
+        return
+      }
+    }
     if (snapshot.status === 'active' && (snapshot.actorId === actorId
+      && (entryOptions.contextRunId === undefined || snapshot.runId === entryOptions.contextRunId)
       || (options.publicAccess && snapshot.actorId === options.accessProvider?.getSnapshot()?.actorId))) return
     if (snapshot.status === 'expired') clearActive('logout')
     const entryRevision = requestRevision
@@ -195,7 +207,7 @@ export function createLocalProfileSessionStore(options: {
       try {
         const access = options.publicAccess ? options.accessProvider?.getSnapshot() ?? null : null
         const principal: AccessPrincipal | null = options.publicAccess ? access : null
-        const localCatalog = options.publicAccess ? null : await options.dashboardApi.catalog()
+        const localCatalog = options.publicAccess ? null : await options.dashboardApi.catalog({ runId: entryOptions.contextRunId })
         const activeActorId = principal?.actorId ?? actorId
         const runId = principal?.runId ?? localCatalog?.runId
         if (requestRevision !== entryRevision) return
@@ -203,6 +215,9 @@ export function createLocalProfileSessionStore(options: {
         if (!options.publicAccess && entryOptions.expectedRunId !== undefined && localCatalog?.runId !== entryOptions.expectedRunId) {
           throw new LocalProfileApiError({ kind: 'http', operation: 'catalog', code: 'RUN_CHANGED',
             message: 'La prueba cambió antes de ingresar. Vuelve a elegir escenario y perfil.' })
+        }
+        if (!options.publicAccess && entryOptions.contextRunId !== undefined && localCatalog?.runId !== entryOptions.contextRunId) {
+          throw new LocalProfileApiError({ kind: 'protocol', operation: 'catalog', message: 'El catálogo no corresponde a la oferta solicitada.' })
         }
         const profile = localCatalog?.data.profiles.find((candidate) => candidate.actorId === activeActorId)
         if (!options.publicAccess && !profile) throw new LocalProfileApiError({ kind: 'protocol', operation: 'catalog', message: 'El perfil no pertenece al catálogo sintético.' })
@@ -274,7 +289,19 @@ export function createLocalProfileSessionStore(options: {
         storeIdentity(null)
         if (requestRevision !== entryRevision) return
         const runChanged = error instanceof Error && 'code' in error && error.code === 'RUN_CHANGED'
-        publish({ status: 'anonymous', notice: runChanged ? 'reset' : null, generation })
+        let reentryRunId: string | undefined
+        if (!options.publicAccess && error instanceof Error && 'code' in error
+          && (error.code === 'SESSION_NOT_FOUND' || error.code === 'SESSION_EXPIRED')) {
+          try {
+            const catalog = await options.dashboardApi.catalog({ runId: stored.runId })
+            if (catalog.runId === stored.runId && catalog.data.profiles.length === 2
+              && catalog.data.profiles.every((profile) => profile.scope?.period === '2027-I')
+              && catalog.data.profiles.some((profile) => profile.actorId === stored.actorId)) reentryRunId = stored.runId
+          } catch { /* An unavailable context never becomes a fallback offer. */ }
+        }
+        if (requestRevision !== entryRevision) return
+        publish({ status: 'anonymous', notice: runChanged ? 'reset' : null, generation,
+          ...(reentryRunId ? { reentryRunId } : {}) })
       }
     })()
     const wrapped = work.finally(() => { if (entryPromise === wrapped) entryPromise = null })
@@ -317,6 +344,7 @@ export function createLocalProfileSessionStore(options: {
     if (options.publicAccess) void options.accessProvider?.logout().catch(() => undefined)
     clearActive('logout')
     storeIdentity(null)
+    if (snapshot.status === 'anonymous' && snapshot.reentryRunId) publish({ status: 'anonymous', notice: null, generation })
     if (snapshot.status === 'entering') {
       entryPromise = null
       requestRevision += 1

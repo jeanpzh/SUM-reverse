@@ -92,7 +92,8 @@ function validateCatalog(value) {
     serverNow: canonicalInstant,
     profiles: (items, path) => {
       if (!Array.isArray(items)) fail(path, 'array')
-      if (items.length !== actorIds.length) fail(path, 'catálogo exacto de cuatro perfiles')
+      const operational = items.length === 2 && items.every((item, index) => item?.actorId === actorIds[index] && item?.scope?.period === '2027-I')
+      if (items.length !== actorIds.length && !operational) fail(path, 'catálogo exacto de cuatro perfiles o dos perfiles operativos 2027-I')
       const seen = new Set()
       items.forEach((item, index) => {
         validateActorChoice(item, `${path}[${index}]`)

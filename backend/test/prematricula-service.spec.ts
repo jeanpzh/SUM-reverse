@@ -54,7 +54,7 @@ function setup() {
   process.env.SUM_ACADEMIC_SCHEDULING = '1'
   delete process.env.SIMULATOR_DEPLOYMENT
   const snapshot = { runId: uuidA, actors, sessions: [], profiles: [], offer: [], requests: [], enrollments: [], reports: [] } as never
-  const repository = { readSnapshot: () => structuredClone(snapshot) } as never
+  const repository = { hasOperationalRun: () => false, readSnapshot: () => structuredClone(snapshot) } as never
   let sessionActive = true
   const sessions = { requireActive: vi.fn(() => { if (!sessionActive) throw new MatriculaRegularError(404, uuidA, 'SESSION_NOT_FOUND') }) } as never
   const context = { now: () => new Date('2026-11-04T12:00:00.000Z') } as never
@@ -64,7 +64,7 @@ function setup() {
     publications: async () => ({ currentId: null, items: [] }),
     getPublication: async (id: string) => id === '00000000-0000-4000-8000-000000000003' ? makePublication(actors[0]!) : Promise.reject(new HttpException({ error: { code: 'DRAFT_NOT_FOUND', message: 'missing' } }, 404)),
   } as { publications: () => Promise<{ currentId: null, items: never[] }>, getPublication: (id: string) => Promise<AcademicPublication> }
-  const create = () => new PrematriculaService(repository, context, sessions, scenarios, saved)
+  const create = () => new PrematriculaService(repository, context, sessions, scenarios, saved as never)
   const identity = makeIdentity()
   const publication = makePublication(actors[0]!)
   const request = (overrides: Partial<E2SaveRequest> = {}): E2SaveRequest => ({
@@ -204,8 +204,10 @@ describe('prematrícula E2 local', () => {
   it('no permite que otra asignatura seleccionada satisfaga un prerrequisito pendiente', async () => {
     const state = setup()
     const learner = projectActor(actors[0]!)
-    const unmet = learner.courses.find((course) => classify(learner, course.courseCode, false).category === 'non-eligible'
-      && classify(learner, course.courseCode, false).code === 'PREREQUISITE_NOT_MET')!
+    const unmet = learner.courses.find((course) => {
+      const outcome = classify(learner, course.courseCode, false)
+      return outcome.category === 'non-eligible' && outcome.code === 'PREREQUISITE_NOT_MET'
+    })!
     const prerequisite = unmet.prerequisiteIds[0]!
     const publication = makePublication(actors[0]!, 1, [unmet.courseCode, prerequisite])
     state.saved.getPublication = async () => publication

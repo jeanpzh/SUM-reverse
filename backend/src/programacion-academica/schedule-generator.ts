@@ -6,6 +6,7 @@ import { GENERATOR_LIMITS } from './generator-limits.js'
 import { preferenceRank } from './teacher-preferences.js'
 import type { GeneratorExecutionOptions, GeneratorInput, GeneratorResult, RequiredSession } from './generator.types.js'
 import type { AcademicAssignment, TimeInterval } from './schedule.types.js'
+import { THESIS_COURSE_IDS } from '../../../shared/academic-planning-policy.mjs'
 
 type SearchUnit = { requirements: RequiredSession[], mode: 'continuous' | 'split' }
 
@@ -56,13 +57,15 @@ export function generateAcademicSchedule(value: unknown, options: GeneratorExecu
     const blockDuration = componentRequirements.reduce((total, item) => total + item.durationMinutes, 0)
     const assignedTeacher = schedule.assignments.find((item) => item.sectionId === first.sectionId)?.teacherId
 
-    const eligibleTeachers = input.teachers.filter((teacher) => !assignedTeacher || teacher.id === assignedTeacher)
+    const eligibleTeachers = input.teachers.filter((teacher) => (!assignedTeacher || teacher.id === assignedTeacher)
+      && isEligibleForCourse(teacher, first.courseId, input))
     const hasPreferenceWindows = input.allocationPolicy !== 'first-feasible'
       && eligibleTeachers.some((teacher) => teacher.courseIds.includes(first.courseId) && teacher.preferences?.length)
-    const rankOrder = hasPreferenceWindows ? [0, 1, 2] : [1]
+    const rankOrder = input.planningPolicy ? [0, 1, 2, 3, 4, 5, 6, 7, 8] : hasPreferenceWindows ? [0, 1, 2] : [1]
     const duration = mode === 'continuous' ? blockDuration : first.durationMinutes
     for (const targetRank of rankOrder) {
-      let teachers = input.teachers.filter((teacher) => !assignedTeacher || teacher.id === assignedTeacher)
+      let teachers = input.teachers.filter((teacher) => (!assignedTeacher || teacher.id === assignedTeacher)
+        && isEligibleForCourse(teacher, first.courseId, input))
       if (input.allocationPolicy === 'balanced') {
         teachers = teachers.slice().sort((left, right) => {
           const load = (id: string) => schedule.assignments.filter((item) => item.teacherId === id)
@@ -95,8 +98,15 @@ export function generateAcademicSchedule(value: unknown, options: GeneratorExecu
           rejectionCounts.TEACHER_SECTION_LIMIT = (rejectionCounts.TEACHER_SECTION_LIMIT ?? 0) + 1
           continue
         }
-        for (const window of input.windows) {
+        const slots = input.windows.flatMap((window) => {
+          const values: Array<{ window: TimeInterval, start: number, rank: number }> = []
           for (let start = window.startMinute; start + duration <= window.endMinute; start += input.startStepMinutes) {
+            const rank = planningTimeRank(first, start, window.day, input, duration)
+            if (rank !== null) values.push({ window, start, rank })
+          }
+          return values
+        }).sort((left, right) => left.rank - right.rank || left.window.day - right.window.day || left.start - right.start)
+        for (const { window, start } of slots) {
           if (!checkpoint()) return
           candidateVisits++
           const componentIntervals: TimeInterval[] = []
@@ -107,9 +117,11 @@ export function generateAcademicSchedule(value: unknown, options: GeneratorExecu
           }
           const partial = componentRequirements.map((requirement, index): AcademicAssignment => ({
             id: requirement.id, sectionId: requirement.sectionId, teacherId: teacher.id, roomId: '', interval: componentIntervals[index]!,
+            ...(requirement.type ? { sessionType: requirement.type } : {}),
           }))
 
-          const rank = input.allocationPolicy === 'first-feasible' ? 1 : preferenceRank(teacher.preferences, componentIntervals)
+          const preference = input.allocationPolicy === 'first-feasible' ? 1 : preferenceRank(teacher.preferences, componentIntervals)
+          const rank = input.planningPolicy ? slotsRank(first, componentIntervals[0]!, input) * 3 + preference : preference
           if (rank !== targetRank) continue
           // Avoid room-product exploration for blocks that already violate teacher rules.
           if (componentIntervals.some((interval) => !availabilityCovers(teacher.availability, interval.day, interval.startMinute, interval.endMinute))) continue
@@ -127,7 +139,7 @@ export function generateAcademicSchedule(value: unknown, options: GeneratorExecu
           function* selectRooms(index: number): Generator<AcademicAssignment[]> {
             if (index === partial.length) {
               const candidate = partial.map((assignment) => ({ ...assignment }))
-              const validation = validateAcademicSchedule({ ...schedule, assignments: [...schedule.assignments, ...candidate] })
+              const validation = validateAcademicSchedule({ ...schedule, assignments: [...schedule.assignments, ...candidate] }, { planningPolicy: Boolean(input.planningPolicy) })
               if (validation.valid && validateSectionDelivery({ ...schedule, assignments: [...schedule.assignments, ...candidate] }, requirements, input).length === 0) yield candidate
               else for (const issue of validation.issues) rejectionCounts[issue.code] = (rejectionCounts[issue.code] ?? 0) + 1
               return
@@ -135,10 +147,14 @@ export function generateAcademicSchedule(value: unknown, options: GeneratorExecu
             for (const room of input.rooms) {
               if (!checkpoint()) return
               candidateVisits++
+              if (input.planningPolicy && partial[index]!.sessionType === 'L' && room.kind !== 'laboratory') {
+                rejectionCounts.ROOM_KIND_MISMATCH = (rejectionCounts.ROOM_KIND_MISMATCH ?? 0) + 1
+                continue
+              }
               partial[index]!.roomId = room.id
               // Capacity, room availability and synchronous conflicts prune this branch before
               // the remaining room product is explored.
-              const validation = validateAcademicSchedule({ ...schedule, assignments: [...schedule.assignments, ...partial.slice(0, index + 1)] })
+              const validation = validateAcademicSchedule({ ...schedule, assignments: [...schedule.assignments, ...partial.slice(0, index + 1)] }, { planningPolicy: Boolean(input.planningPolicy) })
               if (validation.valid) yield* selectRooms(index + 1)
               else for (const issue of validation.issues) rejectionCounts[issue.code] = (rejectionCounts[issue.code] ?? 0) + 1
               if (limitReason) return
@@ -146,7 +162,6 @@ export function generateAcademicSchedule(value: unknown, options: GeneratorExecu
           }
           yield* selectRooms(0)
           if (limitReason) return
-          }
         }
       }
     }
@@ -218,6 +233,7 @@ function getDiagnostic(
   const labels: Partial<Record<keyof NonNullable<GeneratorResult['rejectionCounts']>, string>> = {
     RESOURCE_NOT_FOUND: 'referencias de recursos', TEACHER_CONFLICT: 'cruces de docente', ROOM_CONFLICT: 'cruces de ambiente',
     SECTION_CONFLICT: 'cruces de sección', COURSE_GROUP_CONFLICT: 'cruces de grupo compatible', ROOM_CAPACITY: 'capacidad de ambiente',
+    COHORT_CONFLICT: 'cruces de cohorte', ROOM_KIND_MISMATCH: 'tipo de ambiente',
     TEACHER_UNAVAILABLE: 'disponibilidad docente', ROOM_UNAVAILABLE: 'disponibilidad de ambiente',
     TEACHER_NOT_QUALIFIED: 'habilitación docente', TEACHER_LOAD_EXCEEDED: 'carga docente', INVALID_INPUT: 'forma de asignación',
   }
@@ -233,7 +249,7 @@ function proveNecessaryConstraint(input: GeneratorInput, requirements: RequiredS
   const courseIds = new Set(requirements.map((item) => item.courseId))
   for (const courseId of courseIds) {
     const courseRequirements = requirements.filter((item) => item.courseId === courseId)
-    const teacherPool = input.teachers.filter((teacher) => teacher.courseIds.includes(courseId))
+    const teacherPool = input.teachers.filter((teacher) => teacher.courseIds.includes(courseId) && isEligibleForCourse(teacher, courseId, input))
     if (!teacherPool.length) return { code: 'NO_QUALIFIED_TEACHER', message: `No hay docente habilitado para el curso ${courseId}` }
     const requiredCourseMinutes = courseRequirements.reduce((sum, item) => sum + item.durationMinutes, 0)
     const totalQualifiedLoad = teacherPool.reduce((sum, teacher) => sum + teacher.maxWeeklyMinutes, 0)
@@ -282,4 +298,30 @@ function availabilityCovers(availability: TimeInterval[], day: number, start: nu
     if (coveredUntil >= end) return true
   }
   return false
+}
+
+function isEligibleForCourse(teacher: GeneratorInput['teachers'][number], courseId: string, input: GeneratorInput): boolean {
+  if (!THESIS_COURSE_IDS.includes(courseId)) return true
+  if (!input.planningPolicy) return true
+  return teacher.facultyId === 'FISI' && teacher.qualificationSource === 'synthetic' && teacher.courseIds.includes(courseId)
+}
+
+function planningTimeRank(requirement: RequiredSession, start: number, day: number, input: GeneratorInput, duration = 1): number | null {
+  const policy = input.planningPolicy
+  if (!policy) return 0
+  const course = input.courses.find((item) => item.courseId === requirement.courseId)
+  const senior = (course?.cycle ?? 0) >= 7
+  if (day === 7) return null
+  if (day === 6) return policy.allowSaturday && start >= 8 * 60 && start + duration <= 13 * 60 ? (senior ? 2 : 1) : null
+  if (day < 1 || day > 5 || start + duration > 22 * 60) return null
+  if (senior) {
+    if (start >= 18 * 60 && start < 22 * 60) return 0
+    if (policy.allowAfternoon && start >= 14 * 60 && start < 22 * 60) return 1
+    return null
+  }
+  return start >= 8 * 60 && start < 22 * 60 ? 0 : null
+}
+
+function slotsRank(requirement: RequiredSession, interval: TimeInterval, input: GeneratorInput): number {
+  return planningTimeRank(requirement, interval.startMinute, interval.day, input) ?? Number.MAX_SAFE_INTEGER
 }

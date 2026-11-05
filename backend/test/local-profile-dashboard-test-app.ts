@@ -131,7 +131,7 @@ export async function createLocalProfileDashboardTestApp(
     runtime.createSyntheticAcademicDemoFixture('SOFTWARE'),
   ]
   const seedFixtures = structuredClone(options.fixtures ?? defaultFixtures)
-  const reset = () => repository.resetForTests(structuredClone(seedFixtures))
+  const reset = () => repository.resetForTests(structuredClone([...seedFixtures]))
   reset()
   if (options.scenarios !== undefined) {
     const scenarios = await import('../dist/local-profile-dashboard/local-scenarios.service.js')

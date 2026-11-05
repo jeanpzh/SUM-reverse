@@ -25,9 +25,12 @@ export class LocalProfileSessionService {
     private readonly contextService: ContextService,
   ) {}
 
-  catalog(): MatriculaRegularEnvelope<ProfileCatalog> {
-    const snapshot = this.repository.readSnapshot()
-    const profiles = actorOrder.map((actorId): ProfileChoice => {
+  catalog(runId?: string): MatriculaRegularEnvelope<ProfileCatalog> {
+    const snapshot = this.repository.readSnapshot(runId)
+    const profileOrder = snapshot.runId === this.repository.runId
+      ? actorOrder.filter((actorId) => snapshot.actors.some((actor) => actor.actorId === actorId))
+      : snapshot.actors.map((actor) => actor.actorId as ActorId)
+    const profiles = profileOrder.map((actorId): ProfileChoice => {
       const actor = snapshot.actors.find((candidate) => candidate.actorId === actorId)
       if (actor === undefined) {
         throw new MatriculaRegularError(500, snapshot.runId, 'LOCAL_FAILURE')
@@ -41,7 +44,7 @@ export class LocalProfileSessionService {
     })
     const response = {
       runId: snapshot.runId,
-      data: { serverNow: this.contextService.now().toISOString(), profiles },
+      data: { serverNow: this.contextService.now(snapshot.runId).toISOString(), profiles },
     }
     validateProfileCatalogResponse(response)
     return response

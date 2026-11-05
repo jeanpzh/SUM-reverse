@@ -1,3 +1,4 @@
+import { validateChoice } from '../../shared/matricula-regular.mjs'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import supertest from 'supertest'
 import * as contract from '../../shared/matricula-regular.mjs'
@@ -249,7 +250,7 @@ describe('T033/T035 MR-SUBMIT rejection sets and atomic commit', () => {
     expect(after.offer.map(({ courseId, sections }) => [courseId, sections[0]!.occupied]))
       .toEqual(before.offer.map(({ courseId, sections }) => [courseId, sections[0]!.occupied + (enrolledCourses.has(courseId) ? 1 : 0)]))
     const report = after.reports[0]![1]
-    expect(report.rows.map(({ courseId }) => courseId)).toEqual(payload.selection.map(({ courseId }) => courseId).sort((left, right) => left.localeCompare(right)))
+    expect(report.rows.map(({ courseId }) => courseId)).toEqual(payload.selection.map((choice) => { validateChoice(choice); return choice.courseId }).sort((left, right) => left.localeCompare(right)))
     expect(report.totalCredits).toBe(12)
   })
 

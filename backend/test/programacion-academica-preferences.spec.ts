@@ -5,7 +5,7 @@ import { validateAcademicSchedule } from '../src/programacion-academica/schedule
 import { assessTeacherPreferences } from '../src/programacion-academica/teacher-preferences.js'
 import type { GeneratorInput } from '../src/programacion-academica/generator.types.js'
 
-const window = { day: 1, startMinute: 480, endMinute: 1440 }
+const window = { day: 1 as const, startMinute: 480, endMinute: 1440 }
 const makeInput = (): GeneratorInput => ({
   courses: [{ courseId: 'ERP20118104', estimatedDemand: 180, targetCapacity: 45,
     weeklySessions: [{ id: 'T', durationMinutes: 120 }, { id: 'P', durationMinutes: 120 }] }],
@@ -114,7 +114,7 @@ describe('academic teacher preferences and section limits', () => {
     ]
     expect(generateAcademicSchedule(duplicate).status).toBe('invalid-input')
     const policy = makeInput()
-    policy.allocationPolicy = 'magic'
+    Reflect.set(policy, 'allocationPolicy', 'magic')
     expect(generateAcademicSchedule(policy).status).toBe('invalid-input')
   })
 })

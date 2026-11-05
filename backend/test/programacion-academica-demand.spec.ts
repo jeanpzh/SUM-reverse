@@ -137,7 +137,8 @@ describe('synthetic academic demand estimation', () => {
 
   it('keeps malformed dates and courses outside a learner plan out of the eligible total', () => {
     const outsidePlan = oneLearner({ identity: 'SYN-OUTSIDE-001', courses: oneLearner().courses.filter((course) => course.courseCode !== '20118104'), attempts: [] })
-    const malformed = oneLearner({ identity: 'SYN-MALFORMED-001', attempts: [{ courseCode: '20118095', period: '20X6-1', result: 'approved' }] })
+    const malformed = oneLearner({ identity: 'SYN-MALFORMED-001', attempts: [{ courseCode: '20118095', period: '2026-1', result: 'approved' }] })
+    Reflect.set(malformed.attempts[0]!, 'period', '20X6-1')
     setPopulation([outsidePlan, malformed])
     const result = row('existing-regular-v1')
     expect(result.eligible).toBe(0)

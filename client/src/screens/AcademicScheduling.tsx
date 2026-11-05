@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { DataTable, PageTitle } from '../components/Common'
-import { fetchAcademicCatalog, estimateAcademicDemand, createAcademicProposal, adjustAcademicProposal, fetchAcademicDrafts, saveAcademicDraft, resumeAcademicDraft, submitAcademicTeacherReview, respondAcademicTeacherReview, formatAcademicInterval, formatAcademicMinute, formatAcademicDuration, toAcademicScheduleEvents, academicSectionLabel, academicSessionLabel, aggregateAcademicBlocks, academicSectionCoverage, approveAcademicDraft, publishAcademicDraft, forkAcademicDraft } from '../data/academicScheduling'
+import { fetchAcademicCatalog, estimateAcademicDemand, createAcademicProposal, adjustAcademicProposal, fetchAcademicDrafts, saveAcademicDraft, resumeAcademicDraft, submitAcademicTeacherReview, respondAcademicTeacherReview, formatAcademicInterval, formatAcademicMinute, formatAcademicDuration, toAcademicScheduleEvents, academicSectionLabel, academicSessionLabel, aggregateAcademicBlocks, academicSectionCoverage, approveAcademicDraft, publishAcademicDraft, forkAcademicDraft, createAcademicPlanningDefaults, buildAcademicPlanningRequest, PLANNING_LIMITS } from '../data/academicScheduling'
+import type { PlanningPeriod, PlanningPolicy } from '../data/academicScheduling'
 import type { AcademicCatalog, AcademicDemandEstimate, AcademicProposal } from '../data/academicScheduling'
 import type { AcademicAdjustment, AcademicPlanningResources, AcademicAllocationPolicy, AcademicDemandRequest, AcademicDraftList, AcademicDraftState, AcademicWorkspace, AcademicTeacherReview, AcademicSavedDraft } from '../../../shared/programacion-academica-api.mjs'
 import { validateAcademicResources, validateAcademicRequest, validateAcademicWorkspace } from '../../../shared/programacion-academica-api.mjs'
@@ -47,6 +48,8 @@ export function AcademicScheduling() {
   const [demandError, setDemandError] = useState<string | null>(null)
   const [cycleFilter, setCycleFilter] = useState('all')
   const [resources, setResources] = useState<AcademicPlanningResources>({ teachers: [], rooms: [] })
+  const [planningPeriod, setPlanningPeriod] = useState<PlanningPeriod>('2027-I')
+  const [planningPolicy, setPlanningPolicy] = useState<PlanningPolicy | null>(null)
   const [allocationPolicy, setAllocationPolicy] = useState<AcademicAllocationPolicy>('preferences')
   const [draftTitle, setDraftTitle] = useState('Propuesta SISTEMAS 2027-I')
   const [draftState, setDraftState] = useState<AcademicDraftState>('draft')
@@ -99,18 +102,19 @@ export function AcademicScheduling() {
       const value = await fetchAcademicCatalog(globalThis.fetch, controller.signal)
       setCatalog(value)
       if (!hydratedFromDraft.current) {
-        setDemands(Object.fromEntries(value.courses.map((course) => [course.courseId, String(course.estimatedDemand)])))
-        setCapacities(Object.fromEntries(value.courses.map((course) => [course.courseId, String(course.targetCapacity)])))
+        const defaults = createAcademicPlanningDefaults(value, '2027-I')
+        setDemands(defaults.demands)
+        setCapacities(defaults.capacities)
         setPatterns(Object.fromEntries(value.courses.flatMap((course) => course.planningPatterns?.length
           ? [[course.courseId, course.planningPatterns[0].id]] : [])))
         setSelectedCourses([])
       }
       invalidateDemandEstimate()
-      if (!hydratedFromDraft.current) setResources({ teachers: value.teachers.map((teacher) => ({ ...teacher, courseIds: [...teacher.courseIds],
-        availability: teacher.availability.map((interval) => ({ ...interval })),
-        ...(teacher.preferences ? { preferences: teacher.preferences.map((interval) => ({ ...interval })) } : {}),
-        ...(teacher.sectionLimits ? { sectionLimits: teacher.sectionLimits.map((limit) => ({ ...limit })) } : {}) })),
-      rooms: value.rooms.map((room) => ({ ...room, availability: room.availability.map((interval) => ({ ...interval })) })) })
+      if (!hydratedFromDraft.current) {
+        const defaults = createAcademicPlanningDefaults(value, '2027-I')
+        setResources(defaults.resources)
+        setPlanningPolicy(defaults.planningPolicy)
+      }
     } catch (error) {
       if (!controller.signal.aborted) setCatalogError(error instanceof Error ? error.message : 'No se pudo consultar el catálogo local.')
     } finally {
@@ -152,7 +156,7 @@ export function AcademicScheduling() {
 
   const buildWorkspace = (): AcademicWorkspace => {
     if (!catalog) throw new Error('Espera a que cargue el catálogo local antes de guardar.')
-    const request = {
+    const requestBase = {
       revision: catalog.revision,
       demands: catalog.courses.filter((course) => selectedCourses.includes(course.courseId)).map((course) => ({
         courseId: course.courseId,
@@ -170,11 +174,12 @@ export function AcademicScheduling() {
         rooms: resources.rooms.map((room) => ({ ...room, availability: room.availability.map((interval) => ({ ...interval })) })),
       },
     }
+    const request = planningPolicy ? buildAcademicPlanningRequest(requestBase, planningPolicy) : requestBase
     validateAcademicRequest(request)
     validateAcademicResources(request.resources)
-    const baseRequest = demandBaseRequest && demandEstimate ? { ...demandBaseRequest,
+    const baseRequest = planningPeriod === '2027-I' && demandBaseRequest && demandEstimate ? { ...demandBaseRequest,
       courses: demandEstimate.rows.map((row) => ({ courseId: row.courseId, targetCapacity: row.targetCapacity })) } : null
-    const workspace: AcademicWorkspace = { schoolId: 'SISTEMAS', academicPeriod: '2027-I', request,
+    const workspace: AcademicWorkspace = { schoolId: 'SISTEMAS', academicPeriod: planningPeriod, request,
       demandSourceId, demandBaseRequest: baseRequest }
     validateAcademicWorkspace(workspace)
     return workspace
@@ -245,6 +250,8 @@ export function AcademicScheduling() {
     setSavedReview(draft.review)
     setWorkspaceDirty(false)
     workspaceMutation.current += 1
+    setPlanningPeriod(config.academicPeriod)
+    setPlanningPolicy(config.request.planningPolicy ? { ...config.request.planningPolicy } : null)
     setAllocationPolicy(config.request.allocationPolicy ?? 'preferences')
     setSelectedCourses(config.request.demands.map((item) => item.courseId))
     setDemands((current) => ({ ...current, ...Object.fromEntries(config.request.demands.map((item) => [item.courseId, String(item.estimatedDemand)])) }))
@@ -441,7 +448,7 @@ export function AcademicScheduling() {
   }
 
   const toggleCourse = (courseId: string, checked: boolean) => {
-    if (checked && selectedCourses.length >= 32) return
+    if (checked && selectedCourses.length >= PLANNING_LIMITS.courses) return
     invalidateProposal()
     invalidateDemandEstimate()
     setDemandBaseRequest(null)
@@ -468,7 +475,7 @@ export function AcademicScheduling() {
   }
 
   const estimateDemand = async () => {
-    if (!catalog || !selectedCourses.length) return
+    if (!catalog || planningPeriod !== '2027-I' || !selectedCourses.length) return
     const courses = catalog.courses.filter((course) => selectedCourses.includes(course.courseId))
     const intent = ++demandIntent.current
     demandController.current?.abort()
@@ -523,6 +530,28 @@ export function AcademicScheduling() {
     setAllocationPolicy(value)
   }
 
+  const applyPeriodDefaults = (period: PlanningPeriod, force = false) => {
+    if (!catalog || (period === planningPeriod && !force)) return
+    if (workspaceDirty && !window.confirm('Aplicar valores iniciales para este periodo? Se reemplazarán las demandas y capacidades editadas.')) return
+    const defaults = createAcademicPlanningDefaults(catalog, period)
+    setPlanningPeriod(period)
+    setPlanningPolicy((current) => ({ ...(current ?? defaults.planningPolicy), period }))
+    setDemands(defaults.demands)
+    setCapacities(defaults.capacities)
+    setDemandBaseRequest(null)
+    invalidateDemandEstimate()
+    invalidateProposal()
+    markWorkspaceDirty(true)
+  }
+
+  const updatePlanningException = (key: 'allowAfternoon' | 'allowSaturday', checked: boolean) => {
+    setPlanningPolicy((current) => ({ revision: 'FISI-PLANNING-1', period: planningPeriod,
+      allowAfternoon: current?.allowAfternoon ?? false, allowSaturday: current?.allowSaturday ?? false,
+      [key]: checked }))
+    invalidateProposal()
+    markWorkspaceDirty(true)
+  }
+
   const generate = async () => {
     if (!catalog) return
     markWorkspaceDirty(true)
@@ -534,7 +563,7 @@ export function AcademicScheduling() {
     setProposalError(null)
     setAdjustmentError(null)
     setGenerating(true)
-    const request = {
+    const requestBase = {
       revision: catalog.revision,
       demands: catalog.courses.filter((course) => selectedCourses.includes(course.courseId)).map((course) => ({
         courseId: course.courseId,
@@ -553,6 +582,7 @@ export function AcademicScheduling() {
       },
     }
     try {
+      const request = planningPolicy ? buildAcademicPlanningRequest(requestBase, planningPolicy) : requestBase
       validateAcademicResources(request.resources)
       const value = await createAcademicProposal(request)
       if (intent === latestIntent.current) {
@@ -600,7 +630,7 @@ export function AcademicScheduling() {
     }
   }
 
-  const validDemands = Boolean(catalog) && selectedCourses.length <= 32 && catalog!.courses
+  const validDemands = Boolean(catalog) && selectedCourses.length <= PLANNING_LIMITS.courses && catalog!.courses
     .filter((course) => selectedCourses.includes(course.courseId)).every((course) => {
     const value = demands[course.courseId]
     const capacity = capacities[course.courseId]
@@ -729,11 +759,11 @@ export function AcademicScheduling() {
       <header className="academic-scheduling__panel-heading">
         <div>
           <h3 id="academic-scheduling-courses">Paso 1 · Seleccionar cursos</h3>
-          <p>Selecciona hasta 32 cursos. La referencia histórica se conserva aparte del patrón usado en la planificación.</p>
+          <p>Selecciona hasta {PLANNING_LIMITS.courses} cursos. La referencia histórica se conserva aparte del patrón usado en la planificación.</p>
         </div>
         <div className="academic-scheduling__panel-meta">
           <span className="academic-scheduling__revision">{catalog?.revision ?? 'PA-DEMO-1'}</span>
-          <span>{selectedCourses.length} / 32 seleccionados</span>
+          <span>{selectedCourses.length} / {PLANNING_LIMITS.courses} seleccionados</span>
         </div>
       </header>
 
@@ -743,6 +773,19 @@ export function AcademicScheduling() {
         <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary" onClick={retryCatalog}>Reintentar</button>
       </div>}
       {catalog && <>
+        <div className="academic-scheduling__cycle-filter">
+          <label>Periodo de planificación
+            <select aria-label="Periodo de planificación" value={planningPeriod}
+              onChange={(event) => applyPeriodDefaults(event.currentTarget.value as PlanningPeriod)}>
+              {!['2026-I', '2026-II', '2027-I', '2027-II'].includes(planningPeriod) && <option value={planningPeriod}>{planningPeriod}</option>}
+              <option value="2026-I">2026-I</option><option value="2026-II">2026-II</option>
+              <option value="2027-I">2027-I</option><option value="2027-II">2027-II</option>
+            </select>
+          </label>
+          <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary"
+            onClick={() => applyPeriodDefaults(planningPeriod, true)}>Aplicar valores iniciales del periodo</button>
+          <p>Al cambiar de periodo se aplican los valores iniciales a demanda y capacidad. Los ajustes requieren confirmación si hay cambios pendientes.</p>
+        </div>
         <label className="academic-scheduling__cycle-filter">Filtrar por ciclo
           <select aria-label="Filtrar cursos por ciclo" value={cycleFilter} onChange={(event) => setCycleFilter(event.currentTarget.value)}>
             <option value="all">Todos</option>
@@ -754,7 +797,7 @@ export function AcademicScheduling() {
           {visibleCourses.map((course) => <article className="academic-scheduling__course" key={course.courseId}>
             <label className="academic-scheduling__selection">
               <input type="checkbox" checked={selectedCourses.includes(course.courseId)}
-                disabled={!selectedCourses.includes(course.courseId) && selectedCourses.length >= 32}
+                disabled={!selectedCourses.includes(course.courseId) && selectedCourses.length >= PLANNING_LIMITS.courses}
                 aria-label={`Seleccionar ${course.courseId}`} onChange={(event) => toggleCourse(course.courseId, event.currentTarget.checked)} />
               Incluir en la propuesta
             </label>
@@ -815,12 +858,13 @@ export function AcademicScheduling() {
             </details>}
           </article>)}
         </div>
-        <AcademicDemandPanel sourceId={demandSourceId} onSourceChange={changeDemandSource}
+        {planningPeriod === '2027-I' ? <AcademicDemandPanel sourceId={demandSourceId} onSourceChange={changeDemandSource}
           courses={catalog.courses.filter((course) => selectedCourses.includes(course.courseId)).map((course) => ({
             courseId: course.courseId, name: course.name, targetCapacity: capacities[course.courseId] ?? '', finalDemand: demands[course.courseId] ?? '',
           }))}
           estimate={demandEstimate} loading={demandLoading} error={demandError}
           onEstimate={() => void estimateDemand()} onUseBase={(courseId, value) => updateDemand(courseId, String(value))} />
+          : <p className="academic-scheduling__resource-note" role="note">El estimador de demanda potencial solo tiene ámbito sintético 2027-I. Para {planningPeriod}, ingresa la demanda de planificación manualmente.</p>}
       </>}
     </section>
 
@@ -836,7 +880,15 @@ export function AcademicScheduling() {
 
     {catalog && <section className="academic-scheduling__section academic-scheduling__generate" aria-labelledby="academic-scheduling-generate">
       <h3 id="academic-scheduling-generate">Paso 3 · Generar propuesta</h3>
-        <p>Se envían todos los cursos seleccionados, incluidos los que estén ocultos por el filtro de ciclo.</p>
+        <p>Periodo: {planningPeriod}. Se envían todos los cursos seleccionados, incluidos los que estén ocultos por el filtro de ciclo.</p>
+        <fieldset className="academic-scheduling__policy">
+          <legend>Excepciones de horario · decisión local explícita</legend>
+          <label><input type="checkbox" checked={planningPolicy?.allowAfternoon ?? false}
+            onChange={(event) => updatePlanningException('allowAfternoon', event.currentTarget.checked)} />Permitir propuesta de lunes a viernes desde las 14:00 hasta las 22:00</label>
+          <label><input type="checkbox" checked={planningPolicy?.allowSaturday ?? false}
+            onChange={(event) => updatePlanningException('allowSaturday', event.currentTarget.checked)} />Permitir propuesta sábado de 08:00 a 13:00</label>
+          <p>La disponibilidad docente y de ambientes sigue siendo obligatoria. Habilitar sábado no agrega disponibilidad automáticamente.</p>
+        </fieldset>
         <label className="academic-scheduling__policy">Criterio para ordenar alternativas
           <select aria-label="Criterio de asignación" value={allocationPolicy} onChange={(event) => updateAllocationPolicy(event.currentTarget.value as AcademicAllocationPolicy)}>
             <option value="preferences">Preferencias (predeterminado)</option>

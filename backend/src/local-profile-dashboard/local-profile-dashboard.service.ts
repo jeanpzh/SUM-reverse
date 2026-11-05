@@ -65,16 +65,16 @@ export class LocalProfileDashboardService {
     private readonly context: ContextService,
   ) {}
 
-  catalog() {
-    return this.sessions.catalog()
+  catalog(runId?: string) {
+    return this.sessions.catalog(runId)
   }
 
   read<K extends DashboardKey>(
     key: K,
     identity: Identity,
   ): MatriculaRegularEnvelope<DashboardRead<K, LocalDashboardPayloadMap[K]>> {
-    const snapshot = this.repository.readSnapshot()
-    const now = this.context.now()
+    const snapshot = this.repository.readSnapshot(identity.runId)
+    const now = this.context.now(snapshot.runId)
     this.sessions.requireActive(snapshot, identity, now)
     const actorId: ActorId = identity.actorId
     try {

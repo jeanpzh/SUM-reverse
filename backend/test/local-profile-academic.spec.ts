@@ -1,3 +1,4 @@
+import { validateActorId, validateChoice } from '../../shared/matricula-regular.mjs'
 import { expect, it } from 'vitest'
 import { validateContextResponse, validateEnrollmentReport } from '../../shared/matricula-regular.mjs'
 import { ContextService } from '../src/matricula-regular/context.service.js'
@@ -84,20 +85,20 @@ it('exact_report_after_commit is linked to the accepted actor, request, enrollme
   try {
     const actor = app.repository.readSnapshot().actors.find(({ actorId }) => actorId === 'SYN-SIS-A')!
     const runId = app.repository.runId
-    const session = await app.app.get(SessionService).create({ runId, actorId: actor.actorId })
+    const session = await app.app.get(SessionService).create({ runId, actorId: checkedId(actor.actorId) })
     const result = await app.app.get(MatriculaRegularService).submit({
       runId,
-      actorId: actor.actorId,
+      actorId: checkedId(actor.actorId),
       sessionId: session.data.sessionId,
       requestId: '10000000-0000-4000-8000-000000000001',
       profileRevision: actor.profileRevision,
-      selection: actor.preEnrollment.map(({ courseId }, index) => ({ courseId, sectionId: `SYN-SIS-S${index + 1}` })),
+      selection: actor.preEnrollment.map(({ courseId }, index) => checkedChoice({ courseId, sectionId: `SYN-SIS-S${index + 1}` })),
     })
     expect(result.data.state).toBe('accepted')
     const snapshot = app.repository.readSnapshot()
     expect(snapshot.enrollments).toHaveLength(1)
     expect(snapshot.reports).toHaveLength(1)
-    const report = projectCommittedReport(snapshot, actor.actorId)
+    const report = projectCommittedReport(snapshot, checkedId(actor.actorId))
 
     expect(report).not.toBeNull()
     if (report === null) throw new Error('Expected committed report')
@@ -116,14 +117,14 @@ it('school_actor_isolation prevents another actor from seeing the committed repo
   try {
     const actor = app.repository.readSnapshot().actors.find(({ actorId }) => actorId === 'SYN-SIS-A')!
     const runId = app.repository.runId
-    const session = await app.app.get(SessionService).create({ runId, actorId: actor.actorId })
+    const session = await app.app.get(SessionService).create({ runId, actorId: checkedId(actor.actorId) })
     await app.app.get(MatriculaRegularService).submit({
       runId,
-      actorId: actor.actorId,
+      actorId: checkedId(actor.actorId),
       sessionId: session.data.sessionId,
       requestId: '10000000-0000-4000-8000-000000000002',
       profileRevision: actor.profileRevision,
-      selection: actor.preEnrollment.map((course, index) => ({ courseId: course.courseId, sectionId: `SYN-SIS-S${index + 1}` })),
+      selection: actor.preEnrollment.map((course, index) => checkedChoice({ courseId: course.courseId, sectionId: `SYN-SIS-S${index + 1}` })),
     })
     const snapshot = app.repository.readSnapshot()
     expect(projectCommittedReport(snapshot, 'SYN-SIS-A')).not.toBeNull()
@@ -139,20 +140,20 @@ it('report_link_corruption_fails closed on an enrollment without its exact store
   try {
     const actor = app.repository.readSnapshot().actors.find(({ actorId }) => actorId === 'SYN-SIS-A')!
     const runId = app.repository.runId
-    const session = await app.app.get(SessionService).create({ runId, actorId: actor.actorId })
+    const session = await app.app.get(SessionService).create({ runId, actorId: checkedId(actor.actorId) })
     await app.app.get(MatriculaRegularService).submit({
       runId,
-      actorId: actor.actorId,
+      actorId: checkedId(actor.actorId),
       sessionId: session.data.sessionId,
       requestId: '10000000-0000-4000-8000-000000000003',
       profileRevision: actor.profileRevision,
-      selection: actor.preEnrollment.map((course, index) => ({ courseId: course.courseId, sectionId: `SYN-SIS-S${index + 1}` })),
+      selection: actor.preEnrollment.map((course, index) => checkedChoice({ courseId: course.courseId, sectionId: `SYN-SIS-S${index + 1}` })),
     })
     const snapshot = app.repository.readSnapshot()
     const corrupt = structuredClone(snapshot)
     corrupt.reports = []
 
-    expect(() => projectCommittedReport(corrupt, actor.actorId)).toThrow()
+    expect(() => projectCommittedReport(corrupt, checkedId(actor.actorId))).toThrow()
   } finally {
     await app.close()
   }
@@ -163,22 +164,25 @@ it('report_immutable_after_offer_change projects only the committed report copy'
   try {
     const actor = app.repository.readSnapshot().actors.find(({ actorId }) => actorId === 'SYN-SIS-A')!
     const runId = app.repository.runId
-    const session = await app.app.get(SessionService).create({ runId, actorId: actor.actorId })
+    const session = await app.app.get(SessionService).create({ runId, actorId: checkedId(actor.actorId) })
     await app.app.get(MatriculaRegularService).submit({
       runId,
-      actorId: actor.actorId,
+      actorId: checkedId(actor.actorId),
       sessionId: session.data.sessionId,
       requestId: '10000000-0000-4000-8000-000000000004',
       profileRevision: actor.profileRevision,
-      selection: actor.preEnrollment.map((course, index) => ({ courseId: course.courseId, sectionId: `SYN-SIS-S${index + 1}` })),
+      selection: actor.preEnrollment.map((course, index) => checkedChoice({ courseId: course.courseId, sectionId: `SYN-SIS-S${index + 1}` })),
     })
     const snapshot = app.repository.readSnapshot()
-    const reportBefore = projectCommittedReport(snapshot, actor.actorId)
+    const reportBefore = projectCommittedReport(snapshot, checkedId(actor.actorId))
     const changedOffer = structuredClone(snapshot)
     changedOffer.offer[0]!.name = 'Oferta posterior modificada'
 
-    expect(projectCommittedReport(changedOffer, actor.actorId)).toEqual(reportBefore)
+    expect(projectCommittedReport(changedOffer, checkedId(actor.actorId))).toEqual(reportBefore)
   } finally {
     await app.close()
   }
 })
+
+function checkedId(value: string) { validateActorId(value); return value }
+function checkedChoice(value: unknown) { validateChoice(value); return value }

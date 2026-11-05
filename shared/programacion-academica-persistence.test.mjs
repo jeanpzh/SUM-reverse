@@ -35,6 +35,20 @@ test('save accepts configuration-only drafts and versioned updates, never client
   ]) assert.throws(() => validateAcademicDraftSaveRequest({ ...save(), ...patch }))
 })
 
+test('planning drafts preserve their own semester and reject a policy from another period', () => {
+  for (const period of ['2026-I', '2026-II', '2027-I', '2027-II']) {
+    const value = workspace()
+    value.academicPeriod = period
+    value.request.planningPolicy = { revision: 'FISI-PLANNING-1', period, allowAfternoon: false, allowSaturday: false }
+    assert.doesNotThrow(() => validateAcademicWorkspace(value))
+    const saved = document()
+    saved.configuration = value
+    assert.doesNotThrow(() => validateAcademicSavedDraft(saved))
+    value.request.planningPolicy.period = '2028-I'
+    assert.throws(() => validateAcademicWorkspace(value), /periodo de política/)
+  }
+})
+
 test('saved proposal metadata and readiness cannot contradict actual result', () => {
   assert.doesNotThrow(() => validateAcademicSavedDraft(document()))
   assert.doesNotThrow(() => validateAcademicDraftResume({ draft: document() }))

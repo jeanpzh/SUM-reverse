@@ -53,7 +53,7 @@ function setup() {
   delete process.env.SIMULATOR_DEPLOYMENT
   const state = { actors: structuredClone(actors), sessionActive: true, scenario: 'regular', currentPublication: publication() }
   const snapshot = () => ({ runId, actors: state.actors, sessions: [], profiles: [], offer: [], requests: [], enrollments: [], reports: [] })
-  const repository = { readSnapshot: () => structuredClone(snapshot()) } as never
+  const repository = { hasOperationalRun: () => false, readSnapshot: () => structuredClone(snapshot()) } as never
   const sessions = { requireActive: vi.fn(() => { if (!state.sessionActive) throw new MatriculaRegularError(404, runId, 'SESSION_NOT_FOUND') }) } as never
   const context = { now: () => new Date('2026-11-04T12:00:00.000Z') } as never
   const scenarios = { catalog: () => ({ data: { currentScenarioId: state.scenario } }) } as never

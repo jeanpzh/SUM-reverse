@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { containDialogTab } from '../data/dialogFocus'
 import type { MatriculaRegularOutcome } from '../../../shared/matricula-regular.mjs'
 import {
   formatAcceptedSummary,
@@ -61,31 +62,7 @@ export function EnrollmentResultDialog({
       return
     }
 
-    if (event.key === 'Tab') {
-      const dialog = dialogRef.current
-      if (!dialog) return
-
-      const focusableElements = dialog.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      )
-
-      if (focusableElements.length === 0) return
-
-      const firstElement = focusableElements[0]!
-      const lastElement = focusableElements[focusableElements.length - 1]!
-
-      if (event.shiftKey) {
-        if (document.activeElement === firstElement || document.activeElement === headingRef.current) {
-          event.preventDefault()
-          lastElement.focus()
-        }
-      } else {
-        if (document.activeElement === lastElement) {
-          event.preventDefault()
-          firstElement.focus()
-        }
-      }
-    }
+    if (dialogRef.current) containDialogTab(event, dialogRef.current, headingRef.current)
   }
 
   const isAccepted = dialogKind === 'accepted' && isAcceptedOutcome(outcome)

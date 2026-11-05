@@ -81,7 +81,7 @@ test('editable resource boundary rejects duplicate identities and invalid capaci
     (r) => { r.teachers[0].sectionLimits = [{ courseId: 'C1', maxSections: -1 }] },
     (r) => { r.teachers[0].sectionLimits = [{ courseId: 'C1', maxSections: 1 }, { courseId: 'C1', maxSections: 2 }] },
     (r) => { r.authority = [] },
-    (r) => { r.teachers = Array.from({ length: 33 }, (_, i) => ({ ...r.teachers[0], id: `T${i}` })) },
+    (r) => { r.teachers = Array.from({ length: 129 }, (_, i) => ({ ...r.teachers[0], id: `T${i}` })) },
     (r) => { r.rooms[0].availability = Array.from({ length: 33 }, () => ({ day: 1, startMinute: 480, endMinute: 780 })) },
   ]) {
     const value = planningResources()
@@ -101,10 +101,10 @@ test('planning request accepts selection, target capacity and authorized-pattern
     assert.throws(() => validateAcademicRequest({ ...request, demands: [{ ...request.demands[0], targetCapacity: capacity }] }))
   }
   assert.throws(() => validateAcademicRequest({ ...request, demands: [{ ...request.demands[0], weeklySessions: [] }] }))
-  assert.throws(() => validateAcademicRequest({ ...request, demands: Array.from({ length: 33 }, (_, i) => ({ courseId: `C${i}`, estimatedDemand: 1 })) }))
+  assert.throws(() => validateAcademicRequest({ ...request, demands: Array.from({ length: 97 }, (_, i) => ({ courseId: `C${i}`, estimatedDemand: 1 })) }))
 })
 
-test('catalog can expose 56 courses without widening the generator request bound', () => {
+test('catalog can expose 56 courses independently of the bounded planning request', () => {
   const courses = Array.from({ length: 56 }, (_, i) => ({ courseId: `C${i}`, name: `Course ${i}`, estimatedDemand: 0,
     targetCapacity: 30, cycle: 1, credits: 2, weeklySessions: [{ id: 's1', durationMinutes: 60 }],
     planningPatterns: [{ id: 'p1', label: '60 min', weeklySessions: [{ id: 's1', durationMinutes: 60 }] }],

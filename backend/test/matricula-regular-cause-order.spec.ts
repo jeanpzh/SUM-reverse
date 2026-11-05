@@ -40,8 +40,8 @@ afterEach(async () => {
 
 function cause(
   code: MatriculaRegularCause['code'],
-  courseIds: string[],
-  sectionIds: string[],
+  courseIds: MatriculaRegularCause['courseIds'],
+  sectionIds: MatriculaRegularCause['sectionIds'],
   sourceIds: string[] = ['SYN-FIXTURE'],
 ): MatriculaRegularCause {
   return { code, courseIds, sectionIds, sourceIds }

@@ -54,11 +54,17 @@ export class MatriculaRegularController {
 
   @Get('contextos/:actorId')
   readContext(@Param('actorId') actorId: string, @Req() request: Request) {
-    const snapshot = this.repository.readSnapshot()
-    const fields = invalidFields(request)
-    if (fields.length > 0) {
-      throw new MatriculaRegularError(400, snapshot.runId, 'INVALID_REQUEST', fields)
+    const url = new URL(request.originalUrl, 'http://127.0.0.1')
+    const fields = [...new Set([...url.searchParams.keys()]
+      .filter((key) => key !== 'runId' || url.searchParams.getAll('runId').length !== 1)
+      .map((key) => `query.${key || 'empty'}`))]
+    if (url.searchParams.has('runId')) {
+      try { validateSessionId(url.searchParams.get('runId')) } catch { fields.push('query.runId') }
     }
+    if (Number(request.headers['content-length'] ?? 0) > 0 || request.headers['transfer-encoding'] !== undefined) fields.push('body')
+    if (fields.length > 0) throw new MatriculaRegularError(400, this.repository.runId, 'INVALID_REQUEST', [...new Set(fields)].sort())
+    const runId = url.searchParams.get('runId') ?? undefined
+    const snapshot = this.repository.readSnapshot(runId)
 
     const expectedPath = `${ROUTE_PREFIX}${encodeURIComponent(actorId)}`
     const actualPath = new URL(request.originalUrl, 'http://127.0.0.1').pathname
@@ -72,7 +78,7 @@ export class MatriculaRegularController {
       throw new MatriculaRegularError(400, snapshot.runId, 'INVALID_REQUEST', ['actorId'])
     }
 
-    return this.contextService.read(actorId)
+    return this.contextService.read(actorId, runId)
   }
 
   @Post('sesiones')

@@ -17,7 +17,7 @@ import type {
   ScenarioCatalog,
   ScenarioSelectionRequest,
 } from '../../../shared/local-profile-dashboard.mjs'
-import { validateContextResponse, validateEnrollmentReportResponse, validateErrorResponse } from '../../../shared/matricula-regular.mjs'
+import { validateContextResponse, validateEnrollmentReportResponse, validateErrorResponse, validateSessionId } from '../../../shared/matricula-regular.mjs'
 import type { MatriculaRegularContext, MatriculaRegularEnrollmentReport, MatriculaRegularEnvelope, MatriculaRegularErrorResponse } from '../../../shared/matricula-regular.mjs'
 import type { ApiResponseMap, EndpointKey } from './contracts.ts'
 import { parseResponse } from './transport.ts'
@@ -192,8 +192,18 @@ export function createLocalProfileDashboardApi(options: { fetchImpl?: typeof fet
   }
 
   return {
-    catalog(requestOptions: RequestOptions = {}): Promise<LocalProfileCatalogResponse> {
-      return request('catalog', '/perfiles', requestOptions.signal, validateProfileCatalogResponse)
+    async catalog(requestOptions: RequestOptions & { runId?: string } = {}): Promise<LocalProfileCatalogResponse> {
+      if (requestOptions.runId !== undefined) {
+        try { validateSessionId(requestOptions.runId) } catch {
+          throw errorFor('catalog', 'protocol', 'La ejecución solicitada no es válida.')
+        }
+      }
+      const path = requestOptions.runId ? `/perfiles?runId=${encodeURIComponent(requestOptions.runId)}` : '/perfiles'
+      const response = await request('catalog', path, requestOptions.signal, validateProfileCatalogResponse, requestOptions.runId)
+      if (requestOptions.runId !== undefined && response.runId !== requestOptions.runId) {
+        throw errorFor('catalog', 'protocol', 'El catálogo pertenece a otra ejecución.', { runId: response.runId })
+      }
+      return response
     },
 
     scenarios(requestOptions: RequestOptions = {}): Promise<MatriculaRegularEnvelope<ScenarioCatalog>> {

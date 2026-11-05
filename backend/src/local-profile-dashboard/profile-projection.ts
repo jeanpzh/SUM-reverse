@@ -78,7 +78,7 @@ export function projectStudent(actor: ActorProfile): AlumnoFixture {
     habEncuesta: false,
     habEncuestaEgresados: false,
     habMatricula: false,
-    periodo: '2026-2',
+    periodo: actor.scope.period.replace(/-II$/, '-2').replace(/-I$/, '-1'),
     urlFoto: '',
     foto: '',
     codPermanencia: '',

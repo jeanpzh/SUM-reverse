@@ -143,7 +143,7 @@ describe('E1 manual proposal review', () => {
     expect(updated.body.stats).toEqual(result.body.stats)
     expect(moved[0].startMinute).toBe(16 * 60)
     expect(moved.at(-1).endMinute).toBe(22 * 60)
-    expect(moved.slice(1).every((item: { day: number }, index: number) => item.day === 5
+    expect(moved.slice(1).every((item: { day: number; startMinute: number }, index: number) => item.day === 5
       && item.startMinute === moved[index].endMinute)).toBe(true)
   })
 

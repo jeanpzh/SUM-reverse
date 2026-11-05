@@ -52,7 +52,7 @@ function alreadyEnrolledCause(): MatriculaRegularCause {
   return { code: 'ALREADY_ENROLLED', courseIds: [], sectionIds: [], sourceIds: ['L-01'] }
 }
 
-function commit(state: RunState, request: MatriculaRegularSubmission, clockNow: Date): MatriculaRegularEnvelope<MatriculaRegularOutcome> {
+function commit(state: RunState, request: MatriculaRegularSubmission, clockNow: Date, enrolledInOtherOffer = false): MatriculaRegularEnvelope<MatriculaRegularOutcome> {
   const key = requestKey(request.actorId, request.requestId)
   const stored = state.requests.get(key)
   if (stored !== undefined) {
@@ -110,7 +110,7 @@ function commit(state: RunState, request: MatriculaRegularSubmission, clockNow: 
     additionalCauses: admission.causes,
     additionalGaps: admission.gaps,
   })
-  const causes = state.enrollments.has(actor.actorId)
+  const causes = state.enrollments.has(actor.actorId) || enrolledInOtherOffer
     ? canonicalizeCauses([...evaluated.causes, alreadyEnrolledCause()])
     : canonicalizeCauses(evaluated.causes)
   const gaps = evaluated.gaps
@@ -231,15 +231,16 @@ export class MatriculaRegularService {
         return response
       }
 
-      const candidate = structuredClone(state)
+      const candidate = state.runId === this.repository.runId ? structuredClone(state) : state
       try {
-        const response = commit(candidate, request, this.clock.now())
-        this.repository.publishCandidate(candidate)
+        const response = commit(candidate, request, this.repository.clockFor(state.runId, this.clock).now(),
+          state.runId !== this.repository.runId && this.repository.hasEnrollmentInOtherOffer(state.runId, request.actorId))
+        if (state.runId === this.repository.runId) this.repository.publishCandidate(candidate)
         return response
       } catch (error) {
         if (error instanceof MatriculaRegularError) throw error
         throw new MatriculaRegularError(500, state.runId, 'LOCAL_FAILURE')
       }
-    })
+    }, request.runId)
   }
 }

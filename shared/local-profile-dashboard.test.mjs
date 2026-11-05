@@ -83,6 +83,19 @@ test('identity_correlation validates MR2 identity and read correlation before pa
   }
 })
 
+test('operational catalog permits precisely the two Sistemas profiles in 2027-I', () => {
+  const response = catalogResponse()
+  response.data.profiles = response.data.profiles.slice(0, 2).map((profile) => ({ ...profile, scope: { ...profile.scope, period: '2027-I' } }))
+  assert.doesNotThrow(() => validateProfileCatalogResponse(response))
+  for (const period of ['2026-II', '2027-II']) {
+    const incompatible = structuredClone(response)
+    incompatible.data.profiles[1].scope.period = period
+    assert.throws(() => validateProfileCatalogResponse(incompatible))
+  }
+  response.data.profiles.reverse()
+  assert.throws(() => validateProfileCatalogResponse(response))
+})
+
 test('campaign identities extend the local catalog without permitting malformed IDs or free catalog entries', () => {
   assert.doesNotThrow(() => validateDashboardIdentity({ ...identity, actorId: 'SYN-SIS-U0100' }))
   for (const actorId of ['ADMIN', 'SYN-', 'SYN-student', 'SYN-A/B']) {

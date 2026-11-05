@@ -159,6 +159,59 @@ describe('durable local academic drafts', () => {
       .toEqual(saved.demandBase)
   })
 
+  it('retains a non-2027 planning period with its validated policy across save and resume', async () => {
+    const { proposals } = createServices()
+    const savedService = new SavedDraftService(proposals)
+    const configuration = workspace()
+    configuration.academicPeriod = '2026-II'
+    configuration.request.planningPolicy = { revision: 'FISI-PLANNING-1', period: '2026-II', allowAfternoon: false, allowSaturday: false }
+    const saved = await savedService.save({ ...saveRequest(), configuration })
+    const resumed = await new SavedDraftService(new DemoProposalService()).resume(saved.id, { expectedVersion: saved.version })
+    expect(resumed.draft.configuration.academicPeriod).toBe('2026-II')
+    expect(resumed.draft.configuration.request.planningPolicy?.period).toBe('2026-II')
+    const mismatched = structuredClone(configuration)
+    mismatched.request.planningPolicy!.period = '2026-I'
+    await expect(savedService.save({ ...saveRequest(), configuration: mismatched })).rejects.toMatchObject({ status: 400 })
+  })
+
+  it('revalidates manual senior-course moves against the same evening and afternoon policy', () => {
+    const manualCourse = catalog.courses.find((candidate) => candidate.courseId === '20118104')!
+    const pattern = manualCourse.planningPatterns!.find((candidate) => candidate.weeklySessions.length === 2
+      && candidate.weeklySessions.every((session) => session.durationMinutes === 120))!
+    const resources = {
+      teachers: [{ id: 'SYN-POLICY-TEACHER', name: 'Synthetic policy teacher', courseIds: [manualCourse.courseId],
+        maxWeeklyMinutes: 600, availability: structuredClone(workWindows) }],
+      rooms: catalog.rooms.filter((room) => room.kind === 'laboratory'),
+    }
+    const makeRequest = (allowAfternoon: boolean) => ({ revision: catalog.revision,
+      demands: [{ courseId: manualCourse.courseId, estimatedDemand: 1, targetCapacity: 45, patternId: pattern.id }],
+      resources: structuredClone(resources), planningPolicy: { revision: 'FISI-PLANNING-1' as const, period: '2027-I' as const,
+        allowAfternoon, allowSaturday: false } })
+    const propose = (allowAfternoon: boolean) => {
+      const proposals = new DemoProposalService()
+      const generated = proposals.createProposal(makeRequest(allowAfternoon))
+      expect(generated.status).toBe('complete')
+      const assignments = generated.assignments.filter((item) => item.sectionId === generated.sections[0]!.sectionId)
+        .sort((left, right) => left.startMinute - right.startMinute)
+      return { proposals, generated, assignments }
+    }
+    const strict = propose(false)
+    let rejection: unknown
+    try { strict.proposals.adjustProposal(strict.generated.proposalId, { expectedVersion: 0,
+      sectionId: strict.generated.sections[0]!.sectionId, sessionIds: strict.assignments.map((item) => item.sessionId),
+      teacherId: strict.assignments[0]!.teacherId, day: 1, startMinute: 14 * 60, roomIds: strict.assignments.map((item) => item.roomId) }) }
+    catch (error) { rejection = error }
+    expect(rejection).toBeDefined()
+    expect((rejection as { getResponse(): unknown }).getResponse()).toMatchObject({
+      error: { message: expect.stringContaining('PLANNING_POLICY_WINDOW') },
+    })
+    const exception = propose(true)
+    const adjusted = exception.proposals.adjustProposal(exception.generated.proposalId, { expectedVersion: 0,
+      sectionId: exception.generated.sections[0]!.sectionId, sessionIds: exception.assignments.map((item) => item.sessionId),
+      teacherId: exception.assignments[0]!.teacherId, day: 1, startMinute: 14 * 60, roomIds: exception.assignments.map((item) => item.roomId) })
+    expect(adjusted.assignments.every((item) => item.startMinute >= 14 * 60 && item.startMinute < 18 * 60)).toBe(true)
+  })
+
   it('preserves the old version when atomic rename fails', async () => {
     const { proposals } = createServices()
     const savedService = new SavedDraftService(proposals)

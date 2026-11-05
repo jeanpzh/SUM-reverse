@@ -41,7 +41,7 @@ function checkDerivedCoverage(schedule: unknown, requirements: RequiredSession[]
     add('INVALID_SCHEDULE', null, error instanceof Error ? error.message : 'Horario demasiado grande')
     return { complete: false, missingSessionIds: [], issues }
   }
-  const validation = validateAcademicSchedule(schedule)
+  const validation = validateAcademicSchedule(schedule, { planningPolicy: Boolean(input.planningPolicy) })
   if (!validation.valid) {
     for (const issue of validation.issues) add('INVALID_SCHEDULE', null, `${issue.code}: ${issue.message}`)
     return { complete: false, missingSessionIds: [], issues }
@@ -51,7 +51,7 @@ function checkDerivedCoverage(schedule: unknown, requirements: RequiredSession[]
     if (canonical(valid[key]) !== canonical(source[key])) add('CATALOG_MISMATCH', null, `El catálogo ${key} no coincide con la entrada autorizada`)
   }
   // Always evaluate against original capacities, resources, availabilities and compatibility groups.
-  const authoritativeValidation = validateAcademicSchedule({ ...source, assignments: valid.assignments })
+  const authoritativeValidation = validateAcademicSchedule({ ...source, assignments: valid.assignments }, { planningPolicy: Boolean(input.planningPolicy) })
   for (const issue of authoritativeValidation.issues) add('INVALID_SCHEDULE', null, `${issue.code}: ${issue.message}`)
   for (const issue of validateSectionDelivery(valid, requirements, input)) {
     add('SECTION_DELIVERY_POLICY', issue.sectionId, issue.message)

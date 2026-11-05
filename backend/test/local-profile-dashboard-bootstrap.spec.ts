@@ -137,7 +137,7 @@ it('real_http serves the exact four-actor catalog and one create/consult session
 
   const identity = { runId: catalogBody.runId, actorId: 'SYN-SOFT-B', sessionId: created.body.data.sessionId }
   const read = await consult(origin, 'formulario', identity)
-  const readBody = await read.json() as { data: { actorId: string; key: string; payload: { alumno: { codAlumno: string } } } }
+  const readBody = await read.json() as { data: { actorId: string; key: string; payload: { data: { alumno: { codAlumno: string } } } } }
   expect(read.status).toBe(200)
   expect(readBody.data).toMatchObject({ actorId: 'SYN-SOFT-B', key: 'formulario' })
   expect(readBody.data.payload.data.alumno.codAlumno).toBe('SYN-SOFT-B')

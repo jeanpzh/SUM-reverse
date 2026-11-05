@@ -87,7 +87,8 @@ export class PrematriculaService {
   async getContext(value: unknown): Promise<E2Context> {
     const identity = this.validateIdentity(value, validateE2ContextRequest)
     const { actor, revision } = identity
-    const publications = await this.publications.publications()
+    const publications = await this.supportedPublicationList()
+    this.assertIdentityCurrent((value as { identity: E2Identity }).identity, actor, revision)
     const draft = this.findOwnerDraft(actor.actorId)
     const draftValidation = draft ? await this.validateSelection(actor, revision, draft.publicationId, draft.publicationVersion, draft.selection, draft.academicRevision !== revision) : null
     const result: E2Context = { revision: E2_REVISION, actorId: actor.actorId as E2Identity['actorId'], sourceId, schoolId, planId, academicPeriod, academicRevision: revision, publications, draft, draftValidation }
@@ -97,8 +98,12 @@ export class PrematriculaService {
 
   async getPublication(value: unknown): Promise<E2PublicationResponse> {
     const identity = this.validateIdentity(value, validateE2PublicationRequest)
-    const request = value as { publicationId: string }
+    const request = value as { identity: E2Identity; publicationId: string }
     const publication = await this.publication(request.publicationId)
+    if (publication.schedule.schoolId !== schoolId || publication.schedule.academicPeriod !== academicPeriod) {
+      fail(422, 'PUBLICATION_NOT_SUPPORTED', 'La publicación no pertenece al contexto de prematrícula disponible')
+    }
+    this.assertIdentityCurrent(request.identity, identity.actor, identity.revision)
     const result: E2PublicationResponse = { actorId: identity.actor.actorId as E2Identity['actorId'], academicRevision: identity.revision, publication, eligibility: this.eligibility(identity.actor, publication) }
     validateE2PublicationResponse(result)
     return result
@@ -106,8 +111,9 @@ export class PrematriculaService {
 
   async validate(value: unknown): Promise<E2Validation> {
     const identity = this.validateIdentity(value, validateE2ValidateRequest)
-    const request = value as { publicationId: string, publicationVersion: number, selection: E2Choice[] }
+    const request = value as { identity: E2Identity; publicationId: string, publicationVersion: number, selection: E2Choice[] }
     const result = await this.validateSelection(identity.actor, identity.revision, request.publicationId, request.publicationVersion, request.selection)
+    this.assertIdentityCurrent(request.identity, identity.actor, identity.revision)
     validateE2Validation(result)
     return result
   }
@@ -173,6 +179,7 @@ export class PrematriculaService {
     if (payload?.intention) {
       const latest = payload.intention.history.at(-1)!
       validation = await this.revalidateIntention(identity.actor, identity.revision, latest)
+      this.assertIdentityCurrent((value as { identity: E2Identity }).identity, identity.actor, identity.revision)
     }
     const result: E2IntentionContext = {
       revision: 'E2-INTENT-1', actorId: identity.actor.actorId as E2Identity['actorId'], academicRevision: identity.revision,
@@ -236,7 +243,7 @@ export class PrematriculaService {
     } catch { return fail(400, 'INVALID_REQUEST', 'La solicitud no cumple el contrato E2') }
 
     const actor = this.requireIdentity(identity)
-    const initial = this.repository.readSnapshot()
+    const initial = this.repository.readSnapshot(identity.runId)
     const initialRevision = actor.profileRevision
     const initialAcademicRevision = academicRevision(actor)
     const draft = this.findOwnerDraft(actor.actorId)
@@ -245,14 +252,14 @@ export class PrematriculaService {
     const latest = intention?.history.at(-1) ?? null
     let publication: AcademicPublication | null = null
     if (latest) {
-      try { publication = await this.publication(latest.publicationId) }
+      try { publication = await this.publication(latest.publicationId, true) }
       catch (error) {
         if (!(error instanceof HttpException) || error.getStatus() !== 404) throw error
       }
       this.assertTransferContext(identity, actor.actorId, initial.runId, initialRevision, initialAcademicRevision, intention)
     }
 
-    const current = this.repository.readSnapshot()
+    const current = this.repository.readSnapshot(identity.runId)
     const currentActor = current.actors.find(item => item.actorId === actor.actorId)
     if (current.runId !== initial.runId || !currentActor || currentActor.profileRevision !== initialRevision) {
       fail(409, 'ACADEMIC_CONTEXT_CHANGED', 'El contexto E3 cambió durante la consulta')
@@ -372,7 +379,7 @@ export class PrematriculaService {
 
   private assertTransferContext(identity: E2Identity, actorId: string, runId: string, profileRevision: string, academicContextRevision: string, intention: E2Intention | null): void {
     const actor = this.requireIdentity(identity)
-    const snapshot = this.repository.readSnapshot()
+    const snapshot = this.repository.readSnapshot(identity.runId)
     const latestDraft = this.findOwnerDraft(actorId)
     const latestPayload = latestDraft ? this.readPayload(latestDraft.id) : null
     const latestIntention = latestPayload?.intention ?? null
@@ -447,9 +454,10 @@ export class PrematriculaService {
     if (process.env.SIMULATOR_DEPLOYMENT === 'public' || process.env.SUM_LOCAL_SCENARIOS !== '1' || process.env.SUM_ACADEMIC_SCHEDULING !== '1') {
       fail(403, 'E2_DISABLED', 'La prematrícula local no está habilitada')
     }
-    const snapshot = this.repository.readSnapshot()
-    this.sessions.requireActive(snapshot, identity, this.context.now())
-    if (this.scenarios.catalog().data.currentScenarioId !== 'regular') fail(403, 'SCENARIO_NOT_REGULAR', 'La prematrícula requiere el escenario regular')
+    const snapshot = this.repository.readSnapshot(identity.runId)
+    this.sessions.requireActive(snapshot, identity, this.context.now(snapshot.runId))
+    if (!this.repository.hasOperationalRun(identity.runId)
+      && this.scenarios.catalog().data.currentScenarioId !== 'regular') fail(403, 'SCENARIO_NOT_REGULAR', 'La prematrícula requiere el escenario regular')
     if (identity.actorId !== 'SYN-SIS-A' && identity.actorId !== 'SYN-SIS-B') fail(403, 'ACTOR_NOT_ALLOWED', 'El perfil no está habilitado para esta propuesta')
     const actor = snapshot.actors.find((item) => item.actorId === identity.actorId)
     if (!actor || actor.scope.schoolId !== schoolId || actor.scope.planId !== planId) fail(403, 'ACTOR_NOT_ALLOWED', 'El perfil no pertenece al plan de Sistemas')
@@ -457,7 +465,14 @@ export class PrematriculaService {
     return actor
   }
 
-  private async publication(id: string): Promise<AcademicPublication> {
+  private assertIdentityCurrent(identity: E2Identity, original: ActorProfile, revision: string): void {
+    const actor = this.requireIdentity(identity)
+    if (actor.profileRevision !== original.profileRevision || academicRevision(actor) !== revision) {
+      fail(409, 'ACADEMIC_CONTEXT_CHANGED', 'El contexto académico cambió durante la consulta')
+    }
+  }
+
+  private async publication(id: string, allowIncompatibleScope = false): Promise<AcademicPublication> {
     let publication: AcademicPublication
     try { publication = await this.publications.getPublication(id) }
     catch (error) {
@@ -467,7 +482,20 @@ export class PrematriculaService {
       if (error instanceof HttpException && error.getStatus() === 503) fail(503, 'STORAGE_UNAVAILABLE', 'No se pudo acceder al almacenamiento local de publicaciones')
       fail(409, 'PUBLICATION_UNAVAILABLE', 'La publicación no superó su validación')
     }
+    if (!allowIncompatibleScope && (publication.schedule.schoolId !== schoolId || publication.schedule.academicPeriod !== academicPeriod)) {
+      fail(422, 'PUBLICATION_SCOPE_MISMATCH', 'La prematrícula sintética requiere una publicación de Sistemas 2027-I')
+    }
     return publication
+  }
+
+  private async supportedPublicationList() {
+    const list = await this.publications.publications()
+    const supported = await Promise.all(list.items.map(async (item) => {
+      const publication = await this.publications.getPublication(item.id)
+      return publication.schedule.schoolId === schoolId && publication.schedule.academicPeriod === academicPeriod ? item : null
+    }))
+    const items = supported.filter((item): item is NonNullable<typeof item> => item !== null)
+    return { currentId: items.some((item) => item.id === list.currentId) ? list.currentId : null, items }
   }
 
   private makeValidation(actor: ActorProfile, revision: string, publication: AcademicPublication, selection: E2Choice[], contextChanged = false): E2Validation {

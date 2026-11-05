@@ -169,8 +169,8 @@ describe('PA-DEMO-1 local scheduling API', () => {
       && !selectedCourses.some((selected) => selected.courseId === course.courseId))!
     const request = validRequest()
     request.demands.push({ courseId: third.courseId, estimatedDemand: 1 })
-    request.resources = resourcesFor(request.demands.map((demand) => demand.courseId))
-    const response = await supertest(app.getHttpServer()).post(proposalsPath).send(request).expect(200)
+    const configuredRequest = { ...request, resources: resourcesFor(request.demands.map((demand) => demand.courseId)) }
+    const response = await supertest(app.getHttpServer()).post(proposalsPath).send(configuredRequest).expect(200)
     expect(response.body.status).toBe('complete')
     expect(response.body.coverageComplete).toBe(true)
     expect(response.body.counts.sections).toBe(4)

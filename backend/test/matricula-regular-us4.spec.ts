@@ -1,3 +1,4 @@
+import { validateChoice } from '../../shared/matricula-regular.mjs'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import supertest from 'supertest'
 import { createSyntheticFixture } from '../src/matricula-regular/fixtures.js'
@@ -17,7 +18,7 @@ function input(school: School) {
 }
 
 function evaluate(actor: ActorProfile, offer: OfferedCourse[], selection: Array<{ courseId: string; sectionId: string }>) {
-  return evaluateSubmissionRules({ actor, offer, selection, now: new Date('2026-08-11T15:00:00.000Z') })
+  return evaluateSubmissionRules({ actor, offer, selection: selection.map((choice) => { validateChoice(choice); return choice }), now: new Date('2026-08-11T15:00:00.000Z') })
 }
 
 function matrixCase(school: School, id: string) {
@@ -76,7 +77,7 @@ describe('T028/T030 FISI 2026-II synthetic rule matrix', () => {
   ].map((id) => ({ school, id }))))('SC-002 known $school $id emits its explicit rule result and source-linked causes', ({ school, id }) => {
     const { actor, offer, selection, expected } = matrixCase(school, id)
     const ruleResult = evaluate(actor, offer, selection)
-    const admission = evaluateSelectionAdmission(actor, offer, selection)
+    const admission = evaluateSelectionAdmission(actor, offer, selection.map((choice) => { validateChoice(choice); return choice }))
     const causes = [...ruleResult.causes, ...admission.causes]
     const codes = causes.map(({ code }) => code)
     expect(ruleResult.gaps).toEqual([])
@@ -90,7 +91,7 @@ describe('T028/T030 FISI 2026-II synthetic rule matrix', () => {
   ].map((id) => ({ school, id }))))('SC-002 pending $school $id preserves its explicit source-linked gap', ({ school, id }) => {
     const { actor, offer, selection, expected } = matrixCase(school, id)
     const ruleResult = evaluate(actor, offer, selection)
-    const admission = evaluateSelectionAdmission(actor, offer, selection)
+    const admission = evaluateSelectionAdmission(actor, offer, selection.map((choice) => { validateChoice(choice); return choice }))
     const gaps = [...ruleResult.gaps, ...admission.gaps]
     expect(gaps.map(({ code }) => code)).toContain(expected.gap)
     expect([...ruleResult.causes, ...admission.causes].every(({ sourceIds }) => sourceIds.length > 0)).toBe(true)
@@ -203,7 +204,7 @@ describe('T028/T030 FISI 2026-II synthetic rule matrix', () => {
     const [first, second, third] = base.offer
     const selected = [first!, second!, third!].map((course) => ({ courseId: course.courseId, sectionId: course.sections[0]!.sectionId }))
     first!.planId = 'SYN-OTHER-PLAN'
-    expect(evaluateSelectionAdmission(base.actor, base.offer, selected).causes.map(({ code }) => code)).toContain('PLAN_MISMATCH')
+    expect(evaluateSelectionAdmission(base.actor, base.offer, selected.map((choice) => { validateChoice(choice); return choice })).causes.map(({ code }) => code)).toContain('PLAN_MISMATCH')
     first!.planId = base.actor.scope.planId
     second!.sections[0]!.schedule = [{ day: 1, startMinute: 8 * 60 + 30, endMinute: 9 * 60 + 30 }]
     expect(evaluate(base.actor, base.offer, selected).causes.map(({ code }) => code)).toContain('SCHEDULE_CONFLICT')

@@ -33,7 +33,7 @@ function covers(windows: TimeInterval[], session: TimeInterval): boolean {
 }
 
 /** Shape validation precedes resource/rule checks; no coercion or input mutation. */
-export function validateAcademicSchedule(value: unknown): ScheduleValidation {
+export function validateAcademicSchedule(value: unknown, options: { planningPolicy?: boolean } = {}): ScheduleValidation {
   const issues: ScheduleIssue[] = []
   const add = (code: ScheduleIssue['code'], resourceType: ScheduleIssue['resourceType'], resourceId: string | null,
     assignmentIds: string[], message: string, field: string | null = null) => {
@@ -68,7 +68,8 @@ export function validateAcademicSchedule(value: unknown): ScheduleValidation {
     const seen = new Set<string>()
     Array.from(rows).forEach((row: unknown, index: number) => {
       const path = `${key}[${index}]`
-      if (!exact(row, shape, path, key === 'teachers' ? ['preferences', 'sectionLimits'] : [])) return
+      if (!exact(row, shape, path, key === 'teachers' ? ['preferences', 'sectionLimits', 'facultyId', 'category', 'qualificationSource']
+        : key === 'rooms' ? ['kind'] : key === 'sections' ? ['cycle', 'ordinal'] : key === 'assignments' ? ['sessionType'] : [])) return
       for (const field of shape.filter((name) => name === 'id' || name.endsWith('Id'))) {
         if (!id(row[field])) invalid(`${path}.${field}`, 'Identificador inválido')
       }
@@ -79,6 +80,9 @@ export function validateAcademicSchedule(value: unknown): ScheduleValidation {
       if (shape.includes('courseIds')) ids(row.courseIds, `${path}.courseIds`)
       if (shape.includes('availability')) availability(row.availability, `${path}.availability`)
       if (key === 'teachers') {
+        if (row.facultyId !== undefined && !id(row.facultyId)) invalid(`${path}.facultyId`, 'Facultad inválida')
+        if (row.category !== undefined && !['principal', 'asociado', 'auxiliar'].includes(row.category as string)) invalid(`${path}.category`, 'Categoría docente inválida')
+        if (row.qualificationSource !== undefined && row.qualificationSource !== 'synthetic') invalid(`${path}.qualificationSource`, 'Procedencia de habilitación inválida')
         if (row.preferences !== undefined) {
           if (!Array.isArray(row.preferences) || row.preferences.length > 32) invalid(`${path}.preferences`, 'Se requieren hasta 32 preferencias')
           else availability(row.preferences, `${path}.preferences`)
@@ -100,9 +104,16 @@ export function validateAcademicSchedule(value: unknown): ScheduleValidation {
           }
         }
       }
+      if (key === 'rooms' && row.kind !== undefined && row.kind !== 'classroom' && row.kind !== 'laboratory') invalid(`${path}.kind`, 'Tipo de ambiente inválido')
       if (shape.includes('capacity') && !integer(row.capacity, 1)) invalid(`${path}.capacity`, 'Capacidad entera mayor que cero requerida')
+      if (key === 'sections') {
+        if (row.cycle !== undefined && !integer(row.cycle, 1, 10)) invalid(`${path}.cycle`, 'Ciclo entre 1 y 10 requerido')
+        if (row.ordinal !== undefined && !integer(row.ordinal, 1, 128)) invalid(`${path}.ordinal`, 'Ordinal de sección inválido')
+        if ((row.cycle === undefined) !== (row.ordinal === undefined)) invalid(path, 'Ciclo y ordinal deben declararse juntos')
+      }
       if (shape.includes('maxWeeklyMinutes') && !integer(row.maxWeeklyMinutes, 0)) invalid(`${path}.maxWeeklyMinutes`, 'Carga máxima entera no negativa requerida')
       if (shape.includes('interval') && !interval(row.interval)) invalid(`${path}.interval`, 'Intervalo inválido')
+      if (key === 'assignments' && row.sessionType !== undefined && (typeof row.sessionType !== 'string' || !row.sessionType.trim())) invalid(`${path}.sessionType`, 'Tipo de sesión inválido')
     })
   }
   if (issues.length) return { valid: false, issues }
@@ -132,6 +143,9 @@ export function validateAcademicSchedule(value: unknown): ScheduleValidation {
     if (!teacher) missing('teacher', teacherId, [assignmentId], `assignments.${assignmentId}.teacherId`)
     if (!room) missing('room', roomId, [assignmentId], `assignments.${assignmentId}.roomId`)
     if (room && section && room.capacity < section.capacity) add('ROOM_CAPACITY', 'room', roomId, [assignmentId], 'El aula tiene menos plazas que la sección')
+    if (options.planningPolicy && room && section && assignment.sessionType === 'L' && room.kind !== 'laboratory') {
+      add('ROOM_KIND_MISMATCH', 'room', roomId, [assignmentId], 'Las sesiones de laboratorio requieren un ambiente de laboratorio')
+    }
     if (teacher && !covers(teacher.availability, assignment.interval)) add('TEACHER_UNAVAILABLE', 'teacher', teacherId, [assignmentId], 'La sesión no está cubierta por la disponibilidad docente')
     if (room && !covers(room.availability, assignment.interval)) add('ROOM_UNAVAILABLE', 'room', roomId, [assignmentId], 'La sesión no está cubierta por la disponibilidad del aula')
     if (teacher && section && !teacher.courseIds.includes(section.courseId)) add('TEACHER_NOT_QUALIFIED', 'teacher', teacherId, [assignmentId], 'El docente no está habilitado para este curso')
@@ -164,6 +178,13 @@ export function validateAcademicSchedule(value: unknown): ScheduleValidation {
       if (a.sectionId === b.sectionId && sections.has(a.sectionId)) add('SECTION_CONFLICT', 'section', a.sectionId, pair, 'La sección tiene sesiones simultáneas')
       const first = sections.get(a.sectionId)?.courseId
       const second = sections.get(b.sectionId)?.courseId
+      const firstSection = sections.get(a.sectionId)
+      const secondSection = sections.get(b.sectionId)
+      if (options.planningPolicy && first && second && first !== second && firstSection?.cycle !== undefined
+        && firstSection.cycle === secondSection?.cycle && firstSection.ordinal === secondSection.ordinal) {
+        add('COHORT_CONFLICT', 'group', `cohort:${firstSection.cycle}:${firstSection.ordinal}`, pair,
+          'Cursos del mismo ciclo y ordinal de sección no pueden cruzarse')
+      }
       if (first && second && first !== second) {
         for (const group of schedule.compatibleGroups) {
           if (group.courseIds.includes(first) && group.courseIds.includes(second)) add('COURSE_GROUP_CONFLICT', 'group', group.id, pair, 'Los cursos del grupo compatible tienen sesiones simultáneas')
