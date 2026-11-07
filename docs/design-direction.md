@@ -4,7 +4,7 @@ Status: **binding**. Decided by the user on 2026-11-07 and not open for redesign
 
 ## Scope
 
-- **Applies to:** the internal administration product for academic scheduling, timetable adjustment, teacher review, approval and publication. Today that is `/local/programacion-academica` and the other local academic areas wrapped by `client/src/components/AcademicLocalShell.tsx`.
+- **Applies to:** the internal administration product for academic scheduling, timetable adjustment, teacher review, approval and publication. Today that is only `/local/programacion-academica` (the route matched by `isAcademicSchedulingRoute`) and the panels embedded in it. The local module chooser (`/`, `/local/modulos`) also leads into student flows, so it is out of scope and keeps its current look.
 - **Does not apply to:** student SUM screens. Those keep [DESIGN.md](../DESIGN.md), the `--sum-*` tokens, the student components and the root SUM fidelity rule.
 - **Integration with SUM:** only through data contracts (`shared/`, backend modules). The two products do not share a visual identity, and SUM-observed evidence is not required for internal screens.
 
