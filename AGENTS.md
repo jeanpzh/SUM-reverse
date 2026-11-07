@@ -29,6 +29,8 @@ Implement only behavior supported by evidence or explicitly identified as a loca
 
 **Fidelidad visual y de interacción (preferencia explícita del usuario):** conservar las pantallas SUM ya replicadas, su estructura, estilos, componentes, textos y navegación al integrar nuevas funcionalidades. Adaptar los datos, contratos y estado de sesión a esas interfaces; no sustituirlas por vistas genéricas ni rediseñarlas para facilitar la implementación. Una interfaz local expresamente aprobada, como un selector de acceso, autoriza únicamente esa pantalla y no cambios visuales en el resto del dashboard. Si falta evidencia para una interfaz o comportamiento, consultar al usuario antes de inventarlo. Que el flujo funcione no acredita su fidelidad al SUM.
 
+**Excepción: producto interno de programación académica (decisión del usuario, 2026-11-07).** Las vistas administrativas internas (`/local/programacion-academica` y las áreas envueltas por `AcademicLocalShell`) no replican el SUM. Siguen la dirección vinculante de [docs/design-direction.md](docs/design-direction.md): A como lenguaje visual, B para la vista Semana y C para la estructura de aprobación y publicación. No se reabre esa decisión. Las pantallas del alumno, los tokens `--sum-*` y los componentes compartidos del alumno siguen sujetos a la regla de fidelidad anterior.
+
 Before creating a contract, component, DTO, validator or data adapter, review the existing local contracts and implementations in `shared/`, `client/src/components/`, `client/src/data/` and the relevant backend module. Reuse or extend compatible artifacts first. Record the incompatibility and migration impact before introducing a replacement; do not create parallel contracts or components for the same behavior.
 
 ## Root orchestration and folder ownership
@@ -156,6 +158,8 @@ Operational constraints:
 - Perform at most one automatic repair cycle after failed verification; then diagnose and record the next decision.
 - Reuse sufficient existing plans and evidence. Do not repeatedly replan a sufficiently specified task.
 - Maintain persistent state and verification references for complex tasks; keep simple work lightweight.
+
+**T3 Code orchestration (verified 2026-11-07).** The `.codex/agents/*.toml` role files and `.codex/config.toml` cited above do not exist in this repo or in `~/.codex`. Until they are created, the `datos-reales/` deny rule is enforced only by these instructions, and a worker's model is chosen explicitly through `delegate_task`: provider `codex`, model `gpt-6-luna`, `reasoningEffort: high`, with `isolation: "worktree"` for concurrent code changes. Each brief is self-contained. It includes the folder's `AGENTS.md` and skill, `docs/design-direction.md` for internal UI, exclusive files, the contract revision, acceptance criteria and required checks. Workers return changed files, check output, blockers and integration notes. An independent audit is a fresh `delegate_task` that runs `code-review` against the spec and the design direction. The Matt Pocock skills `grill-with-docs`, `to-spec`, `to-tickets`, `implement`, `improve-codebase-architecture` and `triage` are user-invoked only. The orchestrator asks the user to run them; workers cannot invoke them.
 
 ## 6. Development Commands
 
