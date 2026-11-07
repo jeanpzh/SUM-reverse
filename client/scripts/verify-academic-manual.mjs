@@ -180,6 +180,17 @@ try {
   assert.equal(await calendar.locator('.weekly-schedule__event').count(), 4)
   assert.equal(await calendar.locator('.weekly-schedule__event').filter({ hasText: 'Ajustada manualmente' }).count(), 1)
 
+  // Interval of the chronological component `index` when the block starts at `startMinute` (same rule as the backend's precedingDuration).
+  const componentInterval = (startMinute, index) => {
+    const offset = targetAssignments.slice(0, index).reduce((total, row) => total + row.endMinute - row.startMinute, 0)
+    return { start: startMinute + offset, end: startMinute + offset + targetAssignments[index].endMinute - targetAssignments[index].startMinute }
+  }
+  const optionValues = (select) => select.locator('option').evaluateAll((options) => options.map((option) => option.value))
+  // Configured rooms (availability set above) are preferred; a room is free when no session outside `ignoredSessionIds` uses it on that day during the interval.
+  const preferredRoomIds = [...classroomRoomIds, 'LAB01NP']
+  const chooseRoom = (optionIds, interval, day, ignoredSessionIds) => [...optionIds.filter((id) => preferredRoomIds.includes(id)), ...optionIds.filter((id) => !preferredRoomIds.includes(id))]
+    .find((roomId) => !liveAssignments.some((row) => row.roomId === roomId && !ignoredSessionIds.includes(row.sessionId)
+      && row.day === day && row.startMinute < interval.end && row.endMinute > interval.start))
   // The teacher-collision edit sends only the block start, so the candidate must start at 18:00 to keep the moved block inside the default policy window.
   const collisionAssignment = complete.assignments.find((row) => row.sectionId !== firstSectionId
     && row.startMinute === 18 * 60
@@ -187,13 +198,28 @@ try {
     && !complete.assignments.some((other) => other.sectionId !== firstSectionId && other.sectionId !== row.sectionId
       && other.teacherId === row.teacherId && other.day === row.day && other.startMinute < row.endMinute && other.endMinute > row.startMinute))
   assert.ok(collisionAssignment, 'Se requiere un bloque de otra sección para colisión sintética de docente')
+  // The room-collision edit below keeps the target's original teacher at the collision time, so that teacher must be free there too;
+  // otherwise TEACHER_CONFLICT would be reported before the expected ROOM_CONFLICT (validator order: pair loop emits TEACHER before ROOM).
+  assert.ok(!complete.assignments.some((other) => other.sectionId !== firstSectionId && other.teacherId === targetAssignments[0].teacherId
+    && other.day === collisionAssignment.day && other.startMinute < collisionAssignment.startMinute + blockMinutes && other.endMinute > collisionAssignment.startMinute),
+  'El docente original del bloque debe estar libre en el horario de colisión')
   const otherSection = complete.sections.find((section) => section.sectionId === collisionAssignment.sectionId)
   const tableBeforeRejectedEdit = await table.innerText()
   await sectionsTable.locator('tbody tr').nth(firstSectionRowIndex).getByRole('button', { name: 'Editar horario', exact: true }).click()
   await page.getByLabel(`Docente revisión ${firstSectionId}`, { exact: true }).selectOption(collisionAssignment.teacherId)
   await page.getByLabel(`Día revisión ${firstSectionId}`, { exact: true }).selectOption(String(collisionAssignment.day))
   await page.getByLabel(`Inicio revisión ${firstSectionId}`, { exact: true }).fill(`${String(Math.floor(collisionAssignment.startMinute / 60)).padStart(2, '0')}:${String(collisionAssignment.startMinute % 60).padStart(2, '0')}`)
-  for (const roomSelect of await page.locator('.academic-scheduling__manual-components select').all()) await roomSelect.selectOption(classroomRoomIds[1])
+  // Rooms: each select offers only rooms of its component's kind (T → classroom, L → laboratory), so a fixed classroom id cannot be chosen for an L select.
+  // Choose from each select's real options a room that no other session occupies during its interval, so TEACHER_CONFLICT is the only collision.
+  // Selects follow the block's chronological order (activeAssignments sort in the client), which is the order of targetAssignments.
+  const liveAssignments = adjustedProposal.assignments
+  const componentSelects = page.locator('.academic-scheduling__manual-components select')
+  assert.equal(await componentSelects.count(), targetAssignments.length)
+  for (const [index, select] of (await componentSelects.all()).entries()) {
+    const roomId = chooseRoom(await optionValues(select), componentInterval(collisionAssignment.startMinute, index), collisionAssignment.day, targetIds)
+    assert.ok(roomId, `Sin ambiente libre de tipo ${targetAssignments[index].sessionType} para la colisión docente`)
+    await select.selectOption(roomId)
+  }
   const teacherCollisionPending = page.waitForResponse((response) => response.url().endsWith('/ajustes') && response.request().method() === 'POST')
   await page.getByRole('button', { name: 'Aplicar ajuste', exact: true }).click()
   const teacherCollision = await teacherCollisionPending
@@ -205,8 +231,20 @@ try {
 
   await page.getByLabel(`Docente revisión ${firstSectionId}`, { exact: true }).selectOption(targetAssignments[0].teacherId)
   const targetRoomSelects = page.locator('.academic-scheduling__manual-components select')
-  const collidingAssignments = complete.assignments.filter((row) => row.sectionId === collisionAssignment.sectionId).sort((a, b) => a.startMinute - b.startMinute)
-  for (const [index, assignment] of collidingAssignments.entries()) await targetRoomSelects.nth(index).selectOption(assignment.roomId)
+  // Map by kind and time, not by index: a T select can only offer classrooms, so the colliding room must be the colliding session of the same sessionType
+  // that overlaps the select's component interval. Other selects take a free option, so ROOM_CONFLICT is the room collision reported.
+  let roomCollisionSelects = 0
+  for (const [index, select] of (await targetRoomSelects.all()).entries()) {
+    const interval = componentInterval(collisionAssignment.startMinute, index)
+    const clash = liveAssignments.find((row) => row.sectionId === collisionAssignment.sectionId && row.sessionType === targetAssignments[index].sessionType
+      && row.day === collisionAssignment.day && row.startMinute < interval.end && row.endMinute > interval.start)
+    const options = await optionValues(select)
+    const roomId = clash && options.includes(clash.roomId) ? clash.roomId : chooseRoom(options, interval, collisionAssignment.day, targetIds)
+    assert.ok(roomId, `Sin ambiente para el componente ${targetAssignments[index].sessionType}`)
+    if (clash && roomId === clash.roomId) roomCollisionSelects++
+    await select.selectOption(roomId)
+  }
+  assert.ok(roomCollisionSelects > 0, 'Se requiere un componente del mismo tipo y horario en la sección de colisión para ROOM_CONFLICT')
   const roomCollisionPending = page.waitForResponse((response) => response.url().endsWith('/ajustes') && response.request().method() === 'POST')
   await page.getByRole('button', { name: 'Aplicar ajuste', exact: true }).click()
   const roomCollision = await roomCollisionPending
@@ -252,10 +290,12 @@ try {
   assert.ok(oneTeacher.diagnostics.some((row) => row.code === 'PREFERENCES_NOT_MET'))
   assert.equal(await calendar.locator('.weekly-schedule__event').count(), 4)
   await page.getByLabel('Seleccionar o agregar docente').selectOption(teachers[0].id)
-  await setIntervals('Disponibilidad docente', [1, 2], '16:00', '18:00')
+  // 16:00–18:00 is outside the default policy for cycle ≥ 7 (only 18:00–22:00 weekdays), so the generator could not place these sessions.
+  // Each 2-hour session gets one 18:00–20:00 window on a different day.
+  await setIntervals('Disponibilidad docente', [1, 2], '18:00', '20:00')
   for (const roomId of [...classroomRoomIds, 'LAB01NP']) {
     await page.getByLabel('Seleccionar o agregar ambiente').selectOption(roomId)
-    await setIntervals('Disponibilidad del ambiente', [1, 2], '16:00', '18:00')
+    await setIntervals('Disponibilidad del ambiente', [1, 2], '18:00', '20:00')
   }
   await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).fill('45')
   await page.getByLabel(`Modalidad de sesiones ${course.courseId}`, { exact: true }).selectOption('split')
