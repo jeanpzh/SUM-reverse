@@ -145,9 +145,8 @@
 }
 
 .planning-rail a:focus-visible {
-  outline: 2px solid var(--planning-primary);
+  outline: 2px solid var(--planning-rail-text);
   outline-offset: 2px;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
 }
 
 @media (max-width: 1023.98px) {
