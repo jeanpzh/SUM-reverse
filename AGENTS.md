@@ -37,7 +37,7 @@ Before creating a contract, component, DTO, validator or data adapter, review th
 
 The root agent coordinates the task using `.agents/skills/sum-workflow/SKILL.md`. Root responsibilities are evidence acquisition, specifications/shared API contracts, task dependencies, model dispatch, browser ownership and integrated acceptance. Reuse existing plans and dispatch implementation only after its contract and acceptance criteria are ready.
 
-Orca coordinates future workers. Each worker must receive the current root and folder instructions, assigned stage, source restrictions, exclusive files, contract revision, acceptance criteria and required tests. Existing Orca coordination does not authorize additional workers, broader access or implementation during a documentation stage. These root restrictions prevail over conflicting folder instructions, skills, historical plans or automation hooks.
+The orchestrator coordinates workers through T3 Code (see §5). Each worker must receive the current root and folder instructions, assigned stage, source restrictions, exclusive files, contract revision, acceptance criteria and required tests. Existing coordination does not authorize additional workers, broader access or implementation during a documentation stage. These root restrictions prevail over conflicting folder instructions, skills, historical plans or automation hooks.
 
 | Working folder | Instructions | Skills owned by that folder |
 | --- | --- | --- |
@@ -47,9 +47,9 @@ Orca coordinates future workers. Each worker must receive the current root and f
 
 A handoff includes the target folder, its AGENTS.md and local SKILL.md, exclusive files, contract revision, dependencies, criteria and required checks. Assign backend and client to separate workers only with a fixed shared contract and disjoint file ownership. Workers do not edit root contracts/configuration or the other layer without explicit assignment. The principal may perform a diagnosed isolated correction and must record it.
 
-Todo futuro prompt de planificación, implementación o delegación debe incluir la obligación de preservar la fidelidad visual y de interacción al SUM, las pantallas cuyo cambio está autorizado y la reutilización de las interfaces existentes como criterio de aceptación.
+Todo futuro prompt de planificación, implementación o delegación debe incluir la obligación de preservar la fidelidad visual y de interacción al SUM (o, para el producto interno, `docs/design-direction.md`), las pantallas cuyo cambio está autorizado y la reutilización de las interfaces existentes como criterio de aceptación.
 
-Both implementation profiles use `gpt-6-luna` with `high` reasoning. Existing root implementation/verification skill names are compatibility entrypoints that route to folder skills. Fullstack acceptance belongs to the root and requires actual client/server scenarios. Each layer's own checks alone do not establish integration.
+Roles and models are defined in §5. Existing root implementation/verification skill names are compatibility entrypoints that route to folder skills. Fullstack acceptance belongs to the root and requires actual client/server scenarios. Each layer's own checks alone do not establish integration.
 
 Source, authorization and privacy rules below apply to all folders. Folder instructions refine their own implementation details and must not relax those shared boundaries. Do not duplicate global policy in multiple independent conflicting copies.
 
@@ -136,30 +136,40 @@ During `specify` and `clarify`, inspect relevant non-private code/contracts read
 
 Write measurable acceptance criteria and planned synthetic test scenarios for every requirement. Link each to its source class or explicit local decision, and retain unanswered questions as gaps rather than generated behavior. Use the FISI dossier's N0–N3 distinctions where applicable: normative fidelity and local simulation do not establish observable parity. Implementation starts in a separately assigned stage after the plan, shared contract and acceptance criteria are ready.
 
-## 5. Dynamic Agent and Model Routing
+## 5. Orchestration, Roles and Model Routing
 
-For SUM tasks, first consult `.agents/skills/sum-workflow/SKILL.md` and its model-routing reference. Follow the repository's **actual agent TOML configuration** for model selection and reasoning effort.
+This section is the single source of truth for roles, models and delegation. It replaces the previous Luna-only, principal-only-planning and two-subagent policy (superseded by the user on 2026-11-07). Folder `AGENTS.md` files and skills point here instead of restating it.
 
-- **Planificación a cargo del principal (preferencia explícita, 2026-10-19):** el principal produce o completa el plan persistente, contratos locales y criterios de aceptación. No delegar planificación ni crear agentes planificadores. Reutilizar planes suficientes. Con el handoff listo, asignar implementación a `sum-implementer`/`sum-executor` con GPT-6 Luna High, skills de cada carpeta y archivos disjuntos. La aceptación integrada corresponde al principal con `sum-fullstack-verify`. Registrar autor principal, plan y roles reales de implementación.
-- **Trivial, low-risk tasks:** complete directly using the configured lightweight/Luna profile.
-- **Well-specified implementation:** assign to the configured GPT-6 Luna High implementation profiles (`sum-implementer` or `sum-executor`) as explicitly requested by the user.
-- **Decisiones ambiguas, arquitectónicas, de seguridad o alto impacto:** el principal analiza y documenta decisiones e invariantes sin delegar planificación.
-- **Deterministic checks:** prefer build, lint, diff inspection, and reproducible local tests over another model's opinion.
+Delegation uses T3 Code's `delegate_task` / `task_status` with the provider, model and options set explicitly in each call. Confirm availability with `orchestrator_capabilities` at the start of a thread; if a preferred model is unavailable, use the listed alternative and record the substitution. Naming a model in a prompt does not select it.
 
-Routing should adapt to task complexity, uncertainty, and impact. Do not invoke an expensive reviewer for routine edits. Do not claim to have switched models merely by mentioning a model in a prompt: an actual configured agent profile must be used. If the required profile is unavailable, use the permitted current configuration, disclose the limitation briefly, and do not pretend a delegation occurred.
+| Role | Responsibility | Preferred (provider · model · effort) | Alternative |
+| --- | --- | --- | --- |
+| **Orchestrator** | Intake, sizing, delegation, monitoring, integration decisions, delivery | `claudeAgent` · `claude-opus-5-5` · medium (the root session) | — |
+| **Planner** | Plan, task boundaries, dependencies, file ownership, acceptance criteria and handoff briefs | `claudeAgent` · `claude-opus-5-5` · high | Orchestrator plans inline |
+| **UI worker** | Independent frontend tickets in `client/`, following `docs/design-direction.md` for internal UI and SUM fidelity for student UI | `antigravity` · `gemini-3.8-flash` · high | `codex` · `gpt-6-luna` · high |
+| **Backend worker** | NestJS APIs, DTO validation, data contracts, business logic, persistence in `backend/` and `shared/` when assigned | `claudeAgent` · `claude-sonnet-5-5` · high | `codex` · `gpt-6-luna` · high |
+| **Test worker** | Test preparation and execution, regression analysis | `claudeAgent` · `claude-haiku-5-5` · medium | `codex` · `gpt-6-luna` · medium |
+| **Integrator** | Merge worker branches, resolve conflicts, run builds and integrated checks | `codex` · `gpt-6-luna` · high | Orchestrator integrates |
+| **Auditor** | Independent review of the integrated result against spec, design direction, architecture and accessibility, using `code-review` | `claudeAgent` · `claude-opus-5-5` · high | — |
 
-Operational constraints:
+**Sizing.** Trivial or low-risk changes: the orchestrator does them directly, with no workers. Medium changes: orchestrator plans inline, one worker, orchestrator integrates. Large or multi-layer changes: the full flow below. Combine roles whenever delegation overhead exceeds the work.
 
-- At most two subagents may execute concurrently.
-- Workers must not delegate to further agents.
-- Por instrucción del usuario (2026-10-11), cada worker delegado debe comprobar CodeGraph y ejecutar `codegraph init` si falta su configuración/índice local. Antes de inicializar debe validar `codegraph.json` con exclusiones explícitas de `datos-reales/`, archivos privados, dependencias y symlinks ajenos; esta instrucción no autoriza leer ni indexar datos privados. El coordinador asigna también los metadatos locales de CodeGraph necesarios y verifica el resultado real.
-- Concurrent workers must own disjoint files and independent tasks.
-- Browser-owning work is sequential, even when other independent work runs concurrently.
-- Perform at most one automatic repair cycle after failed verification; then diagnose and record the next decision.
-- Reuse sufficient existing plans and evidence. Do not repeatedly replan a sufficiently specified task.
-- Maintain persistent state and verification references for complex tasks; keep simple work lightweight.
+**Flow:** Plan → Delegate → Implement → Integrate → Test → Audit → Deliver.
 
-**T3 Code orchestration (verified 2026-11-07).** The `.codex/agents/*.toml` role files and `.codex/config.toml` cited above do not exist in this repo or in `~/.codex`. Until they are created, the `datos-reales/` deny rule is enforced only by these instructions, and a worker's model is chosen explicitly through `delegate_task`: provider `codex`, model `gpt-6-luna`, `reasoningEffort: high`, with `isolation: "worktree"` for concurrent code changes. Each brief is self-contained. It includes the folder's `AGENTS.md` and skill, `docs/design-direction.md` for internal UI, exclusive files, the contract revision, acceptance criteria and required checks. Workers return changed files, check output, blockers and integration notes. An independent audit is a fresh `delegate_task` that runs `code-review` against the spec and the design direction. The Matt Pocock skills `grill-with-docs`, `to-spec`, `to-tickets`, `implement`, `improve-codebase-architecture` and `triage` are user-invoked only. The orchestrator asks the user to run them; workers cannot invoke them.
+1. **Plan.** Requirements questions go through `grill-with-docs` / `grill-me`, the specification through `to-spec`, and tickets through `to-tickets` (GitHub Issues, see `docs/agents/`). Those skills are user-invoked: the orchestrator asks the user to run them. The Planner turns the spec into briefs with exclusive files, interfaces, contract revision, dependencies and acceptance criteria.
+2. **Delegate.** Each brief is self-contained; workers do not inherit this conversation. It names the folder `AGENTS.md` and its skill, `docs/design-direction.md` for internal UI, the relevant contracts and evidence, the source and privacy restrictions of §2 and the private-data section, the exclusive files, the acceptance criteria and the required checks. Workers return changed files, check output, blockers and integration notes.
+3. **Parallelism.** Run workers concurrently only for independent tickets with disjoint files and a fixed shared contract, each with `isolation: "worktree"`. Workers do not delegate further. Browser-owning work stays sequential.
+4. **Integrate and test.** Verify each worker's output before merging. Run the affected checks of §6 and real local React → NestJS scenarios for integrated changes. Never report an unexecuted check as passed.
+5. **Audit.** A fresh Auditor task reviews the integrated diff. Findings carry severity, evidence and the owning role.
+6. **Retry.** Retry only the failed work package, at most one automatic repair cycle; then diagnose and decide.
+
+Other constraints:
+
+- Por instrucción del usuario (2026-10-11), cada worker delegado debe comprobar CodeGraph y ejecutar `codegraph init` si falta su configuración/índice local. Antes de inicializar debe validar `codegraph.json` con exclusiones explícitas de `datos-reales/`, archivos privados, dependencias y symlinks ajenos; esta instrucción no autoriza leer ni indexar datos privados.
+- Prefer deterministic checks (build, lint, diff inspection, reproducible tests) over another model's opinion; do not invoke the Auditor for routine edits.
+- Reuse sufficient existing plans and evidence; do not replan a sufficiently specified task.
+- Maintain persistent state and verification references for complex tasks in `docs/reverse-engineering/plans/` and `workflows/`; keep simple work lightweight.
+- The `.codex/config.toml` deny profile cited in the private-data section does not exist yet, so the `datos-reales/` exclusion is enforced by these instructions only and must be repeated in every brief.
 
 ## 6. Development Commands
 

@@ -1,5 +1,7 @@
 # Orquestación por carpeta
 
+> **Superseded (2026-11-07):** historical record. The current policy is the root `AGENTS.md` §5.
+
 Actualización: 2026-10-08, solicitud explícita del usuario.
 
 - Raíz: `AGENTS.md`, workflow, evidencia, escenarios, contrato compartido, delegación e integración.

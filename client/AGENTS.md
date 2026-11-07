@@ -11,7 +11,7 @@ Use this folder's skills for client work. The root coordinates shared contracts,
 | Implement React | [sum-react-implement](.agents/skills/sum-react-implement/SKILL.md) |
 | Verify frontend/UI | [sum-react-verify](.agents/skills/sum-react-verify/SKILL.md) |
 
-Implementation uses `sum-implementer` or `sum-executor`, both GPT-6 Luna High. Workers do not delegate.
+Roles, models and delegation are defined in the root `AGENTS.md` §5. Workers do not delegate. Internal planning UI follows `docs/design-direction.md`.
 
 ## Scope and implementation
 
