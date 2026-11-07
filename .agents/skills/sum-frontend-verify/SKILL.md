@@ -12,4 +12,4 @@ Esta es una entrada compatible para el orquestador raíz. La implementación/ver
 3. Cargar y aplicar [sum-react-verify](../../../client/.agents/skills/sum-react-verify/SKILL.md) para ejecutar el trabajo dentro de `client/`.
 4. Entregar resultados al principal con archivos, comandos/salidas reales, criterios y límites. La integración se evalúa con `sum-fullstack-verify`, no se infiere desde checks de una carpeta.
 
-Los trabajadores no delegan ni amplían el contrato. Implementadores `sum-implementer`/`sum-executor` usan GPT-6 Luna High. En simulación, no modificar código ni ejecutar comprobaciones. Autorización, fuentes y privacidad siguen la raíz; no contactar SUM desde la réplica.
+Los trabajadores no delegan ni amplían el contrato. Roles y modelos: `AGENTS.md` raíz §5. En simulación, no modificar código ni ejecutar comprobaciones. Autorización, fuentes y privacidad siguen la raíz; no contactar SUM desde la réplica.

@@ -1,5 +1,7 @@
 # SUM-ROUTING-2026-10-08
 
+> **Superseded (2026-11-07):** historical record. The current policy is the root `AGENTS.md` §5.
+
 Extender el workflow instalado con selección efectiva de modelos y esfuerzos,
 preservando MCP, skills, hooks y cambios ajenos. Alcance: configuración/documentación;
 sin cambios de frontend ni inspección de SUM.

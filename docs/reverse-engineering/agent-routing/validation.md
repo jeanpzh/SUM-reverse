@@ -1,5 +1,7 @@
 # Dynamic Agent & Model Routing — validación
 
+> **Superseded (2026-11-07):** historical record. The current policy is the root `AGENTS.md` §5.
+
 Fecha: 2026-10-08. Instalación: **Codex CLI 0.162.0**.
 
 ## Resultado

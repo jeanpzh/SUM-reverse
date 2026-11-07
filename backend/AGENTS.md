@@ -25,7 +25,7 @@ Para trabajo en esta carpeta, cargar las skills locales pertinentes. La raíz co
 4. Instrucciones del usuario, AGENTS raíz, AGENTS backend y contrato local delimitan el trabajo. Las recomendaciones genéricas de producción se adaptan al backend sintético solicitado; no convierten un fixture readonly en un sistema de producción.
 5. La raíz conserva planificación, contratos compartidos y aceptación integrada. El worker backend usa las skills de esta carpeta y no copia skills frontend. Registrar en la entrega las skills efectivamente aplicadas cuando cambien una decisión relevante.
 
-Implementadores: `sum-implementer` o `sum-executor`, ambos GPT-6 Luna High. No delegar desde un trabajador.
+Roles, modelos y delegación: `AGENTS.md` raíz §5. No delegar desde un trabajador.
 
 ## Alcance y fuentes
 

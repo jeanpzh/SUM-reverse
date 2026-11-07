@@ -1,0 +1,9 @@
+Make a narrow functional correction to the attached academic planning UI mockup, preserving its existing layout, typography, palette, navigation, hour grid, spacing, calendar blocks and footer. This is a revision of the SAME Visual Planning Studio concept, not a fourth design direction. Target desktop1440×900, synthetic Sistemas2027-I.
+
+The backend can edit an EXISTING assigned block; it cannot directly place an unassigned section. Correct the concept accordingly:
+- Keep left tray "Por ubicar / Redes I · S02 / 2 componentes · 4 h / Lab · 30 plazas". Add a small secondary text action "Revisar recursos", not drag or assign.
+- Change right inspector title to "Redes I · Sección 01", keeping "Ajuste sin validar", teacherSYN-03, LabSYN-L201, Viernes14:00 to18:00, original duration4h, same "Validar ajuste" and "Descartar". This edits the EXISTING S01 block currently Thursday08:00–12:00.
+- Keep the existing Thursday08:00–12:00 "Redes I S01 / Lab SYN-L201" block, but display it with muted outline and a concise "Ubicación actual" label. Do not remove it until validation succeeds. Use clearly distinguishable current outline vs proposed dashed amber.
+- Change the dashed Friday14:00–18:00 preview block to "Redes I · S01 / Vista previa". It is the proposed new location of the existing S01, not assignment of S02.
+- Global counts remain22/24components,11/12sections, search inconclusive. One pending sectionS02 stays unresolved. Toolbar "Vista filtrada · 6 de 11 secciones asignadas" unchanged. No fake conformity or locks. No new features.
+Keep all six other saved blocks, each4h with accurate hour geometry, and leave product navigation and short labels unchanged. Keep the note "El servidor validará el horario completo". Purposeful simple semantic UI. Do not add art direction text to the product screen. No other changes.
