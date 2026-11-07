@@ -1,11 +1,8 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
+import { PlanningPortalContext } from './ui/planningPortal'
 import './PlanningShell.css'
 
-const PlanningPortalContext = createContext<HTMLElement | null>(null)
-export function usePlanningPortalContainer(): HTMLElement | undefined {
-  return useContext(PlanningPortalContext) ?? undefined
-}
 
 export function PlanningShell({ children }: { children: ReactNode }): ReactNode {
   const [mode, setMode] = useState<'light' | 'dark' | 'system'>(() => {

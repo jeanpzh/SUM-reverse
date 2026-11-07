@@ -1,6 +1,6 @@
 import * as Primitive from '@radix-ui/react-dialog'
 import type { ComponentProps } from 'react'
-import { usePlanningPortalContainer } from '../PlanningShell'
+import { usePlanningPortalContainer } from './planningPortal'
 import './ui.css'
 export const Sheet = Primitive.Root
 export const SheetTrigger = Primitive.Trigger
