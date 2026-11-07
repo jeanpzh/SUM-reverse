@@ -19,7 +19,6 @@ export function PlanningStageNav({ currentStage }: PlanningStageNavProps): React
                 to="/local/programacion-academica"
                 search={{ etapa: stage.id }}
                 className={`planning-stage-nav__link ${isActive ? 'planning-stage-nav__link--active' : ''}`}
-                aria-current={isActive ? 'step' : undefined}
               >
                 <span className="planning-stage-nav__label">{stage.label}</span>
               </Link>
