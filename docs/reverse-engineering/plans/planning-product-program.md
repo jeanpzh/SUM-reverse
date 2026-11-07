@@ -90,7 +90,9 @@ Ready immediately, in parallel and with disjoint files: F-0, F-R.1, F-S5.1, F-E2
 | Slice 1 | PR #38 open | AC8 passes; awaiting user review and merge |
 | V1, V2 | integrated on `feat/planning-program` | V2 integration restored the pending-components list and added `data-section-id` rows |
 | F-0, F-R.1, F-S5.1, F-E2.1 | integrated | Backend suite 808/808, shared 78/78 |
-| F-R.2, V3 | dispatched 2026-11-07 | Backend · Sonnet high; UI · Gemini Flash high |
+| F-R.2 | dispatched 2026-11-07 | Backend · Sonnet high; estado de ese paquete independiente de V3 |
+| V3 | integrated in `1649962` | Escenarios funcionales cerrados: [revisión](../workflows/planning-week-review.md); límites visuales registrados |
+| P96-UI | ready | [Preparación de oferta grande](planning-preparation-scale.md); contrato UI PA-DEMO-1 sin cambios. Estimador e integración de 96 separados |
 | F-S5.2, F-S5.4, F-E2.2, F-E2.3, V4, V5 | ready or waiting | F-S5.2 after F-R.2; F-E2.2 merge blocked on ER-Q1/ER-Q2 |
 | F-R.3, F-S5.3 | contract fixed | Wait for F-R.2 and V5 respectively |
 | F-E2.4, F-E3 | blocked | User decisions ER-Q1–ER-Q3 in [prematricula-rules.md](../contracts/local-api/prematricula-rules.md) §11 |
