@@ -120,9 +120,10 @@ try {
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 } })
   const page = await context.newPage()
   page.setDefaultTimeout(10000)
+  page.setDefaultNavigationTimeout(45000)
   page.on('dialog', (dialog) => void dialog.accept())
 
-  await page.goto(`${webUrl}${route}`)
+  await page.goto(`${webUrl}${route}`, { waitUntil: 'domcontentloaded' })
   page.on('pageerror', (err) => console.error('[BROWSER PAGE ERROR]', err.message))
   await page.getByRole('heading', { name: 'Paso 2 · Configurar recursos' }).waitFor()
 

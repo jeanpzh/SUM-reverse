@@ -1,6 +1,6 @@
 # Recursos compactos — entrega 1 del flujo aprobado
 
-Fecha: 2026-11-07. Estado: **especificación lista para implementación**. Revisión local: `RESOURCE-UI-1`. Origen: [plan aprobado](planning-assisted-workflow.md), entregas 0–1 y criterios A3, A4, A10, A12–A14. Se implementa una reorganización de UI y estado local sobre **PA-DEMO-1 sin cambios de wire**. No corresponde a SUM oficial.
+Fecha: 2026-11-07. Estado: **implementada e integrada en `0f7c90b`; verificación local registrada**. Revisión local: `RESOURCE-UI-1`. Origen: [plan aprobado](planning-assisted-workflow.md), entregas 0–1 y criterios A3, A4, A10, A12–A14. Se implementa una reorganización de UI y estado local sobre **PA-DEMO-1 sin cambios de wire**. No corresponde a SUM oficial.
 
 ## Alcance
 
@@ -63,3 +63,6 @@ Checks requeridos: `pnpm --dir client build`, `pnpm --dir client lint`, `pnpm --
 Rol UI: antigravity / gemini-3.8-flash / thinking_level high, conforme AGENTS §5; principal integra. Leer raíz `AGENTS.md`, `client/AGENTS.md`, `/home/ubuntu/.codex/RTK.md`, `client/.agents/skills/sum-react-implement/SKILL.md`, este brief, plan aprobado y dirección de diseño. Verificar CodeGraph; si falta índice, validar primero exclusiones explícitas de privados/dependencias/symlinks ajenos en `codegraph.json` antes de `codegraph init`, sin leer archivos privados. Ninguna inicialización autoriza modificar contratos/configuración ni ampliar el acceso.
 
 Entregar commit local, archivos, evidencia por RUI1–RUI11, comandos/resultados reales y límites. No merge, push ni PR. Principal verifica la entrega y decide integración y siguiente etapa. Este es el primer ciclo de implementación de RESOURCE-UI-1; como máximo una reparación automática diagnosticada.
+
+
+Resultado: [informe local](../../../evidence/local/programacion-academica-resources/fullstack-verification.md). El principal canceló el ciclo delegado por demora, conservó el trabajo y cerró directamente la integración y el defecto de layout; sin nuevo worker. Auditoría independiente pendiente.

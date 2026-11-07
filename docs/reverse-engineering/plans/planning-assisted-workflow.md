@@ -154,3 +154,6 @@ Resultado documental (2026-11-07): enlaces Markdown locales comprobados y existe
 ## Ejecución autorizada
 
 Entrega 1 especificada en [Recursos compactos](planning-resource-workbench.md). Primero se integra y verifica esa entrega; después se fijan los contratos de metadata y reutilización de la entrega 2. No se reduce el plan aprobado a su primera entrega. El servidor de demostración existente se conserva activo.
+
+
+Avance de ejecución (2026-11-07): entrega1 Recursos integrada en `0f7c90b`, con [verificación local](../../../evidence/local/programacion-academica-resources/fullstack-verification.md). Entregas2–5 conservan su alcance aprobado y siguen pendientes. No confundir este incremento con el plan completo finalizado.
