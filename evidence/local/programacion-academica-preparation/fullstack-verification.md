@@ -1,6 +1,6 @@
 # Preparación compacta — aceptación local
 
-Fecha: 2026-11-07. Rama integrada: `feat/planning-program`; código `5078b9e` + corrección puntual `1ac4499`, base `5b1883b`. Estado: comprobaciones locales de Preparación, Semana y regresión general ejecutadas con salida 0; auditoría independiente pendiente.
+Fecha: 2026-11-07. Rama integrada: `feat/planning-program`; código `5078b9e` + corrección puntual `1ac4499`, base `5b1883b`. Estado: comprobaciones locales de Preparación, Semana y regresión general ejecutadas con salida 0; auditoría independiente pendiente por límite de cuota del proveedor Claude.
 
 Fuentes: [plan P96-UI](../../../docs/reverse-engineering/plans/planning-preparation-scale.md), [dirección A vinculante](../../../docs/design-direction.md), contrato existente PA-DEMO-1 y código propio. Clasificación: requisitos locales y observaciones del entorno sintético; no evidencia de producción SUM.
 
@@ -35,3 +35,7 @@ El script nuevo permite únicamente PATH y configuración sintética explícita 
 P10 y P11 siguen pendientes: contrato del estimador coherente con 96 y recorrido completo con catálogo/fuente independientes de 96. No hay cambios en backend/shared, SQL, rondas completas o SUM estudiantil en este paquete. Los scripts adaptados `verify-academic-compose.mjs` no fueron ejecutados contra Compose en esta revisión. No se afirma paridad visual con capturas SUM ni implementación del estimador de 96.
 
 Regresión general ejecutada con `timeout 240 env -i PATH="$PATH" node client/scripts/verify-academic-scheduling.mjs`, salida 0; puertos 3210/5176 comprobados libres antes del arranque. Sus PNG/JSON regenerados se restauraron al contenido histórico previo.
+
+## Auditoría independiente no ejecutada
+
+El 2026-11-07 se despachó el Auditor configurado (claudeAgent / claude-opus-5-5 / high). La tarea terminó con `Claude API rate limit reached. Try again later.`; no produjo hallazgos ni dictamen. Esto no cuenta como revisión aprobada. No se cambió de modelo ni se inició una reparación o reintento automático. Las comprobaciones ejecutadas por el principal permanecen válidas para el código indicado; la aceptación independiente queda pendiente hasta recuperar disponibilidad del Auditor configurado o recibir una nueva selección del usuario.

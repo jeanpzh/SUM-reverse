@@ -1,6 +1,6 @@
 # Preparación de una oferta grande
 
-Fecha: 2026-11-07. Estado: P96-UI integrada en `1ac4499`, comprobaciones locales ejecutadas y auditoría pendiente; estimador e integración de 96 pendientes. Base: `1649962` en `feat/planning-program`. Fuente funcional: petición del usuario de continuar tras el diagnóstico de los 96 cursos, [arquitectura](../../design/academic-planning-architecture.md) y [dirección vinculante](../../design-direction.md). Todo el diseño es `local-only`; no representa comportamiento observado en SUM.
+Fecha: 2026-11-07. Estado: P96-UI integrada en `1ac4499`, comprobaciones locales ejecutadas y auditoría pendiente por cuota de Claude; estimador e integración de 96 pendientes. Base: `1649962` en `feat/planning-program`. Fuente funcional: petición del usuario de continuar tras el diagnóstico de los 96 cursos, [arquitectura](../../design/academic-planning-architecture.md) y [dirección vinculante](../../design-direction.md). Todo el diseño es `local-only`; no representa comportamiento observado en SUM.
 
 ## Alcance y contrato fijo del ticket UI
 
