@@ -4,14 +4,31 @@ import { createCoverageAuthority } from './session-coverage.js'
 import { validateSectionDelivery } from './section-delivery.js'
 import { GENERATOR_LIMITS } from './generator-limits.js'
 import { preferenceRank } from './teacher-preferences.js'
-import type { GeneratorExecutionOptions, GeneratorInput, GeneratorResult, RequiredSession } from './generator.types.js'
-import type { AcademicAssignment, TimeInterval } from './schedule.types.js'
+import type { GeneratorDiagnostic, GeneratorExecutionOptions, GeneratorInput, GeneratorResult, GeneratorSeed, RequiredSession } from './generator.types.js'
+import type { AcademicAssignment, AcademicSchedule, TimeInterval } from './schedule.types.js'
 import { THESIS_COURSE_IDS } from '../../../shared/academic-planning-policy.mjs'
 
 type SearchUnit = { requirements: RequiredSession[], mode: 'continuous' | 'split' }
 
+const invalidSeedResult = (code: string, message: string, sessionIds: string[]): GeneratorResult => ({
+  status: 'invalid-input', schedule: null, requirements: [], coverage: null,
+  exploredCandidates: 0, backtracks: 0, candidateVisits: 0, limitReason: null, rejectionCounts: {},
+  diagnostics: [{ code, message, sessionIds }],
+})
+
+function validateSeedShape(seed: GeneratorSeed): void {
+  const strings = (items: unknown) => Array.isArray(items) && items.every((item) => typeof item === 'string')
+  if (!seed || typeof seed !== 'object' || !Array.isArray(seed.fixedAssignments) || !strings(seed.excludedTeacherIds)
+    || !Array.isArray(seed.sectionRoomExclusions)
+    || seed.fixedAssignments.some((item) => !item || typeof item !== 'object' || typeof item.id !== 'string' || typeof item.sectionId !== 'string')
+    || seed.sectionRoomExclusions.some((item) => !item || typeof item !== 'object' || typeof item.sectionId !== 'string' || !strings(item.roomIds))) {
+    throw new TypeError('Semilla del generador inválida')
+  }
+}
+
 /** Deterministic finite-domain DFS. No enrollment mutation, persistence or quality optimization. */
-export function generateAcademicSchedule(value: unknown, options: GeneratorExecutionOptions = {}): GeneratorResult {
+export function generateAcademicSchedule(value: unknown, options: GeneratorExecutionOptions = {}, seed?: GeneratorSeed): GeneratorResult {
+  if (seed !== undefined) validateSeedShape(seed)
   const now = options.now ?? (() => performance.now())
   const maxElapsedMs = options.maxElapsedMs ?? GENERATOR_LIMITS.defaultElapsedMs
   const maxCandidateVisits = options.maxCandidateVisits ?? GENERATOR_LIMITS.candidateVisits
@@ -32,14 +49,45 @@ export function generateAcademicSchedule(value: unknown, options: GeneratorExecu
       ] }
   }
   const { input, schedule, requirements } = prepared
-  const units = makeUnits(input, requirements)
+  const fixedAssignments = structuredClone(seed?.fixedAssignments ?? [])
+  const excludedTeachers = new Set(seed?.excludedTeacherIds ?? [])
+  const excludedRooms = new Map((seed?.sectionRoomExclusions ?? []).map((item) => [item.sectionId, new Set(item.roomIds)]))
+  const fixedSectionIds = new Set(fixedAssignments.map((item) => item.sectionId))
+  if (fixedAssignments.length) {
+    const sectionIds = new Set(schedule.sections.map((section) => section.id))
+    const requirementIds = new Map(requirements.map((item) => [item.id, item.sectionId]))
+    const seen = new Set<string>()
+    const malformed = fixedAssignments.filter((item) => {
+      const duplicate = seen.has(item.id)
+      seen.add(item.id)
+      return duplicate || !sectionIds.has(item.sectionId) || requirementIds.get(item.id) !== item.sectionId
+    })
+    if (malformed.length) {
+      return invalidSeedResult('FIXED_ASSIGNMENT_INVALID', 'Las asignaciones fijas incluyen sesiones desconocidas, repetidas o de otra sección', malformed.map((item) => item.id))
+    }
+    const present = new Set(fixedAssignments.map((item) => item.id))
+    const missing = requirements.filter((item) => fixedSectionIds.has(item.sectionId) && !present.has(item.id)).map((item) => item.id)
+    if (missing.length) {
+      return invalidSeedResult('FIXED_SECTION_INCOMPLETE', 'Una sección fija debe incluir todas sus sesiones requeridas entre las asignaciones fijas', missing)
+    }
+    const fixedSchedule = { ...schedule, assignments: structuredClone(fixedAssignments) }
+    const validation = validateAcademicSchedule(fixedSchedule, { planningPolicy: Boolean(input.planningPolicy) })
+    const conflicting = new Set(validation.issues.flatMap((issue) => issue.assignmentIds))
+    const delivery = validateSectionDelivery(fixedSchedule, requirements, input)
+    for (const issue of delivery) for (const item of fixedAssignments) if (item.sectionId === issue.sectionId) conflicting.add(item.id)
+    if (!validation.valid || delivery.length) {
+      return invalidSeedResult('FIXED_ASSIGNMENT_INVALID', 'Las asignaciones fijas violan una restricción dura', [...conflicting])
+    }
+    schedule.assignments = fixedAssignments
+  }
+  const units = makeUnits(input, requirements.filter((item) => !fixedSectionIds.has(item.sectionId)))
   let exploredCandidates = 0
   let backtracks = 0
   let limitReason: GeneratorResult['limitReason'] = null
   let candidateVisits = 0
   let lastTime = started
   const authority = createCoverageAuthority(input)
-  let best: AcademicAssignment[] = []
+  let best: AcademicAssignment[] = structuredClone(fixedAssignments)
   const rejectionCounts: GeneratorResult['rejectionCounts'] = {}
 
   function checkpoint(): boolean {
@@ -58,14 +106,14 @@ export function generateAcademicSchedule(value: unknown, options: GeneratorExecu
     const assignedTeacher = schedule.assignments.find((item) => item.sectionId === first.sectionId)?.teacherId
 
     const eligibleTeachers = input.teachers.filter((teacher) => (!assignedTeacher || teacher.id === assignedTeacher)
-      && isEligibleForCourse(teacher, first.courseId, input))
+      && !excludedTeachers.has(teacher.id) && isEligibleForCourse(teacher, first.courseId, input))
     const hasPreferenceWindows = input.allocationPolicy !== 'first-feasible'
       && eligibleTeachers.some((teacher) => teacher.courseIds.includes(first.courseId) && teacher.preferences?.length)
     const rankOrder = input.planningPolicy ? [0, 1, 2, 3, 4, 5, 6, 7, 8] : hasPreferenceWindows ? [0, 1, 2] : [1]
     const duration = mode === 'continuous' ? blockDuration : first.durationMinutes
     for (const targetRank of rankOrder) {
       let teachers = input.teachers.filter((teacher) => (!assignedTeacher || teacher.id === assignedTeacher)
-        && isEligibleForCourse(teacher, first.courseId, input))
+        && !excludedTeachers.has(teacher.id) && isEligibleForCourse(teacher, first.courseId, input))
       if (input.allocationPolicy === 'balanced') {
         teachers = teachers.slice().sort((left, right) => {
           const load = (id: string) => schedule.assignments.filter((item) => item.teacherId === id)
@@ -145,6 +193,7 @@ export function generateAcademicSchedule(value: unknown, options: GeneratorExecu
               return
             }
             for (const room of input.rooms) {
+              if (excludedRooms.get(first.sectionId)?.has(room.id)) continue
               if (!checkpoint()) return
               candidateVisits++
               if (input.planningPolicy && partial[index]!.sessionType === 'L' && room.kind !== 'laboratory') {
@@ -188,9 +237,31 @@ export function generateAcademicSchedule(value: unknown, options: GeneratorExecu
   const coverage = authority.check(schedule)
   if (found && !coverage.complete) throw new Error('Invariante interna: la búsqueda terminó sin cobertura válida')
   const status = found ? 'complete' : limitReason ? 'search-limit' : 'impossible'
-  const diagnostic = getDiagnostic(status, limitReason, input, requirements, rejectionCounts, coverage.missingSessionIds)
-  return { status, schedule, requirements, coverage, exploredCandidates, backtracks, candidateVisits, limitReason, rejectionCounts,
-    diagnostics: [diagnostic] }
+  const diagnostic = getDiagnostic(status, limitReason, input, requirements, rejectionCounts, coverage.missingSessionIds, schedule.sections)
+  const diagnostics: GeneratorDiagnostic[] = [diagnostic]
+  if (status === 'impossible' && fixedAssignments.length && diagnostic.code === 'FINITE_DOMAIN_EXHAUSTED') {
+    // Observation, not proof: the non-fixed sections alone fit under the same exclusions, so the fixed placements are what blocks the search.
+    const stats = { exploredCandidates, backtracks, candidateVisits }
+    const saved = { assignments: schedule.assignments, best, rejections: { ...rejectionCounts } }
+    schedule.assignments = []
+    best = []
+    const probeFound = search(0)
+    const probeLimited = limitReason !== null
+    schedule.assignments = saved.assignments
+    best = saved.best
+    for (const key of Object.keys(rejectionCounts)) delete rejectionCounts[key as keyof typeof rejectionCounts]
+    Object.assign(rejectionCounts, saved.rejections)
+    exploredCandidates = stats.exploredCandidates
+    backtracks = stats.backtracks
+    candidateVisits = stats.candidateVisits
+    limitReason = null
+    if (probeFound && !probeLimited) {
+      diagnostics.push({ code: 'FIXED_PLACEMENTS_BLOCK',
+        message: 'Las secciones no fijas pueden programarse sin las asignaciones fijas; estas últimas son la causa de bloqueo observada. No se ha demostrado una causa única.',
+        sessionIds: fixedAssignments.map((item) => item.id) })
+    }
+  }
+  return { status, schedule, requirements, coverage, exploredCandidates, backtracks, candidateVisits, limitReason, rejectionCounts, diagnostics }
 }
 
 function makeUnits(input: GeneratorInput, requirements: RequiredSession[]): SearchUnit[] {
@@ -218,6 +289,7 @@ function getDiagnostic(
   requirements: RequiredSession[],
   rejections: GeneratorResult['rejectionCounts'],
   missingSessionIds: string[],
+  sections: AcademicSchedule['sections'],
 ) {
   if (status === 'complete') return { code: 'COMPLETE', message: 'Todas las sesiones requeridas están programadas y validadas', sessionIds: [] }
   if (status === 'search-limit') {
@@ -228,7 +300,7 @@ function getDiagnostic(
     }
     return { code: 'SEARCH_LIMIT', message: messages[limitReason!], sessionIds: missingSessionIds }
   }
-  const proof = proveNecessaryConstraint(input, requirements)
+  const proof = proveNecessaryConstraint(input, requirements, sections)
   if (proof) return { ...proof, sessionIds: missingSessionIds }
   const labels: Partial<Record<keyof NonNullable<GeneratorResult['rejectionCounts']>, string>> = {
     RESOURCE_NOT_FOUND: 'referencias de recursos', TEACHER_CONFLICT: 'cruces de docente', ROOM_CONFLICT: 'cruces de ambiente',
@@ -245,7 +317,7 @@ function getDiagnostic(
     sessionIds: missingSessionIds }
 }
 
-function proveNecessaryConstraint(input: GeneratorInput, requirements: RequiredSession[]) {
+function proveNecessaryConstraint(input: GeneratorInput, requirements: RequiredSession[], sections: AcademicSchedule['sections']) {
   const courseIds = new Set(requirements.map((item) => item.courseId))
   for (const courseId of courseIds) {
     const courseRequirements = requirements.filter((item) => item.courseId === courseId)
@@ -281,8 +353,8 @@ function proveNecessaryConstraint(input: GeneratorInput, requirements: RequiredS
     }
   }
   if (!input.rooms.length) return { code: 'NO_ROOM_SELECTED', message: 'No hay ambientes seleccionados para programar las secciones' }
-  const largestCapacity = Math.max(...input.courses.filter((course) => requirements.some((item) => item.courseId === course.courseId))
-    .map((course) => course.targetCapacity))
+  const sectionIds = new Set(requirements.map((item) => item.sectionId))
+  const largestCapacity = Math.max(...sections.filter((section) => sectionIds.has(section.id)).map((section) => section.capacity))
   if (input.rooms.every((room) => room.capacity < largestCapacity)) {
     return { code: 'ROOM_CAPACITY', message: `Ningún ambiente seleccionado alcanza las ${largestCapacity} plazas requeridas` }
   }

@@ -281,6 +281,19 @@ export function validateAcademicDemandEstimate(value) {
     if (counts['non-eligible'] !== row.nonEligible || counts.insufficient !== row.insufficient) throw new TypeError('Motivos inconsistentes')
   })
 }
+/** F-0: per-section capacity override. The ordinal is bounded by the computed section count when the demand carries its own targetCapacity; otherwise the service checks it against the catalog default. */
+function sectionCapacities(row) {
+  const entries = array(row.sectionCapacities, 'sectionCapacities', 32)
+  const ordinals = new Set()
+  const count = Object.hasOwn(row, 'targetCapacity') ? Math.ceil(row.estimatedDemand / row.targetCapacity) : Number.MAX_SAFE_INTEGER
+  entries.forEach((entry) => {
+    object(entry, ['ordinal', 'capacity'], 'sectionCapacity')
+    number(entry.ordinal, 'sectionCapacity.ordinal', 1, count)
+    number(entry.capacity, 'sectionCapacity.capacity', 1, 1000)
+    if (ordinals.has(entry.ordinal)) throw new TypeError('sectionCapacity.ordinal: repetido')
+    ordinals.add(entry.ordinal)
+  })
+}
 export function validateAcademicRequest(value) {
   object(value, ['revision', 'demands'], 'request', ['resources', 'allocationPolicy', 'planningPolicy'])
   if (Object.hasOwn(value, 'planningPolicy')) validatePlanningPolicy(value.planningPolicy)
@@ -289,12 +302,13 @@ export function validateAcademicRequest(value) {
   string(value.revision, 'revision')
   const seen = new Set()
   array(value.demands, 'demands', PLANNING_LIMITS.courses).forEach((row) => {
-    object(row, ['courseId', 'estimatedDemand'], 'demand', ['targetCapacity', 'patternId', 'deliveryMode'])
+    object(row, ['courseId', 'estimatedDemand'], 'demand', ['targetCapacity', 'patternId', 'deliveryMode', 'sectionCapacities'])
     if (Object.hasOwn(row, 'deliveryMode') && !['continuous', 'split'].includes(row.deliveryMode)) throw new TypeError('Modalidad de sección inválida')
     string(row.courseId, 'courseId')
     number(row.estimatedDemand, 'estimatedDemand')
     if (Object.hasOwn(row, 'targetCapacity')) number(row.targetCapacity, 'targetCapacity', 1)
     if (Object.hasOwn(row, 'patternId')) string(row.patternId, 'patternId')
+    if (Object.hasOwn(row, 'sectionCapacities')) sectionCapacities(row)
     if (seen.has(row.courseId)) throw new TypeError('courseId: repetido')
     seen.add(row.courseId)
   })

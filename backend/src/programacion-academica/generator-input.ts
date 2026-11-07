@@ -71,7 +71,7 @@ export function prepareGeneratorInput(value: unknown): { input: GeneratorInput; 
   const requirements: RequiredSession[] = []
   courses.forEach((value, index) => {
     const path = `courses[${index}]`
-    const course = exactRecord(value, ['courseId', 'estimatedDemand', 'targetCapacity', 'weeklySessions'], path, ['deliveryMode', 'cycle'])
+    const course = exactRecord(value, ['courseId', 'estimatedDemand', 'targetCapacity', 'weeklySessions'], path, ['deliveryMode', 'cycle', 'sectionCapacities'])
     const mode = deliveryMode(course.deliveryMode, `${path}.deliveryMode`)
     requireId(course.courseId, `${path}.courseId`)
     if (course.cycle !== undefined) requireInteger(course.cycle, 1, 10, `${path}.cycle`)
@@ -79,6 +79,17 @@ export function prepareGeneratorInput(value: unknown): { input: GeneratorInput; 
     try {
       count = calculateRequiredSections({ courseId: course.courseId, estimatedDemand: course.estimatedDemand, targetCapacity: course.targetCapacity }).requiredSections
     } catch (error) { fail(path, error instanceof Error ? error.message : 'demanda inválida') }
+    const overrides = new Map<number, number>()
+    if (course.sectionCapacities !== undefined) {
+      array(course.sectionCapacities, `${path}.sectionCapacities`, 32).forEach((entry, entryIndex) => {
+        const entryPath = `${path}.sectionCapacities[${entryIndex}]`
+        const override = exactRecord(entry, ['ordinal', 'capacity'], entryPath)
+        requireInteger(override.ordinal, 1, count, `${entryPath}.ordinal`)
+        requireInteger(override.capacity, 1, 1000, `${entryPath}.capacity`)
+        if (overrides.has(override.ordinal)) fail(`${entryPath}.ordinal`, 'ordinal repetido')
+        overrides.set(override.ordinal, override.capacity)
+      })
+    }
     const weekly = array(course.weeklySessions, `${path}.weeklySessions`, 128)
     if (!weekly.length) fail(`${path}.weeklySessions`, 'declarar al menos una sesión semanal')
     const seen = new Set<string>()
@@ -97,7 +108,7 @@ export function prepareGeneratorInput(value: unknown): { input: GeneratorInput; 
     for (let number = 1; number <= count; number++) {
       const sectionId = `section:${JSON.stringify([courseId, number])}`
       sectionNumbers.set(sectionId, number)
-      sections.push({ id: sectionId, courseId, capacity: course.targetCapacity as number,
+      sections.push({ id: sectionId, courseId, capacity: overrides.get(number) ?? course.targetCapacity as number,
         ...(course.cycle !== undefined ? { cycle: course.cycle as number, ordinal: number } : {}) })
       for (const [order, value] of weekly.entries()) {
         const session = value as { id: string, durationMinutes: number, type?: string }
