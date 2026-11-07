@@ -152,16 +152,26 @@ Delegation uses T3 Code's `delegate_task` / `task_status` with the provider, mod
 | **Integrator** | Merge worker branches, resolve conflicts, run builds and integrated checks | `codex` · `gpt-6-luna` · high | Orchestrator integrates |
 | **Auditor** | Independent review of the integrated result against spec, design direction, architecture and accessibility, using `code-review` | `claudeAgent` · `claude-opus-5-5` · high | — |
 
-**Sizing.** Trivial or low-risk changes: the orchestrator does them directly, with no workers. Medium changes: orchestrator plans inline, one worker, orchestrator integrates. Large or multi-layer changes: the full flow below. Combine roles whenever delegation overhead exceeds the work.
+**Sizing.** Trivial or low-risk changes: the orchestrator does them directly, with no workers. Medium changes: orchestrator plans inline, one worker per independent ticket, orchestrator integrates. Large or multi-layer changes: the full flow below, scheduled as described under **Scheduling**. Combine roles whenever delegation overhead exceeds the work.
 
 **Flow:** Plan → Delegate → Implement → Integrate → Test → Audit → Deliver.
 
-1. **Plan.** Requirements questions go through `grill-with-docs` / `grill-me`, the specification through `to-spec`, and tickets through `to-tickets` (GitHub Issues, see `docs/agents/`). Those skills are user-invoked: the orchestrator asks the user to run them. The Planner turns the spec into briefs with exclusive files, interfaces, contract revision, dependencies and acceptance criteria.
+1. **Plan.** Requirements questions go through `grill-with-docs` / `grill-me`, the specification through `to-spec`, and tickets through `to-tickets` (GitHub Issues, see `docs/agents/`). Those skills are user-invoked: the orchestrator asks the user to run them. When no `/to-tickets` output exists, the Planner drafts the tickets inline. The Planner turns the spec into briefs with exclusive files, interfaces, contract revision, dependencies and acceptance criteria.
 2. **Delegate.** Each brief is self-contained; workers do not inherit this conversation. It names the folder `AGENTS.md` and its skill, `docs/design-direction.md` for internal UI, the relevant contracts and evidence, the source and privacy restrictions of §2 and the private-data section, the exclusive files, the acceptance criteria and the required checks. Workers return changed files, check output, blockers and integration notes.
-3. **Parallelism.** Run workers concurrently only for independent tickets with disjoint files and a fixed shared contract, each with `isolation: "worktree"`. Workers do not delegate further. Browser-owning work stays sequential.
+3. **Parallelism.** Follow **Scheduling** below. Workers do not delegate further. Browser-owning work stays sequential.
 4. **Integrate and test.** Verify each worker's output before merging. Run the affected checks of §6 and real local React → NestJS scenarios for integrated changes. Never report an unexecuted check as passed.
 5. **Audit.** A fresh Auditor task reviews the integrated diff. Findings carry severity, evidence and the owning role.
 6. **Retry.** Retry only the failed work package, at most one automatic repair cycle; then diagnose and decide.
+
+**Scheduling (adaptive hybrid).** The goal is the shortest total delivery time at controlled quality and cost. The per-ticket flow stays the same; only the order in which tickets enter it changes.
+
+- **Dependency graph and ready queue.** The plan records each ticket's dependencies, exclusive files and shared contract revision. A ticket is *ready* when all its dependencies are integrated, its contract is fixed and its files are disjoint from every running ticket. Re-evaluate the ready queue whenever a ticket starts, finishes, fails, or adds a follow-up.
+- **Concurrency.** Run one worker for small or tightly coupled work: shared files, an unfixed contract, or one step consuming another's output. Run 2–3 concurrent workers only when that many genuinely independent tickets are ready. Never split a ticket artificially to raise concurrency.
+- **Dispatch.** Use `delegate_task` with `mode: "async"` and `isolation: "worktree"` where supported. End the turn after dispatch, and react to completion notifications without polling.
+- **Pipelining.** While one ticket is in Integrate, Test or Audit, dispatch the next ready ticket, within the concurrency limit. Follow-ups found during verification become tickets, and they are dispatched as soon as they are ready.
+- **Parallel test preparation.** A test worker may write acceptance scripts or tests alongside the implementing worker when its files are disjoint. The scripts run against the integrated result.
+- **Controlled integration.** The orchestrator or Integrator merges one ticket at a time onto the integration branch and re-runs the affected checks after each merge. The Auditor is a fresh task that sees only the integrated diff and the requirements, never the worker's conversation.
+- **Cost.** Use the cheapest role that fits: direct edits for small fixes, and test workers on lower-cost models. Briefs reference files instead of pasting them. Retries follow step 6.
 
 Other constraints:
 
