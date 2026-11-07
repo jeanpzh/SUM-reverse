@@ -70,8 +70,22 @@ try {
   await page.getByLabel(`Capacidad ${course.courseId}`, { exact: true }).fill('45')
   await page.getByLabel(`Patrón ${course.courseId}`).selectOption(pattern.id)
   assert.equal(await page.getByLabel(`Modalidad de sesiones ${course.courseId}`).inputValue(), 'continuous')
-  while (await teacherForm.count()) await teacherForm.getByRole('button', { name: /^Quitar docente / }).click()
-  while (await roomForm.count()) await roomForm.getByRole('button', { name: /^Quitar ambiente / }).click()
+  // Start from zero incorporated resources (same bulk retire flow as verify-academic-scheduling.mjs).
+  const resourceTab = (kind) => page.getByRole('tab', { name: kind === 'teachers' ? /^Docentes \(/ : /^Aulas y laboratorios \(/ })
+  const clearIncluded = async (kind) => {
+    await resourceTab(kind).click()
+    const workbench = page.locator('.academic-resource-workbench')
+    const filter = page.getByLabel(kind === 'teachers' ? 'Filtrar docentes por inclusión' : 'Filtrar ambientes por inclusión')
+    await filter.selectOption('included')
+    if (await workbench.locator('tbody tr input[type="checkbox"]').count()) {
+      await workbench.getByRole('button', { name: 'Seleccionar visibles', exact: true }).click()
+      await workbench.getByRole('button', { name: /Retirar seleccionados/ }).click()
+      await page.getByRole('dialog').getByRole('button', { name: /^Confirmar retiro/ }).click()
+    }
+    await filter.selectOption('all')
+  }
+  await clearIncluded('rooms')
+  await clearIncluded('teachers')
   for (const [index, teacher] of teachers.entries()) {
     await page.getByLabel('Seleccionar o agregar docente').selectOption(teacher.id)
     assert.equal(await teacherForm.count(), 1)
@@ -87,11 +101,12 @@ try {
   assert.equal(await page.getByLabel('Carga semanal docente', { exact: true }).inputValue(), '960')
   assert.equal(await page.getByLabel(`Máximo de secciones ${course.courseId}`, { exact: true }).inputValue(), '4')
   assert.equal(await page.getByRole('group', { name: new RegExp(`^${preferenceLabel}`) }).getByRole('combobox').count(), 2)
-  assert.equal(await page.locator('[aria-label="Docentes incorporados"]').getByRole('button').count(), 2)
+  assert.equal(await page.getByRole('table', { name: 'Docentes', exact: true }).locator('.academic-resource-badge--included').count(), 2)
   await page.getByLabel('Identificación docente', { exact: true }).fill(teachers[1].id)
   assert.equal(await page.getByLabel('Identificación docente', { exact: true }).inputValue(), teachers[0].id)
   await teacherForm.getByRole('alert').waitFor()
   await page.getByLabel('Identificación docente', { exact: true }).fill(teachers[0].id)
+  await resourceTab('rooms').click()
   for (const roomId of [...classroomRoomIds, 'LAB01NP']) {
     await page.getByLabel('Seleccionar o agregar ambiente').selectOption(roomId)
     assert.equal(await roomForm.count(), 1)
@@ -109,22 +124,28 @@ try {
   assert.deepEqual(complete.counts, { sections: 4, requiredSessions: 8, scheduledSessions: 8 })
   assert.equal(complete.preferenceReport.withinPreferenceSections, 4)
   for (const teacher of teachers) assert.equal(new Set(complete.assignments.filter((row) => row.teacherId === teacher.id).map((row) => row.sectionId)).size, 2)
-  const table = page.getByRole('region', { name: 'Programación generada', exact: true })
   const sectionsTable = page.locator('.academic-scheduling__sections-table')
   const sectionRow = (index) => sectionsTable.locator(`tr[data-section-id=${JSON.stringify(complete.sections[index].sectionId)}]`)
-  assert.equal(await table.locator('tbody tr').count(), 4)
+  // Horario keeps one result table (grouped sections) and the Semana grid; the legacy assignments table and calendar were removed.
+  assert.equal(await page.getByRole('region', { name: 'Programación generada', exact: true }).count(), 0, 'The duplicated assignments table is gone')
+  assert.equal(await page.locator('.planning-stage-panel--horario .weekly-schedule').count(), 0, 'The duplicated legacy calendar is gone')
+  const weekBlocks = page.locator('.planning-week__grid-wrapper article[data-week-grid-section-id]')
+  assert.equal(await sectionsTable.locator('tr[data-section-id]').count(), 4)
   assert.equal(await page.locator('.academic-scheduling__manual-review').count(), 0, 'No editor appears before a section is selected')
   assert.equal(await sectionsTable.getByRole('columnheader', { name: 'Acciones', exact: true }).count(), 1)
   assert.equal(await sectionsTable.getByRole('button', { name: 'Editar horario', exact: true }).count(), 4)
   for (const cell of await sectionsTable.locator('tr[data-section-id] .planning-sections__cell-section').all()) assert.match((await cell.innerText()).trim(), /^\d+$/, 'The section cell contains only its number')
   assert.equal(await sectionsTable.getByRole('columnheader', { name: 'Modalidad', exact: true }).count(), 0)
-  assert.equal(await table.getByRole('columnheader', { name: 'Duración total', exact: true }).count(), 0)
-  assert.ok((await table.innerText()).includes('T · 2 h (120 min)'))
-  assert.ok((await table.innerText()).includes('L · 2 h (120 min)'))
   await page.locator('.academic-scheduling__sections-table').screenshot({ path: resolve(output, 'sections-table.png') })
-  await table.screenshot({ path: resolve(output, 'assignments-table.png') })
-  const calendar = page.getByRole('region', { name: 'Calendario semanal con horas; desplázate horizontalmente para ver todos los días', exact: true })
-  assert.equal(await calendar.locator('.weekly-schedule__event').count(), 4)
+  // Component types and durations now live in the section inspector.
+  const componentTags = []
+  for (let index = 0; index < complete.sections.length; index += 1) {
+    await sectionRow(index).getByRole('button', { name: /^Inspeccionar sección/ }).click()
+    componentTags.push(...(await page.locator('.planning-inspector__component-tag').allInnerTexts()).map((text) => text.trim()))
+  }
+  assert.ok(componentTags.includes('T · 2 h (120 min)'), componentTags.join(' | '))
+  assert.ok(componentTags.includes('L · 2 h (120 min)'), componentTags.join(' | '))
+  assert.equal(await weekBlocks.count(), 4)
   const firstSectionId = complete.assignments[0].sectionId
   const firstSectionRowIndex = complete.sections.findIndex((section) => section.sectionId === firstSectionId)
   await sectionRow(firstSectionRowIndex).getByRole('button', { name: 'Editar horario', exact: true }).click()
@@ -159,7 +180,7 @@ try {
   await sectionRow(firstSectionRowIndex).getByRole('button', { name: 'Editar horario', exact: true }).click()
   const firstTargetDay = page.getByLabel(`Día revisión ${firstSectionId}`, { exact: true })
   const firstTargetStart = page.getByLabel(`Inicio revisión ${firstSectionId}`, { exact: true })
-  const tableBeforePolicyRejection = await table.innerText()
+  const tableBeforePolicyRejection = await sectionsTable.innerText()
   const proposalBeforePolicyRejection = await read(`/local/programacion-academica/v1/propuestas/${complete.proposalId}`)
   await firstTargetDay.selectOption(String(afternoonSlot.day))
   await firstTargetStart.fill(toTime(afternoonSlot.startMinute))
@@ -169,7 +190,7 @@ try {
   assert.equal(policyRejected.status(), 422, await policyRejected.text())
   assert.match((await policyRejected.json()).error.message, /PLANNING_POLICY_WINDOW/)
   await page.getByRole('alert').filter({ hasText: 'No se aplicó el ajuste' }).waitFor()
-  assert.equal(await table.innerText(), tableBeforePolicyRejection)
+  assert.equal(await sectionsTable.innerText(), tableBeforePolicyRejection)
   assert.deepEqual(await read(`/local/programacion-academica/v1/propuestas/${complete.proposalId}`), proposalBeforePolicyRejection)
 
   await firstTargetDay.selectOption(String(slot.day))
@@ -182,10 +203,10 @@ try {
   assert.equal(adjustedProposal.editVersion, 1)
   assert.deepEqual(adjustedProposal.manuallyAdjustedSectionIds, [firstSectionId])
   assert.deepEqual(adjustedProposal.assignments.filter((row) => targetIds.includes(row.sessionId)).map((row) => row.day), targetAssignments.map(() => slot.day))
-  assert.equal(await table.locator('tbody tr').count(), 4)
-  assert.match(await table.innerText(), /Ajustada manualmente/)
-  assert.equal(await calendar.locator('.weekly-schedule__event').count(), 4)
-  assert.equal(await calendar.locator('.weekly-schedule__event').filter({ hasText: 'Ajustada manualmente' }).count(), 1)
+  assert.equal(await sectionsTable.locator('tr[data-section-id]').count(), 4)
+  assert.equal(await sectionsTable.locator('tr[data-section-id] .planning-sections__cell-status').filter({ hasText: 'Ajustada' }).count(), 1)
+  assert.match(await sectionRow(firstSectionRowIndex).locator('.planning-sections__cell-status').innerText(), /Ajustada/)
+  assert.equal(await weekBlocks.count(), 4)
 
   // Interval of the chronological component `index` when the block starts at `startMinute` (same rule as the backend's precedingDuration).
   const componentInterval = (startMinute, index) => {
@@ -211,7 +232,7 @@ try {
     && other.day === collisionAssignment.day && other.startMinute < collisionAssignment.startMinute + blockMinutes && other.endMinute > collisionAssignment.startMinute),
   'El docente original del bloque debe estar libre en el horario de colisión')
   const otherSection = complete.sections.find((section) => section.sectionId === collisionAssignment.sectionId)
-  const tableBeforeRejectedEdit = await table.innerText()
+  const tableBeforeRejectedEdit = await sectionsTable.innerText()
   await sectionRow(firstSectionRowIndex).getByRole('button', { name: 'Editar horario', exact: true }).click()
   await page.getByLabel(`Docente revisión ${firstSectionId}`, { exact: true }).selectOption(collisionAssignment.teacherId)
   await page.getByLabel(`Día revisión ${firstSectionId}`, { exact: true }).selectOption(String(collisionAssignment.day))
@@ -239,7 +260,7 @@ try {
   assert.equal(teacherCollision.status(), 422)
   assert.match((await teacherCollision.json()).error.message, /TEACHER_CONFLICT/)
   await page.getByRole('alert').filter({ hasText: 'No se aplicó el ajuste' }).waitFor()
-  assert.equal(await table.innerText(), tableBeforeRejectedEdit)
+  assert.equal(await sectionsTable.innerText(), tableBeforeRejectedEdit)
   assert.equal((await read(`/local/programacion-academica/v1/propuestas/${complete.proposalId}`)).editVersion, 1)
 
   await page.getByLabel(`Docente revisión ${firstSectionId}`, { exact: true }).selectOption(targetAssignments[0].teacherId)
@@ -264,14 +285,18 @@ try {
   assert.equal(roomCollision.status(), 422)
   assert.match((await roomCollision.json()).error.message, /ROOM_CONFLICT/)
   await page.getByRole('alert').filter({ hasText: 'No se aplicó el ajuste' }).waitFor()
-  assert.equal(await table.innerText(), tableBeforeRejectedEdit)
+  assert.equal(await sectionsTable.innerText(), tableBeforeRejectedEdit)
   assert.equal((await read(`/local/programacion-academica/v1/propuestas/${complete.proposalId}`)).editVersion, 1)
-  await calendar.scrollIntoViewIfNeeded()
-  await page.screenshot({ path: resolve(output, 'erp-complete-calendar.png') })
+  await page.getByRole('group', { name: 'Vista', exact: true }).getByRole('button', { name: 'Semana', exact: true }).click()
+  await page.locator('.planning-week__grid-wrapper').screenshot({ path: resolve(output, 'erp-complete-calendar.png') })
+  await page.getByRole('group', { name: 'Vista', exact: true }).getByRole('button', { name: 'Tabla', exact: true }).click()
   await stage('Preparación', 'preparacion')
+  await resourceTab('teachers').click()
   await page.getByLabel('Seleccionar o agregar docente').selectOption(teachers[1].id)
   await teacherForm.getByRole('button', { name: /^Quitar docente / }).click()
   assert.equal(await page.locator('.academic-scheduling__result').count(), 0)
+  // The resource workbench keeps no card open after removal; reopen the remaining teacher explicitly.
+  await page.getByLabel('Seleccionar o agregar docente').selectOption(teachers[0].id)
   await page.getByLabel('Carga semanal docente', { exact: true }).fill('480')
   await page.getByLabel(`Máximo de secciones ${course.courseId}`, { exact: true }).fill('2')
   const insufficient = await generate()
@@ -292,7 +317,7 @@ try {
     assert.ok(insufficient.diagnostics.every((row) => row.code !== 'SEARCH_LIMIT'))
     assert.match(await page.locator('.academic-scheduling__result').innerText(), /Sin solución completa en el dominio configurado/)
   }
-  assert.equal(await calendar.locator('.weekly-schedule__event').count(), insufficient.counts.scheduledSessions / 2)
+  assert.equal(await weekBlocks.count(), insufficient.counts.scheduledSessions / 2)
   await page.locator('.academic-scheduling__result').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(output, 'erp-insufficient.png') })
   await stage('Preparación', 'preparacion')
@@ -303,12 +328,13 @@ try {
   assert.equal(new Set(oneTeacher.assignments.map((row) => row.teacherId)).size, 1)
   assert.equal(oneTeacher.preferenceReport.outsidePreferenceSections, 2)
   assert.ok(oneTeacher.diagnostics.some((row) => row.code === 'PREFERENCES_NOT_MET'))
-  assert.equal(await calendar.locator('.weekly-schedule__event').count(), 4)
+  assert.equal(await weekBlocks.count(), 4)
   await stage('Preparación', 'preparacion')
   await page.getByLabel('Seleccionar o agregar docente').selectOption(teachers[0].id)
   // 16:00–18:00 is outside the default policy for cycle ≥ 7 (only 18:00–22:00 weekdays), so the generator could not place these sessions.
   // Each 2-hour session gets one 18:00–20:00 window on a different day.
   await setIntervals('Disponibilidad docente', [1, 2], '18:00', '20:00')
+  await resourceTab('rooms').click()
   for (const roomId of [...classroomRoomIds, 'LAB01NP']) {
     await page.getByLabel('Seleccionar o agregar ambiente').selectOption(roomId)
     await setIntervals('Disponibilidad del ambiente', [1, 2], '18:00', '20:00')
@@ -351,7 +377,7 @@ try {
     afternoonPolicyRejection: { status: policyRejected.status(), day: afternoonSlot.day, startMinute: afternoonSlot.startMinute },
     teacherCollisionStatus: teacherCollision.status(), roomCollisionStatus: roomCollision.status(), rejectedEditsPreserveView: true,
     duplicatePrevention: true, blocksInCalendar: 4, unchangedEnrollmentOffer: true, errors, external }, null, 2))
-  console.log('PASS ERP180: manual block review, coherent tables/calendar, collision rejection with prior view retained, compact editors, preferences, resource limits, unchanged enrollment offer')
+  console.log('PASS ERP180: manual block review, single sections table plus Semana grid (no duplicated assignments table/calendar), collision rejection with prior view retained, compact editors, preferences, resource limits, unchanged enrollment offer')
 } finally {
   await browser.close()
 }

@@ -80,27 +80,16 @@
 .academic-scheduling__diagnostics { margin-top: 0.8rem; padding: 0.75rem; border: 1px solid var(--planning-border); border-radius: var(--planning-radius-control); background: var(--planning-canvas); }
 .academic-scheduling__diagnostics ul { display: grid; gap: 0.45rem; margin: 0; padding-left: 1.25rem; color: var(--planning-text); font-size: var(--text-meta); }
 .academic-scheduling__section > .table-card { margin-top: 0.75rem; }
-.academic-scheduling__sections-table,
-.academic-scheduling__assignments-table { max-width: 100%; padding: 0.75rem; }
+.academic-scheduling__sections-table { max-width: 100%; padding: 0.75rem; }
 .academic-scheduling__sections-table table { min-width: 760px; table-layout: fixed; }
-.academic-scheduling__assignments-table table { min-width: 880px; table-layout: fixed; }
 .academic-scheduling__sections-table th,
-.academic-scheduling__sections-table td,
-.academic-scheduling__assignments-table th,
-.academic-scheduling__assignments-table td { overflow-wrap: anywhere; }
+.academic-scheduling__sections-table td { overflow-wrap: anywhere; }
 .academic-scheduling__sections-table:not(.planning-sections__table) th:nth-child(1) { width: 11%; }
 .academic-scheduling__sections-table:not(.planning-sections__table) th:nth-child(2) { width: 27%; }
 .academic-scheduling__sections-table:not(.planning-sections__table) th:nth-child(3) { width: 9%; }
 .academic-scheduling__sections-table:not(.planning-sections__table) th:nth-child(4) { width: 10%; }
 .academic-scheduling__sections-table:not(.planning-sections__table) th:nth-child(5) { width: 22%; }
 .academic-scheduling__sections-table:not(.planning-sections__table) th:nth-child(6) { width: 21%; }
-.academic-scheduling__assignments-table th:nth-child(1) { width: 18%; }
-.academic-scheduling__assignments-table th:nth-child(2) { width: 14%; }
-.academic-scheduling__assignments-table th:nth-child(3) { width: 21%; }
-.academic-scheduling__assignments-table th:nth-child(4) { width: 12%; }
-.academic-scheduling__assignments-table th:nth-child(5) { width: 6%; }
-.academic-scheduling__assignments-table th:nth-child(6) { width: 10%; }
-.academic-scheduling__assignments-table th:nth-child(7) { width: 19%; }
 .academic-scheduling__resource-note { margin-bottom: 0.75rem; }
 .academic-scheduling__section-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.6rem; }
 .academic-scheduling__manual-badge { color: var(--planning-muted); font-size: var(--text-meta); }

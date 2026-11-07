@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { DataTable } from '../components/Common'
-import { fetchAcademicCatalog, estimateAcademicDemand, createAcademicProposal, adjustAcademicProposal, fetchAcademicDrafts, saveAcademicDraft, resumeAcademicDraft, submitAcademicTeacherReview, respondAcademicTeacherReview, formatAcademicInterval, formatAcademicMinute, formatAcademicDuration, toAcademicScheduleEvents, academicSectionLabel, aggregateAcademicBlocks, approveAcademicDraft, publishAcademicDraft, forkAcademicDraft, createAcademicPlanningDefaults, buildAcademicPlanningRequest, PLANNING_LIMITS } from '../data/academicScheduling'
+import { fetchAcademicCatalog, estimateAcademicDemand, createAcademicProposal, adjustAcademicProposal, fetchAcademicDrafts, saveAcademicDraft, resumeAcademicDraft, submitAcademicTeacherReview, respondAcademicTeacherReview, formatAcademicInterval, aggregateAcademicBlocks, approveAcademicDraft, publishAcademicDraft, forkAcademicDraft, createAcademicPlanningDefaults, buildAcademicPlanningRequest, PLANNING_LIMITS } from '../data/academicScheduling'
 import type { PlanningPeriod, PlanningPolicy } from '../data/academicScheduling'
 import type { AcademicCatalog, AcademicDemandEstimate, AcademicProposal } from '../data/academicScheduling'
 import type { AcademicAdjustment, AcademicPlanningResources, AcademicAllocationPolicy, AcademicDemandRequest, AcademicDraftList, AcademicDraftState, AcademicWorkspace, AcademicTeacherReview, AcademicSavedDraft } from '../../../shared/programacion-academica-api.mjs'
@@ -10,7 +9,6 @@ import { AcademicPreparationCourses } from './AcademicPreparationCourses'
 import { AcademicTeacherReview as AcademicTeacherReviewPanel } from './AcademicTeacherReview'
 import { AcademicPublicationPanel } from './AcademicPublicationPanel'
 import { AcademicIntentionDemandPanel } from './AcademicIntentionDemandPanel'
-import { WeeklySchedule } from './WeeklySchedule'
 import { PlanningScopeHeader } from './PlanningScopeHeader'
 import { PlanningStageNav } from './PlanningStageNav'
 import { PlanningStatusBar } from './PlanningStatusBar'
@@ -21,10 +19,6 @@ import type { PlanningStage } from '../routes/local.programacion-academica'
 import './AcademicScheduling.css'
 import './PlanningWorkbench.css'
 import './PlanningSections.css'
-
-function emptyScheduleData() {
-  return null
-}
 
 export function AcademicScheduling({ currentStage = 'preparacion' }: { currentStage?: PlanningStage } = {}) {
   const [catalog, setCatalog] = useState<AcademicCatalog | null>(null)
@@ -676,17 +670,6 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
       && capacity !== undefined && capacity.trim() !== '' && Number.isSafeInteger(Number(capacity)) && Number(capacity) > 0
       && (!patternIds.length || patternIds.includes(patterns[course.courseId]))
   })
-  const blocks = proposal ? aggregateAcademicBlocks(proposal) : []
-  const assignmentRows = blocks.map((block) => [
-    block.courseName,
-    `${academicSectionLabel(proposal!, block.sectionId)} · ${proposal!.manuallyAdjustedSectionIds?.includes(block.sectionId) ? 'Ajustada manualmente' : 'Automática'}`,
-    block.teacherName,
-    block.roomNames.join(', '),
-    ['—', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'][block.day],
-    `${formatAcademicMinute(block.startMinute)}–${formatAcademicMinute(block.endMinute)}`,
-    block.componentDetails.map((component) => `${component.type} · ${formatAcademicDuration(component.durationMinutes)}`).join(' + '),
-  ]) ?? []
-
   const canSave = Boolean(catalog) && !draftBusy && !lockedDraft && validDemands
   const disabledSaveReason = !catalog
     ? 'Catálogo local no disponible'
@@ -898,15 +881,7 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
                   onSearchChange={setSearchQuery}
                 />
 
-                <section className="academic-scheduling__section" aria-labelledby="academic-scheduling-assignments">
-                  <h3 id="academic-scheduling-assignments">Asignaciones de horario</h3>
-                  <p className="academic-scheduling__resource-note">Los nombres identifican recursos de esta propuesta local. Un nombre de referencia sintético no confirma una asignación para el nuevo periodo.</p>
-                  <div role="region" aria-label="Programación generada">
-                    <DataTable className="academic-scheduling__assignments-table" headers={['Asignatura', 'Sección', 'Docente asignado · nuevo periodo', 'Ambiente(s)', 'Día', 'Hora', 'Componentes incluidos']} rows={assignmentRows} empty="No hay componentes asignados." />
-                  </div>
-                  <p className="academic-scheduling__resource-note">Asignaciones propuestas para el nuevo periodo; no están confirmadas.</p>
-                  <WeeklySchedule data={emptyScheduleData()} displayEvents={toAcademicScheduleEvents(proposal)} />
-                </section>
+                <p className="academic-scheduling__resource-note">Asignaciones propuestas para el nuevo periodo; no están confirmadas.</p>
               </div>
 
               <div
