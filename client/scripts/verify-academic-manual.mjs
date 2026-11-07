@@ -60,7 +60,7 @@ try {
     assert.equal(response.status(), 200, await response.text())
     const value = await response.json()
     await stage('Horario', 'horario')
-    await page.getByRole('status').filter({ hasText: value.status }).waitFor()
+    await page.locator(`.academic-scheduling__result--${value.status}`).waitFor()
     return value
   }
   await page.goto(`${base}/local/programacion-academica`)
@@ -111,11 +111,12 @@ try {
   for (const teacher of teachers) assert.equal(new Set(complete.assignments.filter((row) => row.teacherId === teacher.id).map((row) => row.sectionId)).size, 2)
   const table = page.getByRole('region', { name: 'Programación generada', exact: true })
   const sectionsTable = page.locator('.academic-scheduling__sections-table')
+  const sectionRow = (index) => sectionsTable.locator(`tr[data-section-id=${JSON.stringify(complete.sections[index].sectionId)}]`)
   assert.equal(await table.locator('tbody tr').count(), 4)
   assert.equal(await page.locator('.academic-scheduling__manual-review').count(), 0, 'No editor appears before a section is selected')
   assert.equal(await sectionsTable.getByRole('columnheader', { name: 'Acciones', exact: true }).count(), 1)
   assert.equal(await sectionsTable.getByRole('button', { name: 'Editar horario', exact: true }).count(), 4)
-  for (const cell of await sectionsTable.locator('tbody tr td:nth-child(3)').all()) assert.match((await cell.innerText()).trim(), /^\d+$/, 'The section cell contains only its number')
+  for (const cell of await sectionsTable.locator('tr[data-section-id] .planning-sections__cell-section').all()) assert.match((await cell.innerText()).trim(), /^\d+$/, 'The section cell contains only its number')
   assert.equal(await sectionsTable.getByRole('columnheader', { name: 'Modalidad', exact: true }).count(), 0)
   assert.equal(await table.getByRole('columnheader', { name: 'Duración total', exact: true }).count(), 0)
   assert.ok((await table.innerText()).includes('T · 2 h (120 min)'))
@@ -126,11 +127,11 @@ try {
   assert.equal(await calendar.locator('.weekly-schedule__event').count(), 4)
   const firstSectionId = complete.assignments[0].sectionId
   const firstSectionRowIndex = complete.sections.findIndex((section) => section.sectionId === firstSectionId)
-  await sectionsTable.locator('tbody tr').nth(firstSectionRowIndex).getByRole('button', { name: 'Editar horario', exact: true }).click()
+  await sectionRow(firstSectionRowIndex).getByRole('button', { name: 'Editar horario', exact: true }).click()
   assert.equal(await page.locator('.academic-scheduling__manual-review').count(), 1)
   assert.match(await page.locator('.academic-scheduling__manual-review h4').innerText(), new RegExp(`Sección ${firstSectionRowIndex + 1}`))
   const otherSectionRowIndex = (firstSectionRowIndex + 1) % complete.sections.length
-  await sectionsTable.locator('tbody tr').nth(otherSectionRowIndex).getByRole('button', { name: 'Editar horario', exact: true }).click()
+  await sectionRow(otherSectionRowIndex).getByRole('button', { name: 'Editar horario', exact: true }).click()
   assert.equal(await page.locator('.academic-scheduling__manual-review').count(), 1, 'Switching sections retains one editor')
   assert.match(await page.locator('.academic-scheduling__manual-review h4').innerText(), new RegExp(`Sección ${otherSectionRowIndex + 1}`))
   await page.getByRole('button', { name: 'Cancelar', exact: true }).click()
@@ -155,7 +156,7 @@ try {
   assert.ok(slot, 'Se requiere un día distinto con bloque libre de 18:00 a 22:00 sin colisión docente o de ambiente')
   // Friday 16:00 is an afternoon slot for a senior course: rejected by default, accepted only with allowAfternoon.
   const afternoonSlot = { day: 5, startMinute: 16 * 60 }
-  await sectionsTable.locator('tbody tr').nth(firstSectionRowIndex).getByRole('button', { name: 'Editar horario', exact: true }).click()
+  await sectionRow(firstSectionRowIndex).getByRole('button', { name: 'Editar horario', exact: true }).click()
   const firstTargetDay = page.getByLabel(`Día revisión ${firstSectionId}`, { exact: true })
   const firstTargetStart = page.getByLabel(`Inicio revisión ${firstSectionId}`, { exact: true })
   const tableBeforePolicyRejection = await table.innerText()
@@ -211,7 +212,7 @@ try {
   'El docente original del bloque debe estar libre en el horario de colisión')
   const otherSection = complete.sections.find((section) => section.sectionId === collisionAssignment.sectionId)
   const tableBeforeRejectedEdit = await table.innerText()
-  await sectionsTable.locator('tbody tr').nth(firstSectionRowIndex).getByRole('button', { name: 'Editar horario', exact: true }).click()
+  await sectionRow(firstSectionRowIndex).getByRole('button', { name: 'Editar horario', exact: true }).click()
   await page.getByLabel(`Docente revisión ${firstSectionId}`, { exact: true }).selectOption(collisionAssignment.teacherId)
   await page.getByLabel(`Día revisión ${firstSectionId}`, { exact: true }).selectOption(String(collisionAssignment.day))
   await page.getByLabel(`Inicio revisión ${firstSectionId}`, { exact: true }).fill(`${String(Math.floor(collisionAssignment.startMinute / 60)).padStart(2, '0')}:${String(collisionAssignment.startMinute % 60).padStart(2, '0')}`)
@@ -280,8 +281,8 @@ try {
   assert.equal(insufficient.coverageComplete, false)
   assert.equal(insufficient.counts.sections, 4)
   assert.ok(insufficient.counts.scheduledSessions < 8)
-  for (const row of await sectionsTable.locator('tbody tr').all()) {
-    if ((await row.locator('td').nth(5).innerText()).includes('Sin asignaciones')) assert.equal(await row.getByRole('button', { name: 'Editar horario', exact: true }).count(), 0, 'Sections without assignments are not editable')
+  for (const row of await sectionsTable.locator('tr[data-section-id]').all()) {
+    if ((await row.locator('.planning-sections__cell-status').innerText()).includes('Pendiente')) assert.equal(await row.getByRole('button', { name: 'Editar horario', exact: true }).count(), 0, 'Sections without assignments are not editable')
   }
   if (insufficient.status === 'search-limit') {
     assert.ok(insufficient.diagnostics.some((row) => row.code === 'SEARCH_LIMIT'))
@@ -320,7 +321,7 @@ try {
   assert.equal(splitProposal.sections[0].deliveryMode, 'split')
   assert.equal(splitProposal.assignments.length, 2)
   assert.equal(new Set(splitProposal.assignments.map((assignment) => assignment.day)).size, 2, 'Two 2-hour sessions must use the two 2-hour availability windows on different days')
-  const splitSectionRow = sectionsTable.locator('tbody tr').first()
+  const splitSectionRow = sectionsTable.locator('tr[data-section-id]').first()
   await splitSectionRow.getByRole('button', { name: 'Editar horario', exact: true }).click()
   assert.equal(await page.locator('.academic-scheduling__manual-review').count(), 1)
   const splitBlockSelect = page.locator('.academic-scheduling__block-select select')

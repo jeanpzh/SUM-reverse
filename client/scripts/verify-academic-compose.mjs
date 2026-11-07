@@ -154,7 +154,7 @@ try {
     for (let index = 1; index < sessions.length; index += 1) assert.equal(sessions[index - 1].endMinute, sessions[index].startMinute, 'componentes consecutivos')
     assert.equal(section.deliveryMode, 'continuous')
   }
-  await page.getByRole('status').filter({ hasText: 'complete' }).waitFor()
+  await page.locator('.academic-scheduling__result--complete').waitFor()
   await page.locator('.academic-scheduling__result').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(evidence, 'escuela.png') })
   const calendar = page.getByRole('region', { name: 'Calendario semanal con horas; desplázate horizontalmente para ver todos los días' })
@@ -172,7 +172,7 @@ try {
   assert.equal((await resourceChanged.json()).status, 'complete')
   assert.deepEqual(await read(`/local/programacion-academica/v1/propuestas/${priorProposal.proposalId}`), priorProposal)
   await page.getByLabel(`Capacidad ${chosen[0].courseId}`, { exact: true }).fill('31')
-  await page.getByRole('status').filter({ hasText: 'complete' }).waitFor({ state: 'detached' })
+  await page.locator('.academic-scheduling__result--complete').waitFor({ state: 'detached' })
   const regeneratedResponse = page.waitForResponse((response) => response.url().endsWith('/propuestas') && response.request().method() === 'POST')
   await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
   const regenerated = await regeneratedResponse

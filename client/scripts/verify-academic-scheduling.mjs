@@ -1,6 +1,7 @@
 // Synthetic local integration only. Starts dedicated processes, never attaches to existing servers.
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
+import { PLANNING_LIMITS } from '../../shared/academic-planning-policy.mjs'
 import { existsSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
@@ -77,11 +78,14 @@ try {
   const catalogResponse = await fetch(`${api}/local/programacion-academica/v1/catalogo`)
   assert.equal(catalogResponse.status, 200)
   const catalog = await catalogResponse.json()
-  assert.ok(catalog.courses.length > 32, 'el catálogo debe permitir comprobar el límite de selección')
-  for (const course of catalog.courses.slice(0, 32)) await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).check()
-  assert.equal(await page.locator('.academic-scheduling__selection input:checked').count(), 32)
-  assert.equal(await page.getByLabel(`Seleccionar ${catalog.courses[32].courseId}`).isDisabled(), true)
-  for (const course of catalog.courses.slice(0, 32)) await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).uncheck()
+  // The selection limit comes from the shared planning policy (96 since #36). The synthetic catalog may be smaller than
+  // the limit; then every course must stay selectable, otherwise the first course past the limit must be disabled.
+  const limit = PLANNING_LIMITS.courses
+  const selectable = catalog.courses.slice(0, limit)
+  for (const course of selectable) await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).check()
+  assert.equal(await page.locator('.academic-scheduling__selection input:checked').count(), selectable.length)
+  if (catalog.courses.length > limit) assert.equal(await page.getByLabel(`Seleccionar ${catalog.courses[limit].courseId}`).isDisabled(), true)
+  for (const course of selectable) await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).uncheck()
   const firstCycleCourse = catalog.courses.find((course) => course.cycle !== undefined) ?? catalog.courses[0]
   const chosen = [firstCycleCourse, catalog.courses.find((course) => course.cycle !== undefined && course.cycle !== firstCycleCourse.cycle)
     ?? catalog.courses.find((course) => course.courseId !== firstCycleCourse.courseId)]
@@ -115,7 +119,8 @@ try {
     }
   }
   // Keep one named reference teacher qualified for selected courses and preserve the authorized synthetic name.
-  for (const teacher of catalog.teachers) await page.getByLabel(`Quitar docente ${teacher.name}`, { exact: true }).click()
+  const teacherForm = page.locator('.academic-scheduling__resource-card--teacher')
+  while (await teacherForm.count()) await teacherForm.getByRole('button', { name: /^Quitar docente / }).click()
   const reference = catalog.referenceTeachers?.[0]
   assert.ok(reference, 'el catálogo incluye docentes de referencia sintéticos con nombre')
   await page.getByLabel('Seleccionar o agregar docente').selectOption(reference.id)
@@ -131,12 +136,13 @@ try {
   assert.equal(await page.locator('.academic-scheduling__course-options label').count(), 1, 'la búsqueda filtra por código')
   await page.getByLabel('Buscar asignatura habilitada').fill('')
   await page.getByLabel(`Máximo de secciones ${catalog.courses[0].courseId}`).fill('4')
-  const preferences = page.locator('fieldset').filter({ has: page.locator('legend', { hasText: 'Preferencias semanales' }) })
+  const preferences = page.getByRole('group', { name: /^Preferencias semanales/ })
   await preferences.getByRole('button', { name: 'Agregar intervalo' }).click()
   await page.getByLabel('Preferencias semanales · prioridad blanda inicio 1', { exact: true }).fill('08:00')
   await page.getByLabel('Preferencias semanales · prioridad blanda fin 1', { exact: true }).fill('12:00')
   await page.getByLabel('Criterio de asignación').selectOption('balanced')
-  for (const room of catalog.rooms) await page.getByLabel(`Quitar ambiente ${room.name}`, { exact: true }).click()
+  const roomForm = page.locator('.academic-scheduling__resource-card--room')
+  while (await roomForm.count()) await roomForm.getByRole('button', { name: /^Quitar ambiente / }).click()
   await page.getByRole('button', { name: 'Agregar laboratorio', exact: true }).click()
   await page.getByLabel('Identificación ambiente').fill('LAB-DEMO-1')
   await page.getByLabel('Nombre ambiente').fill('Laboratorio sintético')
@@ -185,7 +191,7 @@ try {
     if (left.day === right.day) assert.ok(left.endMinute <= right.startMinute || right.endMinute <= left.startMinute, 'el docente compartido no tiene cruces')
   }
   assert.ok(sharedTeacherAssignments.length > 0, 'la propuesta asigna al docente compartido por nombre')
-  await page.getByRole('status').filter({ hasText: 'complete' }).waitFor()
+  await page.locator('.academic-scheduling__result--complete').waitFor()
   const calendar = page.getByRole('region', { name: 'Calendario semanal con horas; desplázate horizontalmente para ver todos los días' })
   await calendar.waitFor()
   assert.ok((await page.getByRole('table').allTextContents()).join(' ').includes(reference.name))
@@ -222,7 +228,8 @@ try {
   const impossible = await generate()
   assert.equal(impossible.status, 'impossible')
   assert.ok(impossible.pending.length > 0)
-  await page.getByRole('status').filter({ hasText: 'impossible' }).waitFor()
+  await page.locator('.academic-scheduling__result--impossible').waitFor()
+  await page.locator('.academic-scheduling__result').getByText('Detalles de búsqueda', { exact: true }).click()
   await page.getByRole('heading', { name: 'Componentes pendientes', exact: true }).waitFor()
   await page.locator('.academic-scheduling__result').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(evidence, 'impossible.png') })
@@ -231,7 +238,7 @@ try {
   await page.getByLabel(`Demanda ${chosen[0].courseId}`, { exact: true }).fill('100000')
   const invalid = await generate()
   assert.equal(invalid.status, 'invalid-input')
-  await page.getByRole('status').filter({ hasText: 'invalid-input' }).waitFor()
+  await page.locator('.academic-scheduling__result--invalid-input').waitFor()
   assert.ok(invalid.diagnostics.length)
   await page.locator('.academic-scheduling__result').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(evidence, 'invalid-input.png') })

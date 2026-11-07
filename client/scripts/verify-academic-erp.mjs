@@ -52,7 +52,7 @@ try {
     const response = await pending
     assert.equal(response.status(), 200, await response.text())
     const value = await response.json()
-    await page.getByRole('status').filter({ hasText: value.status }).waitFor()
+    await page.locator(`.academic-scheduling__result--${value.status}`).waitFor()
     return value
   }
   await page.goto(`${base}/local/programacion-academica`)
