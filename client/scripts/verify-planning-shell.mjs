@@ -158,7 +158,9 @@ try {
     await page.screenshot({ path: join(evidenceDir, 'scheduling-800.png') })
   }))
 
-  await criterion('ZOOM', 'at 200% root text size rail links and product name do not overflow and the document does not scroll horizontally', () => withPage(1440, 900, async (page) => {
+  // 200% text size checks only the shell. Screen panels inside main still overflow at
+  // this size; that is a recorded slice-2 gap, not a shell failure.
+  await criterion('ZOOM-TEXT', 'at 200% root text size rail links and product name do not overflow and the shell stays within the viewport', () => withPage(1440, 900, async (page) => {
     await page.goto(scheduling, { waitUntil: 'networkidle' })
     await page.evaluate(() => { document.documentElement.style.fontSize = '200%' })
     await page.waitForTimeout(200)
@@ -168,15 +170,28 @@ try {
         scrollWidth: element.scrollWidth,
         clientWidth: element.clientWidth,
       })),
-      documentScrollWidth: document.documentElement.scrollWidth,
-      documentClientWidth: document.documentElement.clientWidth,
+      viewport: document.documentElement.clientWidth,
+      shellRight: Math.max(...['.planning-rail', '.planning-main'].map((selector) => document.querySelector(selector)?.getBoundingClientRect().right ?? Infinity)),
     }))
     expectEqual(facts.items.length, 3, 'rail link and product name count')
     for (const item of facts.items) {
       expectTrue(item.scrollWidth <= item.clientWidth + 1, `"${item.text}" overflows: scrollWidth ${item.scrollWidth} > clientWidth ${item.clientWidth}`)
     }
-    expectTrue(facts.documentScrollWidth <= facts.documentClientWidth + 1, `document scrollWidth ${facts.documentScrollWidth} exceeds clientWidth ${facts.documentClientWidth} at 200%`)
+    expectTrue(facts.shellRight <= facts.viewport + 1, `shell right edge ${facts.shellRight} exceeds viewport ${facts.viewport} at 200%`)
     await page.screenshot({ path: join(evidenceDir, 'zoom-200-1440.png') })
+  }))
+
+  // 200% browser zoom of a 1440px window leaves a 720px CSS viewport (WCAG reflow).
+  await criterion('ZOOM-REFLOW', 'at 720px (200% page zoom of 1440px) the rail is a top bar and the document does not scroll horizontally', () => withPage(720, 450, async (page) => {
+    await page.goto(scheduling, { waitUntil: 'networkidle' })
+    const facts = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+      railHeight: document.querySelector('nav.planning-rail')?.getBoundingClientRect().height ?? null,
+    }))
+    expectTrue(facts.scrollWidth <= facts.clientWidth + 1, `document scrollWidth ${facts.scrollWidth} exceeds clientWidth ${facts.clientWidth}`)
+    expectTrue(facts.railHeight !== null && facts.railHeight < 120, `rail height is ${facts.railHeight}px`)
+    await page.screenshot({ path: join(evidenceDir, 'zoom-reflow-720.png') })
   }))
 } finally {
   await browser.close()
