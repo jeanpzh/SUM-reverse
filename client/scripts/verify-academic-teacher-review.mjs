@@ -38,6 +38,10 @@ try {
     assert.equal(response.status(), 200, await response.text())
     return (await response.json()).data.offer
   }
+  const stage = async (name, etapa) => {
+    await page.getByRole('navigation', { name: 'Etapas de programación', exact: true }).getByRole('link', { name, exact: true }).click()
+    await page.waitForURL(new RegExp(`etapa=${etapa}$`))
+  }
   const offerBefore = await readOffer()
 
   if (phase === 'save') {
@@ -62,6 +66,7 @@ try {
     assert.equal(saved.state, 'draft')
     assert.equal(Object.hasOwn(saveResponse.request().postDataJSON(), 'review'), false)
 
+    await stage('Revisión docente', 'revision')
     await page.locator('.academic-teacher-review > summary').click()
     const submit = page.waitForResponse((response) => response.url().endsWith(`/borradores/${saved.id}/revision/enviar`))
     await page.getByRole('button', { name: 'Enviar a revisión', exact: true }).click()
@@ -90,12 +95,14 @@ try {
     assert.ok(catalog.windows.some((item) => item.day === original.day && item.startMinute <= nextStart && item.endMinute >= nextStart + duration))
     assert.ok(selectedTeacher?.availability.some((item) => item.day === original.day && item.startMinute <= nextStart && item.endMinute >= nextStart + duration))
     assert.ok(selectedRoom?.availability.some((item) => item.day === original.day && item.startMinute <= nextStart && item.endMinute >= nextStart + duration))
+    await stage('Horario', 'horario')
     await page.locator('.academic-scheduling__sections-table').getByRole('button', { name: 'Editar horario', exact: true }).first().click()
     await page.getByLabel(`Inicio revisión ${sectionId}`, { exact: true }).fill(`${String(Math.floor(nextStart / 60)).padStart(2, '0')}:${String(nextStart % 60).padStart(2, '0')}`)
     const adjustment = page.waitForResponse((response) => response.url().endsWith('/ajustes') && response.request().method() === 'POST')
     await page.getByRole('button', { name: 'Aplicar ajuste', exact: true }).click()
     const adjusted = await json(await adjustment)
     assert.equal(adjusted.editVersion, 1)
+    await stage('Revisión docente', 'revision')
     assert.equal(await page.getByRole('status').filter({ hasText: 'Revisión guardada, cambios locales pendientes' }).count(), 1)
 
     const saveAdjustment = page.waitForResponse((response) => response.url().endsWith('/borradores/guardar') && response.request().method() === 'POST')
@@ -134,6 +141,7 @@ try {
     assert.equal(recovered.state, 'ready-for-approval')
     assert.equal(recovered.review.round, saved.round)
     assert.equal(recovered.review.history.length, saved.historyLength)
+    await stage('Revisión docente', 'revision')
     await page.locator('.academic-teacher-review__state').filter({ hasText: 'Lista para aprobación' }).waitFor()
     await page.locator('.academic-teacher-review').screenshot({ path: resolve(evidenceDir, 'review-recovered.png') })
     assert.deepEqual(await readOffer(), offerBefore, 'La recuperación no debe modificar la oferta de matrícula sintética')

@@ -44,11 +44,16 @@ try {
     return (await response.json()).data.offer
   }
   const offerBefore = await readOffer()
+  const stage = async (name, etapa) => {
+    await page.getByRole('navigation', { name: 'Etapas de programación', exact: true }).getByRole('link', { name, exact: true }).click()
+    await page.waitForURL(new RegExp(`etapa=${etapa}$`))
+  }
   const openPanel = async () => {
     const summary = page.locator('.academic-publication > summary')
     await summary.waitFor()
     if (await summary.evaluate((element) => !(element.parentElement instanceof HTMLDetailsElement) || !element.parentElement.open)) await summary.click()
   }
+  await stage('Aprobación', 'aprobacion')
   await openPanel()
   const refreshPublicationList = async () => {
     const response = page.waitForResponse((value) => apiResponse(value, '/publicaciones'))
@@ -61,6 +66,7 @@ try {
     return response
   }
   const submitAndConform = async (id) => {
+    await stage('Revisión docente', 'revision')
     if (await page.locator('.academic-teacher-review > summary').evaluate((element) => !(element.parentElement instanceof HTMLDetailsElement) || !element.parentElement.open)) {
       await page.locator('.academic-teacher-review > summary').click()
     }
@@ -79,6 +85,7 @@ try {
     return state
   }
   const approveAndPublish = async (saved) => {
+    await stage('Aprobación', 'aprobacion')
     await openPanel()
     const previewResponse = await previewCurrent(saved.id)
     const preview = await previewResponse.json()
@@ -108,6 +115,7 @@ try {
 
   if (phase === 'save') {
     const catalog = await requestJson(page, '/catalogo')
+    await stage('Preparación', 'preparacion')
     const course = catalog.courses.find((item) => item.planningPatterns?.some((pattern) => pattern.weeklySessions.length > 0)
       && catalog.teachers.some((teacher) => teacher.courseIds.includes(item.courseId))
       && catalog.rooms.some((room) => room.capacity >= item.targetCapacity))
@@ -141,6 +149,7 @@ try {
     assert.equal(forked.version, 1)
     assert.equal(forkedResponse.request().postDataJSON().expectedVersion, first.draft.version)
     const forkTitle = `${title1} · revisión 2`
+    await stage('Preparación', 'preparacion')
     await page.getByLabel('Nombre de la propuesta', { exact: true }).fill(forkTitle)
     const save2Response = page.waitForResponse((response) => apiResponse(response, '/borradores/guardar', 'POST'))
     await page.getByRole('button', { name: 'Guardar propuesta', exact: true }).click()
@@ -164,6 +173,7 @@ try {
       title: second.draft.title, currentId: history.currentId, itemIds: history.items.map((item) => item.id) }, null, 2)}\n`)
   } else {
     const saved = JSON.parse(await readFile(statePath, 'utf8'))
+    await stage('Aprobación', 'aprobacion')
     const history = await refreshPublicationList()
     assert.deepEqual(history.items.map((item) => item.id).sort(), [...saved.itemIds].sort())
     assert.equal(history.currentId, saved.currentId)
@@ -183,6 +193,7 @@ try {
       await page.locator('.academic-publication').screenshot({ path: resolve(evidenceDir, `phase-resume-publication-${item.publicationVersion}.png`) })
     }
     const oldPublicationBefore = await requestJson(page, `/publicaciones/${saved.second.id}`)
+    await stage('Preparación', 'preparacion')
     await page.getByRole('button', { name: 'Mis propuestas', exact: true }).click()
     const row = page.locator('.academic-scheduling__saved-row').filter({ hasText: saved.title })
     await row.locator('summary').click()
@@ -191,6 +202,7 @@ try {
     const recovered = (await (await resumeResponse).json()).draft
     assert.equal(recovered.state, 'published')
     assert.equal(recovered.version, saved.second.version)
+    await stage('Aprobación', 'aprobacion')
     const forkResponse = page.waitForResponse((response) => apiResponse(response, `/borradores/${saved.second.id}/nuevo-borrador`, 'POST'))
     await page.getByRole('button', { name: 'Crear nuevo borrador', exact: true }).click()
     const forked = (await (await forkResponse).json()).draft

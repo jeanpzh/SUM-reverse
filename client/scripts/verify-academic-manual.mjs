@@ -36,6 +36,10 @@ try {
   const teacherForm = page.locator('.academic-scheduling__resource-card--teacher')
   const roomForm = page.locator('.academic-scheduling__resource-card--room')
   const preferenceLabel = 'Preferencias semanales · prioridad blanda'
+  const stage = async (name, etapa) => {
+    await page.getByRole('navigation', { name: 'Etapas de programación', exact: true }).getByRole('link', { name, exact: true }).click()
+    await page.waitForURL(new RegExp(`etapa=${etapa}$`))
+  }
   const setIntervals = async (label, days, start = '18:00', end = '22:00') => {
     const group = page.getByRole('group', { name: new RegExp(`^${label}`) })
     while (await group.getByRole('button', { name: new RegExp(`^Quitar ${label} intervalo`) }).count()) {
@@ -49,11 +53,13 @@ try {
     }
   }
   const generate = async () => {
+    await stage('Preparación', 'preparacion')
     const pending = page.waitForResponse((response) => response.url().endsWith('/propuestas') && response.request().method() === 'POST')
     await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
     const response = await pending
     assert.equal(response.status(), 200, await response.text())
     const value = await response.json()
+    await stage('Horario', 'horario')
     await page.getByRole('status').filter({ hasText: value.status }).waitFor()
     return value
   }
@@ -261,6 +267,7 @@ try {
   assert.equal((await read(`/local/programacion-academica/v1/propuestas/${complete.proposalId}`)).editVersion, 1)
   await calendar.scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(output, 'erp-complete-calendar.png') })
+  await stage('Preparación', 'preparacion')
   await page.getByLabel('Seleccionar o agregar docente').selectOption(teachers[1].id)
   await teacherForm.getByRole('button', { name: /^Quitar docente / }).click()
   assert.equal(await page.locator('.academic-scheduling__result').count(), 0)
@@ -287,6 +294,7 @@ try {
   assert.equal(await calendar.locator('.weekly-schedule__event').count(), insufficient.counts.scheduledSessions / 2)
   await page.locator('.academic-scheduling__result').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(output, 'erp-insufficient.png') })
+  await stage('Preparación', 'preparacion')
   await page.getByLabel('Carga semanal docente', { exact: true }).fill('960')
   await page.getByLabel(`Máximo de secciones ${course.courseId}`, { exact: true }).fill('4')
   const oneTeacher = await generate()
@@ -295,6 +303,7 @@ try {
   assert.equal(oneTeacher.preferenceReport.outsidePreferenceSections, 2)
   assert.ok(oneTeacher.diagnostics.some((row) => row.code === 'PREFERENCES_NOT_MET'))
   assert.equal(await calendar.locator('.weekly-schedule__event').count(), 4)
+  await stage('Preparación', 'preparacion')
   await page.getByLabel('Seleccionar o agregar docente').selectOption(teachers[0].id)
   // 16:00–18:00 is outside the default policy for cycle ≥ 7 (only 18:00–22:00 weekdays), so the generator could not place these sessions.
   // Each 2-hour session gets one 18:00–20:00 window on a different day.

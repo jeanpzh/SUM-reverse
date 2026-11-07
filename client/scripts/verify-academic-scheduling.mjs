@@ -154,13 +154,19 @@ try {
     await page.getByLabel(`Capacidad ${patternCourse.courseId}`, { exact: true }).fill('30')
   }
   assert.equal(new URL(page.url()).pathname, route)
+  const stage = async (name, etapa) => {
+    await page.getByRole('navigation', { name: 'Etapas de programación', exact: true }).getByRole('link', { name, exact: true }).click()
+    await page.waitForURL(new RegExp(`etapa=${etapa}$`))
+  }
   let lastRequest
   const generate = async () => {
+    await stage('Preparación', 'preparacion')
     const response = page.waitForResponse((res) => res.url().endsWith('/propuestas') && res.request().method() === 'POST')
     await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
     const received = await response
     assert.equal(received.status(), 200)
     lastRequest = received.request().postDataJSON()
+    await stage('Horario', 'horario')
     return received.json()
   }
   const first = await generate()
@@ -190,6 +196,7 @@ try {
   const variableCourse = chosen.find((course) => course.planningPatterns?.length > 1)
   const changeablePatternCourse = variableCourse ?? patternCourse
   if (changeablePatternCourse) {
+    await stage('Preparación', 'preparacion')
     const pattern = page.getByLabel(`Patrón ${changeablePatternCourse.courseId}`)
     await pattern.selectOption(changeablePatternCourse.planningPatterns[1].id)
     assert.equal(await page.locator('.academic-scheduling__result').count(), 0, 'cambiar patrón invalida la propuesta visible')
@@ -200,12 +207,14 @@ try {
   const retained = await (await fetch(`${api}/local/programacion-academica/v1/propuestas/${first.proposalId}`)).json()
   assert.deepEqual(retained, first)
 
+  await stage('Preparación', 'preparacion')
   for (const course of plannedCourses) await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).uncheck()
   const empty = await generate()
   assert.equal(empty.status, 'complete')
   assert.equal(empty.counts.requiredSessions, 0)
   assert.equal(empty.assignments.length, 0)
 
+  await stage('Preparación', 'preparacion')
   for (const course of plannedCourses) await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).check()
   await page.getByLabel(`Demanda ${chosen[0].courseId}`, { exact: true }).fill('1')
   await page.getByLabel(`Capacidad ${chosen[0].courseId}`, { exact: true }).fill('41')
@@ -218,6 +227,7 @@ try {
   await page.locator('.academic-scheduling__result').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(evidence, 'impossible.png') })
 
+  await stage('Preparación', 'preparacion')
   await page.getByLabel(`Demanda ${chosen[0].courseId}`, { exact: true }).fill('100000')
   const invalid = await generate()
   assert.equal(invalid.status, 'invalid-input')
@@ -226,6 +236,7 @@ try {
   await page.locator('.academic-scheduling__result').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(evidence, 'invalid-input.png') })
 
+  await stage('Preparación', 'preparacion')
   await page.getByLabel(`Demanda ${chosen[0].courseId}`, { exact: true }).fill('31')
   await page.getByLabel(`Demanda ${chosen[1].courseId}`, { exact: true }).fill('20')
   await page.getByLabel(`Capacidad ${chosen[0].courseId}`, { exact: true }).fill('31')
@@ -235,6 +246,7 @@ try {
   assert.deepEqual(await (await fetch(`${api}/local/programacion-academica/v1/propuestas/${first.proposalId}`)).json(), first)
 
   // API error and UI recovery, without mocking generator responses.
+  await stage('Preparación', 'preparacion')
   await page.route('**/api/local/programacion-academica/v1/propuestas', (request) => request.abort())
   await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
   await page.getByRole('alert').waitFor()
