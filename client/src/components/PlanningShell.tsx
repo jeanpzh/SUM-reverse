@@ -12,8 +12,7 @@ export function PlanningShell({ children }: { children: ReactNode }): ReactNode 
         <div className="planning-rail__nav">
           <Link
             to="/local/programacion-academica"
-            className="planning-rail__item planning-rail__item--active"
-            aria-current="page"
+            className="planning-rail__item"
           >
             Programaciones
           </Link>

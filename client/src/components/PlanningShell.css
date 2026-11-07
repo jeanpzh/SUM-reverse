@@ -1,17 +1,17 @@
 .planning-root {
-  --planning-canvas: #F5F6F5;
-  --planning-surface: #FFFFFF;
+  --planning-canvas: #f5f6f5;
+  --planning-surface: #ffffff;
   --planning-text: #202925;
-  --planning-muted: #52625A;
-  --planning-rail: #202A25;
-  --planning-rail-text: #F5F6F5;
-  --planning-primary: #175C3B;
-  --planning-selected: #EAF2ED;
-  --planning-border: #D7DED9;
+  --planning-muted: #52625a;
+  --planning-rail: #202a25;
+  --planning-rail-text: #f5f6f5;
+  --planning-primary: #175c3b;
+  --planning-selected: #eaf2ed;
+  --planning-border: #d7ded9;
   --planning-warning: #805300;
-  --planning-warning-surface: #FFF4DC;
-  --planning-error: #A12622;
-  --planning-error-surface: #FDECEB;
+  --planning-warning-surface: #fff4dc;
+  --planning-error: #a12622;
+  --planning-error-surface: #fdeceb;
   --planning-spacing: 4px;
   --planning-radius-control: 4px;
   --planning-radius-panel: 4px;
@@ -41,23 +41,39 @@
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   background-color: var(--planning-canvas);
   color: var(--planning-text);
+  font-size: var(--text-body);
   min-height: 100vh;
   box-sizing: border-box;
   display: grid;
-  grid-template-columns: 176px minmax(0, 1fr);
+  grid-template-columns: 11rem minmax(0, 1fr);
 }
 
-.planning-root table {
-  font-family: inherit;
-  font-size: 14px;
-  font-variant-numeric: tabular-nums;
-}
-
+.planning-root table,
 .planning-root table th,
 .planning-root table td {
   font-family: inherit;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-variant-numeric: tabular-nums;
+}
+
+/* Transitional bridge: global App.css table rules hard-code SUM colors */
+.planning-root table {
+  color: var(--planning-text);
+}
+
+.planning-root table th {
+  color: var(--planning-text);
+  font-weight: 600;
+  background: var(--planning-canvas);
+  border-color: var(--planning-border);
+}
+
+.planning-root table td {
+  border-color: var(--planning-border);
+}
+
+.planning-root tbody tr:nth-child(even) {
+  background: var(--planning-surface);
 }
 
 .planning-rail {
@@ -69,6 +85,7 @@
   top: 0;
   align-self: start;
   height: 100vh;
+  height: 100dvh;
   overflow-y: auto;
   padding: 1.25rem 0.75rem 1rem;
   box-sizing: border-box;
@@ -80,9 +97,10 @@
 }
 
 .planning-rail__product {
+  overflow-wrap: anywhere;
   font-size: 1.125rem;
   font-weight: 700;
-  color: #FFFFFF;
+  color: #ffffff;
   letter-spacing: -0.01em;
   display: block;
 }
@@ -98,20 +116,19 @@
   align-items: center;
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
-  color: #D7DED9;
+  color: #d7ded9;
   text-decoration: none;
   border-radius: var(--planning-radius-control);
 }
 
 .planning-rail__item:hover {
   background-color: rgba(255, 255, 255, 0.06);
-  color: #FFFFFF;
+  color: #ffffff;
 }
 
-.planning-rail__item--active,
 .planning-rail__item[aria-current='page'] {
   background-color: rgba(255, 255, 255, 0.1);
-  color: #FFFFFF;
+  color: #ffffff;
   font-weight: 600;
 }
 
@@ -126,13 +143,13 @@
   align-items: center;
   padding: 0.5rem 0.75rem;
   font-size: 0.8125rem;
-  color: #A3B1A9;
+  color: #a3b1a9;
   text-decoration: none;
   border-radius: var(--planning-radius-control);
 }
 
 .planning-rail__back:hover {
-  color: #FFFFFF;
+  color: #ffffff;
   text-decoration: underline;
 }
 
