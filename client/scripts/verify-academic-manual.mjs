@@ -131,11 +131,42 @@ try {
   assert.equal(await page.locator('.academic-scheduling__manual-review').count(), 0, 'Cancel closes the editor')
   const targetAssignments = complete.assignments.filter((row) => row.sectionId === firstSectionId).sort((a, b) => a.startMinute - b.startMinute)
   const targetIds = targetAssignments.map((row) => row.sessionId)
-  const slot = { day: 5, startMinute: 960 }
+  const toTime = (minute) => `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`
+  const blockMinutes = targetAssignments.reduce((total, row) => total + row.endMinute - row.startMinute, 0)
+  const targetTeacherIds = new Set(targetAssignments.map((row) => row.teacherId))
+  const targetRoomIds = new Set(targetAssignments.map((row) => row.roomId))
+  // Cycle ≥ 7 courses pass FISI-PLANNING-1 without exceptions only on weekdays 18:00–22:00
+  // (backend/src/programacion-academica/demo-proposal.service.ts:556-562 isAllowedPlanningInterval;
+  // mirrored in schedule-generator.ts:309-322). The two 2-hour sessions run back to back, so only 18:00 fits.
+  // The day must differ from the current placement so the adjustment really moves the block.
+  const slot = [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 18 * 60 })).find((candidate) => {
+    if (candidate.day === targetAssignments[0].day) return false
+    const blockEnd = candidate.startMinute + blockMinutes
+    return !complete.assignments.some((row) => row.sectionId !== firstSectionId && row.day === candidate.day
+      && row.startMinute < blockEnd && row.endMinute > candidate.startMinute
+      && (targetTeacherIds.has(row.teacherId) || targetRoomIds.has(row.roomId)))
+  })
+  assert.ok(slot, 'Se requiere un día distinto con bloque libre de 18:00 a 22:00 sin colisión docente o de ambiente')
+  // Friday 16:00 is an afternoon slot for a senior course: rejected by default, accepted only with allowAfternoon.
+  const afternoonSlot = { day: 5, startMinute: 16 * 60 }
   await sectionsTable.locator('tbody tr').nth(firstSectionRowIndex).getByRole('button', { name: 'Editar horario', exact: true }).click()
   const firstTargetDay = page.getByLabel(`Día revisión ${firstSectionId}`, { exact: true })
+  const firstTargetStart = page.getByLabel(`Inicio revisión ${firstSectionId}`, { exact: true })
+  const tableBeforePolicyRejection = await table.innerText()
+  const proposalBeforePolicyRejection = await read(`/local/programacion-academica/v1/propuestas/${complete.proposalId}`)
+  await firstTargetDay.selectOption(String(afternoonSlot.day))
+  await firstTargetStart.fill(toTime(afternoonSlot.startMinute))
+  const policyRejectedPending = page.waitForResponse((response) => response.url().endsWith('/ajustes') && response.request().method() === 'POST')
+  await page.getByRole('button', { name: 'Aplicar ajuste', exact: true }).click()
+  const policyRejected = await policyRejectedPending
+  assert.equal(policyRejected.status(), 422, await policyRejected.text())
+  assert.match((await policyRejected.json()).error.message, /PLANNING_POLICY_WINDOW/)
+  await page.getByRole('alert').filter({ hasText: 'No se aplicó el ajuste' }).waitFor()
+  assert.equal(await table.innerText(), tableBeforePolicyRejection)
+  assert.deepEqual(await read(`/local/programacion-academica/v1/propuestas/${complete.proposalId}`), proposalBeforePolicyRejection)
+
   await firstTargetDay.selectOption(String(slot.day))
-  await page.getByLabel(`Inicio revisión ${firstSectionId}`, { exact: true }).fill(`${String(Math.floor(slot.startMinute / 60)).padStart(2, '0')}:${String(slot.startMinute % 60).padStart(2, '0')}`)
+  await firstTargetStart.fill(toTime(slot.startMinute))
   const validAdjustmentPending = page.waitForResponse((response) => response.url().endsWith('/ajustes') && response.request().method() === 'POST')
   await page.getByRole('button', { name: 'Aplicar ajuste', exact: true }).click()
   const validAdjustmentResponse = await validAdjustmentPending
@@ -149,7 +180,9 @@ try {
   assert.equal(await calendar.locator('.weekly-schedule__event').count(), 4)
   assert.equal(await calendar.locator('.weekly-schedule__event').filter({ hasText: 'Ajustada manualmente' }).count(), 1)
 
+  // The teacher-collision edit sends only the block start, so the candidate must start at 18:00 to keep the moved block inside the default policy window.
   const collisionAssignment = complete.assignments.find((row) => row.sectionId !== firstSectionId
+    && row.startMinute === 18 * 60
     && row.teacherId !== targetAssignments[0].teacherId
     && !complete.assignments.some((other) => other.sectionId !== firstSectionId && other.sectionId !== row.sectionId
       && other.teacherId === row.teacherId && other.day === row.day && other.startMinute < row.endMinute && other.endMinute > row.startMinute))
@@ -259,6 +292,7 @@ try {
     splitEditor: { sectionId: splitProposal.sections[0].sectionId, assignedSessions: splitProposal.assignments.length,
       availableBlockChoices: splitChoiceCount }, compactEditors: true, retainedConfiguration: true,
     manualAdjustment: { sectionId: firstSectionId, sessionIds: targetIds, version: adjustedProposal.editVersion, day: slot.day, startMinute: slot.startMinute },
+    afternoonPolicyRejection: { status: policyRejected.status(), day: afternoonSlot.day, startMinute: afternoonSlot.startMinute },
     teacherCollisionStatus: teacherCollision.status(), roomCollisionStatus: roomCollision.status(), rejectedEditsPreserveView: true,
     duplicatePrevention: true, blocksInCalendar: 4, unchangedEnrollmentOffer: true, errors, external }, null, 2))
   console.log('PASS ERP180: manual block review, coherent tables/calendar, collision rejection with prior view retained, compact editors, preferences, resource limits, unchanged enrollment offer')
