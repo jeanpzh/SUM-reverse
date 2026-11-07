@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "verify": "node scripts/verify.mjs",
+    "verify:planning-shell": "node scripts/verify-planning-shell.mjs",
     "test:data": "tsc -p tsconfig.data-tests.json && node --experimental-strip-types --test --test-isolation=none src/data/*.test.ts"
   },
   "dependencies": {
