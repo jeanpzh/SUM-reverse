@@ -1,0 +1,470 @@
+/* Planning Week View (Semana) - Design Direction A */
+
+.planning-week {
+  display: flex;
+  flex-direction: column;
+  background: var(--planning-surface);
+  border: 1px solid var(--planning-border);
+  border-radius: var(--planning-radius-panel);
+  overflow: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Editing active banner */
+.planning-week__editing-banner {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 1.5);
+  padding: calc(var(--planning-spacing) * 3) calc(var(--planning-spacing) * 4);
+  background: var(--planning-selected);
+  border-bottom: 1px solid var(--planning-border);
+}
+
+.planning-week__editing-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--planning-spacing) * 2);
+  font-size: 0.875rem;
+  color: var(--planning-text);
+}
+
+.planning-week__editing-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px calc(var(--planning-spacing) * 2);
+  border-radius: var(--planning-radius-control);
+  background: var(--planning-primary);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.planning-week__editing-time {
+  color: var(--planning-primary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.planning-week__editing-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--planning-muted);
+}
+
+/* Desktop Grid View */
+.planning-week__grid-wrapper {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  background: var(--planning-surface);
+}
+
+.planning-week__grid-wrapper:focus-visible {
+  outline: 2px solid var(--planning-primary);
+  outline-offset: -2px;
+}
+
+.planning-week__grid {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.planning-week__header-row {
+  display: flex;
+  border-bottom: 1px solid var(--planning-border);
+  background: var(--planning-canvas);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.planning-week__time-col-header {
+  width: 64px;
+  flex-shrink: 0;
+  padding: calc(var(--planning-spacing) * 2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--planning-muted);
+  text-align: center;
+  border-right: 1px solid var(--planning-border);
+  box-sizing: border-box;
+}
+
+.planning-week__day-col-header {
+  flex: 1 1 0%;
+  min-width: 130px;
+  padding: calc(var(--planning-spacing) * 2);
+  text-align: center;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--planning-text);
+  border-right: 1px solid var(--planning-border);
+  box-sizing: border-box;
+}
+
+.planning-week__day-col-header:last-child {
+  border-right: none;
+}
+
+.planning-week__body {
+  display: flex;
+  position: relative;
+  width: 100%;
+  background: var(--planning-surface);
+}
+
+/* Time axis */
+.planning-week__time-axis {
+  width: 64px;
+  flex-shrink: 0;
+  position: relative;
+  border-right: 1px solid var(--planning-border);
+  background: var(--planning-canvas);
+}
+
+.planning-week__time-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  padding-right: calc(var(--planning-spacing) * 1.5);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--planning-muted);
+  text-align: right;
+  transform: translateY(-50%);
+  user-select: none;
+}
+
+/* Day column */
+.planning-week__day-col {
+  flex: 1 1 0%;
+  min-width: 130px;
+  position: relative;
+  border-right: 1px solid var(--planning-border);
+  background-image: linear-gradient(to bottom, var(--planning-border) 1px, transparent 1px);
+  box-sizing: border-box;
+}
+
+.planning-week__day-col:last-child {
+  border-right: none;
+}
+
+/* Slot targets for clicking when editing */
+.planning-week__slots-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+}
+
+.planning-week__slot-target {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+}
+
+.planning-week__slot-target:hover {
+  background: var(--planning-selected);
+}
+
+.planning-week__slot-target:focus-visible {
+  outline: 2px solid var(--planning-primary);
+  outline-offset: -2px;
+}
+
+/* Block Cards */
+.planning-week__block {
+  position: absolute;
+  box-sizing: border-box;
+  padding: calc(var(--planning-spacing) * 1.5);
+  background: var(--planning-surface);
+  border: 1px solid var(--planning-border);
+  border-left: 3px solid var(--planning-primary);
+  border-radius: var(--planning-radius-control);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.75rem;
+  line-height: 1.25;
+  cursor: pointer;
+  z-index: 2;
+  transition: border-color 100ms ease;
+  text-align: left;
+}
+
+.planning-week__block:hover {
+  border-color: var(--planning-primary);
+}
+
+.planning-week__block:focus-visible {
+  outline: 2px solid var(--planning-primary);
+  outline-offset: 2px;
+  z-index: 5;
+}
+
+.planning-week__block--selected {
+  background: var(--planning-selected);
+  border-color: var(--planning-primary);
+  border-left-width: 4px;
+  z-index: 3;
+}
+
+.planning-week__block--current-placement {
+  opacity: 0.75;
+  border-style: dashed;
+}
+
+.planning-week__block--proposed-preview {
+  background: var(--planning-selected);
+  border: 2px dashed var(--planning-primary);
+  border-left-width: 4px;
+  z-index: 4;
+}
+
+.planning-week__placement-tag {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  padding: 1px calc(var(--planning-spacing) * 1);
+  border-radius: 2px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.planning-week__placement-tag--current {
+  background: var(--planning-canvas);
+  color: var(--planning-muted);
+  border: 1px solid var(--planning-border);
+}
+
+.planning-week__placement-tag--proposed {
+  background: var(--planning-primary);
+  color: #ffffff;
+}
+
+.planning-week__block-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.planning-week__block-course {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--planning-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.planning-week__block-section {
+  font-size: 0.75rem;
+  color: var(--planning-muted);
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+.planning-week__block-time {
+  font-size: 0.75rem;
+  color: var(--planning-muted);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.planning-week__block-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 0.75rem;
+  color: var(--planning-muted);
+  overflow: hidden;
+}
+
+.planning-week__block-teacher,
+.planning-week__block-room {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Narrow screen day agenda (<= 720px) */
+.planning-week__agenda {
+  display: none;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 3);
+  padding: calc(var(--planning-spacing) * 3);
+  background: var(--planning-surface);
+}
+
+.planning-week__agenda-nav {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--planning-spacing) * 2);
+}
+
+.planning-week__agenda-nav-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--planning-text);
+  white-space: nowrap;
+}
+
+.planning-week__agenda-day-select {
+  flex: 1 1 auto;
+  min-height: 2.25rem;
+  padding: calc(var(--planning-spacing) * 1) calc(var(--planning-spacing) * 2);
+  border: 1px solid var(--planning-border);
+  border-radius: var(--planning-radius-control);
+  background: var(--planning-surface);
+  color: var(--planning-text);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.planning-week__agenda-day-select:focus-visible {
+  outline: 2px solid var(--planning-primary);
+  outline-offset: 1px;
+}
+
+.planning-week__agenda-content {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 4);
+}
+
+.planning-week__agenda-day-group {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 2);
+}
+
+.planning-week__agenda-day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: calc(var(--planning-spacing) * 1);
+  border-bottom: 2px solid var(--planning-border);
+}
+
+.planning-week__agenda-day-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--planning-text);
+}
+
+.planning-week__agenda-day-count {
+  font-size: 0.75rem;
+  color: var(--planning-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.planning-week__agenda-empty {
+  margin: 0;
+  padding: calc(var(--planning-spacing) * 2);
+  font-size: 0.8125rem;
+  color: var(--planning-muted);
+  font-style: italic;
+  background: var(--planning-canvas);
+  border-radius: var(--planning-radius-control);
+}
+
+.planning-week__agenda-list {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 2);
+}
+
+.planning-week__agenda-card {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 1.5);
+  padding: calc(var(--planning-spacing) * 3);
+  background: var(--planning-canvas);
+  border: 1px solid var(--planning-border);
+  border-left: 4px solid var(--planning-primary);
+  border-radius: var(--planning-radius-control);
+  cursor: pointer;
+  transition: border-color 100ms ease, background-color 100ms ease;
+  text-align: left;
+}
+
+.planning-week__agenda-card:hover {
+  background: var(--planning-selected);
+  border-color: var(--planning-primary);
+}
+
+.planning-week__agenda-card:focus-visible {
+  outline: 2px solid var(--planning-primary);
+  outline-offset: 2px;
+}
+
+.planning-week__agenda-card--selected {
+  background: var(--planning-selected);
+  border-color: var(--planning-primary);
+}
+
+.planning-week__agenda-card--current {
+  border-left-style: dashed;
+}
+
+.planning-week__agenda-card--proposed {
+  background: var(--planning-selected);
+  border: 2px dashed var(--planning-primary);
+  border-left-width: 4px;
+}
+
+.planning-week__agenda-card-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--planning-spacing) * 2);
+}
+
+.planning-week__agenda-card-title strong {
+  font-size: 0.875rem;
+  color: var(--planning-text);
+}
+
+.planning-week__agenda-card-title span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--planning-muted);
+}
+
+.planning-week__agenda-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.8125rem;
+  color: var(--planning-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.planning-week__agenda-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: calc(var(--planning-spacing) * 1);
+}
+
+/* Breakpoint for narrow screens (at 720px and below) */
+@media (max-width: 768px) {
+  .planning-week__grid-wrapper {
+    display: none !important;
+  }
+
+  .planning-week__agenda {
+    display: flex !important;
+  }
+}

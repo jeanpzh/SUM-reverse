@@ -149,9 +149,39 @@ export function PlanningInspector({
                   {adjustmentError}
                 </p>
               )}
+              <div className="planning-inspector__placement-comparison" aria-label="Comparación de ubicación del bloque">
+                <div className="planning-inspector__placement-item">
+                  <span className="planning-inspector__placement-badge planning-inspector__placement-badge--current">
+                    Ubicación actual
+                  </span>
+                  <span className="planning-inspector__placement-val">
+                    {dayNamesFull[activeBlock.day]} {formatAcademicMinute(activeBlock.startMinute)}–{formatAcademicMinute(activeBlock.endMinute)}
+                  </span>
+                </div>
+                <div className="planning-inspector__placement-item">
+                  <span className="planning-inspector__placement-badge planning-inspector__placement-badge--proposed">
+                    Ubicación propuesta
+                  </span>
+                  <span className="planning-inspector__placement-val">
+                    {dayNamesFull[editingBlock.day]} {formatAcademicMinute(editingBlock.startMinute)}–{editingBlock.startMinute + activeBlock.durationMinutes <= 1440 ? formatAcademicMinute(editingBlock.startMinute + activeBlock.durationMinutes) : 'fuera del día'}
+                  </span>
+                </div>
+              </div>
+
               <p className="academic-scheduling__manual-preview">
                 Vista previa: {dayNamesFull[editingBlock.day]} {formatAcademicMinute(editingBlock.startMinute)}–{editingBlock.startMinute + activeBlock.durationMinutes <= 1440 ? formatAcademicMinute(editingBlock.startMinute + activeBlock.durationMinutes) : 'fuera del día'} · duración conservada {formatAcademicDuration(activeBlock.durationMinutes)}.{section.deliveryMode === 'split' ? ' Cambiar docente modifica la responsabilidad de toda la sección; los demás bloques mantienen sus horarios.' : ' Se conserva el bloque continuo completo.'}
               </p>
+
+              <label>
+                Duración (solo lectura)
+                <input
+                  type="text"
+                  readOnly
+                  disabled
+                  value={formatAcademicDuration(activeBlock.durationMinutes)}
+                  aria-label={`Duración ${activeBlock.sectionId}`}
+                />
+              </label>
 
               <label>
                 Docente responsable

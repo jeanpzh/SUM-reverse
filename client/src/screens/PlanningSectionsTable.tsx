@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AcademicCatalog, AcademicProposal } from '../data/academicScheduling'
 import {
   academicSectionLabel,
@@ -17,6 +17,8 @@ export interface PlanningSectionsTableProps {
   isLocked?: boolean
   viewMode: 'tabla' | 'semana'
   onToggleView: (mode: 'tabla' | 'semana') => void
+  searchQuery?: string
+  onSearchChange?: (query: string) => void
 }
 
 export function PlanningSectionsTable({
@@ -29,8 +31,25 @@ export function PlanningSectionsTable({
   isLocked = false,
   viewMode,
   onToggleView,
+  searchQuery,
+  onSearchChange,
 }: PlanningSectionsTableProps) {
-  const [searchQuery, setSearchQuery] = useState('')
+  const [internalSearchQuery, setInternalSearchQuery] = useState('')
+  const effectiveQuery = searchQuery !== undefined ? searchQuery : internalSearchQuery
+  const prevSelectedId = useRef<string | null>(selectedSectionId)
+
+  useEffect(() => {
+    if (
+      selectedSectionId &&
+      selectedSectionId !== prevSelectedId.current &&
+      typeof CSS !== 'undefined' &&
+      CSS.escape
+    ) {
+      const row = document.querySelector(`tr[data-section-id="${CSS.escape(selectedSectionId)}"]`)
+      row?.scrollIntoView({ block: 'nearest' })
+    }
+    prevSelectedId.current = selectedSectionId
+  }, [selectedSectionId])
 
   const blocks = useMemo(() => aggregateAcademicBlocks(proposal), [proposal])
 
@@ -42,7 +61,7 @@ export function PlanningSectionsTable({
     return map
   }, [blocks])
 
-  const normalizedQuery = normalizeAcademicSearch(searchQuery)
+  const normalizedQuery = normalizeAcademicSearch(effectiveQuery)
 
   const { courseGroups, totalSectionsCount, filteredSectionsCount } = useMemo(() => {
     const groupsMap = new Map<string, { courseId: string; courseName: string; sections: AcademicProposal['sections'] }>()
@@ -125,8 +144,14 @@ export function PlanningSectionsTable({
             className="planning-sections__search"
             placeholder="Buscar por curso, sección o recurso…"
             aria-label="Buscar secciones"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={effectiveQuery}
+            onChange={(e) => {
+              if (onSearchChange) {
+                onSearchChange(e.target.value)
+              } else {
+                setInternalSearchQuery(e.target.value)
+              }
+            }}
           />
 
           <div className="planning-sections__view-toggle" role="group" aria-label="Vista">

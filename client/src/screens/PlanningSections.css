@@ -612,3 +612,53 @@
     z-index: 999;
   }
 }
+
+/* Placement comparison in inspector editor */
+.planning-inspector__placement-comparison {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 1.5);
+  padding: calc(var(--planning-spacing) * 2);
+  background: var(--planning-canvas);
+  border: 1px solid var(--planning-border);
+  border-radius: var(--planning-radius-control);
+  margin-top: calc(var(--planning-spacing) * 1);
+}
+
+.planning-inspector__placement-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--planning-spacing) * 1);
+  font-size: 0.8125rem;
+}
+
+.planning-inspector__placement-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px calc(var(--planning-spacing) * 1.5);
+  border-radius: var(--planning-radius-control);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.planning-inspector__placement-badge--current {
+  background: var(--planning-surface);
+  border: 1px solid var(--planning-border);
+  color: var(--planning-muted);
+}
+
+.planning-inspector__placement-badge--proposed {
+  background: var(--planning-selected);
+  border: 1px solid var(--planning-primary);
+  color: var(--planning-primary);
+}
+
+.planning-inspector__placement-val {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--planning-text);
+}
+

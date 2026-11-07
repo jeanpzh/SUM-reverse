@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { DataTable } from '../components/Common'
 import { fetchAcademicCatalog, estimateAcademicDemand, createAcademicProposal, adjustAcademicProposal, fetchAcademicDrafts, saveAcademicDraft, resumeAcademicDraft, submitAcademicTeacherReview, respondAcademicTeacherReview, formatAcademicInterval, formatAcademicMinute, formatAcademicDuration, toAcademicScheduleEvents, academicSectionLabel, aggregateAcademicBlocks, approveAcademicDraft, publishAcademicDraft, forkAcademicDraft, createAcademicPlanningDefaults, buildAcademicPlanningRequest, PLANNING_LIMITS } from '../data/academicScheduling'
 import type { PlanningPeriod, PlanningPolicy } from '../data/academicScheduling'
@@ -16,6 +16,7 @@ import { PlanningStageNav } from './PlanningStageNav'
 import { PlanningStatusBar } from './PlanningStatusBar'
 import { PlanningSectionsTable } from './PlanningSectionsTable'
 import { PlanningInspector } from './PlanningInspector'
+import { PlanningWeekView } from './PlanningWeekView'
 import type { PlanningStage } from '../routes/local.programacion-academica'
 import './AcademicScheduling.css'
 import './PlanningWorkbench.css'
@@ -34,6 +35,23 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
   const [editingBlock, setEditingBlock] = useState<AcademicAdjustment | null>(null)
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'tabla' | 'semana'>('tabla')
+  const [searchQuery, setSearchQuery] = useState('')
+  const viewScrollPositions = useRef<{ tabla: number; semana: number }>({ tabla: 0, semana: 0 })
+
+  const handleToggleView = useCallback((nextMode: 'tabla' | 'semana') => {
+    if (nextMode === viewMode) return
+    viewScrollPositions.current[viewMode] = window.scrollY
+    setViewMode(nextMode)
+  }, [viewMode])
+
+  useLayoutEffect(() => {
+    const targetY = viewScrollPositions.current[viewMode] ?? 0
+    window.scrollTo({ top: targetY, behavior: 'instant' })
+    const rafId = requestAnimationFrame(() => {
+      window.scrollTo({ top: targetY, behavior: 'instant' })
+    })
+    return () => cancelAnimationFrame(rafId)
+  }, [viewMode])
   const [adjusting, setAdjusting] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [proposalError, setProposalError] = useState<string | null>(null)
@@ -917,60 +935,59 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
 
           <div className="planning-workbench-container">
             <div className="planning-workbench-main">
-              {viewMode === 'tabla' ? (
-                <>
-                  <PlanningSectionsTable
-                    proposal={proposal}
-                    catalog={catalog}
-                    demands={demands}
-                    selectedSectionId={selectedSectionId}
-                    onSelectSection={setSelectedSectionId}
-                    onEditBlock={startBlockReview}
-                    isLocked={lockedDraft || draftBusy}
-                    viewMode={viewMode}
-                    onToggleView={setViewMode}
-                  />
+              <div
+                className="planning-view-pane planning-view-pane--tabla"
+                style={{
+                  display: viewMode === 'tabla' ? 'flex' : 'none',
+                  flexDirection: 'column',
+                  gap: 'calc(var(--planning-spacing) * 4)',
+                }}
+              >
+                <PlanningSectionsTable
+                  proposal={proposal}
+                  catalog={catalog}
+                  demands={demands}
+                  selectedSectionId={selectedSectionId}
+                  onSelectSection={setSelectedSectionId}
+                  onEditBlock={startBlockReview}
+                  isLocked={lockedDraft || draftBusy}
+                  viewMode={viewMode}
+                  onToggleView={handleToggleView}
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                />
 
-                  <section className="academic-scheduling__section" aria-labelledby="academic-scheduling-assignments">
-                    <h3 id="academic-scheduling-assignments">Asignaciones de horario</h3>
-                    <p className="academic-scheduling__resource-note">Los nombres identifican recursos de esta propuesta local. Un nombre de referencia sintético no confirma una asignación para el nuevo periodo.</p>
-                    <div role="region" aria-label="Programación generada">
-                      <DataTable className="academic-scheduling__assignments-table" headers={['Asignatura', 'Sección', 'Docente asignado · nuevo periodo', 'Ambiente(s)', 'Día', 'Hora', 'Componentes incluidos']} rows={assignmentRows} empty="No hay componentes asignados." />
-                    </div>
-                    <p className="academic-scheduling__resource-note">Asignaciones propuestas para el nuevo periodo; no están confirmadas.</p>
-                    <WeeklySchedule data={emptyScheduleData()} displayEvents={toAcademicScheduleEvents(proposal)} />
-                  </section>
-                </>
-              ) : (
-                <div className="planning-sections">
-                  <div className="planning-sections__toolbar">
-                    <div className="planning-sections__toolbar-left">
-                      <h3 className="planning-sections__title">Vista semanal</h3>
-                    </div>
-                    <div className="planning-sections__toolbar-right">
-                      <div className="planning-sections__view-toggle" role="group" aria-label="Vista">
-                        <button
-                          type="button"
-                          className="planning-sections__toggle-btn"
-                          aria-pressed={false}
-                          onClick={() => setViewMode('tabla')}
-                        >
-                          Tabla
-                        </button>
-                        <button
-                          type="button"
-                          className="planning-sections__toggle-btn planning-sections__toggle-btn--active"
-                          aria-pressed={true}
-                          onClick={() => setViewMode('semana')}
-                        >
-                          Semana
-                        </button>
-                      </div>
-                    </div>
+                <section className="academic-scheduling__section" aria-labelledby="academic-scheduling-assignments">
+                  <h3 id="academic-scheduling-assignments">Asignaciones de horario</h3>
+                  <p className="academic-scheduling__resource-note">Los nombres identifican recursos de esta propuesta local. Un nombre de referencia sintético no confirma una asignación para el nuevo periodo.</p>
+                  <div role="region" aria-label="Programación generada">
+                    <DataTable className="academic-scheduling__assignments-table" headers={['Asignatura', 'Sección', 'Docente asignado · nuevo periodo', 'Ambiente(s)', 'Día', 'Hora', 'Componentes incluidos']} rows={assignmentRows} empty="No hay componentes asignados." />
                   </div>
+                  <p className="academic-scheduling__resource-note">Asignaciones propuestas para el nuevo periodo; no están confirmadas.</p>
                   <WeeklySchedule data={emptyScheduleData()} displayEvents={toAcademicScheduleEvents(proposal)} />
-                </div>
-              )}
+                </section>
+              </div>
+
+              <div
+                className="planning-view-pane planning-view-pane--semana"
+                style={{ display: viewMode === 'semana' ? 'block' : 'none' }}
+              >
+                <PlanningWeekView
+                  proposal={proposal}
+                  catalog={catalog}
+                  proposalResources={proposalResources}
+                  selectedSectionId={selectedSectionId}
+                  editingBlock={editingBlock}
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  viewMode={viewMode}
+                  onToggleView={handleToggleView}
+                  onSelectSection={setSelectedSectionId}
+                  onStartEditBlock={startBlockReview}
+                  onChangeEditingBlock={setEditingBlock}
+                  isLocked={lockedDraft || draftBusy}
+                />
+              </div>
             </div>
 
             {selectedSectionId && (
