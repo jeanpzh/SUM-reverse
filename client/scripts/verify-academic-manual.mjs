@@ -216,7 +216,13 @@ try {
   const componentSelects = page.locator('.academic-scheduling__manual-components select')
   assert.equal(await componentSelects.count(), targetAssignments.length)
   for (const [index, select] of (await componentSelects.all()).entries()) {
-    const roomId = chooseRoom(await optionValues(select), componentInterval(collisionAssignment.startMinute, index), collisionAssignment.day, targetIds)
+    // With a single configured room of a kind, it may be busy only with the colliding section itself. The validator checks each
+    // pair for TEACHER_CONFLICT before ROOM_CONFLICT, so sharing a room with that same section still reports the teacher conflict first.
+    const options = await optionValues(select)
+    const interval = componentInterval(collisionAssignment.startMinute, index)
+    const collidingSessionIds = complete.assignments.filter((row) => row.sectionId === collisionAssignment.sectionId).map((row) => row.sessionId)
+    const roomId = chooseRoom(options, interval, collisionAssignment.day, targetIds)
+      ?? chooseRoom(options, interval, collisionAssignment.day, [...targetIds, ...collidingSessionIds])
     assert.ok(roomId, `Sin ambiente libre de tipo ${targetAssignments[index].sessionType} para la colisión docente`)
     await select.selectOption(roomId)
   }
