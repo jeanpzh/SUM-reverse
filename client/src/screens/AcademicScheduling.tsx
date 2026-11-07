@@ -619,7 +619,7 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
   }
 
   const startBlockReview = (block: ReturnType<typeof aggregateAcademicBlocks>[number]) => {
-    if (!proposal) return
+    if (!proposal || lockedDraft || draftBusy) return
     const assignments = proposal.assignments.filter((assignment) => block.sessionIds.includes(assignment.sessionId))
       .sort((left, right) => left.startMinute - right.startMinute || left.sessionId.localeCompare(right.sessionId))
     setSelectedSectionId(block.sectionId)
@@ -630,7 +630,7 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
   }
 
   const submitBlockReview = async () => {
-    if (!proposal || !editingBlock || adjusting) return
+    if (!proposal || !editingBlock || adjusting || lockedDraft || draftBusy) return
     const intent = ++latestIntent.current
     setAdjusting(true)
     setAdjustmentError(null)
@@ -915,7 +915,7 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
       hidden={currentStage !== 'horario'}
       aria-label="Etapa de horario"
     >
-      <fieldset className="academic-scheduling__locked-workspace" disabled={lockedDraft || draftBusy}>
+      <fieldset className="academic-scheduling__locked-workspace" disabled={draftBusy}>
         {proposalError && <p className="academic-scheduling__error" role="alert">{proposalError}</p>}
         {!proposal && (
           <div className="academic-scheduling__empty-stage">

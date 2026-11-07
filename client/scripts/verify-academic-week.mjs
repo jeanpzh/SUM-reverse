@@ -3,7 +3,9 @@
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { mkdir, rm } from 'node:fs/promises'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { verifyWeekScenarios } from './verify-academic-week-scenarios.mjs'
 import { createServer } from 'node:net'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -15,13 +17,10 @@ const webPort = 5291
 const api = `http://127.0.0.1:${apiPort}`
 const web = `http://127.0.0.1:${webPort}`
 const route = '/local/programacion-academica'
-const evidenceDir = resolve(root, 'evidence/local/programacion-academica-week-synthetic')
+const fixtureDir = await mkdtemp(resolve(tmpdir(), 'sum-week-synthetic-'))
 
-// Clean environment with provenance env -i
-const environment = { ...process.env }
-for (const key of Object.keys(environment)) {
-  if (key.endsWith('_SNAPSHOT_DIR') || key === 'DATABASE_URL') delete environment[key]
-}
+// Allowlist: never inherit operator data sources, database or draft storage.
+const environment = { PATH: process.env.PATH }
 
 const children = []
 let browser
@@ -90,7 +89,6 @@ process.on('SIGTERM', async () => {
 })
 
 try {
-  await mkdir(evidenceDir, { recursive: true })
   await assertPortFree(apiPort)
   await assertPortFree(webPort)
 
@@ -104,6 +102,7 @@ try {
       SUM_LOCAL_SCENARIOS: '0',
       SIMULATOR_DEPLOYMENT: 'local',
       PORT: String(apiPort),
+      SUM_ACADEMIC_DRAFT_DIR: fixtureDir,
     }
   )
   await waitFor(`${api}/local/programacion-academica/v1/catalogo`, backend)
@@ -213,6 +212,8 @@ try {
   const semanaSearch = await searchInput.inputValue()
   assert.equal(semanaSearch, queryPrefix, 'Search query preserved across view switch')
 
+  assert.equal(await page.locator('.planning-week__block--selected').first().getAttribute('data-week-grid-section-id'), selectedId)
+
   // Scroll semana view down to different offset
   await page.evaluate(() => window.scrollTo(0, 160))
   const semanaScrollY = await page.evaluate(() => window.scrollY)
@@ -252,188 +253,16 @@ try {
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.waitForTimeout(100)
 
-  console.log('✓ Criterion 2 passed: Selection, normalized search, and actual scroll offsets preserved each way; at 720px agenda visible with no page overflow')
+  console.log('✓ Criterion 2 passed: Selection, search, and actual scroll offsets preserved each way; at 720px agenda visible with no page overflow')
 
-  // --- ACCEPTANCE CRITERION 1: Overlapping blocks layout & distinct bounding boxes ---
-  // Clear search to see all blocks
-  await searchInput.fill('')
-
-  // Identify assigned blocks in desktop grid
-  const blocksLocator = page.locator('.planning-week__block:not(.planning-week__block--proposed-preview)')
-  const totalBlocks = await blocksLocator.count()
-  assert.ok(totalBlocks >= 2, 'Should have at least 2 assigned blocks')
-
-  // Click a block to start editing
-  await blocksLocator.nth(0).click()
-  await page.locator('.planning-inspector').waitFor()
-
-  // The proposed preview appears
-  const proposedPreview = page.locator('.planning-week__block--proposed-preview')
-  await proposedPreview.waitFor()
-  assert.equal(await proposedPreview.count(), 1)
-
-  // Verify proposed preview and current placement do not hide each other
-  const previewBox = await proposedPreview.boundingBox()
-  const currentBlock = page.locator('.planning-week__block--current-placement')
-  const currentBox = await currentBlock.boundingBox()
-  assert.ok(previewBox && currentBox)
-  assert.ok(previewBox.width > 20 && currentBox.width > 20)
-
-  // Side by side without hiding each other
-  const disjoint =
-    previewBox.x + previewBox.width <= currentBox.x + 2 ||
-    currentBox.x + currentBox.width <= previewBox.x + 2 ||
-    previewBox.y + previewBox.height <= currentBox.y ||
-    currentBox.y + currentBox.height <= previewBox.y
-  assert.ok(disjoint, 'Preview and current placement bounding boxes must not hide each other')
-
-  // Keyboard navigation on grid: focus and press Enter selects block
-  await blocksLocator.nth(1).focus()
-  await page.keyboard.press('Enter')
-  assert.ok(await page.locator('.planning-inspector').isVisible())
-
-  console.log('✓ Criterion 1 passed: Overlapping valid blocks have deterministic non-overlapping lanes; preview does not hide current placement; keyboard selects blocks')
-
-  // --- ACCEPTANCE CRITERION 3: Split section search keeps all components across views ---
-  // Switch to Tabla view
-  await page.getByRole('button', { name: 'Tabla', exact: true }).click()
-  await page.locator('.planning-sections__table').waitFor()
-
-  // Search by course1
-  await searchInput.fill(queryPrefix)
-  const tablaSections = await page.locator('tr[data-section-id]').count()
-
-  // Switch to Semana view
-  await page.getByRole('button', { name: 'Semana', exact: true }).click()
-  await page.locator('.planning-week').waitFor()
-
-  // All blocks belonging to matched sections are present in Semana view
-  const semanaSections = await page.locator('.planning-week__block:not(.planning-week__block--proposed-preview)').count()
-  assert.ok(semanaSections >= tablaSections, 'All section components are preserved in Semana view')
-
-  console.log('✓ Criterion 3 passed: Section membership and all components preserved across Tabla and Semana')
-
-  // --- ACCEPTANCE CRITERION 4: Valid edit & 422 rejection preserves committed schedule ---
-  // Clear search
-  await searchInput.fill('')
-
-  // Select first block to edit
-  await blocksLocator.first().click()
-  await page.locator('.planning-inspector').waitFor()
-
-  const inspectorDay = page.getByLabel(/Día revisión/)
-  const inspectorStart = page.getByLabel(/Inicio revisión/)
-  const submitBtn = page.getByRole('button', { name: 'Aplicar ajuste', exact: true })
-
-  // 1. Valid edit to an evening slot
-  await inspectorDay.selectOption('3')
-  await inspectorStart.fill('18:00')
-
-  const validPending = page.waitForResponse((res) => res.url().endsWith('/ajustes') && res.request().method() === 'POST')
-  await submitBtn.click()
-  const validRes = await validPending
-  assert.equal(validRes.status(), 200, 'Valid adjustment must return 200')
-  console.log('Valid edit accepted through local NestJS API')
-
-  // 2. Now test 422 collision:
-  // After the edit, get updated blocks
-  const updatedBlocks = page.locator('.planning-week__block:not(.planning-week__block--proposed-preview)')
-  assert.ok((await updatedBlocks.count()) >= 2)
-
-  // Start editing block 2
-  await updatedBlocks.nth(1).click()
-  await page.locator('.planning-inspector').waitFor()
-
-  // Capture current committed schedule state before collision
-  const committedScheduleBefore = await page.locator('.planning-week__body').innerText()
-
-  // Set block 2 to collide with block 1 on day 3 at 18:00 with colliding teacher/room
-  await inspectorDay.selectOption('3')
-  await inspectorStart.fill('18:00')
-
-  const rejectPending = page.waitForResponse((res) => res.url().endsWith('/ajustes') && res.request().method() === 'POST')
-  await submitBtn.click()
-  const rejectRes = await rejectPending
-
-  if (rejectRes.status() === 422) {
-    await page.getByRole('alert').filter({ hasText: 'No se aplicó el ajuste' }).waitFor()
-    const committedScheduleAfter = await page.locator('.planning-week__body').innerText()
-    // Schedule did not apply the colliding edit
-    assert.ok(committedScheduleAfter.includes('18:00'), 'Committed schedule preserved after 422')
-    // Preview remains labelled as proposed preview
-    assert.ok(await page.locator('.planning-week__placement-tag--proposed').first().isVisible(), 'Preview remains labelled unvalidated')
-    console.log('422 rejection handled: alert shown, committed schedule preserved, preview remains unvalidated')
-  } else {
-    // If slot was free, verify 200 succeeded
-    assert.equal(rejectRes.status(), 200)
-  }
-
-  console.log('✓ Criterion 4 passed: Existing assigned block edit through real NestJS API and collision handled cleanly')
-
-  // --- ACCEPTANCE CRITERION 5: Weekend reachability, locked proposal, no double activation, computed text >= 12px ---
-  // 1. Weekend reachability: Day select in inspector includes Sábado and Domingo
-  const dayOptions = await page.locator('.planning-inspector select').filter({ hasText: /Lunes/ }).locator('option').allInnerTexts()
-  assert.ok(dayOptions.some((o) => o.includes('Sábado')), 'Sábado must be reachable')
-  assert.ok(dayOptions.some((o) => o.includes('Domingo')), 'Domingo must be reachable')
-
-  // 2. Computed essential text >= 12px
-  const computedSizes = await page.evaluate(() => {
-    const sel = (selector) => {
-      const el = document.querySelector(selector)
-      return el ? parseFloat(window.getComputedStyle(el).fontSize) : null
-    }
-    return {
-      placementTag: sel('.planning-week__placement-tag'),
-      blockSection: sel('.planning-week__block-section'),
-      blockTime: sel('.planning-week__block-time'),
-      blockDetails: sel('.planning-week__block-details'),
-      inspectorBadge: sel('.planning-inspector__placement-badge'),
-    }
-  })
-
-  for (const [key, size] of Object.entries(computedSizes)) {
-    if (size !== null) {
-      assert.ok(size >= 12, `Computed font-size for ${key} (${size}px) must be >= 12px`)
-    }
-  }
-
-  // 3. Agenda accessibility: verify NO nested role="button"
-  await page.setViewportSize({ width: 720, height: 700 })
-  await page.waitForTimeout(100)
-
-  const nestedRolesCheck = await page.evaluate(() => {
-    const agendaCards = document.querySelectorAll('.planning-week__agenda-card')
-    let invalidNested = 0
-    agendaCards.forEach((card) => {
-      const isRoleButton = card.getAttribute('role') === 'button'
-      const hasInnerButton = card.querySelector('button') !== null
-      if (isRoleButton && hasInnerButton) invalidNested++
-    })
-    return invalidNested
-  })
-  assert.equal(nestedRolesCheck, 0, 'No nested interactive roles (role=button containing button) in agenda')
-
-  // 4. Keyboard activation on agenda edit button without double bubbling
-  const editBtn = page.locator('.planning-week__agenda-card button').first()
-  if (await editBtn.count()) {
-    await editBtn.focus()
-    await page.keyboard.press('Enter')
-    assert.ok(await page.locator('.planning-inspector').isVisible())
-  }
-
-  // 5. Locked proposal cannot start mutable operations:
-  // In Preparacion/Aprobacion, if locked, buttons are disabled
-  // Test locked status on inspector when disabled
-  console.log('✓ Criterion 5 passed: Weekend reachable, no nested interactive roles in agenda, computed font sizes >= 12px')
-
-  console.log('\n========================================')
-  console.log('ALL 5 ACCEPTANCE CRITERIA VERIFIED CLEANLY')
-  console.log('========================================\n')
+  await verifyWeekScenarios({ page, api, catalog, goToStage })
+  assert.deepEqual(jsErrors, [], 'No browser runtime errors')
+  console.log('PASS: Semana acceptance scenarios completed against synthetic NestJS API')
 
 } finally {
   await cleanup()
   try {
-    await rm(evidenceDir, { recursive: true, force: true })
+    await rm(fixtureDir, { recursive: true, force: true })
   } catch {
     // ignore
   }
