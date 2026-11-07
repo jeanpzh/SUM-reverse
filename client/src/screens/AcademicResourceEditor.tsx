@@ -1,12 +1,38 @@
-import { useMemo, useState } from 'react'
-import type { AcademicCatalog } from '../data/academicScheduling'
-import { filterAcademicResources, PLANNING_LIMITS } from '../data/academicScheduling'
-import type { AcademicPlanningResources, AcademicTeacherResource, AcademicRoomResource, AcademicInterval } from '../../../shared/programacion-academica-api.mjs'
+import { useId, useMemo, useRef, useState, useEffect } from 'react'
+import type { AcademicCatalog } from '../data/academicScheduling.ts'
+import { filterAcademicResources, PLANNING_LIMITS } from '../data/academicScheduling.ts'
+import type {
+  AcademicInterval,
+  AcademicPlanningResources,
+  AcademicProposal,
+  AcademicRoomResource,
+  AcademicTeacherResource,
+} from '../../../shared/programacion-academica-api.mjs'
+import {
+  applyBulkIncorporateRooms,
+  applyBulkIncorporateTeachers,
+  applyBulkRemoveRooms,
+  applyBulkRemoveTeachers,
+  buildBulkIncorporateRoomPreview,
+  buildBulkIncorporateTeacherPreview,
+  buildBulkRemovePreview,
+  buildUnifiedRooms,
+  buildUnifiedTeachers,
+  calculateAssignedTeacherMinutes,
+  calculateRoomCounts,
+  calculateTeacherCounts,
+  filterUnifiedRooms,
+  filterUnifiedTeachers,
+  formatAvailabilitySummary,
+} from '../data/academicResources.ts'
+import './AcademicResourceEditor.css'
 
-type Props = {
+export type AcademicResourceEditorProps = {
   catalog: AcademicCatalog
   resources: AcademicPlanningResources
   onChange: (resources: AcademicPlanningResources) => void
+  isLocked?: boolean
+  proposal?: AcademicProposal | null
 }
 
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
@@ -28,253 +54,1966 @@ function nextId(prefix: string, current: Array<{ id: string }>) {
 }
 
 function updateInterval(intervals: AcademicInterval[], index: number, patch: Partial<AcademicInterval>) {
-  return intervals.map((interval, itemIndex) => itemIndex === index ? { ...interval, ...patch } : interval)
+  return intervals.map((interval, itemIndex) => (itemIndex === index ? { ...interval, ...patch } : interval))
 }
 
 function cloneResources(resources: AcademicPlanningResources): AcademicPlanningResources {
   return {
-    teachers: resources.teachers.map((teacher) => ({ ...teacher, courseIds: [...teacher.courseIds],
+    teachers: resources.teachers.map((teacher) => ({
+      ...teacher,
+      courseIds: [...teacher.courseIds],
       availability: teacher.availability.map((interval) => ({ ...interval })),
       ...(teacher.preferences ? { preferences: teacher.preferences.map((interval) => ({ ...interval })) } : {}),
-      ...(teacher.sectionLimits ? { sectionLimits: teacher.sectionLimits.map((limit) => ({ ...limit })) } : {}) })),
-    rooms: resources.rooms.map((room) => ({ ...room, availability: room.availability.map((interval) => ({ ...interval })) })),
+      ...(teacher.sectionLimits ? { sectionLimits: teacher.sectionLimits.map((limit) => ({ ...limit })) } : {}),
+    })),
+    rooms: resources.rooms.map((room) => ({
+      ...room,
+      availability: room.availability.map((interval) => ({ ...interval })),
+    })),
   }
 }
 
-export function AcademicResourceEditor({ catalog, resources, onChange }: Props) {
-  const [activeTeacherId, setActiveTeacherId] = useState(resources.teachers[0]?.id ?? '')
-  const [activeRoomId, setActiveRoomId] = useState(resources.rooms[0]?.id ?? '')
-  const [courseSearch, setCourseSearch] = useState('')
+export function AcademicResourceEditor({
+  catalog,
+  resources,
+  onChange,
+  isLocked = false,
+  proposal,
+}: AcademicResourceEditorProps) {
+  const [activeTab, setActiveTab] = useState<'teachers' | 'rooms'>('teachers')
+
+  // Requirement: ZERO resource inspectors open on initial entry!
+  const [inspectedTeacherId, setInspectedTeacherId] = useState<string | null>(null)
+  const [inspectedRoomId, setInspectedRoomId] = useState<string | null>(null)
+
+  // Filters & Search
   const [teacherSearch, setTeacherSearch] = useState('')
+  const [roomSearch, setRoomSearch] = useState('')
+  const [teacherInclusionFilter, setTeacherInclusionFilter] = useState<'all' | 'included' | 'reference'>('all')
+  const [roomInclusionFilter, setRoomInclusionFilter] = useState<'all' | 'included' | 'reference'>('all')
+  const [roomKindFilter, setRoomKindFilter] = useState<'all' | 'classroom' | 'laboratory'>('all')
+
+  // Multi-Selection
+  const [selectedTeacherIds, setSelectedTeacherIds] = useState<string[]>([])
+  const [selectedRoomIds, setSelectedRoomIds] = useState<string[]>([])
+
+  // Errors & Fieldset searches
   const [teacherIdError, setTeacherIdError] = useState('')
   const [roomIdError, setRoomIdError] = useState('')
-  const [teacherReferenceIds, setTeacherReferenceIds] = useState<Record<string, string>>(() => Object.fromEntries(
-    resources.teachers.flatMap((teacher) => catalog.referenceTeachers?.some((reference) => reference.id === teacher.id)
-      ? [[teacher.id, teacher.id]] : [])))
-  const [roomReferenceIds, setRoomReferenceIds] = useState<Record<string, string>>(() => Object.fromEntries(
-    resources.rooms.flatMap((room) => catalog.referenceRooms?.some((reference) => reference.id === room.id)
-      ? [[room.id, room.id]] : [])))
-  const selectedTeacher = resources.teachers.find((teacher) => teacher.id === activeTeacherId) ?? resources.teachers[0]
-  const selectedRoom = resources.rooms.find((room) => room.id === activeRoomId) ?? resources.rooms[0]
-  const filteredCourses = useMemo(() => {
-    const query = courseSearch.trim().toLocaleLowerCase('es')
-    return catalog.courses.filter((course) => !query || `${course.courseId} ${course.name}`.toLocaleLowerCase('es').includes(query))
-  }, [catalog.courses, courseSearch])
-  const filteredReferenceTeachers = useMemo(() => filterAcademicResources(catalog.referenceTeachers ?? [], teacherSearch), [catalog.referenceTeachers, teacherSearch])
-  const filteredActiveTeachers = useMemo(() => filterAcademicResources(resources.teachers, teacherSearch), [resources.teachers, teacherSearch])
+  const [courseSearch, setCourseSearch] = useState('')
 
+  // Modals for bulk preview
+  const [activeModal, setActiveModal] = useState<
+    'incorporate-teacher' | 'incorporate-room' | 'remove-teacher' | 'remove-room' | null
+  >(null)
+  const triggerButtonRef = useRef<HTMLButtonElement | null>(null)
+  const modalFirstControlRef = useRef<HTMLButtonElement | null>(null)
+
+  // References mapping (tracks changes in ID to preserve correspondence)
+  const [teacherReferenceIds, setTeacherReferenceIds] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      resources.teachers.flatMap((teacher) =>
+        catalog.referenceTeachers?.some((reference) => reference.id === teacher.id) ? [[teacher.id, teacher.id]] : [],
+      ),
+    ),
+  )
+  const [roomReferenceIds, setRoomReferenceIds] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      resources.rooms.flatMap((room) =>
+        catalog.referenceRooms?.some((reference) => reference.id === room.id) ? [[room.id, room.id]] : [],
+      ),
+    ),
+  )
+
+  // Build unified lists
+  const unifiedTeachers = useMemo(
+    () => buildUnifiedTeachers(catalog.referenceTeachers, resources.teachers, teacherReferenceIds),
+    [catalog.referenceTeachers, resources.teachers, teacherReferenceIds],
+  )
+  const unifiedRooms = useMemo(
+    () => buildUnifiedRooms(catalog.referenceRooms, resources.rooms, roomReferenceIds),
+    [catalog.referenceRooms, resources.rooms, roomReferenceIds],
+  )
+
+  // Filtered lists
+  const filteredTeachers = useMemo(
+    () => filterUnifiedTeachers(unifiedTeachers, teacherSearch, teacherInclusionFilter),
+    [unifiedTeachers, teacherSearch, teacherInclusionFilter],
+  )
+  const filteredRooms = useMemo(
+    () => filterUnifiedRooms(unifiedRooms, roomSearch, roomKindFilter, roomInclusionFilter),
+    [unifiedRooms, roomSearch, roomKindFilter, roomInclusionFilter],
+  )
+
+  // Legacy filtered reference teachers for select dropdown
+  const filteredReferenceTeachers = useMemo(
+    () => filterAcademicResources(catalog.referenceTeachers ?? [], teacherSearch),
+    [catalog.referenceTeachers, teacherSearch],
+  )
+
+  // Counters
+  const teacherCounts = useMemo(
+    () => calculateTeacherCounts(catalog.referenceTeachers?.length ?? 0, resources.teachers.length, filteredTeachers.length),
+    [catalog.referenceTeachers, resources.teachers.length, filteredTeachers.length],
+  )
+  const roomCounts = useMemo(
+    () => calculateRoomCounts(catalog.referenceRooms?.length ?? 0, resources.rooms.length, filteredRooms.length),
+    [catalog.referenceRooms, resources.rooms.length, filteredRooms.length],
+  )
+
+  // Active inspected items
+  const inspectedTeacher = useMemo(() => {
+    if (!inspectedTeacherId) return null
+    return unifiedTeachers.find((t) => t.id === inspectedTeacherId) ?? null
+  }, [inspectedTeacherId, unifiedTeachers])
+
+  const inspectedRoom = useMemo(() => {
+    if (!inspectedRoomId) return null
+    return unifiedRooms.find((r) => r.id === inspectedRoomId) ?? null
+  }, [inspectedRoomId, unifiedRooms])
+
+  // Single active resource inspector:
+  // Switching tabs closes the open card without mutations!
+  const handleTabChange = (tab: 'teachers' | 'rooms') => {
+    setActiveTab(tab)
+    setInspectedTeacherId(null)
+    setInspectedRoomId(null)
+    setTeacherIdError('')
+    setRoomIdError('')
+  }
+
+  // Open / Close inspector:
+  const openTeacherInspector = (id: string) => {
+    setInspectedRoomId(null) // Only one inspector across teacher/room views!
+    setInspectedTeacherId(id)
+    setTeacherIdError('')
+  }
+
+  const openRoomInspector = (id: string) => {
+    setInspectedTeacherId(null) // Only one inspector across teacher/room views!
+    setInspectedRoomId(id)
+    setRoomIdError('')
+  }
+
+  const closeInspector = () => {
+    setInspectedTeacherId(null)
+    setInspectedRoomId(null)
+    setTeacherIdError('')
+    setRoomIdError('')
+  }
+
+  // Mutating commit helper
   const commit = (update: (draft: AcademicPlanningResources) => void) => {
+    if (isLocked) return
     const draft = cloneResources(resources)
     update(draft)
     onChange(draft)
   }
+
+  // Teacher changes
   const changeTeacher = (patch: Partial<AcademicTeacherResource>) => {
-    if (!selectedTeacher) return
-    const oldId = selectedTeacher.id
+    if (isLocked || !inspectedTeacherId) return
+    const current = resources.teachers.find((t) => t.id === inspectedTeacherId)
+    if (!current) return
+    const oldId = current.id
+
     if (patch.id !== undefined && patch.id !== oldId) {
       if (resources.teachers.some((teacher) => teacher.id !== oldId && teacher.id === patch.id)) {
         setTeacherIdError('Esa identificación ya está asignada a otro docente.')
         return
       }
       setTeacherIdError('')
-      setTeacherReferenceIds((current) => Object.fromEntries(Object.entries(current).map(([id, refId]) => [id === oldId ? patch.id! : id, refId])))
-      setActiveTeacherId(patch.id)
+      setTeacherReferenceIds((prev) =>
+        Object.fromEntries(Object.entries(prev).map(([id, refId]) => [id === oldId ? patch.id! : id, refId])),
+      )
+      setInspectedTeacherId(patch.id)
     }
-    commit((draft) => { draft.teachers = draft.teachers.map((teacher) => teacher.id === oldId ? { ...teacher, ...patch } : teacher) })
+
+    commit((draft) => {
+      draft.teachers = draft.teachers.map((t) => (t.id === oldId ? { ...t, ...patch } : t))
+    })
   }
+
+  // Room changes
   const changeRoom = (patch: Partial<AcademicRoomResource>) => {
-    if (!selectedRoom) return
-    const oldId = selectedRoom.id
+    if (isLocked || !inspectedRoomId) return
+    const current = resources.rooms.find((r) => r.id === inspectedRoomId)
+    if (!current) return
+    const oldId = current.id
+
     if (patch.id !== undefined && patch.id !== oldId) {
       if (resources.rooms.some((room) => room.id !== oldId && room.id === patch.id)) {
         setRoomIdError('Esa identificación ya está asignada a otro ambiente.')
         return
       }
       setRoomIdError('')
-      setRoomReferenceIds((current) => Object.fromEntries(Object.entries(current).map(([id, refId]) => [id === oldId ? patch.id! : id, refId])))
-      setActiveRoomId(patch.id)
+      setRoomReferenceIds((prev) =>
+        Object.fromEntries(Object.entries(prev).map(([id, refId]) => [id === oldId ? patch.id! : id, refId])),
+      )
+      setInspectedRoomId(patch.id)
     }
-    commit((draft) => { draft.rooms = draft.rooms.map((room) => room.id === oldId ? { ...room, ...patch } : room) })
+
+    commit((draft) => {
+      draft.rooms = draft.rooms.map((r) => (r.id === oldId ? { ...r, ...patch } : r))
+    })
   }
+
+  // Single resource incorporate from reference card
+  const handleIncorporateSingleTeacher = (refId: string) => {
+    if (isLocked || resources.teachers.length >= PLANNING_LIMITS.teachers) return
+    const ref = catalog.referenceTeachers?.find((t) => t.id === refId)
+    if (!ref) return
+
+    const newTeacher: AcademicTeacherResource = {
+      id: ref.id,
+      name: ref.name,
+      courseIds: [...(ref.courseIds ?? [])],
+      maxWeeklyMinutes: 600,
+      availability: [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 })),
+    }
+
+    commit((draft) => {
+      draft.teachers.push(newTeacher)
+    })
+    setTeacherReferenceIds((prev) => ({ ...prev, [newTeacher.id]: ref.id }))
+    setTeacherIdError('')
+    setInspectedTeacherId(newTeacher.id)
+  }
+
+  const handleIncorporateSingleRoom = (refId: string) => {
+    if (isLocked || resources.rooms.length >= PLANNING_LIMITS.rooms) return
+    const ref = catalog.referenceRooms?.find((r) => r.id === refId)
+    if (!ref) return
+
+    const newRoom: AcademicRoomResource = {
+      id: ref.id,
+      name: ref.name,
+      capacity: ref.capacity ?? 45,
+      kind: ref.kind,
+      availability: [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 })),
+    }
+
+    commit((draft) => {
+      draft.rooms.push(newRoom)
+    })
+    setRoomReferenceIds((prev) => ({ ...prev, [newRoom.id]: ref.id }))
+    setRoomIdError('')
+    setInspectedRoomId(newRoom.id)
+  }
+
+  // Remove single
+  const removeTeacher = (idToRemove: string) => {
+    if (isLocked) return
+    const remaining = resources.teachers.filter((t) => t.id !== idToRemove)
+    commit((draft) => {
+      draft.teachers = remaining
+    })
+    setTeacherReferenceIds((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => id !== idToRemove)))
+    if (inspectedTeacherId === idToRemove) {
+      setInspectedTeacherId(null)
+    }
+  }
+
+  const removeRoom = (idToRemove: string) => {
+    if (isLocked) return
+    const remaining = resources.rooms.filter((r) => r.id !== idToRemove)
+    commit((draft) => {
+      draft.rooms = remaining
+    })
+    setRoomReferenceIds((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => id !== idToRemove)))
+    if (inspectedRoomId === idToRemove) {
+      setInspectedRoomId(null)
+    }
+  }
+
+  // Add local demonstration
   const addTeacher = () => {
-    if (resources.teachers.length >= PLANNING_LIMITS.teachers) return
-    const teacher: AcademicTeacherResource = { id: nextId('DOC', resources.teachers), name: 'Docente de demostración', courseIds: [], maxWeeklyMinutes: 600,
-      availability: [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 })) }
-    commit((draft) => { draft.teachers.push(teacher) })
+    if (isLocked || resources.teachers.length >= PLANNING_LIMITS.teachers) return
+    const teacher: AcademicTeacherResource = {
+      id: nextId('DOC', resources.teachers),
+      name: 'Docente de demostración',
+      courseIds: [],
+      maxWeeklyMinutes: 600,
+      availability: [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 })),
+    }
+    commit((draft) => {
+      draft.teachers.push(teacher)
+    })
     setTeacherIdError('')
-    setActiveTeacherId(teacher.id)
+    openTeacherInspector(teacher.id)
   }
-  const selectReferenceTeacher = (id: string) => {
-    if (!id) return
-    const existingId = Object.entries(teacherReferenceIds).find(([, referenceId]) => referenceId === id)?.[0]
-      ?? resources.teachers.find((teacher) => teacher.id === id)?.id
-    if (existingId !== undefined) { setTeacherIdError(''); setActiveTeacherId(existingId); return }
-    const reference = catalog.referenceTeachers?.find((teacher) => teacher.id === id)
-    if (!reference || resources.teachers.length >= PLANNING_LIMITS.teachers) return
-    const teacher: AcademicTeacherResource = { ...reference, courseIds: [...reference.courseIds], maxWeeklyMinutes: 600,
-      availability: [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 })) }
-    commit((draft) => { draft.teachers.push(teacher) })
-    setTeacherReferenceIds((current) => ({ ...current, [teacher.id]: id }))
-    setTeacherIdError('')
-    setActiveTeacherId(teacher.id)
-  }
+
   const addRoom = (kind: 'classroom' | 'laboratory' = 'classroom') => {
-    if (resources.rooms.length >= PLANNING_LIMITS.rooms) return
-    const room: AcademicRoomResource = { id: nextId('AULA', resources.rooms), name: kind === 'laboratory' ? 'Laboratorio de demostración' : 'Aula de demostración', capacity: 45, kind,
-      availability: [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 })) }
-    commit((draft) => { draft.rooms.push(room) })
+    if (isLocked || resources.rooms.length >= PLANNING_LIMITS.rooms) return
+    const room: AcademicRoomResource = {
+      id: nextId('AULA', resources.rooms),
+      name: kind === 'laboratory' ? 'Laboratorio de demostración' : 'Aula de demostración',
+      capacity: 45,
+      kind,
+      availability: [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 })),
+    }
+    commit((draft) => {
+      draft.rooms.push(room)
+    })
     setRoomIdError('')
-    setActiveRoomId(room.id)
+    openRoomInspector(room.id)
   }
+
+  // Legacy quick select
+  const selectReferenceTeacher = (id: string) => {
+    if (!id || isLocked) return
+    const existingId =
+      Object.entries(teacherReferenceIds).find(([, refId]) => refId === id)?.[0] ??
+      resources.teachers.find((t) => t.id === id)?.id
+
+    if (existingId !== undefined) {
+      setTeacherIdError('')
+      openTeacherInspector(existingId)
+      return
+    }
+
+    const reference = catalog.referenceTeachers?.find((t) => t.id === id)
+    if (!reference || resources.teachers.length >= PLANNING_LIMITS.teachers) return
+
+    const teacher: AcademicTeacherResource = {
+      ...reference,
+      courseIds: [...(reference.courseIds ?? [])],
+      maxWeeklyMinutes: 600,
+      availability: [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 })),
+    }
+    commit((draft) => {
+      draft.teachers.push(teacher)
+    })
+    setTeacherReferenceIds((prev) => ({ ...prev, [teacher.id]: id }))
+    setTeacherIdError('')
+    openTeacherInspector(teacher.id)
+  }
+
   const selectReferenceRoom = (id: string) => {
-    if (!id) return
-    const existingId = Object.entries(roomReferenceIds).find(([, referenceId]) => referenceId === id)?.[0]
-      ?? resources.rooms.find((room) => room.id === id)?.id
-    if (existingId !== undefined) { setRoomIdError(''); setActiveRoomId(existingId); return }
-    const reference = catalog.referenceRooms?.find((room) => room.id === id)
+    if (!id || isLocked) return
+    const existingId =
+      Object.entries(roomReferenceIds).find(([, refId]) => refId === id)?.[0] ??
+      resources.rooms.find((r) => r.id === id)?.id
+
+    if (existingId !== undefined) {
+      setRoomIdError('')
+      openRoomInspector(existingId)
+      return
+    }
+
+    const reference = catalog.referenceRooms?.find((r) => r.id === id)
     if (!reference || resources.rooms.length >= PLANNING_LIMITS.rooms) return
-    const room: AcademicRoomResource = { id: reference.id, name: reference.name, capacity: reference.capacity, kind: reference.kind,
-      availability: [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 })) }
-    commit((draft) => { draft.rooms.push(room) })
-    setRoomReferenceIds((current) => ({ ...current, [room.id]: id }))
+
+    const room: AcademicRoomResource = {
+      id: reference.id,
+      name: reference.name,
+      capacity: reference.capacity,
+      kind: reference.kind,
+      availability: [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 })),
+    }
+    commit((draft) => {
+      draft.rooms.push(room)
+    })
+    setRoomReferenceIds((prev) => ({ ...prev, [room.id]: id }))
     setRoomIdError('')
-    setActiveRoomId(room.id)
-  }
-  const removeTeacher = () => {
-    if (!selectedTeacher) return
-    const remaining = resources.teachers.filter((teacher) => teacher.id !== selectedTeacher.id)
-    commit((draft) => { draft.teachers = remaining })
-    setTeacherReferenceIds((current) => Object.fromEntries(Object.entries(current).filter(([id]) => id !== selectedTeacher.id)))
-    setActiveTeacherId(remaining[0]?.id ?? '')
-  }
-  const removeRoom = () => {
-    if (!selectedRoom) return
-    const remaining = resources.rooms.filter((room) => room.id !== selectedRoom.id)
-    commit((draft) => { draft.rooms = remaining })
-    setRoomReferenceIds((current) => Object.fromEntries(Object.entries(current).filter(([id]) => id !== selectedRoom.id)))
-    setActiveRoomId(remaining[0]?.id ?? '')
+    openRoomInspector(room.id)
   }
 
-  return <div className="academic-scheduling__resource-editor">
-    <div className="academic-scheduling__editor-heading">
-      <div><h4>Docentes disponibles</h4>
-        <p>Las habilitaciones de referencia son supuestos de demostración, no confirmaciones para el nuevo periodo.</p></div>
-      <div className="academic-scheduling__editor-actions">
-        <input type="search" aria-label="Buscar docentes por nombre o código" placeholder="Buscar docente por nombre o código" value={teacherSearch} onChange={(event) => setTeacherSearch(event.currentTarget.value)} />
-        <select aria-label="Seleccionar o agregar docente" value="" onChange={(event) => selectReferenceTeacher(event.currentTarget.value)}>
-          <option value="">Seleccionar o agregar docente…</option>
-          {!filteredReferenceTeachers.length && <option value="" disabled>Sin docentes que coincidan</option>}
-          {filteredReferenceTeachers.map((teacher) => <option key={teacher.id} value={teacher.id}
-            disabled={resources.teachers.length >= PLANNING_LIMITS.teachers && !Object.values(teacherReferenceIds).includes(teacher.id) && !resources.teachers.some((item) => item.id === teacher.id)}>{teacher.name} · {teacher.id}</option>)}
-        </select>
-        <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary" onClick={addTeacher} disabled={resources.teachers.length >= PLANNING_LIMITS.teachers}>Agregar demostración</button>
+  // Course eligibility options inside teacher inspector
+  const filteredCourses = useMemo(() => {
+    const query = courseSearch.trim().toLocaleLowerCase('es')
+    return catalog.courses.filter(
+      (course) => !query || `${course.courseId} ${course.name}`.toLocaleLowerCase('es').includes(query),
+    )
+  }, [catalog.courses, courseSearch])
+
+  // Multi-Selection Bulk Preview calculations
+  const teacherIncorporatePreview = useMemo(() => {
+    if (activeModal !== 'incorporate-teacher') return null
+    return buildBulkIncorporateTeacherPreview(selectedTeacherIds, unifiedTeachers, resources.teachers.length)
+  }, [activeModal, selectedTeacherIds, unifiedTeachers, resources.teachers.length])
+
+  const roomIncorporatePreview = useMemo(() => {
+    if (activeModal !== 'incorporate-room') return null
+    return buildBulkIncorporateRoomPreview(selectedRoomIds, unifiedRooms, resources.rooms.length)
+  }, [activeModal, selectedRoomIds, unifiedRooms, resources.rooms.length])
+
+  const teacherRemovePreview = useMemo(() => {
+    if (activeModal !== 'remove-teacher') return null
+    return buildBulkRemovePreview(selectedTeacherIds, unifiedTeachers)
+  }, [activeModal, selectedTeacherIds, unifiedTeachers])
+
+  const roomRemovePreview = useMemo(() => {
+    if (activeModal !== 'remove-room') return null
+    return buildBulkRemovePreview(selectedRoomIds, unifiedRooms)
+  }, [activeModal, selectedRoomIds, unifiedRooms])
+
+  // Modal open / close handlers with accessible focus trap
+  const openModal = (
+    modalType: 'incorporate-teacher' | 'incorporate-room' | 'remove-teacher' | 'remove-room',
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    triggerButtonRef.current = event.currentTarget
+    setActiveModal(modalType)
+  }
+
+  const closeModal = () => {
+    setActiveModal(null)
+    if (triggerButtonRef.current) {
+      triggerButtonRef.current.focus()
+    }
+  }
+
+  useEffect(() => {
+    if (activeModal && modalFirstControlRef.current) {
+      modalFirstControlRef.current.focus()
+    }
+  }, [activeModal])
+
+  // Confirming bulk incorporate
+  const confirmBulkIncorporateTeachers = () => {
+    if (isLocked) return
+    const { teachers, referenceMapping } = applyBulkIncorporateTeachers(
+      selectedTeacherIds,
+      resources.teachers,
+      catalog.referenceTeachers,
+      teacherReferenceIds,
+    )
+    commit((draft) => {
+      draft.teachers = teachers
+    })
+    setTeacherReferenceIds(referenceMapping)
+    setSelectedTeacherIds([])
+    closeModal()
+  }
+
+  const confirmBulkIncorporateRooms = () => {
+    if (isLocked) return
+    const { rooms, referenceMapping } = applyBulkIncorporateRooms(
+      selectedRoomIds,
+      resources.rooms,
+      catalog.referenceRooms,
+      roomReferenceIds,
+    )
+    commit((draft) => {
+      draft.rooms = rooms
+    })
+    setRoomReferenceIds(referenceMapping)
+    setSelectedRoomIds([])
+    closeModal()
+  }
+
+  // Confirming bulk remove
+  const confirmBulkRemoveTeachers = () => {
+    if (isLocked) return
+    const { teachers, referenceMapping } = applyBulkRemoveTeachers(
+      selectedTeacherIds,
+      resources.teachers,
+      teacherReferenceIds,
+    )
+    commit((draft) => {
+      draft.teachers = teachers
+    })
+    setTeacherReferenceIds(referenceMapping)
+    if (inspectedTeacherId && selectedTeacherIds.includes(inspectedTeacherId)) {
+      setInspectedTeacherId(null)
+    }
+    setSelectedTeacherIds([])
+    closeModal()
+  }
+
+  const confirmBulkRemoveRooms = () => {
+    if (isLocked) return
+    const { rooms, referenceMapping } = applyBulkRemoveRooms(
+      selectedRoomIds,
+      resources.rooms,
+      roomReferenceIds,
+    )
+    commit((draft) => {
+      draft.rooms = rooms
+    })
+    setRoomReferenceIds(referenceMapping)
+    if (inspectedRoomId && selectedRoomIds.includes(inspectedRoomId)) {
+      setInspectedRoomId(null)
+    }
+    setSelectedRoomIds([])
+    closeModal()
+  }
+
+  // Toggle selections
+  const toggleTeacherSelect = (id: string) => {
+    setSelectedTeacherIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
+  }
+
+  const toggleRoomSelect = (id: string) => {
+    setSelectedRoomIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
+  }
+
+  const selectAllVisibleTeachers = () => {
+    const visibleIds = filteredTeachers.map((t) => t.id)
+    setSelectedTeacherIds((prev) => [...new Set([...prev, ...visibleIds])])
+  }
+
+  const deselectVisibleTeachers = () => {
+    const visibleSet = new Set(filteredTeachers.map((t) => t.id))
+    setSelectedTeacherIds((prev) => prev.filter((id) => !visibleSet.has(id)))
+  }
+
+  const selectAllVisibleRooms = () => {
+    const visibleIds = filteredRooms.map((r) => r.id)
+    setSelectedRoomIds((prev) => [...new Set([...prev, ...visibleIds])])
+  }
+
+  const deselectVisibleRooms = () => {
+    const visibleSet = new Set(filteredRooms.map((r) => r.id))
+    setSelectedRoomIds((prev) => prev.filter((id) => !visibleSet.has(id)))
+  }
+
+  const modalTitleId = useId()
+
+  return (
+    <div className="academic-scheduling__resource-editor academic-resource-workbench">
+      {/* Navigation Tabs: Docentes vs Ambientes */}
+      <nav className="academic-resource-workbench__tabs" aria-label="Vistas de recursos">
+        <button
+          type="button"
+          className={`academic-resource-workbench__tab ${activeTab === 'teachers' ? 'academic-resource-workbench__tab--active' : ''}`}
+          aria-selected={activeTab === 'teachers'}
+          role="tab"
+          onClick={() => handleTabChange('teachers')}
+        >
+          Docentes ({teacherCounts.included} incluidos)
+        </button>
+        <button
+          type="button"
+          className={`academic-resource-workbench__tab ${activeTab === 'rooms' ? 'academic-resource-workbench__tab--active' : ''}`}
+          aria-selected={activeTab === 'rooms'}
+          role="tab"
+          onClick={() => handleTabChange('rooms')}
+        >
+          Aulas y laboratorios ({roomCounts.included} incluidos)
+        </button>
+      </nav>
+
+      {/* Heading */}
+      <div className="academic-resource-workbench__header">
+        <h4 className="academic-resource-workbench__title">
+          {activeTab === 'teachers' ? 'Docentes disponibles' : 'Aulas y laboratorios'}
+        </h4>
+        <p className="academic-resource-workbench__subtitle">
+          {activeTab === 'teachers'
+            ? 'Las referencias del catálogo representan supuestos de partida y no confirman disponibilidad institucional para el nuevo periodo.'
+            : 'El tipo identifica el recurso; no agrega requisitos de equipamiento por sesión. La disponibilidad editable es sintética.'}
+        </p>
       </div>
-    </div>
-    <div className="academic-scheduling__resource-roster" aria-label="Docentes incorporados">
-      {filteredActiveTeachers.map((teacher) => <button type="button" key={teacher.id} aria-pressed={selectedTeacher?.id === teacher.id}
-        className="academic-scheduling__roster-item" onClick={() => { setTeacherIdError(''); setActiveTeacherId(teacher.id) }}>
-        {teacher.name} <span>{teacher.id}</span>
-      </button>)}
-      {!filteredActiveTeachers.length && <p className="academic-scheduling__resource-note">{resources.teachers.length ? 'No hay docentes que coincidan con la búsqueda.' : 'Sin docentes incorporados.'}</p>}
-    </div>
-    {selectedTeacher && <article className="academic-scheduling__resource-card academic-scheduling__resource-card--teacher">
-      <div className="academic-scheduling__resource-card-heading"><strong>{teacherReferenceIds[selectedTeacher.id] ? 'Docente de referencia · no confirmado para el nuevo periodo' : 'Docente de demostración'}</strong>
-        <button type="button" className="academic-scheduling__text-button" aria-label={`Quitar docente ${selectedTeacher.name || selectedTeacher.id}`} onClick={removeTeacher}>Quitar</button></div>
-      <div className="academic-scheduling__resource-fields">
-        <label>Identificación<input aria-label="Identificación docente" aria-invalid={Boolean(teacherIdError)} value={selectedTeacher.id} onChange={(event) => changeTeacher({ id: event.currentTarget.value })} />
-          {teacherIdError && <span role="alert" className="academic-scheduling__inline-error">{teacherIdError}</span>}</label>
-        <label>Nombre<input aria-label="Nombre docente" value={selectedTeacher.name} onChange={(event) => changeTeacher({ name: event.currentTarget.value })} /></label>
-        <label>Carga semanal máxima (minutos)<input type="number" min="0" max="10080" step="1" aria-label="Carga semanal docente"
-          value={Number.isFinite(selectedTeacher.maxWeeklyMinutes) ? selectedTeacher.maxWeeklyMinutes : ''}
-          onChange={(event) => changeTeacher({ maxWeeklyMinutes: event.currentTarget.value === '' ? Number.NaN : Number(event.currentTarget.value) })} /></label>
-      </div>
-      {selectedTeacher.qualificationSource === 'synthetic' && <p className="academic-scheduling__resource-note">Metadatos de habilitación locales sintéticos · {selectedTeacher.facultyId ?? 'sin facultad'} · categoría {selectedTeacher.category ?? 'sin especificar'}. No verifican afiliación ni categoría institucional.</p>}
-      <fieldset className="academic-scheduling__course-eligibility"><legend>Asignaturas habilitadas · buscar y seleccionar</legend>
-        <input type="search" aria-label="Buscar asignatura habilitada" placeholder="Buscar por código o nombre" value={courseSearch} onChange={(event) => setCourseSearch(event.currentTarget.value)} />
-        <div className="academic-scheduling__course-options">{filteredCourses.map((course) => <label key={course.courseId}><input type="checkbox" checked={selectedTeacher.courseIds.includes(course.courseId)}
-          aria-label={`${selectedTeacher.name || 'Docente'} habilitado para ${course.courseId}`}
-          onChange={(event) => changeTeacher({ courseIds: event.currentTarget.checked
-            ? [...new Set([...selectedTeacher.courseIds, course.courseId])]
-            : selectedTeacher.courseIds.filter((courseId) => courseId !== course.courseId) })} />{course.courseId} · {course.name}</label>)}</div>
-        <div className="academic-scheduling__course-chips" aria-label="Asignaturas habilitadas">
-          {selectedTeacher.courseIds.map((id) => <span className="academic-scheduling__chip" key={id}>{id}
-            {catalog.courses.some((course) => course.courseId === id) && <button type="button" aria-label={`Quitar habilitación ${id}`}
-              onClick={() => changeTeacher({ courseIds: selectedTeacher.courseIds.filter((courseId) => courseId !== id) })}>×</button>}
-          </span>)}
-          {!selectedTeacher.courseIds.length && <span className="academic-scheduling__resource-note">Sin asignaturas habilitadas.</span>}
+
+      {/* Unequivocal Counters */}
+      <div className="academic-resource-workbench__counters" role="status" aria-label="Contadores de recursos">
+        <div className="academic-resource-workbench__counter-item">
+          <span className="academic-resource-workbench__counter-label">Referencias del catálogo:</span>
+          <span className="academic-resource-workbench__counter-value">
+            {activeTab === 'teachers' ? teacherCounts.references : roomCounts.references}
+          </span>
         </div>
-        {selectedTeacher.courseIds.filter((id) => !catalog.courses.some((course) => course.courseId === id)).map((id) => <span key={id}>{id} · habilitación conservada fuera del catálogo visible</span>)}
-      </fieldset>
-      <fieldset className="academic-scheduling__course-limits"><legend>Máximo de secciones por asignatura (opcional)</legend>
-        {selectedTeacher.courseIds.filter((id) => catalog.courses.some((course) => course.courseId === id)).map((id) => {
-          const limit = selectedTeacher.sectionLimits?.find((item) => item.courseId === id)?.maxSections
-          return <label key={id}>{id} · {catalog.courses.find((course) => course.courseId === id)?.name}
-            <input type="number" min="0" max="128" step="1" placeholder="Sin límite adicional" aria-label={`Máximo de secciones ${id}`}
-              value={limit === undefined ? '' : Number.isFinite(limit) ? limit : ''} onChange={(event) => {
-                const limits = selectedTeacher.sectionLimits?.filter((item) => item.courseId !== id) ?? []
-                if (event.currentTarget.value !== '') limits.push({ courseId: id, maxSections: Number(event.currentTarget.value) })
-                changeTeacher({ sectionLimits: limits.length ? limits : undefined })
-              }} />
-          </label>
-        })}
-        {!selectedTeacher.courseIds.length && <span>Agrega asignaturas habilitadas para configurar sus límites.</span>}
-      </fieldset>
-      <AvailabilityEditor label="Disponibilidad docente" intervals={selectedTeacher.availability} onChange={(availability) => changeTeacher({ availability })} />
-      <AvailabilityEditor label="Preferencias semanales · prioridad blanda" intervals={selectedTeacher.preferences ?? []}
-        onChange={(preferences) => changeTeacher({ preferences: preferences.length ? preferences : undefined })} />
-      <p className="academic-scheduling__resource-note">Las preferencias ordenan alternativas, no impiden horarios fuera de ellas. Una persona puede atender varias secciones si respeta carga y límites.</p>
-    </article>}
+        <div className="academic-resource-workbench__counter-item">
+          <span className="academic-resource-workbench__counter-label">Incorporados en borrador:</span>
+          <span className="academic-resource-workbench__counter-value">
+            {activeTab === 'teachers' ? teacherCounts.included : roomCounts.included}
+          </span>
+        </div>
+        <div className="academic-resource-workbench__counter-item">
+          <span className="academic-resource-workbench__counter-label">Visibles:</span>
+          <span className="academic-resource-workbench__counter-value">
+            {activeTab === 'teachers' ? teacherCounts.visible : roomCounts.visible}
+          </span>
+        </div>
+      </div>
 
-    <div className="academic-scheduling__editor-heading academic-scheduling__editor-heading--rooms">
-      <div><h4>Aulas y laboratorios</h4><p>El tipo identifica el recurso; no agrega requisitos de equipamiento por sesión. La disponibilidad editable es sintética.</p></div>
-      <div className="academic-scheduling__editor-actions">
-        <select aria-label="Seleccionar o agregar ambiente" value="" onChange={(event) => selectReferenceRoom(event.currentTarget.value)}>
-          <option value="">Seleccionar o agregar ambiente…</option>
-          {(catalog.referenceRooms ?? []).map((room) => <option key={room.id} value={room.id}
-            disabled={resources.rooms.length >= PLANNING_LIMITS.rooms && !Object.values(roomReferenceIds).includes(room.id) && !resources.rooms.some((item) => item.id === room.id)}>{room.id} · {room.name} · {room.pavilion}</option>)}
-        </select>
-        <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary" onClick={() => addRoom()} disabled={resources.rooms.length >= PLANNING_LIMITS.rooms}>Agregar aula</button>
-        <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary" onClick={() => addRoom('laboratory')} disabled={resources.rooms.length >= PLANNING_LIMITS.rooms}>Agregar laboratorio</button>
+      {/* Toolbar: Search, Filters, Multi-actions & Under-demand additions */}
+      <div className="academic-resource-workbench__toolbar">
+        <div className="academic-resource-workbench__toolbar-row">
+          {activeTab === 'teachers' ? (
+            <>
+              <div className="academic-resource-workbench__search-field">
+                <label htmlFor="search-teachers-input">Buscar docente</label>
+                <input
+                  id="search-teachers-input"
+                  type="search"
+                  aria-label="Buscar docentes por nombre o código"
+                  placeholder="Buscar por nombre o código"
+                  value={teacherSearch}
+                  onChange={(e) => setTeacherSearch(e.currentTarget.value)}
+                />
+              </div>
+              <div className="academic-resource-workbench__filter-field">
+                <label htmlFor="filter-teachers-inclusion">Filtrar por inclusión</label>
+                <select
+                  id="filter-teachers-inclusion"
+                  aria-label="Filtrar docentes por inclusión"
+                  value={teacherInclusionFilter}
+                  onChange={(e) => setTeacherInclusionFilter(e.currentTarget.value as 'all' | 'included' | 'reference')}
+                >
+                  <option value="all">Todos los docentes</option>
+                  <option value="included">Solo incorporados</option>
+                  <option value="reference">Solo referencias no incorporadas</option>
+                </select>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="academic-resource-workbench__search-field">
+                <label htmlFor="search-rooms-input">Buscar ambiente</label>
+                <input
+                  id="search-rooms-input"
+                  type="search"
+                  aria-label="Buscar ambientes por nombre o código"
+                  placeholder="Buscar por nombre o código"
+                  value={roomSearch}
+                  onChange={(e) => setRoomSearch(e.currentTarget.value)}
+                />
+              </div>
+              <div className="academic-resource-workbench__filter-field">
+                <label htmlFor="filter-rooms-kind">Tipo de ambiente</label>
+                <select
+                  id="filter-rooms-kind"
+                  aria-label="Filtrar por tipo de ambiente"
+                  value={roomKindFilter}
+                  onChange={(e) => setRoomKindFilter(e.currentTarget.value as 'all' | 'classroom' | 'laboratory')}
+                >
+                  <option value="all">Todos los tipos</option>
+                  <option value="classroom">Aulas</option>
+                  <option value="laboratory">Laboratorios</option>
+                </select>
+              </div>
+              <div className="academic-resource-workbench__filter-field">
+                <label htmlFor="filter-rooms-inclusion">Filtrar por inclusión</label>
+                <select
+                  id="filter-rooms-inclusion"
+                  aria-label="Filtrar ambientes por inclusión"
+                  value={roomInclusionFilter}
+                  onChange={(e) => setRoomInclusionFilter(e.currentTarget.value as 'all' | 'included' | 'reference')}
+                >
+                  <option value="all">Todos los ambientes</option>
+                  <option value="included">Solo incorporados</option>
+                  <option value="reference">Solo referencias no incorporadas</option>
+                </select>
+              </div>
+            </>
+          )}
+
+          {/* Legacy select for test backward compatibility */}
+          {activeTab === 'teachers' ? (
+            <select
+              aria-label="Seleccionar o agregar docente"
+              className="academic-resource-workbench__legacy-select"
+              value=""
+              disabled={isLocked}
+              onChange={(e) => selectReferenceTeacher(e.currentTarget.value)}
+            >
+              <option value="">Seleccionar o agregar docente…</option>
+              {!filteredReferenceTeachers.length && <option value="" disabled>Sin docentes que coincidan</option>}
+              {filteredReferenceTeachers.map((teacher) => (
+                <option
+                  key={teacher.id}
+                  value={teacher.id}
+                  disabled={
+                    resources.teachers.length >= PLANNING_LIMITS.teachers &&
+                    !Object.values(teacherReferenceIds).includes(teacher.id) &&
+                    !resources.teachers.some((item) => item.id === teacher.id)
+                  }
+                >
+                  {teacher.name} · {teacher.id}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <select
+              aria-label="Seleccionar o agregar ambiente"
+              className="academic-resource-workbench__legacy-select"
+              value=""
+              disabled={isLocked}
+              onChange={(e) => selectReferenceRoom(e.currentTarget.value)}
+            >
+              <option value="">Seleccionar o agregar ambiente…</option>
+              {(catalog.referenceRooms ?? []).map((room) => (
+                <option
+                  key={room.id}
+                  value={room.id}
+                  disabled={
+                    resources.rooms.length >= PLANNING_LIMITS.rooms &&
+                    !Object.values(roomReferenceIds).includes(room.id) &&
+                    !resources.rooms.some((item) => item.id === room.id)
+                  }
+                >
+                  {room.id} · {room.name} · {room.pavilion}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        {/* Action buttons: Bulk selection & Add demo */}
+        <div className="academic-resource-workbench__toolbar-actions">
+          {activeTab === 'teachers' ? (
+            <>
+              <button
+                type="button"
+                className="academic-scheduling__button academic-scheduling__button--secondary"
+                disabled={isLocked || selectedTeacherIds.length === 0}
+                onClick={(e) => openModal('incorporate-teacher', e)}
+                aria-haspopup="dialog"
+              >
+                Incorporar seleccionados ({selectedTeacherIds.length})
+              </button>
+              <button
+                type="button"
+                className="academic-scheduling__button academic-scheduling__button--secondary"
+                disabled={isLocked || selectedTeacherIds.length === 0}
+                onClick={(e) => openModal('remove-teacher', e)}
+                aria-haspopup="dialog"
+              >
+                Retirar seleccionados ({selectedTeacherIds.length})
+              </button>
+              <button
+                type="button"
+                className="academic-scheduling__button academic-scheduling__button--secondary"
+                disabled={filteredTeachers.length === 0}
+                onClick={selectAllVisibleTeachers}
+              >
+                Seleccionar visibles
+              </button>
+              <button
+                type="button"
+                className="academic-scheduling__button academic-scheduling__button--secondary"
+                disabled={selectedTeacherIds.length === 0}
+                onClick={deselectVisibleTeachers}
+              >
+                Deseleccionar visibles
+              </button>
+              <button
+                type="button"
+                className="academic-scheduling__button academic-scheduling__button--secondary"
+                onClick={addTeacher}
+                disabled={isLocked || resources.teachers.length >= PLANNING_LIMITS.teachers}
+              >
+                Agregar demostración
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="academic-scheduling__button academic-scheduling__button--secondary"
+                disabled={isLocked || selectedRoomIds.length === 0}
+                onClick={(e) => openModal('incorporate-room', e)}
+                aria-haspopup="dialog"
+              >
+                Incorporar seleccionados ({selectedRoomIds.length})
+              </button>
+              <button
+                type="button"
+                className="academic-scheduling__button academic-scheduling__button--secondary"
+                disabled={isLocked || selectedRoomIds.length === 0}
+                onClick={(e) => openModal('remove-room', e)}
+                aria-haspopup="dialog"
+              >
+                Retirar seleccionados ({selectedRoomIds.length})
+              </button>
+              <button
+                type="button"
+                className="academic-scheduling__button academic-scheduling__button--secondary"
+                disabled={filteredRooms.length === 0}
+                onClick={selectAllVisibleRooms}
+              >
+                Seleccionar visibles
+              </button>
+              <button
+                type="button"
+                className="academic-scheduling__button academic-scheduling__button--secondary"
+                disabled={selectedRoomIds.length === 0}
+                onClick={deselectVisibleRooms}
+              >
+                Deseleccionar visibles
+              </button>
+              <button
+                type="button"
+                className="academic-scheduling__button academic-scheduling__button--secondary"
+                onClick={() => addRoom('classroom')}
+                disabled={isLocked || resources.rooms.length >= PLANNING_LIMITS.rooms}
+              >
+                Agregar aula
+              </button>
+              <button
+                type="button"
+                className="academic-scheduling__button academic-scheduling__button--secondary"
+                onClick={() => addRoom('laboratory')}
+                disabled={isLocked || resources.rooms.length >= PLANNING_LIMITS.rooms}
+              >
+                Agregar laboratorio
+              </button>
+            </>
+          )}
+        </div>
       </div>
-    </div>
-    {catalog.referenceRooms && <details className="academic-scheduling__reference-rooms">
-      <summary>Catálogo de referencia · {catalog.referenceRooms.length} ambientes (AP: {catalog.referenceRooms.filter((room) => room.pavilion === 'AP').length}, NP: {catalog.referenceRooms.filter((room) => room.pavilion === 'NP').length})</summary>
-      <p>Listado de referencia proporcionado para esta demo. Capacidad inicial: 45. La disponibilidad no está confirmada y no proviene del historial.</p>
-      <ul>{catalog.referenceRooms.map((room) => <li key={room.id}>{room.id} · {room.name} · {room.kind === 'laboratory' ? 'Laboratorio' : 'Aula'} · {room.pavilion} · capacidad {room.capacity}</li>)}</ul>
-    </details>}
-    <div className="academic-scheduling__resource-roster" aria-label="Ambientes incorporados">
-      {resources.rooms.map((room) => <button type="button" key={room.id} aria-pressed={selectedRoom?.id === room.id}
-        className="academic-scheduling__roster-item" onClick={() => { setRoomIdError(''); setActiveRoomId(room.id) }}>{room.name} <span>{room.id}</span></button>)}
-      {!resources.rooms.length && <p className="academic-scheduling__resource-note">Sin ambientes incorporados.</p>}
-    </div>
-    {selectedRoom && <article className="academic-scheduling__resource-card academic-scheduling__resource-card--room">
-      <div className="academic-scheduling__resource-card-heading"><strong>{selectedRoom.kind === 'laboratory' ? 'Laboratorio' : 'Aula'}{roomReferenceIds[selectedRoom.id] ? ' · referencia sintética' : ''}</strong>
-        <button type="button" className="academic-scheduling__text-button" aria-label={`Quitar ambiente ${selectedRoom.name || selectedRoom.id}`} onClick={removeRoom}>Quitar</button></div>
-      <div className="academic-scheduling__resource-fields">
-        <label>Identificación<input aria-label="Identificación ambiente" aria-invalid={Boolean(roomIdError)} value={selectedRoom.id} onChange={(event) => changeRoom({ id: event.currentTarget.value })} />
-          {roomIdError && <span role="alert" className="academic-scheduling__inline-error">{roomIdError}</span>}</label>
-        <label>Nombre<input aria-label="Nombre ambiente" value={selectedRoom.name} onChange={(event) => changeRoom({ name: event.currentTarget.value })} /></label>
-        <label>Tipo<select aria-label="Tipo ambiente" value={selectedRoom.kind ?? 'classroom'} onChange={(event) => changeRoom({ kind: event.currentTarget.value as 'classroom' | 'laboratory' })}>
-          <option value="classroom">Aula</option><option value="laboratory">Laboratorio</option></select></label>
-        <label>Capacidad<input type="number" min="1" step="1" aria-label="Capacidad ambiente" value={Number.isFinite(selectedRoom.capacity) ? selectedRoom.capacity : ''}
-          onChange={(event) => changeRoom({ capacity: event.currentTarget.value === '' ? Number.NaN : Number(event.currentTarget.value) })} /></label>
+
+      {/* Main Split: Searchable Table + At-most-one Inspector */}
+      <div className="academic-resource-workbench__split">
+        {/* Table Pane */}
+        <div className="academic-resource-workbench__table-pane">
+          <div
+            className="academic-resource-workbench__scroll-region"
+            tabIndex={0}
+            role="region"
+            aria-label={activeTab === 'teachers' ? 'Tabla de docentes' : 'Tabla de ambientes'}
+          >
+            {activeTab === 'teachers' ? (
+              <table className="academic-resource-table" aria-label="Docentes">
+                <thead>
+                  <tr>
+                    <th className="academic-resource-table__td-checkbox">
+                      <input
+                        type="checkbox"
+                        aria-label="Seleccionar todos los docentes visibles"
+                        checked={
+                          filteredTeachers.length > 0 &&
+                          filteredTeachers.every((t) => selectedTeacherIds.includes(t.id))
+                        }
+                        onChange={(e) => {
+                          if (e.currentTarget.checked) selectAllVisibleTeachers()
+                          else deselectVisibleTeachers()
+                        }}
+                      />
+                    </th>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Inclusión</th>
+                    <th>Asignaturas</th>
+                    <th>Carga máx.</th>
+                    <th>Carga asig.</th>
+                    <th>Disponibilidad</th>
+                    <th className="academic-resource-table__td-actions">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTeachers.map((teacher) => {
+                    const isSelected = selectedTeacherIds.includes(teacher.id)
+                    const isInspected = inspectedTeacherId === teacher.id
+                    const assignedMinutes = calculateAssignedTeacherMinutes(proposal, teacher.id)
+
+                    return (
+                      <tr
+                        key={teacher.id}
+                        className={`${isSelected ? 'academic-resource-workbench__row--selected' : ''} ${isInspected ? 'academic-resource-workbench__row--inspected' : ''}`}
+                      >
+                        <td className="academic-resource-table__td-checkbox">
+                          <input
+                            type="checkbox"
+                            aria-label={`Seleccionar docente ${teacher.name}`}
+                            checked={isSelected}
+                            onChange={() => toggleTeacherSelect(teacher.id)}
+                          />
+                        </td>
+                        <td>
+                          <code>{teacher.id}</code>
+                        </td>
+                        <td>
+                          <strong>{teacher.name}</strong>
+                        </td>
+                        <td>
+                          <span
+                            className={`academic-resource-badge ${teacher.isIncluded ? 'academic-resource-badge--included' : teacher.isLocal ? 'academic-resource-badge--local' : 'academic-resource-badge--reference'}`}
+                          >
+                            {teacher.isIncluded ? (teacher.isLocal ? 'Local (incorporado)' : 'Incorporado') : 'Referencia (no incorporado)'}
+                          </span>
+                        </td>
+                        <td>
+                          {teacher.courseIds.length > 0 ? (
+                            <span title={teacher.courseIds.join(', ')}>
+                              {teacher.courseIds.length} {teacher.courseIds.length === 1 ? 'asignatura' : 'asignaturas'}
+                            </span>
+                          ) : (
+                            <span className="academic-scheduling__resource-note">Sin asignaturas</span>
+                          )}
+                        </td>
+                        <td>
+                          {teacher.maxWeeklyMinutes !== null ? (
+                            <span>{teacher.maxWeeklyMinutes} min</span>
+                          ) : (
+                            <span className="academic-scheduling__resource-note">Sin configurar</span>
+                          )}
+                        </td>
+                        <td>
+                          {assignedMinutes !== null ? (
+                            <span>{assignedMinutes} min</span>
+                          ) : (
+                            <span>—</span>
+                          )}
+                        </td>
+                        <td>
+                          <span>{formatAvailabilitySummary(teacher.availability)}</span>
+                        </td>
+                        <td className="academic-resource-table__td-actions">
+                          <button
+                            type="button"
+                            className="academic-scheduling__button academic-scheduling__button--secondary"
+                            aria-label={`Abrir ficha de ${teacher.name}`}
+                            onClick={() => openTeacherInspector(teacher.id)}
+                          >
+                            Abrir ficha
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  {filteredTeachers.length === 0 && (
+                    <tr>
+                      <td colSpan={9} className="academic-resource-workbench__empty">
+                        {unifiedTeachers.length === 0
+                          ? 'No hay docentes disponibles en el catálogo ni en el borrador.'
+                          : 'No se encontraron docentes con los filtros y búsqueda aplicados.'}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            ) : (
+              <table className="academic-resource-table" aria-label="Aulas y laboratorios">
+                <thead>
+                  <tr>
+                    <th className="academic-resource-table__td-checkbox">
+                      <input
+                        type="checkbox"
+                        aria-label="Seleccionar todos los ambientes visibles"
+                        checked={
+                          filteredRooms.length > 0 &&
+                          filteredRooms.every((r) => selectedRoomIds.includes(r.id))
+                        }
+                        onChange={(e) => {
+                          if (e.currentTarget.checked) selectAllVisibleRooms()
+                          else deselectVisibleRooms()
+                        }}
+                      />
+                    </th>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Inclusión</th>
+                    <th>Tipo</th>
+                    <th>Capacidad</th>
+                    <th>Pabellón</th>
+                    <th>Disponibilidad</th>
+                    <th className="academic-resource-table__td-actions">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRooms.map((room) => {
+                    const isSelected = selectedRoomIds.includes(room.id)
+                    const isInspected = inspectedRoomId === room.id
+
+                    return (
+                      <tr
+                        key={room.id}
+                        className={`${isSelected ? 'academic-resource-workbench__row--selected' : ''} ${isInspected ? 'academic-resource-workbench__row--inspected' : ''}`}
+                      >
+                        <td className="academic-resource-table__td-checkbox">
+                          <input
+                            type="checkbox"
+                            aria-label={`Seleccionar ambiente ${room.name}`}
+                            checked={isSelected}
+                            onChange={() => toggleRoomSelect(room.id)}
+                          />
+                        </td>
+                        <td>
+                          <code>{room.id}</code>
+                        </td>
+                        <td>
+                          <strong>{room.name}</strong>
+                        </td>
+                        <td>
+                          <span
+                            className={`academic-resource-badge ${room.isIncluded ? 'academic-resource-badge--included' : room.isLocal ? 'academic-resource-badge--local' : 'academic-resource-badge--reference'}`}
+                          >
+                            {room.isIncluded ? (room.isLocal ? 'Local (incorporado)' : 'Incorporado') : 'Referencia (no incorporado)'}
+                          </span>
+                        </td>
+                        <td>{room.kind === 'laboratory' ? 'Laboratorio' : 'Aula'}</td>
+                        <td>{room.capacity}</td>
+                        <td>{room.pavilion ?? '—'}</td>
+                        <td>
+                          <span>{formatAvailabilitySummary(room.availability)}</span>
+                        </td>
+                        <td className="academic-resource-table__td-actions">
+                          <button
+                            type="button"
+                            className="academic-scheduling__button academic-scheduling__button--secondary"
+                            aria-label={`Abrir ficha de ${room.name}`}
+                            onClick={() => openRoomInspector(room.id)}
+                          >
+                            Abrir ficha
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  {filteredRooms.length === 0 && (
+                    <tr>
+                      <td colSpan={9} className="academic-resource-workbench__empty">
+                        {unifiedRooms.length === 0
+                          ? 'No hay ambientes disponibles en el catálogo ni en el borrador.'
+                          : 'No se encontraron ambientes con los filtros y búsqueda aplicados.'}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+
+        {/* Inspector Pane (Only open when a resource is inspected) */}
+        {activeTab === 'teachers' && inspectedTeacher && (
+          <aside className="academic-resource-workbench__inspector-pane" aria-label="Ficha de docente">
+            <div className="academic-resource-workbench__inspector-header">
+              <div>
+                <h5 className="academic-resource-workbench__inspector-title">
+                  {inspectedTeacher.name || inspectedTeacher.id}
+                </h5>
+                <p className="academic-resource-workbench__inspector-subtitle">
+                  {inspectedTeacher.isIncluded
+                    ? teacherReferenceIds[inspectedTeacher.id]
+                      ? 'Docente de referencia · no confirmado para el nuevo periodo'
+                      : 'Docente de demostración local'
+                    : 'Referencia del catálogo · no incorporado en el borrador'}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="academic-scheduling__text-button"
+                aria-label="Cerrar ficha"
+                onClick={closeInspector}
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div className="academic-resource-workbench__inspector-body">
+              {isLocked && (
+                <div className="academic-scheduling__draft-note" role="status">
+                  Versión congelada de solo lectura: el recurso puede consultarse pero no modificarse.
+                </div>
+              )}
+
+              {/* View 1: If reference not yet included */}
+              {!inspectedTeacher.isIncluded ? (
+                <div className="academic-resource-workbench__ref-view">
+                  <dl className="academic-resource-workbench__ref-grid">
+                    <dt>Identificación de catálogo</dt>
+                    <dd>{inspectedTeacher.id}</dd>
+                    <dt>Nombre registrado</dt>
+                    <dd>{inspectedTeacher.name}</dd>
+                    <dt>Asignaturas de referencia</dt>
+                    <dd>
+                      {inspectedTeacher.courseIds.length > 0
+                        ? inspectedTeacher.courseIds.join(', ')
+                        : 'Sin asignaturas registradas'}
+                    </dd>
+                    <dt>Carga semanal</dt>
+                    <dd>Sin configurar en el catálogo de referencia</dd>
+                    <dt>Disponibilidad</dt>
+                    <dd>Sin configurar en el catálogo de referencia</dd>
+                  </dl>
+                  <p className="academic-scheduling__resource-note">
+                    Las habilitaciones de referencia representan supuestos de partida y no comprometen disponibilidad ni confirmación institucional para el nuevo periodo.
+                  </p>
+                  <button
+                    type="button"
+                    className="academic-scheduling__button academic-scheduling__button--primary"
+                    disabled={isLocked || resources.teachers.length >= PLANNING_LIMITS.teachers}
+                    onClick={() => handleIncorporateSingleTeacher(inspectedTeacher.id)}
+                  >
+                    Incorporar a la propuesta
+                  </button>
+                </div>
+              ) : (
+                /* View 2: Incorporated teacher editor */
+                (() => {
+                  const currentTeacher = resources.teachers.find((t) => t.id === inspectedTeacher.id)
+                  if (!currentTeacher) return null
+
+                  return (
+                    <article className="academic-scheduling__resource-card academic-scheduling__resource-card--teacher">
+                      <div className="academic-scheduling__resource-card-heading">
+                        <strong>
+                          {teacherReferenceIds[currentTeacher.id]
+                            ? 'Docente de referencia · no confirmado para el nuevo periodo'
+                            : 'Docente de demostración'}
+                        </strong>
+                        <button
+                          type="button"
+                          className="academic-scheduling__text-button"
+                          aria-label={`Quitar docente ${currentTeacher.name || currentTeacher.id}`}
+                          disabled={isLocked}
+                          onClick={() => removeTeacher(currentTeacher.id)}
+                        >
+                          Quitar
+                        </button>
+                      </div>
+
+                      <div className="academic-scheduling__resource-fields">
+                        <label>
+                          Identificación
+                          <input
+                            aria-label="Identificación docente"
+                            aria-invalid={Boolean(teacherIdError)}
+                            value={currentTeacher.id}
+                            disabled={isLocked}
+                            onChange={(e) => changeTeacher({ id: e.currentTarget.value })}
+                          />
+                          {teacherIdError && (
+                            <span role="alert" className="academic-scheduling__inline-error">
+                              {teacherIdError}
+                            </span>
+                          )}
+                        </label>
+                        <label>
+                          Nombre
+                          <input
+                            aria-label="Nombre docente"
+                            value={currentTeacher.name}
+                            disabled={isLocked}
+                            onChange={(e) => changeTeacher({ name: e.currentTarget.value })}
+                          />
+                        </label>
+                        <label>
+                          Carga semanal máxima (minutos)
+                          <input
+                            type="number"
+                            min="0"
+                            max="10080"
+                            step="1"
+                            aria-label="Carga semanal docente"
+                            value={Number.isFinite(currentTeacher.maxWeeklyMinutes) ? currentTeacher.maxWeeklyMinutes : ''}
+                            disabled={isLocked}
+                            onChange={(e) =>
+                              changeTeacher({
+                                maxWeeklyMinutes: e.currentTarget.value === '' ? Number.NaN : Number(e.currentTarget.value),
+                              })
+                            }
+                          />
+                        </label>
+                      </div>
+
+                      {currentTeacher.qualificationSource === 'synthetic' && (
+                        <p className="academic-scheduling__resource-note">
+                          Metadatos de habilitación locales sintéticos · {currentTeacher.facultyId ?? 'sin facultad'} · categoría{' '}
+                          {currentTeacher.category ?? 'sin especificar'}. No verifican afiliación ni categoría institucional.
+                        </p>
+                      )}
+
+                      <fieldset className="academic-scheduling__course-eligibility">
+                        <legend>Asignaturas habilitadas · buscar y seleccionar</legend>
+                        <input
+                          type="search"
+                          aria-label="Buscar asignatura habilitada"
+                          placeholder="Buscar por código o nombre"
+                          value={courseSearch}
+                          disabled={isLocked}
+                          onChange={(e) => setCourseSearch(e.currentTarget.value)}
+                        />
+                        <div className="academic-scheduling__course-options">
+                          {filteredCourses.map((course) => (
+                            <label key={course.courseId}>
+                              <input
+                                type="checkbox"
+                                checked={currentTeacher.courseIds.includes(course.courseId)}
+                                disabled={isLocked}
+                                aria-label={`${currentTeacher.name || 'Docente'} habilitado para ${course.courseId}`}
+                                onChange={(e) =>
+                                  changeTeacher({
+                                    courseIds: e.currentTarget.checked
+                                      ? [...new Set([...currentTeacher.courseIds, course.courseId])]
+                                      : currentTeacher.courseIds.filter((id) => id !== course.courseId),
+                                  })
+                                }
+                              />
+                              {course.courseId} · {course.name}
+                            </label>
+                          ))}
+                        </div>
+                        <div className="academic-scheduling__course-chips" aria-label="Asignaturas habilitadas">
+                          {currentTeacher.courseIds.map((id) => (
+                            <span className="academic-scheduling__chip" key={id}>
+                              {id}
+                              {catalog.courses.some((course) => course.courseId === id) && (
+                                <button
+                                  type="button"
+                                  aria-label={`Quitar habilitación ${id}`}
+                                  disabled={isLocked}
+                                  onClick={() =>
+                                    changeTeacher({
+                                      courseIds: currentTeacher.courseIds.filter((courseId) => courseId !== id),
+                                    })
+                                  }
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </span>
+                          ))}
+                          {!currentTeacher.courseIds.length && (
+                            <span className="academic-scheduling__resource-note">Sin asignaturas habilitadas.</span>
+                          )}
+                        </div>
+                        {currentTeacher.courseIds
+                          .filter((id) => !catalog.courses.some((course) => course.courseId === id))
+                          .map((id) => (
+                            <span key={id}>{id} · habilitación conservada fuera del catálogo visible</span>
+                          ))}
+                      </fieldset>
+
+                      <fieldset className="academic-scheduling__course-limits">
+                        <legend>Máximo de secciones por asignatura (opcional)</legend>
+                        {currentTeacher.courseIds
+                          .filter((id) => catalog.courses.some((course) => course.courseId === id))
+                          .map((id) => {
+                            const limit = currentTeacher.sectionLimits?.find((item) => item.courseId === id)?.maxSections
+                            return (
+                              <label key={id}>
+                                {id} · {catalog.courses.find((course) => course.courseId === id)?.name}
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="128"
+                                  step="1"
+                                  placeholder="Sin límite adicional"
+                                  aria-label={`Máximo de secciones ${id}`}
+                                  value={limit === undefined ? '' : Number.isFinite(limit) ? limit : ''}
+                                  disabled={isLocked}
+                                  onChange={(e) => {
+                                    const limits = currentTeacher.sectionLimits?.filter((item) => item.courseId !== id) ?? []
+                                    if (e.currentTarget.value !== '')
+                                      limits.push({ courseId: id, maxSections: Number(e.currentTarget.value) })
+                                    changeTeacher({ sectionLimits: limits.length ? limits : undefined })
+                                  }}
+                                />
+                              </label>
+                            )
+                          })}
+                        {!currentTeacher.courseIds.length && (
+                          <span>Agrega asignaturas habilitadas para configurar sus límites.</span>
+                        )}
+                      </fieldset>
+
+                      <AvailabilityEditor
+                        label="Disponibilidad docente"
+                        intervals={currentTeacher.availability}
+                        disabled={isLocked}
+                        onChange={(availability) => changeTeacher({ availability })}
+                      />
+                      <AvailabilityEditor
+                        label="Preferencias semanales · prioridad blanda"
+                        intervals={currentTeacher.preferences ?? []}
+                        disabled={isLocked}
+                        onChange={(preferences) =>
+                          changeTeacher({ preferences: preferences.length ? preferences : undefined })
+                        }
+                      />
+                      <p className="academic-scheduling__resource-note">
+                        Las preferencias ordenan alternativas, no impiden horarios fuera de ellas. Una persona puede atender varias secciones si respeta carga y límites.
+                      </p>
+                    </article>
+                  )
+                })()
+              )}
+            </div>
+          </aside>
+        )}
+
+        {activeTab === 'rooms' && inspectedRoom && (
+          <aside className="academic-resource-workbench__inspector-pane" aria-label="Ficha de ambiente">
+            <div className="academic-resource-workbench__inspector-header">
+              <div>
+                <h5 className="academic-resource-workbench__inspector-title">
+                  {inspectedRoom.name || inspectedRoom.id}
+                </h5>
+                <p className="academic-resource-workbench__inspector-subtitle">
+                  {inspectedRoom.isIncluded
+                    ? `${inspectedRoom.kind === 'laboratory' ? 'Laboratorio' : 'Aula'}${roomReferenceIds[inspectedRoom.id] ? ' · referencia sintética' : ' · ambiente local'}`
+                    : 'Referencia del catálogo · no incorporado en el borrador'}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="academic-scheduling__text-button"
+                aria-label="Cerrar ficha"
+                onClick={closeInspector}
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div className="academic-resource-workbench__inspector-body">
+              {isLocked && (
+                <div className="academic-scheduling__draft-note" role="status">
+                  Versión congelada de solo lectura: el recurso puede consultarse pero no modificarse.
+                </div>
+              )}
+
+              {/* View 1: If room reference not yet included */}
+              {!inspectedRoom.isIncluded ? (
+                <div className="academic-resource-workbench__ref-view">
+                  <dl className="academic-resource-workbench__ref-grid">
+                    <dt>Identificación de catálogo</dt>
+                    <dd>{inspectedRoom.id}</dd>
+                    <dt>Nombre</dt>
+                    <dd>{inspectedRoom.name}</dd>
+                    <dt>Tipo de ambiente</dt>
+                    <dd>{inspectedRoom.kind === 'laboratory' ? 'Laboratorio' : 'Aula'}</dd>
+                    <dt>Capacidad</dt>
+                    <dd>{inspectedRoom.capacity}</dd>
+                    <dt>Pabellón</dt>
+                    <dd>{inspectedRoom.pavilion ?? 'Sin pabellón'}</dd>
+                    <dt>Disponibilidad</dt>
+                    <dd>Sin configurar en el catálogo de referencia</dd>
+                  </dl>
+                  <button
+                    type="button"
+                    className="academic-scheduling__button academic-scheduling__button--primary"
+                    disabled={isLocked || resources.rooms.length >= PLANNING_LIMITS.rooms}
+                    onClick={() => handleIncorporateSingleRoom(inspectedRoom.id)}
+                  >
+                    Incorporar a la propuesta
+                  </button>
+                </div>
+              ) : (
+                /* View 2: Incorporated room editor */
+                (() => {
+                  const currentRoom = resources.rooms.find((r) => r.id === inspectedRoom.id)
+                  if (!currentRoom) return null
+
+                  return (
+                    <article className="academic-scheduling__resource-card academic-scheduling__resource-card--room">
+                      <div className="academic-scheduling__resource-card-heading">
+                        <strong>
+                          {currentRoom.kind === 'laboratory' ? 'Laboratorio' : 'Aula'}
+                          {roomReferenceIds[currentRoom.id] ? ' · referencia sintética' : ''}
+                        </strong>
+                        <button
+                          type="button"
+                          className="academic-scheduling__text-button"
+                          aria-label={`Quitar ambiente ${currentRoom.name || currentRoom.id}`}
+                          disabled={isLocked}
+                          onClick={() => removeRoom(currentRoom.id)}
+                        >
+                          Quitar
+                        </button>
+                      </div>
+
+                      <div className="academic-scheduling__resource-fields">
+                        <label>
+                          Identificación
+                          <input
+                            aria-label="Identificación ambiente"
+                            aria-invalid={Boolean(roomIdError)}
+                            value={currentRoom.id}
+                            disabled={isLocked}
+                            onChange={(e) => changeRoom({ id: e.currentTarget.value })}
+                          />
+                          {roomIdError && (
+                            <span role="alert" className="academic-scheduling__inline-error">
+                              {roomIdError}
+                            </span>
+                          )}
+                        </label>
+                        <label>
+                          Nombre
+                          <input
+                            aria-label="Nombre ambiente"
+                            value={currentRoom.name}
+                            disabled={isLocked}
+                            onChange={(e) => changeRoom({ name: e.currentTarget.value })}
+                          />
+                        </label>
+                        <label>
+                          Tipo
+                          <select
+                            aria-label="Tipo ambiente"
+                            value={currentRoom.kind ?? 'classroom'}
+                            disabled={isLocked}
+                            onChange={(e) => changeRoom({ kind: e.currentTarget.value as 'classroom' | 'laboratory' })}
+                          >
+                            <option value="classroom">Aula</option>
+                            <option value="laboratory">Laboratorio</option>
+                          </select>
+                        </label>
+                        <label>
+                          Capacidad
+                          <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            aria-label="Capacidad ambiente"
+                            value={Number.isFinite(currentRoom.capacity) ? currentRoom.capacity : ''}
+                            disabled={isLocked}
+                            onChange={(e) =>
+                              changeRoom({
+                                capacity: e.currentTarget.value === '' ? Number.NaN : Number(e.currentTarget.value),
+                              })
+                            }
+                          />
+                        </label>
+                      </div>
+
+                      <AvailabilityEditor
+                        label="Disponibilidad del ambiente"
+                        intervals={currentRoom.availability}
+                        disabled={isLocked}
+                        onChange={(availability) => changeRoom({ availability })}
+                      />
+                    </article>
+                  )
+                })()
+              )}
+            </div>
+          </aside>
+        )}
       </div>
-      <AvailabilityEditor label="Disponibilidad del ambiente" intervals={selectedRoom.availability} onChange={(availability) => changeRoom({ availability })} />
-    </article>}
-  </div>
+
+      {/* Catalog reference rooms details box for information */}
+      {catalog.referenceRooms && (
+        <details className="academic-scheduling__reference-rooms">
+          <summary>
+            Catálogo de referencia · {catalog.referenceRooms.length} ambientes (AP:{' '}
+            {catalog.referenceRooms.filter((room) => room.pavilion === 'AP').length}, NP:{' '}
+            {catalog.referenceRooms.filter((room) => room.pavilion === 'NP').length})
+          </summary>
+          <p>Listado de referencia proporcionado para esta demo. Capacidad inicial: 45. La disponibilidad no está confirmada y no proviene del historial.</p>
+          <ul>
+            {catalog.referenceRooms.map((room) => (
+              <li key={room.id}>
+                {room.id} · {room.name} · {room.kind === 'laboratory' ? 'Laboratorio' : 'Aula'} · {room.pavilion} · capacidad {room.capacity}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      {/* Multi-Selection Preview Modals / Dialogs */}
+      {activeModal === 'incorporate-teacher' && teacherIncorporatePreview && (
+        <div className="academic-resource-modal-backdrop" onClick={closeModal}>
+          <div
+            className="academic-resource-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={modalTitleId}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                closeModal()
+              }
+              if (e.key === 'Tab') {
+                const focusables = e.currentTarget.querySelectorAll<HTMLElement>(
+                  'button:not([disabled]), input:not([disabled]), [tabindex="0"]',
+                )
+                if (focusables.length === 0) return
+                const first = focusables[0]
+                const last = focusables[focusables.length - 1]
+                if (e.shiftKey && document.activeElement === first) {
+                  e.preventDefault()
+                  last.focus()
+                } else if (!e.shiftKey && document.activeElement === last) {
+                  e.preventDefault()
+                  first.focus()
+                }
+              }
+            }}
+          >
+            <div className="academic-resource-modal__header">
+              <div>
+                <h4 id={modalTitleId} className="academic-resource-modal__title">
+                  Vista previa de incorporación múltiple de docentes
+                </h4>
+                <p className="academic-resource-modal__subtitle">
+                  Los valores iniciales de carga y disponibilidad son sintéticos y no confirman asignaciones institucionales.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="academic-scheduling__text-button"
+                aria-label="Cerrar vista previa"
+                onClick={closeModal}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="academic-resource-modal__body">
+              <div className="academic-resource-modal__summary">
+                <span>Seleccionados: <strong>{teacherIncorporatePreview.counts.totalSelected}</strong></span>
+                <span>A incorporar: <strong>{teacherIncorporatePreview.counts.toIncorporate}</strong></span>
+                <span>Sin efecto (ya incorporados): <strong>{teacherIncorporatePreview.counts.alreadyIncluded}</strong></span>
+                {teacherIncorporatePreview.counts.excludedByLimit > 0 && (
+                  <span>Excluidos por límite: <strong>{teacherIncorporatePreview.counts.excludedByLimit}</strong></span>
+                )}
+              </div>
+
+              {teacherIncorporatePreview.limitError && (
+                <p className="academic-scheduling__inline-error" role="alert">
+                  {teacherIncorporatePreview.limitError}
+                </p>
+              )}
+
+              <div className="academic-resource-modal__item-list">
+                {teacherIncorporatePreview.items.map((item) => (
+                  <div key={item.id} className="academic-resource-modal__item">
+                    <div className="academic-resource-modal__item-header">
+                      <span>{item.name} (<code>{item.id}</code>)</span>
+                      <span
+                        className={`academic-resource-badge ${item.action === 'incorporate' ? 'academic-resource-badge--included' : 'academic-resource-badge--reference'}`}
+                      >
+                        {item.action === 'incorporate'
+                          ? 'Se incorporará'
+                          : item.action === 'no-effect-already-included'
+                            ? 'Sin efecto · Ya incorporado'
+                            : 'Excluido por límite'}
+                      </span>
+                    </div>
+                    {item.syntheticValues && (
+                      <div className="academic-resource-modal__item-details">
+                        Carga inicial: {item.syntheticValues.maxWeeklyMinutes} min (sintética) · Disponibilidad: {item.syntheticValues.availabilitySummary} · Asignaturas de referencia: {item.syntheticValues.courseCount}
+                      </div>
+                    )}
+                    {item.reason && (
+                      <div className="academic-resource-modal__item-details">
+                        {item.reason}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="academic-resource-modal__footer">
+              <button
+                ref={modalFirstControlRef}
+                type="button"
+                className="academic-scheduling__button academic-scheduling__button--secondary"
+                onClick={closeModal}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="academic-scheduling__button academic-scheduling__button--primary"
+                disabled={!teacherIncorporatePreview.canConfirm}
+                onClick={confirmBulkIncorporateTeachers}
+              >
+                Confirmar incorporación ({teacherIncorporatePreview.counts.toIncorporate})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeModal === 'incorporate-room' && roomIncorporatePreview && (
+        <div className="academic-resource-modal-backdrop" onClick={closeModal}>
+          <div
+            className="academic-resource-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={modalTitleId}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                closeModal()
+              }
+              if (e.key === 'Tab') {
+                const focusables = e.currentTarget.querySelectorAll<HTMLElement>(
+                  'button:not([disabled]), input:not([disabled]), [tabindex="0"]',
+                )
+                if (focusables.length === 0) return
+                const first = focusables[0]
+                const last = focusables[focusables.length - 1]
+                if (e.shiftKey && document.activeElement === first) {
+                  e.preventDefault()
+                  last.focus()
+                } else if (!e.shiftKey && document.activeElement === last) {
+                  e.preventDefault()
+                  first.focus()
+                }
+              }
+            }}
+          >
+            <div className="academic-resource-modal__header">
+              <div>
+                <h4 id={modalTitleId} className="academic-resource-modal__title">
+                  Vista previa de incorporación múltiple de ambientes
+                </h4>
+                <p className="academic-resource-modal__subtitle">
+                  La disponibilidad inicial de cada ambiente incorporado es sintética.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="academic-scheduling__text-button"
+                aria-label="Cerrar vista previa"
+                onClick={closeModal}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="academic-resource-modal__body">
+              <div className="academic-resource-modal__summary">
+                <span>Seleccionados: <strong>{roomIncorporatePreview.counts.totalSelected}</strong></span>
+                <span>A incorporar: <strong>{roomIncorporatePreview.counts.toIncorporate}</strong></span>
+                <span>Sin efecto (ya incorporados): <strong>{roomIncorporatePreview.counts.alreadyIncluded}</strong></span>
+                {roomIncorporatePreview.counts.excludedByLimit > 0 && (
+                  <span>Excluidos por límite: <strong>{roomIncorporatePreview.counts.excludedByLimit}</strong></span>
+                )}
+              </div>
+
+              {roomIncorporatePreview.limitError && (
+                <p className="academic-scheduling__inline-error" role="alert">
+                  {roomIncorporatePreview.limitError}
+                </p>
+              )}
+
+              <div className="academic-resource-modal__item-list">
+                {roomIncorporatePreview.items.map((item) => (
+                  <div key={item.id} className="academic-resource-modal__item">
+                    <div className="academic-resource-modal__item-header">
+                      <span>{item.name} (<code>{item.id}</code>)</span>
+                      <span
+                        className={`academic-resource-badge ${item.action === 'incorporate' ? 'academic-resource-badge--included' : 'academic-resource-badge--reference'}`}
+                      >
+                        {item.action === 'incorporate'
+                          ? 'Se incorporará'
+                          : item.action === 'no-effect-already-included'
+                            ? 'Sin efecto · Ya incorporado'
+                            : 'Excluido por límite'}
+                      </span>
+                    </div>
+                    {item.syntheticValues && (
+                      <div className="academic-resource-modal__item-details">
+                        Tipo: {item.syntheticValues.kind === 'laboratory' ? 'Laboratorio' : 'Aula'} · Capacidad: {item.syntheticValues.capacity} · Disponibilidad: {item.syntheticValues.availabilitySummary}
+                      </div>
+                    )}
+                    {item.reason && (
+                      <div className="academic-resource-modal__item-details">
+                        {item.reason}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="academic-resource-modal__footer">
+              <button
+                ref={modalFirstControlRef}
+                type="button"
+                className="academic-scheduling__button academic-scheduling__button--secondary"
+                onClick={closeModal}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="academic-scheduling__button academic-scheduling__button--primary"
+                disabled={!roomIncorporatePreview.canConfirm}
+                onClick={confirmBulkIncorporateRooms}
+              >
+                Confirmar incorporación ({roomIncorporatePreview.counts.toIncorporate})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeModal === 'remove-teacher' && teacherRemovePreview && (
+        <div className="academic-resource-modal-backdrop" onClick={closeModal}>
+          <div
+            className="academic-resource-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={modalTitleId}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                closeModal()
+              }
+              if (e.key === 'Tab') {
+                const focusables = e.currentTarget.querySelectorAll<HTMLElement>(
+                  'button:not([disabled]), input:not([disabled]), [tabindex="0"]',
+                )
+                if (focusables.length === 0) return
+                const first = focusables[0]
+                const last = focusables[focusables.length - 1]
+                if (e.shiftKey && document.activeElement === first) {
+                  e.preventDefault()
+                  last.focus()
+                } else if (!e.shiftKey && document.activeElement === last) {
+                  e.preventDefault()
+                  first.focus()
+                }
+              }
+            }}
+          >
+            <div className="academic-resource-modal__header">
+              <div>
+                <h4 id={modalTitleId} className="academic-resource-modal__title">
+                  Vista previa de retiro múltiple de docentes
+                </h4>
+                <p className="academic-resource-modal__subtitle">
+                  Retirar un docente lo elimina de la configuración del borrador. Las referencias del catálogo permanecerán disponibles.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="academic-scheduling__text-button"
+                aria-label="Cerrar vista previa"
+                onClick={closeModal}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="academic-resource-modal__body">
+              <div className="academic-resource-modal__summary">
+                <span>Seleccionados: <strong>{teacherRemovePreview.counts.totalSelected}</strong></span>
+                <span>A retirar: <strong>{teacherRemovePreview.counts.toRemove}</strong></span>
+                <span>Sin efecto (no estaban incorporados): <strong>{teacherRemovePreview.counts.notIncluded}</strong></span>
+              </div>
+
+              <div className="academic-resource-modal__item-list">
+                {teacherRemovePreview.items.map((item) => (
+                  <div key={item.id} className="academic-resource-modal__item">
+                    <div className="academic-resource-modal__item-header">
+                      <span>{item.name} (<code>{item.id}</code>)</span>
+                      <span
+                        className={`academic-resource-badge ${item.action === 'remove' ? 'academic-resource-badge--local' : 'academic-resource-badge--reference'}`}
+                      >
+                        {item.action === 'remove' ? 'Se retirará' : 'Sin efecto · No incorporado'}
+                      </span>
+                    </div>
+                    {item.reason && (
+                      <div className="academic-resource-modal__item-details">
+                        {item.reason}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="academic-resource-modal__footer">
+              <button
+                ref={modalFirstControlRef}
+                type="button"
+                className="academic-scheduling__button academic-scheduling__button--secondary"
+                onClick={closeModal}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="academic-scheduling__button academic-scheduling__button--primary"
+                disabled={!teacherRemovePreview.canConfirm}
+                onClick={confirmBulkRemoveTeachers}
+              >
+                Confirmar retiro ({teacherRemovePreview.counts.toRemove})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeModal === 'remove-room' && roomRemovePreview && (
+        <div className="academic-resource-modal-backdrop" onClick={closeModal}>
+          <div
+            className="academic-resource-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={modalTitleId}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                closeModal()
+              }
+              if (e.key === 'Tab') {
+                const focusables = e.currentTarget.querySelectorAll<HTMLElement>(
+                  'button:not([disabled]), input:not([disabled]), [tabindex="0"]',
+                )
+                if (focusables.length === 0) return
+                const first = focusables[0]
+                const last = focusables[focusables.length - 1]
+                if (e.shiftKey && document.activeElement === first) {
+                  e.preventDefault()
+                  last.focus()
+                } else if (!e.shiftKey && document.activeElement === last) {
+                  e.preventDefault()
+                  first.focus()
+                }
+              }
+            }}
+          >
+            <div className="academic-resource-modal__header">
+              <div>
+                <h4 id={modalTitleId} className="academic-resource-modal__title">
+                  Vista previa de retiro múltiple de ambientes
+                </h4>
+                <p className="academic-resource-modal__subtitle">
+                  Retirar un ambiente lo elimina de la configuración del borrador. Las referencias del catálogo permanecerán disponibles.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="academic-scheduling__text-button"
+                aria-label="Cerrar vista previa"
+                onClick={closeModal}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="academic-resource-modal__body">
+              <div className="academic-resource-modal__summary">
+                <span>Seleccionados: <strong>{roomRemovePreview.counts.totalSelected}</strong></span>
+                <span>A retirar: <strong>{roomRemovePreview.counts.toRemove}</strong></span>
+                <span>Sin efecto (no estaban incorporados): <strong>{roomRemovePreview.counts.notIncluded}</strong></span>
+              </div>
+
+              <div className="academic-resource-modal__item-list">
+                {roomRemovePreview.items.map((item) => (
+                  <div key={item.id} className="academic-resource-modal__item">
+                    <div className="academic-resource-modal__item-header">
+                      <span>{item.name} (<code>{item.id}</code>)</span>
+                      <span
+                        className={`academic-resource-badge ${item.action === 'remove' ? 'academic-resource-badge--local' : 'academic-resource-badge--reference'}`}
+                      >
+                        {item.action === 'remove' ? 'Se retirará' : 'Sin efecto · No incorporado'}
+                      </span>
+                    </div>
+                    {item.reason && (
+                      <div className="academic-resource-modal__item-details">
+                        {item.reason}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="academic-resource-modal__footer">
+              <button
+                ref={modalFirstControlRef}
+                type="button"
+                className="academic-scheduling__button academic-scheduling__button--secondary"
+                onClick={closeModal}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="academic-scheduling__button academic-scheduling__button--primary"
+                disabled={!roomRemovePreview.canConfirm}
+                onClick={confirmBulkRemoveRooms}
+              >
+                Confirmar retiro ({roomRemovePreview.counts.toRemove})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
-function AvailabilityEditor({ label, intervals, onChange }: { label: string; intervals: AcademicInterval[]; onChange: (value: AcademicInterval[]) => void }) {
-  const patch = (index: number, change: Partial<AcademicInterval>) => onChange(updateInterval(intervals, index, change))
-  return <fieldset className="academic-scheduling__availability"><legend>{label} · máximo 32 intervalos</legend>
-    {intervals.map((interval, index) => <div className="academic-scheduling__availability-row" key={`${label}-${index}`}>
-      <label>Día<select aria-label={`${label} día ${index + 1}`} value={interval.day} onChange={(event) => patch(index, { day: Number(event.currentTarget.value) })}>
-        {DAYS.map((day, dayIndex) => <option key={day} value={dayIndex + 1}>{day}</option>)}</select></label>
-      <label>Inicio<input type="time" aria-label={`${label} inicio ${index + 1}`} value={timeValue(interval.startMinute)} onChange={(event) => patch(index, { startMinute: timeMinute(event.currentTarget.value) })} /></label>
-      <label>Fin<input type="time" aria-label={`${label} fin ${index + 1}`} value={timeValue(interval.endMinute)} onChange={(event) => patch(index, { endMinute: timeMinute(event.currentTarget.value) })} /></label>
-      <button type="button" className="academic-scheduling__text-button" aria-label={`Quitar ${label} intervalo ${index + 1}`} onClick={() => onChange(intervals.filter((_, itemIndex) => itemIndex !== index))}>Quitar</button>
-    </div>)}
-    <button type="button" className="academic-scheduling__text-button" disabled={intervals.length >= 32}
-      onClick={() => onChange([...intervals, { day: 1, startMinute: 480, endMinute: 1020 }])}>Agregar intervalo</button>
-  </fieldset>
+function AvailabilityEditor({
+  label,
+  intervals,
+  disabled = false,
+  onChange,
+}: {
+  label: string
+  intervals: AcademicInterval[]
+  disabled?: boolean
+  onChange: (value: AcademicInterval[]) => void
+}) {
+  const patch = (index: number, change: Partial<AcademicInterval>) => {
+    if (disabled) return
+    onChange(updateInterval(intervals, index, change))
+  }
+
+  return (
+    <fieldset className="academic-scheduling__availability">
+      <legend>{label} · máximo 32 intervalos</legend>
+      {intervals.map((interval, index) => (
+        <div className="academic-scheduling__availability-row" key={`${label}-${index}`}>
+          <label>
+            Día
+            <select
+              aria-label={`${label} día ${index + 1}`}
+              value={interval.day}
+              disabled={disabled}
+              onChange={(event) => patch(index, { day: Number(event.currentTarget.value) })}
+            >
+              {DAYS.map((day, dayIndex) => (
+                <option key={day} value={dayIndex + 1}>
+                  {day}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Inicio
+            <input
+              type="time"
+              aria-label={`${label} inicio ${index + 1}`}
+              value={timeValue(interval.startMinute)}
+              disabled={disabled}
+              onChange={(event) => patch(index, { startMinute: timeMinute(event.currentTarget.value) })}
+            />
+          </label>
+          <label>
+            Fin
+            <input
+              type="time"
+              aria-label={`${label} fin ${index + 1}`}
+              value={timeValue(interval.endMinute)}
+              disabled={disabled}
+              onChange={(event) => patch(index, { endMinute: timeMinute(event.currentTarget.value) })}
+            />
+          </label>
+          <button
+            type="button"
+            className="academic-scheduling__text-button"
+            aria-label={`Quitar ${label} intervalo ${index + 1}`}
+            disabled={disabled}
+            onClick={() => {
+              if (disabled) return
+              onChange(intervals.filter((_, itemIndex) => itemIndex !== index))
+            }}
+          >
+            Quitar
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        className="academic-scheduling__text-button"
+        disabled={disabled || intervals.length >= 32}
+        onClick={() => {
+          if (disabled) return
+          onChange([...intervals, { day: 1, startMinute: 480, endMinute: 1020 }])
+        }}
+      >
+        Agregar intervalo
+      </button>
+    </fieldset>
+  )
 }

@@ -1,0 +1,556 @@
+/* AcademicResourceEditor.css
+   Operational Workbench (Design A) for Academic Resource Management */
+
+.academic-resource-workbench {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 4);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.academic-resource-workbench > * {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Tabs: Docentes vs Ambientes */
+.academic-resource-workbench__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  align-items: center;
+  gap: calc(var(--planning-spacing) * 1);
+  border-bottom: 1px solid var(--planning-border);
+  padding-bottom: 0;
+  margin-bottom: calc(var(--planning-spacing) * 1);
+}
+
+.academic-resource-workbench__tab {
+  padding: calc(var(--planning-spacing) * 2) calc(var(--planning-spacing) * 4);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--planning-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  outline: none;
+}
+
+.academic-resource-workbench__tab:hover {
+  color: var(--planning-text);
+  background: var(--planning-selected);
+}
+
+.academic-resource-workbench__tab:focus-visible {
+  border-color: var(--planning-primary);
+  box-shadow: 0 0 0 2px var(--planning-selected);
+}
+
+.academic-resource-workbench__tab--active {
+  color: var(--planning-primary);
+  border-bottom-color: var(--planning-primary);
+  background: transparent;
+}
+
+/* Heading & Intro */
+.academic-resource-workbench__header {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 1);
+}
+
+.academic-resource-workbench__title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--planning-text);
+}
+
+.academic-resource-workbench__subtitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--planning-muted);
+  line-height: 1.4;
+}
+
+/* Counters bar */
+.academic-resource-workbench__counters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--planning-spacing) * 3);
+  padding: calc(var(--planning-spacing) * 2) calc(var(--planning-spacing) * 3);
+  background: var(--planning-canvas);
+  border: 1px solid var(--planning-border);
+  border-radius: var(--planning-radius-control);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--planning-text);
+}
+
+.academic-resource-workbench__counter-item {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--planning-spacing) * 1.5);
+}
+
+.academic-resource-workbench__counter-label {
+  font-weight: 600;
+  color: var(--planning-muted);
+}
+
+.academic-resource-workbench__counter-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px calc(var(--planning-spacing) * 1.5);
+  background: var(--planning-surface);
+  border: 1px solid var(--planning-border);
+  border-radius: var(--planning-radius-control);
+  font-weight: 700;
+  color: var(--planning-text);
+  min-width: 1.5rem;
+}
+
+/* Toolbar: Search, Filters & Actions */
+.academic-resource-workbench__toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 3);
+  padding: calc(var(--planning-spacing) * 3) calc(var(--planning-spacing) * 4);
+  background: var(--planning-surface);
+  border: 1px solid var(--planning-border);
+  border-radius: var(--planning-radius-panel);
+}
+
+.academic-resource-workbench__toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--planning-spacing) * 3);
+}
+
+.academic-resource-workbench__search-field {
+  flex: 1 1 240px;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 1);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--planning-text);
+}
+
+.academic-resource-workbench__search-field input[type="search"] {
+  padding: calc(var(--planning-spacing) * 1.5) calc(var(--planning-spacing) * 2.5);
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--planning-text);
+  background: var(--planning-canvas);
+  border: 1px solid var(--planning-border);
+  border-radius: var(--planning-radius-control);
+  outline: none;
+  min-height: 2.25rem;
+  box-sizing: border-box;
+}
+
+.academic-resource-workbench__search-field input[type="search"]:focus-visible {
+  border-color: var(--planning-primary);
+  box-shadow: 0 0 0 2px var(--planning-selected);
+}
+
+.academic-resource-workbench__filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 1);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--planning-text);
+}
+
+.academic-resource-workbench__filter-field select {
+  padding: calc(var(--planning-spacing) * 1.5) calc(var(--planning-spacing) * 2.5);
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--planning-text);
+  background: var(--planning-canvas);
+  border: 1px solid var(--planning-border);
+  border-radius: var(--planning-radius-control);
+  outline: none;
+  min-height: 2.25rem;
+  box-sizing: border-box;
+}
+
+.academic-resource-workbench__filter-field select:focus-visible {
+  border-color: var(--planning-primary);
+  box-shadow: 0 0 0 2px var(--planning-selected);
+}
+
+.academic-resource-workbench__toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--planning-spacing) * 2);
+}
+
+.academic-resource-workbench__legacy-select {
+  min-width: 0;
+  max-width: 100%;
+  padding: calc(var(--planning-spacing) * 1.5) calc(var(--planning-spacing) * 2.5);
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--planning-text);
+  background: var(--planning-canvas);
+  border: 1px solid var(--planning-border);
+  border-radius: var(--planning-radius-control);
+  outline: none;
+  min-height: 2.25rem;
+  box-sizing: border-box;
+}
+
+.academic-resource-workbench__legacy-select:focus-visible {
+  border-color: var(--planning-primary);
+  box-shadow: 0 0 0 2px var(--planning-selected);
+}
+
+/* Main Split: Table + Single Inspector */
+.academic-resource-workbench__split {
+  display: flex;
+  gap: calc(var(--planning-spacing) * 4);
+  align-items: flex-start;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.academic-resource-workbench__table-pane {
+  flex: 1 1 0%;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--planning-surface);
+  border: 1px solid var(--planning-border);
+  border-radius: var(--planning-radius-panel);
+  overflow: hidden;
+}
+
+.academic-resource-workbench__scroll-region {
+  overflow-x: auto;
+  max-width: 100%;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.academic-resource-workbench__scroll-region:focus-visible {
+  outline: 2px solid var(--planning-primary);
+  outline-offset: -2px;
+}
+
+/* Table styles */
+.academic-resource-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.academic-resource-table th {
+  background: var(--planning-canvas);
+  color: var(--planning-text);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: calc(var(--planning-spacing) * 2) calc(var(--planning-spacing) * 2.5);
+  border-bottom: 1px solid var(--planning-border);
+  white-space: nowrap;
+}
+
+.academic-resource-table td {
+  padding: calc(var(--planning-spacing) * 2) calc(var(--planning-spacing) * 2.5);
+  border-bottom: 1px solid var(--planning-border);
+  vertical-align: middle;
+  font-size: 0.875rem;
+}
+
+.academic-resource-table tbody tr:hover {
+  background: var(--planning-canvas);
+}
+
+.academic-resource-workbench__row--selected {
+  background: var(--planning-selected);
+}
+
+.academic-resource-workbench__row--selected:hover {
+  background: var(--planning-selected);
+}
+
+.academic-resource-workbench__row--inspected {
+  outline: 2px solid var(--planning-primary);
+  outline-offset: -2px;
+}
+
+.academic-resource-table__td-checkbox {
+  width: 2.5rem;
+  text-align: center;
+}
+
+.academic-resource-table__td-actions {
+  width: 7rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Inclusión Badges */
+.academic-resource-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px calc(var(--planning-spacing) * 1.5);
+  border-radius: var(--planning-radius-control);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.academic-resource-badge--included {
+  background: var(--planning-selected);
+  color: var(--planning-primary);
+  border: 1px solid var(--planning-primary);
+}
+
+.academic-resource-badge--reference {
+  background: var(--planning-canvas);
+  color: var(--planning-muted);
+  border: 1px solid var(--planning-border);
+}
+
+.academic-resource-badge--local {
+  background: var(--planning-warning-surface);
+  color: var(--planning-warning);
+  border: 1px solid var(--planning-warning);
+}
+
+/* Inspector Pane */
+.academic-resource-workbench__inspector-pane {
+  flex: 0 0 420px;
+  max-width: 420px;
+  min-width: 320px;
+  background: var(--planning-surface);
+  border: 1px solid var(--planning-border);
+  border-radius: var(--planning-radius-panel);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.academic-resource-workbench__inspector-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: calc(var(--planning-spacing) * 2);
+  padding: calc(var(--planning-spacing) * 3) calc(var(--planning-spacing) * 4);
+  background: var(--planning-canvas);
+  border-bottom: 1px solid var(--planning-border);
+}
+
+.academic-resource-workbench__inspector-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--planning-text);
+  line-height: 1.3;
+}
+
+.academic-resource-workbench__inspector-subtitle {
+  margin: calc(var(--planning-spacing) * 1) 0 0;
+  font-size: 0.8125rem;
+  color: var(--planning-muted);
+}
+
+.academic-resource-workbench__inspector-body {
+  padding: calc(var(--planning-spacing) * 4);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 3);
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+/* Reference-only card view */
+.academic-resource-workbench__ref-view {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 3);
+}
+
+.academic-resource-workbench__ref-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: calc(var(--planning-spacing) * 2);
+  background: var(--planning-canvas);
+  padding: calc(var(--planning-spacing) * 3);
+  border-radius: var(--planning-radius-control);
+  border: 1px solid var(--planning-border);
+}
+
+.academic-resource-workbench__ref-grid dt {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--planning-muted);
+  text-transform: uppercase;
+}
+
+.academic-resource-workbench__ref-grid dd {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--planning-text);
+}
+
+/* Modals / Dialogs for Bulk Preview */
+.academic-resource-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--planning-spacing) * 4);
+}
+
+.academic-resource-modal {
+  background: var(--planning-surface);
+  border: 1px solid var(--planning-border);
+  border-radius: var(--planning-radius-panel);
+  max-width: 640px;
+  width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  z-index: 1101;
+}
+
+.academic-resource-modal__header {
+  padding: calc(var(--planning-spacing) * 4);
+  border-bottom: 1px solid var(--planning-border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: calc(var(--planning-spacing) * 2);
+}
+
+.academic-resource-modal__title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--planning-text);
+}
+
+.academic-resource-modal__subtitle {
+  margin: calc(var(--planning-spacing) * 1) 0 0;
+  font-size: 0.8125rem;
+  color: var(--planning-muted);
+}
+
+.academic-resource-modal__body {
+  padding: calc(var(--planning-spacing) * 4);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 3);
+}
+
+.academic-resource-modal__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--planning-spacing) * 2);
+  padding: calc(var(--planning-spacing) * 2) calc(var(--planning-spacing) * 3);
+  background: var(--planning-canvas);
+  border: 1px solid var(--planning-border);
+  border-radius: var(--planning-radius-control);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.academic-resource-modal__item-list {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 1.5);
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.academic-resource-modal__item {
+  padding: calc(var(--planning-spacing) * 2) calc(var(--planning-spacing) * 2.5);
+  border: 1px solid var(--planning-border);
+  border-radius: var(--planning-radius-control);
+  background: var(--planning-surface);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 0.5);
+}
+
+.academic-resource-modal__item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--planning-text);
+}
+
+.academic-resource-modal__item-details {
+  font-size: 0.8125rem;
+  color: var(--planning-muted);
+}
+
+.academic-resource-modal__footer {
+  padding: calc(var(--planning-spacing) * 3) calc(var(--planning-spacing) * 4);
+  border-top: 1px solid var(--planning-border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: calc(var(--planning-spacing) * 2);
+  background: var(--planning-canvas);
+}
+
+/* Empty State */
+.academic-resource-workbench__empty {
+  padding: calc(var(--planning-spacing) * 8) calc(var(--planning-spacing) * 4);
+  text-align: center;
+  color: var(--planning-muted);
+  font-size: 0.875rem;
+}
+
+/* Responsive adjustment for 720px and narrower */
+@media (max-width: 900px) {
+  .academic-resource-workbench__split {
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .academic-resource-workbench__table-pane {
+    flex: none;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .academic-resource-workbench__inspector-pane {
+    flex: none;
+    max-width: 100%;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+}

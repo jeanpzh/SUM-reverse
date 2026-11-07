@@ -1,6 +1,7 @@
 // Synthetic local integration only. Starts dedicated processes, never attaches to existing servers.
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
+import { createServer } from 'node:net'
 import { PLANNING_LIMITS } from '../../shared/academic-planning-policy.mjs'
 import { existsSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
@@ -9,8 +10,24 @@ import { resolve } from 'node:path'
 import { chromium } from 'playwright'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
-const apiPort = 3210
-const webPort = 5176
+
+function parsePort(value, fallback) {
+  if (value === undefined) return fallback
+  const port = Number(value)
+  if (!Number.isInteger(port) || port <= 1024 || port >= 65535 || [3210, 5176].includes(port)) {
+    throw new Error('Puerto de prueba inválido o reservado para la demo del usuario')
+  }
+  return port
+}
+async function assertPortFree(port) {
+  await new Promise((accept, reject) => {
+    const server = createServer()
+    server.once('error', reject)
+    server.listen(port, '127.0.0.1', () => server.close(accept))
+  })
+}
+const apiPort = parsePort(process.env.SUM_TEST_API_PORT, 3411)
+const webPort = parsePort(process.env.SUM_TEST_WEB_PORT, 5411)
 const api = `http://127.0.0.1:${apiPort}`
 const web = `http://127.0.0.1:${webPort}`
 const route = '/local/programacion-academica'
@@ -39,14 +56,6 @@ function start(args, cwd, env) {
   child.stdout.on('data', () => {})
   children.push(child)
   return child
-}
-async function assertPortFree(port) {
-  const { createServer } = await import('node:net')
-  await new Promise((accept, reject) => {
-    const server = createServer()
-    server.once('error', () => reject(new Error(`Puerto ${port} ocupado: no se inspeccionará el servicio existente`)))
-    server.listen(port, '127.0.0.1', () => server.close(accept))
-  })
 }
 
 try {
@@ -120,8 +129,18 @@ try {
     }
   }
   // Keep one named reference teacher qualified for selected courses and preserve the authorized synthetic name.
-  const teacherForm = page.locator('.academic-scheduling__resource-card--teacher')
-  while (await teacherForm.count()) await teacherForm.getByRole('button', { name: /^Quitar docente / }).click()
+  const clearIncluded = async (kind) => {
+    const workbench = page.locator('.academic-resource-workbench')
+    const filter = page.getByLabel(kind === 'teachers' ? 'Filtrar docentes por inclusión' : 'Filtrar ambientes por inclusión')
+    await filter.selectOption('included')
+    if (await workbench.locator('tbody tr input[type="checkbox"]').count()) {
+      await workbench.getByRole('button', { name: 'Seleccionar visibles', exact: true }).click()
+      await workbench.getByRole('button', { name: /Retirar seleccionados/ }).click()
+      await page.getByRole('dialog').getByRole('button', { name: /^Confirmar retiro/ }).click()
+    }
+    await filter.selectOption('all')
+  }
+  await clearIncluded('teachers')
   const reference = catalog.referenceTeachers?.[0]
   assert.ok(reference, 'el catálogo incluye docentes de referencia sintéticos con nombre')
   await page.getByLabel('Seleccionar o agregar docente').selectOption(reference.id)
@@ -142,8 +161,8 @@ try {
   await page.getByLabel('Preferencias semanales · prioridad blanda inicio 1', { exact: true }).fill('08:00')
   await page.getByLabel('Preferencias semanales · prioridad blanda fin 1', { exact: true }).fill('12:00')
   await page.getByLabel('Criterio de asignación').selectOption('balanced')
-  const roomForm = page.locator('.academic-scheduling__resource-card--room')
-  while (await roomForm.count()) await roomForm.getByRole('button', { name: /^Quitar ambiente / }).click()
+  await page.getByRole('tab', { name: /Aulas y laboratorios/ }).click()
+  await clearIncluded('rooms')
   await page.getByRole('button', { name: 'Agregar laboratorio', exact: true }).click()
   await page.getByLabel('Identificación ambiente').fill('LAB-DEMO-1')
   await page.getByLabel('Nombre ambiente').fill('Laboratorio sintético')

@@ -798,17 +798,25 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
           onEstimateDemand={() => void estimateDemand()}
           onUseBaseDemand={(courseId, value) => updateDemand(courseId, String(value))}
         />
+      </fieldset>
 
-        {catalog && <section className="academic-scheduling__section" aria-labelledby="academic-scheduling-resource-editor">
-          <div className="academic-scheduling__step-heading"><h3 id="academic-scheduling-resource-editor">Paso 2 · Configurar recursos</h3>
-            <p>Los nombres de referencia provienen del escenario sintético y no confirman asignaciones del nuevo periodo.</p></div>
-          <AcademicResourceEditor catalog={catalog} resources={resources} onChange={updateResources} />
-          <div className="academic-scheduling__general-windows"><strong>Franjas generales del catálogo</strong>
-            <span>La disponibilidad de cada recurso se intersecta con estas franjas; no se deduce del historial.</span>
-            <ul>{catalog.windows.map((window, index) => <li key={index}>{formatAcademicInterval(window)}</li>)}</ul>
-          </div>
-        </section>}
+      {catalog && <section className="academic-scheduling__section" aria-labelledby="academic-scheduling-resource-editor">
+        <div className="academic-scheduling__step-heading"><h3 id="academic-scheduling-resource-editor">Paso 2 · Configurar recursos</h3>
+          <p>Los nombres de referencia provienen del escenario sintético y no confirman asignaciones del nuevo periodo.</p></div>
+        <AcademicResourceEditor
+          catalog={catalog}
+          resources={resources}
+          onChange={updateResources}
+          isLocked={lockedDraft || draftBusy}
+          proposal={proposal}
+        />
+        <div className="academic-scheduling__general-windows"><strong>Franjas generales del catálogo</strong>
+          <span>La disponibilidad de cada recurso se intersecta con estas franjas; no se deduce del historial.</span>
+          <ul>{catalog.windows.map((window, index) => <li key={index}>{formatAcademicInterval(window)}</li>)}</ul>
+        </div>
+      </section>}
 
+      <fieldset className="academic-scheduling__locked-workspace" disabled={lockedDraft || draftBusy}>
         {catalog && <section className="academic-scheduling__section academic-scheduling__generate" aria-labelledby="academic-scheduling-generate">
           <h3 id="academic-scheduling-generate">Paso 3 · Generar propuesta</h3>
           <p>Periodo: {planningPeriod}. Se envían todos los cursos seleccionados, incluidos los que estén ocultos por el filtro de ciclo.</p>
