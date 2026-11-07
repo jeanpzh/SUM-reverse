@@ -12,6 +12,10 @@
   --planning-warning-surface: #fff4dc;
   --planning-error: #a12622;
   --planning-error-surface: #fdeceb;
+  --planning-primary-foreground: #ffffff;
+  --planning-error-foreground: #ffffff;
+  --planning-overlay: rgb(0 0 0 / 45%);
+  --planning-shadow: 0 8px 32px rgb(0 0 0 / 20%);
   --planning-spacing: 4px;
   --planning-radius-control: 4px;
   --planning-radius-panel: 4px;
@@ -230,64 +234,24 @@
   }
 }
 
-.planning-root {
-  --planning-canvas: #f5f6f5;
-  --planning-surface: #ffffff;
-  --planning-text: #202925;
-  --planning-muted: #52625a;
-  --planning-rail: #202a25;
-  --planning-rail-text: #f5f6f5;
-  --planning-primary: #175c3b;
-  --planning-primary-foreground: #ffffff;
-  --planning-selected: #eaf2ed;
-  --planning-border: #d7ded9;
-  --planning-warning: #805300;
-  --planning-warning-surface: #fff4dc;
-  --planning-error: #a12622;
-  --planning-error-foreground: #ffffff;
-  --planning-error-surface: #fdeceb;
-  --planning-overlay: rgb(0 0 0 / 45%);
-  --planning-shadow: 0 8px 32px rgb(0 0 0 / 20%);
-}
-  .planning-root[data-theme='dark'] {
-    --planning-canvas: #171c19;
-    --planning-surface: #222a25;
-    --planning-text: #f1f5f2;
-    --planning-muted: #bac8bf;
-    --planning-rail: #101512;
-    --planning-rail-text: #f1f5f2;
-    --planning-primary: #67c995;
-    --planning-primary-foreground: #102419;
-    --planning-selected: #304b3b;
-    --planning-border: #526158;
-    --planning-warning: #ffd27a;
-    --planning-warning-surface: #483719;
-    --planning-error: #ffaaa5;
-    --planning-error-foreground: #3a0c0a;
-    --planning-error-surface: #4c2421;
-    --planning-overlay: rgb(0 0 0 / 60%);
-    --planning-shadow: 0 8px 32px rgb(0 0 0 / 48%);
-  }
-@media (prefers-color-scheme: dark) {
-  .planning-root:not([data-theme='light']) {
-    --planning-canvas: #171c19;
-    --planning-surface: #222a25;
-    --planning-text: #f1f5f2;
-    --planning-muted: #bac8bf;
-    --planning-rail: #101512;
-    --planning-rail-text: #f1f5f2;
-    --planning-primary: #67c995;
-    --planning-primary-foreground: #102419;
-    --planning-selected: #304b3b;
-    --planning-border: #526158;
-    --planning-warning: #ffd27a;
-    --planning-warning-surface: #483719;
-    --planning-error: #ffaaa5;
-    --planning-error-foreground: #3a0c0a;
-    --planning-error-surface: #4c2421;
-    --planning-overlay: rgb(0 0 0 / 60%);
-    --planning-shadow: 0 8px 32px rgb(0 0 0 / 48%);
-  }
+.planning-root[data-theme='dark'] {
+  --planning-canvas: #171c19;
+  --planning-surface: #222a25;
+  --planning-text: #f1f5f2;
+  --planning-muted: #bac8bf;
+  --planning-rail: #101512;
+  --planning-rail-text: #f1f5f2;
+  --planning-primary: #67c995;
+  --planning-primary-foreground: #102419;
+  --planning-selected: #304b3b;
+  --planning-border: #526158;
+  --planning-warning: #ffd27a;
+  --planning-warning-surface: #483719;
+  --planning-error: #ffaaa5;
+  --planning-error-foreground: #3a0c0a;
+  --planning-error-surface: #4c2421;
+  --planning-overlay: rgb(0 0 0 / 60%);
+  --planning-shadow: 0 8px 32px rgb(0 0 0 / 48%);
 }
 .planning-root { box-sizing: border-box; }
 .planning-root *, .planning-root *::before, .planning-root *::after { box-sizing: inherit; }
