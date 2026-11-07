@@ -82,6 +82,7 @@ try {
   for (const course of chosen) {
     await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).fill(course === chosen[0] ? '31' : '20')
     await page.getByLabel(`Capacidad ${course.courseId}`, { exact: true }).fill('30')
+    await page.getByLabel(`Inspeccionar ${course.courseId}`).click()
     if (course.planningPatterns?.length) assert.equal(await page.getByLabel(`Patrón ${course.courseId}`).inputValue(), course.planningPatterns[0].id)
     assert.equal(await page.getByLabel(`Modalidad de sesiones ${course.courseId}`).inputValue(), 'continuous')
     if (course.history?.sections.length) {
@@ -184,11 +185,13 @@ try {
   assert.deepEqual(await read(`/local/programacion-academica/v1/propuestas/${priorProposal.proposalId}`), priorProposal)
   const variableCourse = chosen.find((course) => course.planningPatterns?.length > 1)
   if (variableCourse) {
+    await page.getByLabel(`Inspeccionar ${variableCourse.courseId}`).click()
     await page.getByLabel(`Patrón ${variableCourse.courseId}`).selectOption(variableCourse.planningPatterns[1].id)
     assert.equal(await page.locator('.academic-scheduling__result').count(), 0, 'cambiar patrón invalida resultado anterior')
   }
   assert.deepEqual((await read('/local/matricula-regular/v1/contextos/SYN-SIS-A')).data.offer, beforeOffer)
   assert.deepEqual(await read(`/local/programacion-academica/v1/propuestas/${proposal.proposalId}`), proposal)
+  await page.getByLabel(`Inspeccionar ${chosen[1].courseId}`).click()
   await page.getByLabel(`Modalidad de sesiones ${chosen[1].courseId}`).selectOption('split')
   assert.equal(await page.locator('.academic-scheduling__result').count(), 0, 'cambiar modalidad invalida la propuesta visible')
   const splitResponse = page.waitForResponse((response) => response.url().endsWith('/propuestas') && response.request().method() === 'POST')

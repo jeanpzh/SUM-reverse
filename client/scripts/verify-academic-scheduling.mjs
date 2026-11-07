@@ -103,6 +103,7 @@ try {
   for (const course of chosen) {
     await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).fill(course === chosen[0] ? '31' : '20')
     await page.getByLabel(`Capacidad ${course.courseId}`, { exact: true }).fill('30')
+    await page.getByLabel(`Inspeccionar ${course.courseId}`).click()
     if (course.planningPatterns?.length) {
       const pattern = page.getByLabel(`Patrón ${course.courseId}`)
       assert.equal(await pattern.inputValue(), course.planningPatterns[0].id)
@@ -203,6 +204,7 @@ try {
   const changeablePatternCourse = variableCourse ?? patternCourse
   if (changeablePatternCourse) {
     await stage('Preparación', 'preparacion')
+    await page.getByLabel(`Inspeccionar ${changeablePatternCourse.courseId}`).click()
     const pattern = page.getByLabel(`Patrón ${changeablePatternCourse.courseId}`)
     await pattern.selectOption(changeablePatternCourse.planningPatterns[1].id)
     assert.equal(await page.locator('.academic-scheduling__result').count(), 0, 'cambiar patrón invalida la propuesta visible')

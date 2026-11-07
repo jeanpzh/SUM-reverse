@@ -6,7 +6,7 @@ import type { AcademicCatalog, AcademicDemandEstimate, AcademicProposal } from '
 import type { AcademicAdjustment, AcademicPlanningResources, AcademicAllocationPolicy, AcademicDemandRequest, AcademicDraftList, AcademicDraftState, AcademicWorkspace, AcademicTeacherReview, AcademicSavedDraft } from '../../../shared/programacion-academica-api.mjs'
 import { validateAcademicResources, validateAcademicRequest, validateAcademicWorkspace } from '../../../shared/programacion-academica-api.mjs'
 import { AcademicResourceEditor } from './AcademicResourceEditor'
-import { AcademicDemandPanel } from './AcademicDemandPanel'
+import { AcademicPreparationCourses } from './AcademicPreparationCourses'
 import { AcademicTeacherReview as AcademicTeacherReviewPanel } from './AcademicTeacherReview'
 import { AcademicPublicationPanel } from './AcademicPublicationPanel'
 import { AcademicIntentionDemandPanel } from './AcademicIntentionDemandPanel'
@@ -477,6 +477,23 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
       : current.filter((id) => id !== courseId))
   }
 
+  const selectCourses = (courseIds: string[]) => {
+    invalidateProposal()
+    invalidateDemandEstimate()
+    setDemandBaseRequest(null)
+    markWorkspaceDirty(true)
+    setSelectedCourses(courseIds)
+  }
+
+  const applyBulkChanges = (newDemands: Record<string, string>, newCapacities: Record<string, string>) => {
+    invalidateProposal()
+    invalidateDemandEstimate()
+    setDemandBaseRequest(null)
+    markWorkspaceDirty(true)
+    setDemands(newDemands)
+    setCapacities(newCapacities)
+  }
+
   const updateCapacity = (courseId: string, value: string) => {
     invalidateProposal()
     invalidateDemandEstimate()
@@ -659,9 +676,6 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
       && capacity !== undefined && capacity.trim() !== '' && Number.isSafeInteger(Number(capacity)) && Number(capacity) > 0
       && (!patternIds.length || patternIds.includes(patterns[course.courseId]))
   })
-  const visibleCourses = catalog?.courses.filter((course) => cycleFilter === 'all' || String(course.cycle ?? '') === cycleFilter) ?? []
-  const availableCycles = [...new Set(catalog?.courses.map((course) => course.cycle).filter((cycle): cycle is number => cycle !== undefined) ?? [])]
-    .sort((left, right) => left - right)
   const blocks = proposal ? aggregateAcademicBlocks(proposal) : []
   const assignmentRows = blocks.map((block) => [
     block.courseName,
@@ -753,118 +767,37 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
       </section>
 
       <fieldset className="academic-scheduling__locked-workspace" disabled={lockedDraft || draftBusy}>
-        <section className="academic-scheduling__panel" aria-labelledby="academic-scheduling-courses">
-          <header className="academic-scheduling__panel-heading">
-            <div>
-              <h3 id="academic-scheduling-courses">Paso 1 · Seleccionar cursos</h3>
-              <p>Selecciona hasta {PLANNING_LIMITS.courses} cursos. La referencia histórica se conserva aparte del patrón usado en la planificación.</p>
-            </div>
-            <div className="academic-scheduling__panel-meta">
-              <span className="academic-scheduling__revision">{catalog?.revision ?? 'PA-DEMO-1'}</span>
-              <span>{selectedCourses.length} / {PLANNING_LIMITS.courses} seleccionados</span>
-            </div>
-          </header>
-
-          {loadingCatalog && <p className="academic-scheduling__state" role="status">Consultando catálogo local…</p>}
-          {catalogError && <div className="academic-scheduling__error" role="alert">
-            <span>{catalogError}</span>
-            <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary" onClick={retryCatalog}>Reintentar</button>
-          </div>}
-          {catalog && <>
-            <div className="academic-scheduling__cycle-filter">
-              <label>Periodo de planificación
-                <select aria-label="Periodo de planificación" value={planningPeriod}
-                  onChange={(event) => applyPeriodDefaults(event.currentTarget.value as PlanningPeriod)}>
-                  {!['2026-I', '2026-II', '2027-I', '2027-II'].includes(planningPeriod) && <option value={planningPeriod}>{planningPeriod}</option>}
-                  <option value="2026-I">2026-I</option><option value="2026-II">2026-II</option>
-                  <option value="2027-I">2027-I</option><option value="2027-II">2027-II</option>
-                </select>
-              </label>
-              <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary"
-                onClick={() => applyPeriodDefaults(planningPeriod, true)}>Aplicar valores iniciales del periodo</button>
-              <p>Al cambiar de periodo se aplican los valores iniciales a demanda y capacidad. Los ajustes requieren confirmación si hay cambios pendientes.</p>
-            </div>
-            <label className="academic-scheduling__cycle-filter">Filtrar por ciclo
-              <select aria-label="Filtrar cursos por ciclo" value={cycleFilter} onChange={(event) => setCycleFilter(event.currentTarget.value)}>
-                <option value="all">Todos</option>
-                {Array.from({ length: 10 }, (_, index) => index + 1).map((cycle) => <option key={cycle} value={cycle}>Ciclo {cycle}</option>)}
-              </select>
-              {availableCycles.length === 0 && <span>El catálogo no especifica ciclos.</span>}
-            </label>
-            <div className="academic-scheduling__courses">
-              {visibleCourses.map((course) => <article className="academic-scheduling__course" key={course.courseId}>
-                <label className="academic-scheduling__selection">
-                  <input type="checkbox" checked={selectedCourses.includes(course.courseId)}
-                    disabled={!selectedCourses.includes(course.courseId) && selectedCourses.length >= PLANNING_LIMITS.courses}
-                    aria-label={`Seleccionar ${course.courseId}`} onChange={(event) => toggleCourse(course.courseId, event.currentTarget.checked)} />
-                  Incluir en la propuesta
-                </label>
-                <div className="academic-scheduling__course-title">
-                  <strong>{course.name}</strong>
-                  <span>{course.courseId}</span>
-                </div>
-                <label>
-                  Demanda final de planificación
-                  <input type="number" min="0" step="1" inputMode="numeric" value={demands[course.courseId] ?? ''}
-                    disabled={!selectedCourses.includes(course.courseId)}
-                    aria-label={`Demanda ${course.courseId}`}
-                    onChange={(event) => updateDemand(course.courseId, event.currentTarget.value)} />
-                </label>
-                <label>
-                  Capacidad objetivo
-                  <input type="number" min="1" step="1" inputMode="numeric" value={capacities[course.courseId] ?? ''}
-                    disabled={!selectedCourses.includes(course.courseId)} aria-label={`Capacidad ${course.courseId}`}
-                    onChange={(event) => updateCapacity(course.courseId, event.currentTarget.value)} />
-                </label>
-                {course.planningPatterns && course.planningPatterns.length > 0 && <label>
-                  Patrón semanal de planificación
-                  <select value={patterns[course.courseId] ?? ''} disabled={!selectedCourses.includes(course.courseId)}
-                    aria-label={`Patrón ${course.courseId}`} onChange={(event) => updatePattern(course.courseId, event.currentTarget.value)}>
-                    {course.planningPatterns.map((pattern) => <option key={pattern.id} value={pattern.id}>
-                      {pattern.label} — {pattern.weeklySessions.map((session) => `${session.type ?? 'Sesión'} ${session.durationMinutes} min`).join(', ')}
-                    </option>)}
-                  </select>
-                </label>}
-                <label>
-                  Modalidad de sesiones
-                  <select value={deliveryModes[course.courseId] ?? 'continuous'} disabled={!selectedCourses.includes(course.courseId)}
-                    aria-label={`Modalidad de sesiones ${course.courseId}`}
-                    onChange={(event) => updateDeliveryMode(course.courseId, event.currentTarget.value as 'continuous' | 'split')}>
-                    <option value="continuous">Bloque continuo · predeterminado</option>
-                    <option value="split">Sesiones divididas · excepción</option>
-                  </select>
-                </label>
-                <dl>
-                  {course.cycle !== undefined && <div><dt>Ciclo</dt><dd>{course.cycle}</dd></div>}
-                  {course.credits !== undefined && <div><dt>Créditos</dt><dd>{course.credits}</dd></div>}
-                  <div><dt>Sesiones del patrón</dt><dd>{(course.planningPatterns?.find((pattern) => pattern.id === patterns[course.courseId])?.weeklySessions ?? course.weeklySessions).length}</dd></div>
-                  <div><dt>Secciones estimadas</dt><dd>{proposal?.status === 'invalid-input' ? 'Entrada inválida' : proposal
-                    ? proposal.sections.filter((section) => section.courseId === course.courseId).length
-                    : 'Se calculará al generar'}</dd></div>
-                </dl>
-                {course.history && <details className="academic-scheduling__history">
-                  <summary>Referencia histórica · {course.history.sections.length} secciones</summary>
-                  <div className="academic-scheduling__history-content">
-                    {course.history.sections.map((section) => <div className="academic-scheduling__history-section" key={section.sectionId}>
-                      <strong>Sección {section.sectionId} · capacidad histórica {section.capacity}</strong>
-                      <ul>{section.sessions.map((session, index) => <li key={`${section.sectionId}-${index}`}>
-                        {formatAcademicInterval(session)} · {session.type} · {session.room} · {session.teacherName
-                          ? `Docente de referencia: ${session.teacherName}` : session.teacherId}
-                      </li>)}</ul>
-                    </div>)}
-                  </div>
-                </details>}
-              </article>)}
-            </div>
-            {planningPeriod === '2027-I' ? <AcademicDemandPanel sourceId={demandSourceId} onSourceChange={changeDemandSource}
-              courses={catalog.courses.filter((course) => selectedCourses.includes(course.courseId)).map((course) => ({
-                courseId: course.courseId, name: course.name, targetCapacity: capacities[course.courseId] ?? '', finalDemand: demands[course.courseId] ?? '',
-              }))}
-              estimate={demandEstimate} loading={demandLoading} error={demandError}
-              onEstimate={() => void estimateDemand()} onUseBase={(courseId, value) => updateDemand(courseId, String(value))} />
-              : <p className="academic-scheduling__resource-note" role="note">El estimador de demanda potencial solo tiene ámbito sintético 2027-I. Para {planningPeriod}, ingresa la demanda de planificación manualmente.</p>}
-          </>}
-        </section>
+        <AcademicPreparationCourses
+          catalog={catalog}
+          loadingCatalog={loadingCatalog}
+          catalogError={catalogError}
+          onRetryCatalog={retryCatalog}
+          planningPeriod={planningPeriod}
+          onApplyPeriodDefaults={applyPeriodDefaults}
+          cycleFilter={cycleFilter}
+          onCycleFilterChange={setCycleFilter}
+          selectedCourses={selectedCourses}
+          onToggleCourse={toggleCourse}
+          onSelectCourses={selectCourses}
+          demands={demands}
+          capacities={capacities}
+          patterns={patterns}
+          deliveryModes={deliveryModes}
+          onUpdateDemand={updateDemand}
+          onUpdateCapacity={updateCapacity}
+          onUpdatePattern={updatePattern}
+          onUpdateDeliveryMode={updateDeliveryMode}
+          onApplyBulkChanges={applyBulkChanges}
+          proposal={proposal}
+          isLocked={lockedDraft || draftBusy}
+          demandSourceId={demandSourceId}
+          onChangeDemandSource={changeDemandSource}
+          demandEstimate={demandEstimate}
+          demandLoading={demandLoading}
+          demandError={demandError}
+          onEstimateDemand={() => void estimateDemand()}
+          onUseBaseDemand={(courseId, value) => updateDemand(courseId, String(value))}
+        />
 
         {catalog && <section className="academic-scheduling__section" aria-labelledby="academic-scheduling-resource-editor">
           <div className="academic-scheduling__step-heading"><h3 id="academic-scheduling-resource-editor">Paso 2 · Configurar recursos</h3>
