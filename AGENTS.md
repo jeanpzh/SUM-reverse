@@ -214,3 +214,17 @@ Avoid lengthy repeated authorization explanations. Raise the gate once per task 
 ## 10. Commits and Pull Requests
 
 Use short imperative commit subjects, for example `Add student profile screen`. Pull requests should describe the user-visible change, reference relevant sanitized evidence, include actual validation results, and attach sanitized before/after screenshots when meaningful. Never commit secrets or unredacted student information.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues for `jeanpzh/SUM-reverse` (via the `gh` CLI). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
