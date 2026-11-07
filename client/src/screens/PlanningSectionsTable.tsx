@@ -228,6 +228,7 @@ export function PlanningSectionsTable({
                     return (
                       <tr
                         key={section.sectionId}
+                        data-section-id={section.sectionId}
                         className={`planning-sections__row ${isPending ? 'planning-sections__row--pending' : ''} ${isSelected ? 'planning-sections__row--selected' : ''}`}
                         onClick={() => onSelectSection(section.sectionId)}
                         aria-selected={isSelected}

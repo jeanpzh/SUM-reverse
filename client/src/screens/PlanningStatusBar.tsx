@@ -1,5 +1,5 @@
 import type { AcademicProposal } from '../data/academicScheduling'
-import { academicSectionCoverage, academicSessionLabel } from '../data/academicScheduling'
+import { academicSectionCoverage, academicSectionLabel, academicSessionLabel, formatAcademicDuration } from '../data/academicScheduling'
 
 export interface PlanningStatusBarProps {
   proposal: AcademicProposal
@@ -130,6 +130,20 @@ export function PlanningStatusBar({ proposal, onRegenerate, onReviewPending, isL
             Búsqueda local: {proposal.stats.exploredCandidates} candidatos explorados, {proposal.stats.candidateVisits} visitas y {proposal.stats.backtracks} retrocesos.
             {proposal.stats.limitReason && <> Límite: {proposal.stats.limitReason}.</>}
           </p>
+          {proposal.pending.length > 0 && (
+            <div className="academic-scheduling__diagnostics">
+              <h4>Componentes pendientes</h4>
+              <ul>
+                {proposal.pending.map((pending) => (
+                  <li key={pending.sessionId}>
+                    {proposal.sections.find((section) => section.sectionId === pending.sectionId)?.courseName ?? pending.courseId}
+                    {' · '}Sección {academicSectionLabel(proposal, pending.sectionId)}
+                    {' · '}{formatAcademicDuration(pending.durationMinutes)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {proposal.diagnostics.length > 0 && (
             <div className="academic-scheduling__diagnostics">
               <h4>Diagnósticos</h4>
