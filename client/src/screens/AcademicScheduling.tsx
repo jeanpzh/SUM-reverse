@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { DataTable, PageTitle } from '../components/Common'
+import { DataTable } from '../components/Common'
 import { fetchAcademicCatalog, estimateAcademicDemand, createAcademicProposal, adjustAcademicProposal, fetchAcademicDrafts, saveAcademicDraft, resumeAcademicDraft, submitAcademicTeacherReview, respondAcademicTeacherReview, formatAcademicInterval, formatAcademicMinute, formatAcademicDuration, toAcademicScheduleEvents, academicSectionLabel, academicSessionLabel, aggregateAcademicBlocks, academicSectionCoverage, approveAcademicDraft, publishAcademicDraft, forkAcademicDraft, createAcademicPlanningDefaults, buildAcademicPlanningRequest, PLANNING_LIMITS } from '../data/academicScheduling'
 import type { PlanningPeriod, PlanningPolicy } from '../data/academicScheduling'
 import type { AcademicCatalog, AcademicDemandEstimate, AcademicProposal } from '../data/academicScheduling'
@@ -11,7 +11,11 @@ import { AcademicTeacherReview as AcademicTeacherReviewPanel } from './AcademicT
 import { AcademicPublicationPanel } from './AcademicPublicationPanel'
 import { AcademicIntentionDemandPanel } from './AcademicIntentionDemandPanel'
 import { WeeklySchedule } from './WeeklySchedule'
+import { PlanningScopeHeader } from './PlanningScopeHeader'
+import { PlanningStageNav } from './PlanningStageNav'
+import type { PlanningStage } from '../routes/local.programacion-academica'
 import './AcademicScheduling.css'
+import './PlanningWorkbench.css'
 
 function statusLabel(status: AcademicProposal['status']) {
   switch (status) {
@@ -26,7 +30,7 @@ function emptyScheduleData() {
   return null
 }
 
-export function AcademicScheduling() {
+export function AcademicScheduling({ currentStage = 'preparacion' }: { currentStage?: PlanningStage } = {}) {
   const [catalog, setCatalog] = useState<AcademicCatalog | null>(null)
   const [catalogError, setCatalogError] = useState<string | null>(null)
   const [loadingCatalog, setLoadingCatalog] = useState(true)
@@ -679,73 +683,400 @@ export function AcademicScheduling() {
   const activeAssignments = activeBlock && proposal ? proposal.assignments.filter((assignment) => activeBlock.sessionIds.includes(assignment.sessionId))
     .sort((left, right) => left.startMinute - right.startMinute || left.sessionId.localeCompare(right.sessionId)) : []
 
-  return <section className="screen-academic-scheduling">
-    <PageTitle>Programación académica asistida</PageTitle>
-    <div className="academic-scheduling__notice" role="note">
-      <strong>Prototipo local con datos sintéticos.</strong>
-      <span>No es una pantalla oficial SUM y no requiere ni otorga permisos administrativos.</span>
-      {catalog?.source && <span className="academic-scheduling__provenance">
-        Fuente: {catalog.source.kind} · {catalog.source.reference} · periodo de referencia: {catalog.source.sourcePeriod} · planificación: {catalog.source.planningPeriod}. {catalog.source.assumptions}
-      </span>}
-    </div>
+  const canSave = Boolean(catalog) && !draftBusy && !lockedDraft && validDemands
+  const disabledSaveReason = !catalog
+    ? 'Catálogo local no disponible'
+    : lockedDraft
+      ? 'Versión congelada de solo lectura'
+      : !validDemands
+        ? 'Demanda y capacidad requeridas'
+        : null
 
-    <section className="academic-scheduling__draft-bar" aria-label="Propuestas locales">
-      <div className="academic-scheduling__draft-heading">
-        <label>Propuesta
-          <input aria-label="Nombre de la propuesta" maxLength={100} value={draftTitle} disabled={lockedDraft || draftBusy}
-            onChange={(event) => { setDraftTitle(event.currentTarget.value); markWorkspaceDirty() }} />
-        </label>
-        <label>Estado
-          <select aria-label="Estado de la propuesta" disabled={lockedDraft || draftBusy} value={workspaceDirty && savedDraftState === 'ready-for-approval'
-            ? 'draft' : savedReview && ['in-review', 'ready-for-approval'].includes(savedDraftState) ? savedDraftState : draftState} onChange={(event) => {
-            setDraftState(event.currentTarget.value as AcademicDraftState)
-            markWorkspaceDirty()
-          }}>
-            <option value="draft">Borrador</option>
-            <option value="ready-for-review" disabled={!proposal || proposal.status !== 'complete' || !proposal.coverageComplete || proposal.assignments.length === 0}>Lista para revisión</option>
-            <option value="in-review" disabled>En revisión docente</option>
-            <option value="ready-for-approval" disabled>Lista para aprobación</option>
-            {savedDraftState === 'approved' && <option value="approved" disabled>Aprobada (simulada)</option>}
-            {savedDraftState === 'published' && <option value="published" disabled>Publicada (simulada)</option>}
-          </select>
-        </label>
-        <div className="academic-scheduling__draft-actions">
-          <button type="button" className="academic-scheduling__button" disabled={!catalog || draftBusy || lockedDraft || !validDemands}
-            onClick={() => void saveDraft()}>{draftBusy ? 'Guardando…' : 'Guardar propuesta'}</button>
-          <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary"
-            aria-expanded={draftListOpen} aria-controls="academic-scheduling-saved-proposals"
-            onClick={() => {
-              const opening = !draftListOpen
-              setDraftListOpen(opening)
-              if (opening) void refreshDraftList()
-            }}>Mis propuestas</button>
-        </div>
-      </div>
-      <p className="academic-scheduling__draft-note">Almacenamiento local compartido; no está asociado a una cuenta.</p>
-      {workspaceDirty && <p className="academic-scheduling__draft-note" role="status">
-        {draftId ? `Cambios sin guardar · versión guardada ${draftVersion}.` : 'Cambios sin guardar.'}
-      </p>}
-      {draftMessage && <p className="academic-scheduling__draft-note" role="status">{draftMessage}</p>}
-      {draftError && <p className="academic-scheduling__error" role="alert">{draftError}</p>}
-      {draftListOpen && <div id="academic-scheduling-saved-proposals" className="academic-scheduling__saved-proposals">
-        {draftList?.unavailableCount ? <p role="status">{draftList.unavailableCount} propuesta(s) no se pudieron leer.</p> : null}
-        {draftList?.items.length === 0 && <p>No hay propuestas guardadas.</p>}
-        {draftList && draftList.items.map((item) => <details className="academic-scheduling__saved-row" key={item.id}>
-          <summary>{item.title} · {item.schoolId} · {item.academicPeriod} · {item.state === 'draft' ? 'Borrador' : item.state === 'ready-for-review' ? 'Lista para revisión' : item.state === 'in-review' ? 'En revisión docente' : item.state === 'ready-for-approval' ? 'Lista para aprobación' : item.state === 'approved' ? 'Aprobada (simulada)' : 'Publicada (simulada)'} · v{item.version}</summary>
-          <div><span>Actualizada {new Date(item.updatedAt).toLocaleString('es-PE')} · {item.hasSchedule ? 'Con horario' : 'Solo configuración'}</span>
+  return <section className="screen-academic-scheduling">
+    <PlanningScopeHeader
+      school="Sistemas"
+      period={planningPeriod}
+      draftVersion={draftVersion}
+      draftId={draftId}
+      savedDraftState={savedDraftState}
+      workspaceDirty={workspaceDirty}
+      canSave={canSave}
+      draftBusy={draftBusy}
+      onSave={() => void saveDraft()}
+      disabledReason={disabledSaveReason}
+    />
+
+    <PlanningStageNav currentStage={currentStage} />
+
+    {/* Stage 1: Preparación */}
+    <section
+      className="planning-stage-panel planning-stage-panel--preparacion"
+      hidden={currentStage !== 'preparacion'}
+      aria-label="Etapa de preparación"
+    >
+      <section className="academic-scheduling__draft-bar" aria-label="Propuestas locales">
+        <div className="academic-scheduling__draft-heading">
+          <label>Propuesta
+            <input aria-label="Nombre de la propuesta" maxLength={100} value={draftTitle} disabled={lockedDraft || draftBusy}
+              onChange={(event) => { setDraftTitle(event.currentTarget.value); markWorkspaceDirty() }} />
+          </label>
+          <label>Estado
+            <select aria-label="Estado de la propuesta" disabled={lockedDraft || draftBusy} value={workspaceDirty && savedDraftState === 'ready-for-approval'
+              ? 'draft' : savedReview && ['in-review', 'ready-for-approval'].includes(savedDraftState) ? savedDraftState : draftState} onChange={(event) => {
+              setDraftState(event.currentTarget.value as AcademicDraftState)
+              markWorkspaceDirty()
+            }}>
+              <option value="draft">Borrador</option>
+              <option value="ready-for-review" disabled={!proposal || proposal.status !== 'complete' || !proposal.coverageComplete || proposal.assignments.length === 0}>Lista para revisión</option>
+              <option value="in-review" disabled>En revisión docente</option>
+              <option value="ready-for-approval" disabled>Lista para aprobación</option>
+              {savedDraftState === 'approved' && <option value="approved" disabled>Aprobada (simulada)</option>}
+              {savedDraftState === 'published' && <option value="published" disabled>Publicada (simulada)</option>}
+            </select>
+          </label>
+          <div className="academic-scheduling__draft-actions">
             <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary"
-              disabled={draftBusy} onClick={() => void resumeDraft(item.id, item.version)}>{item.state === 'approved' || item.state === 'published' ? 'Consultar' : 'Continuar edición'}</button></div>
-        </details>)}
-      </div>}
+              aria-expanded={draftListOpen} aria-controls="academic-scheduling-saved-proposals"
+              onClick={() => {
+                const opening = !draftListOpen
+                setDraftListOpen(opening)
+                if (opening) void refreshDraftList()
+              }}>Mis propuestas</button>
+          </div>
+        </div>
+        <p className="academic-scheduling__draft-note">Almacenamiento local compartido; no está asociado a una cuenta.</p>
+        {workspaceDirty && <p className="academic-scheduling__draft-note" role="status">
+          {draftId ? `Cambios sin guardar · versión guardada ${draftVersion}.` : 'Cambios sin guardar.'}
+        </p>}
+        {draftMessage && <p className="academic-scheduling__draft-note" role="status">{draftMessage}</p>}
+        {draftError && <p className="academic-scheduling__error" role="alert">{draftError}</p>}
+        {draftListOpen && <div id="academic-scheduling-saved-proposals" className="academic-scheduling__saved-proposals">
+          {draftList?.unavailableCount ? <p role="status">{draftList.unavailableCount} propuesta(s) no se pudieron leer.</p> : null}
+          {draftList?.items.length === 0 && <p>No hay propuestas guardadas.</p>}
+          {draftList && draftList.items.map((item) => <details className="academic-scheduling__saved-row" key={item.id}>
+            <summary>{item.title} · {item.schoolId} · {item.academicPeriod} · {item.state === 'draft' ? 'Borrador' : item.state === 'ready-for-review' ? 'Lista para revisión' : item.state === 'in-review' ? 'En revisión docente' : item.state === 'ready-for-approval' ? 'Lista para aprobación' : item.state === 'approved' ? 'Aprobada (simulada)' : 'Publicada (simulada)'} · v{item.version}</summary>
+            <div><span>Actualizada {new Date(item.updatedAt).toLocaleString('es-PE')} · {item.hasSchedule ? 'Con horario' : 'Solo configuración'}</span>
+              <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary"
+                disabled={draftBusy} onClick={() => void resumeDraft(item.id, item.version)}>{item.state === 'approved' || item.state === 'published' ? 'Consultar' : 'Continuar edición'}</button></div>
+          </details>)}
+        </div>}
+      </section>
+
       <fieldset className="academic-scheduling__locked-workspace" disabled={lockedDraft || draftBusy}>
-      <AcademicTeacherReviewPanel key={`${draftId ?? 'new'}-${savedReview?.round ?? 0}`} review={savedReview} proposal={proposal} draftId={draftId} draftVersion={draftVersion}
-        derivedState={workspaceDirty ? `${savedDraftState === 'ready-for-approval' ? 'La versión guardada está lista para aprobación' : savedDraftState === 'in-review' ? 'La versión guardada está en revisión docente' : savedDraftState === 'ready-for-review' ? 'La versión guardada está lista para revisión' : savedDraftState === 'approved' ? 'La versión guardada está aprobada (simulada)' : savedDraftState === 'published' ? 'La versión guardada está publicada (simulada)' : 'Borrador'}; cambios locales sin guardar` : savedDraftState === 'ready-for-approval' ? 'Lista para aprobación' : savedDraftState === 'in-review' ? 'En revisión docente' : savedDraftState === 'ready-for-review' ? 'Lista para revisión' : savedDraftState === 'approved' ? 'Aprobada (simulada)' : savedDraftState === 'published' ? 'Publicada (simulada)' : 'Borrador'}
-        dirty={workspaceDirty} busy={draftBusy} error={reviewError} onSubmit={() => void submitTeacherReview()}
-        onRespond={(teacherId, decision, observation) => void respondTeacherReview(teacherId, decision, observation)} />
+        <section className="academic-scheduling__panel" aria-labelledby="academic-scheduling-courses">
+          <header className="academic-scheduling__panel-heading">
+            <div>
+              <h3 id="academic-scheduling-courses">Paso 1 · Seleccionar cursos</h3>
+              <p>Selecciona hasta {PLANNING_LIMITS.courses} cursos. La referencia histórica se conserva aparte del patrón usado en la planificación.</p>
+            </div>
+            <div className="academic-scheduling__panel-meta">
+              <span className="academic-scheduling__revision">{catalog?.revision ?? 'PA-DEMO-1'}</span>
+              <span>{selectedCourses.length} / {PLANNING_LIMITS.courses} seleccionados</span>
+            </div>
+          </header>
+
+          {loadingCatalog && <p className="academic-scheduling__state" role="status">Consultando catálogo local…</p>}
+          {catalogError && <div className="academic-scheduling__error" role="alert">
+            <span>{catalogError}</span>
+            <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary" onClick={retryCatalog}>Reintentar</button>
+          </div>}
+          {catalog && <>
+            <div className="academic-scheduling__cycle-filter">
+              <label>Periodo de planificación
+                <select aria-label="Periodo de planificación" value={planningPeriod}
+                  onChange={(event) => applyPeriodDefaults(event.currentTarget.value as PlanningPeriod)}>
+                  {!['2026-I', '2026-II', '2027-I', '2027-II'].includes(planningPeriod) && <option value={planningPeriod}>{planningPeriod}</option>}
+                  <option value="2026-I">2026-I</option><option value="2026-II">2026-II</option>
+                  <option value="2027-I">2027-I</option><option value="2027-II">2027-II</option>
+                </select>
+              </label>
+              <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary"
+                onClick={() => applyPeriodDefaults(planningPeriod, true)}>Aplicar valores iniciales del periodo</button>
+              <p>Al cambiar de periodo se aplican los valores iniciales a demanda y capacidad. Los ajustes requieren confirmación si hay cambios pendientes.</p>
+            </div>
+            <label className="academic-scheduling__cycle-filter">Filtrar por ciclo
+              <select aria-label="Filtrar cursos por ciclo" value={cycleFilter} onChange={(event) => setCycleFilter(event.currentTarget.value)}>
+                <option value="all">Todos</option>
+                {Array.from({ length: 10 }, (_, index) => index + 1).map((cycle) => <option key={cycle} value={cycle}>Ciclo {cycle}</option>)}
+              </select>
+              {availableCycles.length === 0 && <span>El catálogo no especifica ciclos.</span>}
+            </label>
+            <div className="academic-scheduling__courses">
+              {visibleCourses.map((course) => <article className="academic-scheduling__course" key={course.courseId}>
+                <label className="academic-scheduling__selection">
+                  <input type="checkbox" checked={selectedCourses.includes(course.courseId)}
+                    disabled={!selectedCourses.includes(course.courseId) && selectedCourses.length >= PLANNING_LIMITS.courses}
+                    aria-label={`Seleccionar ${course.courseId}`} onChange={(event) => toggleCourse(course.courseId, event.currentTarget.checked)} />
+                  Incluir en la propuesta
+                </label>
+                <div className="academic-scheduling__course-title">
+                  <strong>{course.name}</strong>
+                  <span>{course.courseId}</span>
+                </div>
+                <label>
+                  Demanda final de planificación
+                  <input type="number" min="0" step="1" inputMode="numeric" value={demands[course.courseId] ?? ''}
+                    disabled={!selectedCourses.includes(course.courseId)}
+                    aria-label={`Demanda ${course.courseId}`}
+                    onChange={(event) => updateDemand(course.courseId, event.currentTarget.value)} />
+                </label>
+                <label>
+                  Capacidad objetivo
+                  <input type="number" min="1" step="1" inputMode="numeric" value={capacities[course.courseId] ?? ''}
+                    disabled={!selectedCourses.includes(course.courseId)} aria-label={`Capacidad ${course.courseId}`}
+                    onChange={(event) => updateCapacity(course.courseId, event.currentTarget.value)} />
+                </label>
+                {course.planningPatterns && course.planningPatterns.length > 0 && <label>
+                  Patrón semanal de planificación
+                  <select value={patterns[course.courseId] ?? ''} disabled={!selectedCourses.includes(course.courseId)}
+                    aria-label={`Patrón ${course.courseId}`} onChange={(event) => updatePattern(course.courseId, event.currentTarget.value)}>
+                    {course.planningPatterns.map((pattern) => <option key={pattern.id} value={pattern.id}>
+                      {pattern.label} — {pattern.weeklySessions.map((session) => `${session.type ?? 'Sesión'} ${session.durationMinutes} min`).join(', ')}
+                    </option>)}
+                  </select>
+                </label>}
+                <label>
+                  Modalidad de sesiones
+                  <select value={deliveryModes[course.courseId] ?? 'continuous'} disabled={!selectedCourses.includes(course.courseId)}
+                    aria-label={`Modalidad de sesiones ${course.courseId}`}
+                    onChange={(event) => updateDeliveryMode(course.courseId, event.currentTarget.value as 'continuous' | 'split')}>
+                    <option value="continuous">Bloque continuo · predeterminado</option>
+                    <option value="split">Sesiones divididas · excepción</option>
+                  </select>
+                </label>
+                <dl>
+                  {course.cycle !== undefined && <div><dt>Ciclo</dt><dd>{course.cycle}</dd></div>}
+                  {course.credits !== undefined && <div><dt>Créditos</dt><dd>{course.credits}</dd></div>}
+                  <div><dt>Sesiones del patrón</dt><dd>{(course.planningPatterns?.find((pattern) => pattern.id === patterns[course.courseId])?.weeklySessions ?? course.weeklySessions).length}</dd></div>
+                  <div><dt>Secciones estimadas</dt><dd>{proposal?.status === 'invalid-input' ? 'Entrada inválida' : proposal
+                    ? proposal.sections.filter((section) => section.courseId === course.courseId).length
+                    : 'Se calculará al generar'}</dd></div>
+                </dl>
+                {course.history && <details className="academic-scheduling__history">
+                  <summary>Referencia histórica · {course.history.sections.length} secciones</summary>
+                  <div className="academic-scheduling__history-content">
+                    {course.history.sections.map((section) => <div className="academic-scheduling__history-section" key={section.sectionId}>
+                      <strong>Sección {section.sectionId} · capacidad histórica {section.capacity}</strong>
+                      <ul>{section.sessions.map((session, index) => <li key={`${section.sectionId}-${index}`}>
+                        {formatAcademicInterval(session)} · {session.type} · {session.room} · {session.teacherName
+                          ? `Docente de referencia: ${session.teacherName}` : session.teacherId}
+                      </li>)}</ul>
+                    </div>)}
+                  </div>
+                </details>}
+              </article>)}
+            </div>
+            {planningPeriod === '2027-I' ? <AcademicDemandPanel sourceId={demandSourceId} onSourceChange={changeDemandSource}
+              courses={catalog.courses.filter((course) => selectedCourses.includes(course.courseId)).map((course) => ({
+                courseId: course.courseId, name: course.name, targetCapacity: capacities[course.courseId] ?? '', finalDemand: demands[course.courseId] ?? '',
+              }))}
+              estimate={demandEstimate} loading={demandLoading} error={demandError}
+              onEstimate={() => void estimateDemand()} onUseBase={(courseId, value) => updateDemand(courseId, String(value))} />
+              : <p className="academic-scheduling__resource-note" role="note">El estimador de demanda potencial solo tiene ámbito sintético 2027-I. Para {planningPeriod}, ingresa la demanda de planificación manualmente.</p>}
+          </>}
+        </section>
+
+        {catalog && <section className="academic-scheduling__section" aria-labelledby="academic-scheduling-resource-editor">
+          <div className="academic-scheduling__step-heading"><h3 id="academic-scheduling-resource-editor">Paso 2 · Configurar recursos</h3>
+            <p>Los nombres de referencia provienen del escenario sintético y no confirman asignaciones del nuevo periodo.</p></div>
+          <AcademicResourceEditor catalog={catalog} resources={resources} onChange={updateResources} />
+          <div className="academic-scheduling__general-windows"><strong>Franjas generales del catálogo</strong>
+            <span>La disponibilidad de cada recurso se intersecta con estas franjas; no se deduce del historial.</span>
+            <ul>{catalog.windows.map((window, index) => <li key={index}>{formatAcademicInterval(window)}</li>)}</ul>
+          </div>
+        </section>}
+
+        {catalog && <section className="academic-scheduling__section academic-scheduling__generate" aria-labelledby="academic-scheduling-generate">
+          <h3 id="academic-scheduling-generate">Paso 3 · Generar propuesta</h3>
+          <p>Periodo: {planningPeriod}. Se envían todos los cursos seleccionados, incluidos los que estén ocultos por el filtro de ciclo.</p>
+          <fieldset className="academic-scheduling__policy">
+            <legend>Excepciones de horario · decisión local explícita</legend>
+            <label><input type="checkbox" checked={planningPolicy?.allowAfternoon ?? false}
+              onChange={(event) => updatePlanningException('allowAfternoon', event.currentTarget.checked)} />Permitir propuesta de lunes a viernes desde las 14:00 hasta las 22:00</label>
+            <label><input type="checkbox" checked={planningPolicy?.allowSaturday ?? false}
+              onChange={(event) => updatePlanningException('allowSaturday', event.currentTarget.checked)} />Permitir propuesta sábado de 08:00 a 13:00</label>
+            <p>La disponibilidad docente y de ambientes sigue siendo obligatoria. Habilitar sábado no agrega disponibilidad automáticamente.</p>
+          </fieldset>
+          <label className="academic-scheduling__policy">Criterio para ordenar alternativas
+            <select aria-label="Criterio de asignación" value={allocationPolicy} onChange={(event) => updateAllocationPolicy(event.currentTarget.value as AcademicAllocationPolicy)}>
+              <option value="preferences">Preferencias (predeterminado)</option>
+              <option value="balanced">Preferencias y menor concentración en empates</option>
+              <option value="first-feasible">Primera alternativa factible</option>
+            </select>
+          </label>
+          <p className="academic-scheduling__resource-note">
+            {allocationPolicy === 'preferences' && 'Ordena primero bloques dentro de preferencias; luego docentes sin preferencias y deja alternativas fuera como respaldo.'}
+            {allocationPolicy === 'balanced' && 'Aplica la prioridad de preferencias y, en empates, prioriza menor concentración (secciones asignadas y luego minutos); no impone equidad global.'}
+            {allocationPolicy === 'first-feasible' && 'Conserva el orden determinista y no prioriza preferencias.'}
+          </p>
+          <div className="academic-scheduling__actions">
+            <button type="button" className="academic-scheduling__button" disabled={!validDemands || generating}
+              onClick={() => void generate()}>{generating ? 'Generando…' : 'Generar horarios'}</button>
+            {!validDemands && <span>Ingresa demanda válida y capacidad entera positiva para cada curso seleccionado. Sin selección se genera una propuesta vacía.</span>}
+          </div>
+        </section>}
+        {proposalError && <p className="academic-scheduling__error" role="alert">{proposalError}</p>}
+      </fieldset>
+    </section>
+
+    {/* Stage 2: Horario */}
+    <section
+      className="planning-stage-panel planning-stage-panel--horario"
+      hidden={currentStage !== 'horario'}
+      aria-label="Etapa de horario"
+    >
+      <fieldset className="academic-scheduling__locked-workspace" disabled={lockedDraft || draftBusy}>
+        {proposalError && <p className="academic-scheduling__error" role="alert">{proposalError}</p>}
+        {!proposal && (
+          <div className="academic-scheduling__empty-stage">
+            <p>No hay una propuesta generada. Ve a la etapa de <strong>Preparación</strong> y selecciona <strong>Generar horarios</strong>.</p>
+          </div>
+        )}
+        {proposal && <>
+          <section className={`academic-scheduling__result academic-scheduling__result--${proposal.status}`} aria-labelledby="academic-scheduling-result" role="status">
+            <div className="academic-scheduling__result-heading">
+              <div><h3 id="academic-scheduling-result">Paso 4 · Resultados · {statusLabel(proposal.status)}</h3>
+                <p>{proposal.coverageComplete ? 'Todos los componentes requeridos fueron asignados.'
+                  : proposal.counts.scheduledSessions === 0 ? 'Sin asignaciones. Las secciones pendientes no demuestran por sí solas que falte un docente.'
+                    : `Propuesta parcial no definitiva: ${sectionCoverage.complete} secciones completas, ${sectionCoverage.partial} parciales y ${sectionCoverage.pending} pendientes.`}</p>
+              </div>
+              <span><span className="academic-scheduling__status-code">{proposal.status}</span> · COMPONENTES {proposal.counts.scheduledSessions} / {proposal.counts.requiredSessions}</span>
+            </div>
+            <dl className="academic-scheduling__counts">
+              <div><dt>Secciones</dt><dd>{proposal.counts.sections}</dd></div>
+              <div><dt>Completas</dt><dd>{sectionCoverage.complete}</dd></div>
+              <div><dt>Parciales</dt><dd>{sectionCoverage.partial}</dd></div>
+              <div><dt>Pendientes</dt><dd>{sectionCoverage.pending}</dd></div>
+              <div><dt>Componentes asignados</dt><dd>{proposal.counts.scheduledSessions}</dd></div>
+              <div><dt>Componentes requeridos</dt><dd>{proposal.counts.requiredSessions}</dd></div>
+              <div><dt>Bloques generados</dt><dd>{blocks.length}</dd></div>
+            </dl>
+            {proposal.preferenceReport && <div className="academic-scheduling__preference-report">
+              <h4>Resultado de preferencias · {proposal.preferenceReport.policy}</h4>
+              <p>{proposal.preferenceReport.withinPreferenceSections} secciones dentro de preferencia, {proposal.preferenceReport.outsidePreferenceSections} fuera y {proposal.preferenceReport.withoutPreferenceSections} sin preferencia evaluable. La búsqueda no demuestra un óptimo global.</p>
+            </div>}
+            <p className="academic-scheduling__stats">Búsqueda local: {proposal.stats.exploredCandidates} candidatos explorados, {proposal.stats.candidateVisits} visitas y {proposal.stats.backtracks} retrocesos.
+              {proposal.stats.limitReason && <> Límite: {proposal.stats.limitReason}.</>}</p>
+            {proposal.pending.length > 0 && <>
+              <h4>Componentes pendientes</h4>
+              <DataTable headers={['Curso', 'Sección', 'Componente', 'Duración']} rows={proposal.pending.map((pending) => [
+                proposal.sections.find((section) => section.sectionId === pending.sectionId)?.courseName ?? pending.courseId,
+                academicSectionLabel(proposal, pending.sectionId), 'Componente pendiente', formatAcademicDuration(pending.durationMinutes),
+              ])} />
+            </>}
+            {proposal.diagnostics.length > 0 && <div className="academic-scheduling__diagnostics">
+              <h4>Diagnósticos</h4>
+              <ul>{proposal.diagnostics.map((diagnostic, index) => <li key={`${diagnostic.code}-${index}`}>
+                <strong>{diagnostic.code}</strong> — {diagnostic.message}
+                {diagnostic.sessionIds.length > 0 && <span> Sesiones: {diagnostic.sessionIds.map((id) => academicSessionLabel(proposal, id)).join('; ')}.</span>}
+              </li>)}</ul>
+            </div>}
+          </section>
+
+          <section className="academic-scheduling__section" aria-labelledby="academic-scheduling-sections">
+            <h3 id="academic-scheduling-sections">Secciones propuestas</h3>
+            <DataTable className="academic-scheduling__sections-table" headers={['Código', 'Asignatura', 'Sección', 'Capacidad', 'Docente responsable', 'Acciones']} rows={sectionRows} empty="La propuesta no generó secciones." />
+            {proposalResources && activeBlock && editingBlock && activeSection && <section id="academic-scheduling-manual-editor" className="academic-scheduling__manual-review" aria-labelledby="academic-scheduling-manual-review">
+              <header className="academic-scheduling__manual-heading">
+                <div>
+                  <h4 id="academic-scheduling-manual-review">Editar horario · {activeBlock.courseName} · Sección {academicSectionLabel(proposal, activeBlock.sectionId)}</h4>
+                  <p>El ajuste usa los recursos originales de esta propuesta. Las preferencias ordenan alternativas, pero no garantizan un óptimo global.</p>
+                </div>
+                {activeBlocks.length > 1 && <label className="academic-scheduling__block-select">Bloque horario
+                  <select aria-label={`Bloque horario ${activeBlock.sectionId}`} value={activeBlock.sessionIds.join('|')} disabled={adjusting}
+                    onChange={(event) => {
+                      const nextBlock = activeBlocks.find((block) => block.sessionIds.join('|') === event.currentTarget.value)
+                      if (nextBlock) startBlockReview(nextBlock)
+                    }}>
+                    {activeBlocks.map((block) => <option key={block.sessionIds.join('|')} value={block.sessionIds.join('|')}>
+                      {['—', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][block.day]} {formatAcademicMinute(block.startMinute)}–{formatAcademicMinute(block.endMinute)} · {block.componentDetails.map((component) => component.type).join(' + ')}
+                    </option>)}
+                  </select>
+                </label>}
+              </header>
+              <div className="academic-scheduling__manual-fields">
+                {adjustmentError && <p className="academic-scheduling__inline-error academic-scheduling__manual-error" role="alert">{adjustmentError}</p>}
+                <p className="academic-scheduling__manual-preview">Vista previa: {['—', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][editingBlock.day]} {formatAcademicMinute(editingBlock.startMinute)}–{editingBlock.startMinute + activeBlock.durationMinutes <= 1440 ? formatAcademicMinute(editingBlock.startMinute + activeBlock.durationMinutes) : 'fuera del día'} · duración conservada {formatAcademicDuration(activeBlock.durationMinutes)}.{activeSection.deliveryMode === 'split' ? ' Cambiar docente modifica la responsabilidad de toda la sección; los demás bloques mantienen sus horarios.' : ' Se conserva el bloque continuo completo.'}</p>
+                <label>Docente responsable
+                  <select aria-label={`Docente revisión ${activeBlock.sectionId}`} value={editingBlock.teacherId} disabled={adjusting}
+                    onChange={(event) => setEditingBlock({ ...editingBlock, teacherId: event.currentTarget.value })}>
+                    {proposalResources.teachers.filter((teacher) => teacher.courseIds.includes(activeBlock.courseId)).map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}
+                  </select>
+                </label>
+                <label>Día
+                  <select aria-label={`Día revisión ${activeBlock.sectionId}`} value={editingBlock.day} disabled={adjusting}
+                    onChange={(event) => setEditingBlock({ ...editingBlock, day: Number(event.currentTarget.value) })}>
+                    {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map((day, index) => <option key={day} value={index + 1}>{day}</option>)}
+                  </select>
+                </label>
+                <label>Hora de inicio
+                  <input aria-label={`Inicio revisión ${activeBlock.sectionId}`} type="time" step={catalog?.startStepMinutes ? catalog.startStepMinutes * 60 : 1800}
+                    value={formatAcademicMinute(editingBlock.startMinute)} disabled={adjusting}
+                    onChange={(event) => {
+                      const [hours, minutes] = event.currentTarget.value.split(':').map(Number)
+                      if (Number.isFinite(hours) && Number.isFinite(minutes)) setEditingBlock({ ...editingBlock, startMinute: hours * 60 + minutes })
+                    }} />
+                </label>
+                <div className="academic-scheduling__manual-components">
+                  {activeAssignments.map((assignment, index) => {
+                    const originalRoom = proposalResources.rooms.find((room) => room.id === assignment.roomId)
+                    const rooms = proposalResources.rooms.filter((room) => room.capacity >= activeSection.capacity
+                      && (!originalRoom?.kind || room.kind === originalRoom.kind))
+                    return <label key={assignment.sessionId}>{assignment.sessionType ?? 'Componente'} · {formatAcademicDuration(assignment.endMinute - assignment.startMinute)}
+                      <select aria-label={`Ambiente ${assignment.sessionType ?? index + 1} revisión ${activeBlock.sectionId}`}
+                        value={editingBlock.roomIds[index] ?? ''} disabled={adjusting}
+                        onChange={(event) => setEditingBlock({ ...editingBlock, roomIds: editingBlock.roomIds.map((id, roomIndex) => roomIndex === index ? event.currentTarget.value : id) })}>
+                        {rooms.map((room) => <option key={room.id} value={room.id}>{room.name} · capacidad {room.capacity}</option>)}
+                      </select>
+                    </label>
+                  })}
+                </div>
+                <div className="academic-scheduling__manual-actions">
+                  <button type="button" className="academic-scheduling__button" disabled={adjusting || proposalResources.teachers.filter((teacher) => teacher.courseIds.includes(activeBlock.courseId)).length === 0}
+                    onClick={() => void submitBlockReview()}>{adjusting ? 'Aplicando…' : 'Aplicar ajuste'}</button>
+                  <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary" disabled={adjusting}
+                    onClick={() => { setEditingBlock(null); setAdjustmentError(null) }}>Cancelar</button>
+                </div>
+              </div>
+            </section>}
+          </section>
+
+          <section className="academic-scheduling__section" aria-labelledby="academic-scheduling-assignments">
+            <h3 id="academic-scheduling-assignments">Asignaciones de horario</h3>
+            <p className="academic-scheduling__resource-note">Los nombres identifican recursos de esta propuesta local. Un nombre de referencia sintético no confirma una asignación para el nuevo periodo.</p>
+            <div role="region" aria-label="Programación generada">
+              <DataTable className="academic-scheduling__assignments-table" headers={['Asignatura', 'Sección', 'Docente asignado · nuevo periodo', 'Ambiente(s)', 'Día', 'Hora', 'Componentes incluidos']} rows={assignmentRows} empty="No hay componentes asignados." />
+            </div>
+            <p className="academic-scheduling__resource-note">Asignaciones propuestas para el nuevo periodo; no están confirmadas.</p>
+            <WeeklySchedule data={emptyScheduleData()} displayEvents={toAcademicScheduleEvents(proposal)} />
+          </section>
+        </>}
+      </fieldset>
+    </section>
+
+    {/* Stage 3: Revisión docente */}
+    <section
+      className="planning-stage-panel planning-stage-panel--revision"
+      hidden={currentStage !== 'revision'}
+      aria-label="Etapa de revisión docente"
+    >
+      <fieldset className="academic-scheduling__locked-workspace" disabled={lockedDraft || draftBusy}>
+        <AcademicTeacherReviewPanel key={`${draftId ?? 'new'}-${savedReview?.round ?? 0}`} review={savedReview} proposal={proposal} draftId={draftId} draftVersion={draftVersion}
+          derivedState={workspaceDirty ? `${savedDraftState === 'ready-for-approval' ? 'La versión guardada está lista para aprobación' : savedDraftState === 'in-review' ? 'La versión guardada está en revisión docente' : savedDraftState === 'ready-for-review' ? 'La versión guardada está lista para revisión' : savedDraftState === 'approved' ? 'La versión guardada está aprobada (simulada)' : savedDraftState === 'published' ? 'La versión guardada está publicada (simulada)' : 'Borrador'}; cambios locales sin guardar` : savedDraftState === 'ready-for-approval' ? 'Lista para aprobación' : savedDraftState === 'in-review' ? 'En revisión docente' : savedDraftState === 'ready-for-review' ? 'Lista para revisión' : savedDraftState === 'approved' ? 'Aprobada (simulada)' : savedDraftState === 'published' ? 'Publicada (simulada)' : 'Borrador'}
+          dirty={workspaceDirty} busy={draftBusy} error={reviewError} onSubmit={() => void submitTeacherReview()}
+          onRespond={(teacherId, decision, observation) => void respondTeacherReview(teacherId, decision, observation)} />
       </fieldset>
       {lockedDraft && <p className="academic-scheduling__draft-note" role="status">
         {savedDraftState === 'approved' ? 'Aprobada (simulada).' : 'Publicada (simulada).'} Versión congelada de solo lectura; el horario y las respuestas de revisión no se pueden guardar en este documento.
       </p>}
+    </section>
+
+    {/* Stage 4: Aprobación */}
+    <section
+      className="planning-stage-panel planning-stage-panel--aprobacion"
+      hidden={currentStage !== 'aprobacion'}
+      aria-label="Etapa de aprobación"
+    >
       <AcademicPublicationPanel draftId={draftId} draftVersion={draftVersion} draftTitle={draftTitle}
         draftState={savedDraftState} dirty={workspaceDirty} busy={draftBusy || generating || adjusting || demandLoading} onApprove={approveDraft}
         onPublish={publishDraft} onFork={forkDraft} onBusyChange={setDraftBusy} onError={setDraftError} onMessage={setDraftMessage} />
@@ -753,281 +1084,5 @@ export function AcademicScheduling() {
         onFork={(id, version) => void forkDraft(id, version)} potential={demandEstimate}
         finalDemand={Object.fromEntries(selectedCourses.map((courseId) => [courseId, demands[courseId] ?? '']))} />
     </section>
-
-    <fieldset className="academic-scheduling__locked-workspace" disabled={lockedDraft || draftBusy}>
-    <section className="academic-scheduling__panel" aria-labelledby="academic-scheduling-courses">
-      <header className="academic-scheduling__panel-heading">
-        <div>
-          <h3 id="academic-scheduling-courses">Paso 1 · Seleccionar cursos</h3>
-          <p>Selecciona hasta {PLANNING_LIMITS.courses} cursos. La referencia histórica se conserva aparte del patrón usado en la planificación.</p>
-        </div>
-        <div className="academic-scheduling__panel-meta">
-          <span className="academic-scheduling__revision">{catalog?.revision ?? 'PA-DEMO-1'}</span>
-          <span>{selectedCourses.length} / {PLANNING_LIMITS.courses} seleccionados</span>
-        </div>
-      </header>
-
-      {loadingCatalog && <p className="academic-scheduling__state" role="status">Consultando catálogo local…</p>}
-      {catalogError && <div className="academic-scheduling__error" role="alert">
-        <span>{catalogError}</span>
-        <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary" onClick={retryCatalog}>Reintentar</button>
-      </div>}
-      {catalog && <>
-        <div className="academic-scheduling__cycle-filter">
-          <label>Periodo de planificación
-            <select aria-label="Periodo de planificación" value={planningPeriod}
-              onChange={(event) => applyPeriodDefaults(event.currentTarget.value as PlanningPeriod)}>
-              {!['2026-I', '2026-II', '2027-I', '2027-II'].includes(planningPeriod) && <option value={planningPeriod}>{planningPeriod}</option>}
-              <option value="2026-I">2026-I</option><option value="2026-II">2026-II</option>
-              <option value="2027-I">2027-I</option><option value="2027-II">2027-II</option>
-            </select>
-          </label>
-          <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary"
-            onClick={() => applyPeriodDefaults(planningPeriod, true)}>Aplicar valores iniciales del periodo</button>
-          <p>Al cambiar de periodo se aplican los valores iniciales a demanda y capacidad. Los ajustes requieren confirmación si hay cambios pendientes.</p>
-        </div>
-        <label className="academic-scheduling__cycle-filter">Filtrar por ciclo
-          <select aria-label="Filtrar cursos por ciclo" value={cycleFilter} onChange={(event) => setCycleFilter(event.currentTarget.value)}>
-            <option value="all">Todos</option>
-            {Array.from({ length: 10 }, (_, index) => index + 1).map((cycle) => <option key={cycle} value={cycle}>Ciclo {cycle}</option>)}
-          </select>
-          {availableCycles.length === 0 && <span>El catálogo no especifica ciclos.</span>}
-        </label>
-        <div className="academic-scheduling__courses">
-          {visibleCourses.map((course) => <article className="academic-scheduling__course" key={course.courseId}>
-            <label className="academic-scheduling__selection">
-              <input type="checkbox" checked={selectedCourses.includes(course.courseId)}
-                disabled={!selectedCourses.includes(course.courseId) && selectedCourses.length >= PLANNING_LIMITS.courses}
-                aria-label={`Seleccionar ${course.courseId}`} onChange={(event) => toggleCourse(course.courseId, event.currentTarget.checked)} />
-              Incluir en la propuesta
-            </label>
-            <div className="academic-scheduling__course-title">
-              <strong>{course.name}</strong>
-              <span>{course.courseId}</span>
-            </div>
-            <label>
-              Demanda final de planificación
-              <input type="number" min="0" step="1" inputMode="numeric" value={demands[course.courseId] ?? ''}
-                disabled={!selectedCourses.includes(course.courseId)}
-                aria-label={`Demanda ${course.courseId}`}
-                onChange={(event) => updateDemand(course.courseId, event.currentTarget.value)} />
-            </label>
-            <label>
-              Capacidad objetivo
-              <input type="number" min="1" step="1" inputMode="numeric" value={capacities[course.courseId] ?? ''}
-                disabled={!selectedCourses.includes(course.courseId)} aria-label={`Capacidad ${course.courseId}`}
-                onChange={(event) => updateCapacity(course.courseId, event.currentTarget.value)} />
-            </label>
-            {course.planningPatterns && course.planningPatterns.length > 0 && <label>
-              Patrón semanal de planificación
-              <select value={patterns[course.courseId] ?? ''} disabled={!selectedCourses.includes(course.courseId)}
-                aria-label={`Patrón ${course.courseId}`} onChange={(event) => updatePattern(course.courseId, event.currentTarget.value)}>
-                {course.planningPatterns.map((pattern) => <option key={pattern.id} value={pattern.id}>
-                  {pattern.label} — {pattern.weeklySessions.map((session) => `${session.type ?? 'Sesión'} ${session.durationMinutes} min`).join(', ')}
-                </option>)}
-              </select>
-            </label>}
-            <label>
-              Modalidad de sesiones
-              <select value={deliveryModes[course.courseId] ?? 'continuous'} disabled={!selectedCourses.includes(course.courseId)}
-                aria-label={`Modalidad de sesiones ${course.courseId}`}
-                onChange={(event) => updateDeliveryMode(course.courseId, event.currentTarget.value as 'continuous' | 'split')}>
-                <option value="continuous">Bloque continuo · predeterminado</option>
-                <option value="split">Sesiones divididas · excepción</option>
-              </select>
-            </label>
-            <dl>
-              {course.cycle !== undefined && <div><dt>Ciclo</dt><dd>{course.cycle}</dd></div>}
-              {course.credits !== undefined && <div><dt>Créditos</dt><dd>{course.credits}</dd></div>}
-              <div><dt>Sesiones del patrón</dt><dd>{(course.planningPatterns?.find((pattern) => pattern.id === patterns[course.courseId])?.weeklySessions ?? course.weeklySessions).length}</dd></div>
-              <div><dt>Secciones estimadas</dt><dd>{proposal?.status === 'invalid-input' ? 'Entrada inválida' : proposal
-                ? proposal.sections.filter((section) => section.courseId === course.courseId).length
-                : 'Se calculará al generar'}</dd></div>
-            </dl>
-            {course.history && <details className="academic-scheduling__history">
-              <summary>Referencia histórica · {course.history.sections.length} secciones</summary>
-              <div className="academic-scheduling__history-content">
-                {course.history.sections.map((section) => <div className="academic-scheduling__history-section" key={section.sectionId}>
-                  <strong>Sección {section.sectionId} · capacidad histórica {section.capacity}</strong>
-                  <ul>{section.sessions.map((session, index) => <li key={`${section.sectionId}-${index}`}>
-                    {formatAcademicInterval(session)} · {session.type} · {session.room} · {session.teacherName
-                      ? `Docente de referencia: ${session.teacherName}` : session.teacherId}
-                  </li>)}</ul>
-                </div>)}
-              </div>
-            </details>}
-          </article>)}
-        </div>
-        {planningPeriod === '2027-I' ? <AcademicDemandPanel sourceId={demandSourceId} onSourceChange={changeDemandSource}
-          courses={catalog.courses.filter((course) => selectedCourses.includes(course.courseId)).map((course) => ({
-            courseId: course.courseId, name: course.name, targetCapacity: capacities[course.courseId] ?? '', finalDemand: demands[course.courseId] ?? '',
-          }))}
-          estimate={demandEstimate} loading={demandLoading} error={demandError}
-          onEstimate={() => void estimateDemand()} onUseBase={(courseId, value) => updateDemand(courseId, String(value))} />
-          : <p className="academic-scheduling__resource-note" role="note">El estimador de demanda potencial solo tiene ámbito sintético 2027-I. Para {planningPeriod}, ingresa la demanda de planificación manualmente.</p>}
-      </>}
-    </section>
-
-    {catalog && <section className="academic-scheduling__section" aria-labelledby="academic-scheduling-resource-editor">
-      <div className="academic-scheduling__step-heading"><h3 id="academic-scheduling-resource-editor">Paso 2 · Configurar recursos</h3>
-        <p>Los nombres de referencia provienen del escenario sintético y no confirman asignaciones del nuevo periodo.</p></div>
-      <AcademicResourceEditor catalog={catalog} resources={resources} onChange={updateResources} />
-      <div className="academic-scheduling__general-windows"><strong>Franjas generales del catálogo</strong>
-        <span>La disponibilidad de cada recurso se intersecta con estas franjas; no se deduce del historial.</span>
-        <ul>{catalog.windows.map((window, index) => <li key={index}>{formatAcademicInterval(window)}</li>)}</ul>
-      </div>
-    </section>}
-
-    {catalog && <section className="academic-scheduling__section academic-scheduling__generate" aria-labelledby="academic-scheduling-generate">
-      <h3 id="academic-scheduling-generate">Paso 3 · Generar propuesta</h3>
-        <p>Periodo: {planningPeriod}. Se envían todos los cursos seleccionados, incluidos los que estén ocultos por el filtro de ciclo.</p>
-        <fieldset className="academic-scheduling__policy">
-          <legend>Excepciones de horario · decisión local explícita</legend>
-          <label><input type="checkbox" checked={planningPolicy?.allowAfternoon ?? false}
-            onChange={(event) => updatePlanningException('allowAfternoon', event.currentTarget.checked)} />Permitir propuesta de lunes a viernes desde las 14:00 hasta las 22:00</label>
-          <label><input type="checkbox" checked={planningPolicy?.allowSaturday ?? false}
-            onChange={(event) => updatePlanningException('allowSaturday', event.currentTarget.checked)} />Permitir propuesta sábado de 08:00 a 13:00</label>
-          <p>La disponibilidad docente y de ambientes sigue siendo obligatoria. Habilitar sábado no agrega disponibilidad automáticamente.</p>
-        </fieldset>
-        <label className="academic-scheduling__policy">Criterio para ordenar alternativas
-          <select aria-label="Criterio de asignación" value={allocationPolicy} onChange={(event) => updateAllocationPolicy(event.currentTarget.value as AcademicAllocationPolicy)}>
-            <option value="preferences">Preferencias (predeterminado)</option>
-            <option value="balanced">Preferencias y menor concentración en empates</option>
-            <option value="first-feasible">Primera alternativa factible</option>
-          </select>
-        </label>
-        <p className="academic-scheduling__resource-note">
-          {allocationPolicy === 'preferences' && 'Ordena primero bloques dentro de preferencias; luego docentes sin preferencias y deja alternativas fuera como respaldo.'}
-          {allocationPolicy === 'balanced' && 'Aplica la prioridad de preferencias y, en empates, prioriza menor concentración (secciones asignadas y luego minutos); no impone equidad global.'}
-          {allocationPolicy === 'first-feasible' && 'Conserva el orden determinista y no prioriza preferencias.'}
-        </p>
-      <div className="academic-scheduling__actions">
-        <button type="button" className="academic-scheduling__button" disabled={!validDemands || generating}
-          onClick={() => void generate()}>{generating ? 'Generando…' : 'Generar horarios'}</button>
-        {!validDemands && <span>Ingresa demanda válida y capacidad entera positiva para cada curso seleccionado. Sin selección se genera una propuesta vacía.</span>}
-      </div>
-    </section>}
-
-    {proposalError && <p className="academic-scheduling__error" role="alert">{proposalError}</p>}
-    {proposal && <>
-      <section className={`academic-scheduling__result academic-scheduling__result--${proposal.status}`} aria-labelledby="academic-scheduling-result" role="status">
-        <div className="academic-scheduling__result-heading">
-          <div><h3 id="academic-scheduling-result">Paso 4 · Resultados · {statusLabel(proposal.status)}</h3>
-            <p>{proposal.coverageComplete ? 'Todos los componentes requeridos fueron asignados.'
-              : proposal.counts.scheduledSessions === 0 ? 'Sin asignaciones. Las secciones pendientes no demuestran por sí solas que falte un docente.'
-                : `Propuesta parcial no definitiva: ${sectionCoverage.complete} secciones completas, ${sectionCoverage.partial} parciales y ${sectionCoverage.pending} pendientes.`}</p>
-          </div>
-          <span><span className="academic-scheduling__status-code">{proposal.status}</span> · COMPONENTES {proposal.counts.scheduledSessions} / {proposal.counts.requiredSessions}</span>
-        </div>
-        <dl className="academic-scheduling__counts">
-          <div><dt>Secciones</dt><dd>{proposal.counts.sections}</dd></div>
-          <div><dt>Completas</dt><dd>{sectionCoverage.complete}</dd></div>
-          <div><dt>Parciales</dt><dd>{sectionCoverage.partial}</dd></div>
-          <div><dt>Pendientes</dt><dd>{sectionCoverage.pending}</dd></div>
-          <div><dt>Componentes asignados</dt><dd>{proposal.counts.scheduledSessions}</dd></div>
-          <div><dt>Componentes requeridos</dt><dd>{proposal.counts.requiredSessions}</dd></div>
-          <div><dt>Bloques generados</dt><dd>{blocks.length}</dd></div>
-        </dl>
-        {proposal.preferenceReport && <div className="academic-scheduling__preference-report">
-          <h4>Resultado de preferencias · {proposal.preferenceReport.policy}</h4>
-          <p>{proposal.preferenceReport.withinPreferenceSections} secciones dentro de preferencia, {proposal.preferenceReport.outsidePreferenceSections} fuera y {proposal.preferenceReport.withoutPreferenceSections} sin preferencia evaluable. La búsqueda no demuestra un óptimo global.</p>
-        </div>}
-        <p className="academic-scheduling__stats">Búsqueda local: {proposal.stats.exploredCandidates} candidatos explorados, {proposal.stats.candidateVisits} visitas y {proposal.stats.backtracks} retrocesos.
-          {proposal.stats.limitReason && <> Límite: {proposal.stats.limitReason}.</>}</p>
-        {proposal.pending.length > 0 && <>
-          <h4>Componentes pendientes</h4>
-          <DataTable headers={['Curso', 'Sección', 'Componente', 'Duración']} rows={proposal.pending.map((pending) => [
-            proposal.sections.find((section) => section.sectionId === pending.sectionId)?.courseName ?? pending.courseId,
-            academicSectionLabel(proposal, pending.sectionId), 'Componente pendiente', formatAcademicDuration(pending.durationMinutes),
-          ])} />
-        </>}
-        {proposal.diagnostics.length > 0 && <div className="academic-scheduling__diagnostics">
-          <h4>Diagnósticos</h4>
-          <ul>{proposal.diagnostics.map((diagnostic, index) => <li key={`${diagnostic.code}-${index}`}>
-            <strong>{diagnostic.code}</strong> — {diagnostic.message}
-            {diagnostic.sessionIds.length > 0 && <span> Sesiones: {diagnostic.sessionIds.map((id) => academicSessionLabel(proposal, id)).join('; ')}.</span>}
-          </li>)}</ul>
-        </div>}
-      </section>
-
-      <section className="academic-scheduling__section" aria-labelledby="academic-scheduling-sections">
-        <h3 id="academic-scheduling-sections">Secciones propuestas</h3>
-        <DataTable className="academic-scheduling__sections-table" headers={['Código', 'Asignatura', 'Sección', 'Capacidad', 'Docente responsable', 'Acciones']} rows={sectionRows} empty="La propuesta no generó secciones." />
-        {proposalResources && activeBlock && editingBlock && activeSection && <section id="academic-scheduling-manual-editor" className="academic-scheduling__manual-review" aria-labelledby="academic-scheduling-manual-review">
-          <header className="academic-scheduling__manual-heading">
-            <div>
-              <h4 id="academic-scheduling-manual-review">Editar horario · {activeBlock.courseName} · Sección {academicSectionLabel(proposal, activeBlock.sectionId)}</h4>
-              <p>El ajuste usa los recursos originales de esta propuesta. Las preferencias ordenan alternativas, pero no garantizan un óptimo global.</p>
-            </div>
-            {activeBlocks.length > 1 && <label className="academic-scheduling__block-select">Bloque horario
-              <select aria-label={`Bloque horario ${activeBlock.sectionId}`} value={activeBlock.sessionIds.join('|')} disabled={adjusting}
-                onChange={(event) => {
-                  const nextBlock = activeBlocks.find((block) => block.sessionIds.join('|') === event.currentTarget.value)
-                  if (nextBlock) startBlockReview(nextBlock)
-                }}>
-                {activeBlocks.map((block) => <option key={block.sessionIds.join('|')} value={block.sessionIds.join('|')}>
-                  {['—', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][block.day]} {formatAcademicMinute(block.startMinute)}–{formatAcademicMinute(block.endMinute)} · {block.componentDetails.map((component) => component.type).join(' + ')}
-                </option>)}
-              </select>
-            </label>}
-          </header>
-          <div className="academic-scheduling__manual-fields">
-            {adjustmentError && <p className="academic-scheduling__inline-error academic-scheduling__manual-error" role="alert">{adjustmentError}</p>}
-            <p className="academic-scheduling__manual-preview">Vista previa: {['—', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][editingBlock.day]} {formatAcademicMinute(editingBlock.startMinute)}–{editingBlock.startMinute + activeBlock.durationMinutes <= 1440 ? formatAcademicMinute(editingBlock.startMinute + activeBlock.durationMinutes) : 'fuera del día'} · duración conservada {formatAcademicDuration(activeBlock.durationMinutes)}.{activeSection.deliveryMode === 'split' ? ' Cambiar docente modifica la responsabilidad de toda la sección; los demás bloques mantienen sus horarios.' : ' Se conserva el bloque continuo completo.'}</p>
-            <label>Docente responsable
-              <select aria-label={`Docente revisión ${activeBlock.sectionId}`} value={editingBlock.teacherId} disabled={adjusting}
-                onChange={(event) => setEditingBlock({ ...editingBlock, teacherId: event.currentTarget.value })}>
-                {proposalResources.teachers.filter((teacher) => teacher.courseIds.includes(activeBlock.courseId)).map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}
-              </select>
-            </label>
-            <label>Día
-              <select aria-label={`Día revisión ${activeBlock.sectionId}`} value={editingBlock.day} disabled={adjusting}
-                onChange={(event) => setEditingBlock({ ...editingBlock, day: Number(event.currentTarget.value) })}>
-                {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map((day, index) => <option key={day} value={index + 1}>{day}</option>)}
-              </select>
-            </label>
-            <label>Hora de inicio
-              <input aria-label={`Inicio revisión ${activeBlock.sectionId}`} type="time" step={catalog?.startStepMinutes ? catalog.startStepMinutes * 60 : 1800}
-                value={formatAcademicMinute(editingBlock.startMinute)} disabled={adjusting}
-                onChange={(event) => {
-                  const [hours, minutes] = event.currentTarget.value.split(':').map(Number)
-                  if (Number.isFinite(hours) && Number.isFinite(minutes)) setEditingBlock({ ...editingBlock, startMinute: hours * 60 + minutes })
-                }} />
-            </label>
-            <div className="academic-scheduling__manual-components">
-              {activeAssignments.map((assignment, index) => {
-                const originalRoom = proposalResources.rooms.find((room) => room.id === assignment.roomId)
-                const rooms = proposalResources.rooms.filter((room) => room.capacity >= activeSection.capacity
-                  && (!originalRoom?.kind || room.kind === originalRoom.kind))
-                return <label key={assignment.sessionId}>{assignment.sessionType ?? 'Componente'} · {formatAcademicDuration(assignment.endMinute - assignment.startMinute)}
-                  <select aria-label={`Ambiente ${assignment.sessionType ?? index + 1} revisión ${activeBlock.sectionId}`}
-                    value={editingBlock.roomIds[index] ?? ''} disabled={adjusting}
-                    onChange={(event) => setEditingBlock({ ...editingBlock, roomIds: editingBlock.roomIds.map((id, roomIndex) => roomIndex === index ? event.currentTarget.value : id) })}>
-                    {rooms.map((room) => <option key={room.id} value={room.id}>{room.name} · capacidad {room.capacity}</option>)}
-                  </select>
-                </label>
-              })}
-            </div>
-            <div className="academic-scheduling__manual-actions">
-              <button type="button" className="academic-scheduling__button" disabled={adjusting || proposalResources.teachers.filter((teacher) => teacher.courseIds.includes(activeBlock.courseId)).length === 0}
-                onClick={() => void submitBlockReview()}>{adjusting ? 'Aplicando…' : 'Aplicar ajuste'}</button>
-              <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary" disabled={adjusting}
-                onClick={() => { setEditingBlock(null); setAdjustmentError(null) }}>Cancelar</button>
-            </div>
-          </div>
-        </section>}
-      </section>
-      <section className="academic-scheduling__section" aria-labelledby="academic-scheduling-assignments">
-        <h3 id="academic-scheduling-assignments">Asignaciones de horario</h3>
-        <p className="academic-scheduling__resource-note">Los nombres identifican recursos de esta propuesta local. Un nombre de referencia sintético no confirma una asignación para el nuevo periodo.</p>
-        <div role="region" aria-label="Programación generada">
-          <DataTable className="academic-scheduling__assignments-table" headers={['Asignatura', 'Sección', 'Docente asignado · nuevo periodo', 'Ambiente(s)', 'Día', 'Hora', 'Componentes incluidos']} rows={assignmentRows} empty="No hay componentes asignados." />
-        </div>
-        <p className="academic-scheduling__resource-note">Asignaciones propuestas para el nuevo periodo; no están confirmadas.</p>
-        <WeeklySchedule data={emptyScheduleData()} displayEvents={toAcademicScheduleEvents(proposal)} />
-      </section>
-    </>}
-    </fieldset>
-
   </section>
 }
