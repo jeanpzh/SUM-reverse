@@ -1,4 +1,4 @@
-import { Fragment, useId, useMemo, useState } from 'react'
+import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { AcademicCatalog, AcademicDemandEstimate, AcademicProposal, PlanningPeriod } from '../data/academicScheduling.ts'
 import { formatAcademicInterval, PLANNING_LIMITS } from '../data/academicScheduling.ts'
 import {
@@ -88,6 +88,14 @@ export function AcademicPreparationCourses({
   const [bulkCapacityInput, setBulkCapacityInput] = useState('')
   const [bulkPreview, setBulkPreview] = useState<BulkChangePreview | null>(null)
 
+  const bulkDialogRef = useRef<HTMLDivElement>(null)
+  const bulkOpenerRef = useRef<HTMLElement | null>(null)
+  useEffect(() => {
+    if (!isBulkOpen) return
+    bulkDialogRef.current?.querySelector<HTMLElement>('button')?.focus()
+    return () => bulkOpenerRef.current?.focus()
+  }, [isBulkOpen])
+
   const bulkModalTitleId = useId()
   const searchInputId = useId()
   const cycleSelectId = useId()
@@ -134,6 +142,8 @@ export function AcademicPreparationCourses({
   }
 
   const handleOpenBulkModal = () => {
+    if (isLocked) return
+    bulkOpenerRef.current = document.activeElement as HTMLElement | null
     setIsBulkOpen(true)
     setBulkApplyDemand(false)
     setBulkApplyCapacity(false)
@@ -165,7 +175,7 @@ export function AcademicPreparationCourses({
   }
 
   const handleConfirmBulk = () => {
-    if (!bulkPreview) return
+    if (!bulkPreview || isLocked) return
     const result = applyBulkChanges(bulkPreview, demands, capacities)
     onApplyBulkChanges(result.nextDemands, result.nextCapacities)
     handleCloseBulkModal()
@@ -612,6 +622,26 @@ export function AcademicPreparationCourses({
             >
               <div
                 className="academic-preparation__modal"
+                ref={bulkDialogRef}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    event.preventDefault()
+                    handleCloseBulkModal()
+                  }
+                  if (event.key !== 'Tab') return
+                  const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(
+                    'button:not(:disabled), input:not(:disabled), select:not(:disabled), [tabindex="0"]'
+                  ))
+                  const first = controls[0]
+                  const last = controls.at(-1)
+                  if (event.shiftKey && document.activeElement === first) {
+                    event.preventDefault()
+                    last?.focus()
+                  } else if (!event.shiftKey && document.activeElement === last) {
+                    event.preventDefault()
+                    first?.focus()
+                  }
+                }}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={bulkModalTitleId}
@@ -643,7 +673,10 @@ export function AcademicPreparationCourses({
                         <input
                           type="checkbox"
                           checked={bulkApplyDemand}
-                          onChange={(e) => setBulkApplyDemand(e.currentTarget.checked)}
+                          onChange={(e) => {
+                            setBulkApplyDemand(e.currentTarget.checked)
+                            setBulkPreview(null)
+                          }}
                         />
                         Modificar demanda final
                       </label>
@@ -655,7 +688,10 @@ export function AcademicPreparationCourses({
                         placeholder="Ej. 40"
                         value={bulkDemandInput}
                         disabled={!bulkApplyDemand}
-                        onChange={(e) => setBulkDemandInput(e.currentTarget.value)}
+                        onChange={(e) => {
+                            setBulkDemandInput(e.currentTarget.value)
+                            setBulkPreview(null)
+                          }}
                         aria-label="Nueva demanda en lote"
                         className="academic-preparation__num-input"
                         style={{ width: '100%', textAlign: 'left' }}
@@ -667,7 +703,10 @@ export function AcademicPreparationCourses({
                         <input
                           type="checkbox"
                           checked={bulkApplyCapacity}
-                          onChange={(e) => setBulkApplyCapacity(e.currentTarget.checked)}
+                          onChange={(e) => {
+                            setBulkApplyCapacity(e.currentTarget.checked)
+                            setBulkPreview(null)
+                          }}
                         />
                         Modificar capacidad objetivo
                       </label>
@@ -679,7 +718,10 @@ export function AcademicPreparationCourses({
                         placeholder="Ej. 30"
                         value={bulkCapacityInput}
                         disabled={!bulkApplyCapacity}
-                        onChange={(e) => setBulkCapacityInput(e.currentTarget.value)}
+                        onChange={(e) => {
+                            setBulkCapacityInput(e.currentTarget.value)
+                            setBulkPreview(null)
+                          }}
                         aria-label="Nueva capacidad en lote"
                         className="academic-preparation__num-input"
                         style={{ width: '100%', textAlign: 'left' }}

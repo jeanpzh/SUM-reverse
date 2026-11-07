@@ -20,6 +20,7 @@ const fixtureDir = await mkdtemp(resolve(tmpdir(), 'sum-prep-synthetic-'))
 const environment = { PATH: process.env.PATH }
 const children = []
 let browser
+const runtimeErrors = []
 
 async function assertPortFree(port) {
   await new Promise((accept, reject) => {
@@ -209,7 +210,7 @@ try {
   const simulatedContext = await browser.newContext()
   const page = await simulatedContext.newPage()
   page.on('console', (msg) => console.log('PAGE LOG:', msg.text()))
-  page.on('pageerror', (err) => console.error('PAGE ERROR:', err))
+  page.on('pageerror', (err) => runtimeErrors.push(err.message))
 
   const synthetic96 = createSynthetic96Catalog()
 
@@ -328,12 +329,15 @@ try {
   const totalChecked = await allChecked.count()
   assert.ok(totalChecked >= cycle1Selected, 'P3: Selección persiste al cambiar filtro')
 
-  // Trigger generation
+  const expectedCourseIds = await allChecked.evaluateAll((nodes) => nodes.map((node) => node.getAttribute('aria-label').replace('Seleccionar ', '')))
+  await page.getByLabel('Filtrar cursos por ciclo').selectOption('3')
+  // Trigger generation while selected courses are hidden by the cycle filter.
   const genBtn = page.getByRole('button', { name: 'Generar horarios' })
   await genBtn.click()
   await page.waitForTimeout(500)
 
   assert.ok(capturedDemands, 'P3: Se envió la petición de generación')
+  assert.deepEqual(capturedDemands.map((item) => item.courseId).sort(), expectedCourseIds.sort())
   assert.equal(capturedDemands.length, totalChecked, 'P3: Payload contiene todos los incluidos, ninguno eliminado por filtro')
   console.log('✓ P3: Visible selection across filters retained in generation payload')
 
@@ -353,6 +357,14 @@ try {
   await page.getByRole('button', { name: /Edición en lote/ }).click()
   const bulkDialog = page.getByRole('dialog')
   await bulkDialog.waitFor()
+  const closeBulk = bulkDialog.getByRole('button', { name: 'Cerrar ventana de edición en lote' })
+  assert.equal(await closeBulk.evaluate((el) => document.activeElement === el), true)
+  await page.keyboard.press('Shift+Tab')
+  assert.equal(await bulkDialog.evaluate((el) => el.contains(document.activeElement)), true)
+  await page.keyboard.press('Escape')
+  assert.equal(await bulkDialog.count(), 0)
+  assert.equal(await page.getByRole('button', { name: /Edición en lote/ }).evaluate((el) => document.activeElement === el), true)
+  await page.getByRole('button', { name: /Edición en lote/ }).click()
 
   // Test invalid capacity (0 is invalid: capacity must be >= 1)
   await bulkDialog.getByLabel('Modificar demanda final').check()
@@ -381,6 +393,12 @@ try {
 
   const valids = bulkDialog.locator('.academic-preparation__preview-table .academic-preparation__preview-status--valid')
   assert.equal(await valids.count(), 3, 'P4: 3 cursos válidos en vista previa')
+
+  // Editing an input invalidates the old preview; confirmation cannot use stale values.
+  await bulkDialog.getByLabel('Nueva demanda en lote').fill('56')
+  assert.equal(await bulkDialog.getByRole('button', { name: 'Confirmar cambios en lote' }).isDisabled(), true)
+  await bulkDialog.getByLabel('Nueva demanda en lote').fill('55')
+  await bulkDialog.getByRole('button', { name: 'Calcular vista previa' }).click()
 
   // Confirm changes
   await bulkDialog.getByRole('button', { name: 'Confirmar cambios en lote' }).click()
@@ -427,19 +445,6 @@ try {
   assert.equal(await page.getByLabel('Modalidad de sesiones CS-001').inputValue(), 'split', 'P5: Modalidad preservada al reabrir')
   console.log('✓ P5: Single inspector pattern/modality edit, close/reopen and history disclosure verified')
 
-  // --- P6: Frozen draft keeps mutation controls disabled ---
-  // Simulate saved/approved draft in state
-  await page.evaluate(() => {
-    // Check locked fieldset presence
-    const fieldset = document.querySelector('.academic-scheduling__locked-workspace')
-    if (fieldset) fieldset.setAttribute('disabled', 'true')
-  })
-
-  assert.equal(await page.getByLabel('Seleccionar CS-001').isDisabled(), true, 'P6: Selección deshabilitada en borrador bloqueado')
-  assert.equal(await page.getByLabel('Demanda CS-001').isDisabled(), true, 'P6: Demanda deshabilitada en borrador bloqueado')
-  assert.equal(await page.getByLabel('Capacidad CS-001').isDisabled(), true, 'P6: Capacidad deshabilitada en borrador bloqueado')
-  console.log('✓ P6: Frozen drafts keep mutation controls disabled')
-
   // --- P7: Keyboard, focus, 720px viewport, scroll region, zoom / text size >= 12px ---
   await page.setViewportSize({ width: 720, height: 900 })
   const tableWrapper = page.locator('.academic-preparation__table-wrapper')
@@ -465,10 +470,20 @@ try {
     assert.ok(item.size >= 12, `P7: Texto esencial debe ser >= 12px, encontrado: ${item.size}px en ${item.tag}`)
   }
 
-  // Keyboard navigation check (focusable elements)
+  // Focus the scroll region and follow the real Tab path into its first control.
+  await tableWrapper.focus()
+  assert.equal(await tableWrapper.evaluate((el) => document.activeElement === el), true)
   await page.keyboard.press('Tab')
-  const focusedTag = await page.evaluate(() => document.activeElement?.tagName)
-  assert.ok(focusedTag, 'P7: Navegación por teclado operativa')
+  assert.equal(await page.getByLabel('Seleccionar CS-001', { exact: true }).evaluate((el) => document.activeElement === el), true)
+  // CSS rendering zoom is explicit; this does not claim native browser zoom coverage.
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.evaluate(() => { document.documentElement.style.zoom = '2' })
+  assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).zoom), '2')
+  const zoomLayout = await page.evaluate(() => ({ width: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth,
+    overflowing: [...document.querySelectorAll('body *')].filter((el) => el.getBoundingClientRect().right > innerWidth + 2)
+      .slice(0, 8).map((el) => ({ tag: el.tagName, className: el.className, right: el.getBoundingClientRect().right })) }))
+  assert.ok(zoomLayout.scroll <= zoomLayout.width + 2, `P7: Documento sin desborde con zoom CSS 200%: ${JSON.stringify(zoomLayout)}`)
+  await page.evaluate(() => { document.documentElement.style.zoom = '' })
   console.log('✓ P7: Keyboard, focus, 720px responsive scroll region, and text >= 12px verified')
 
   await simulatedContext.close()
@@ -479,6 +494,7 @@ try {
   console.log('--- Testing P9 with real NestJS backend and built-in catalog ---')
   const realContext = await browser.newContext()
   const realPage = await realContext.newPage()
+  realPage.on('pageerror', (err) => runtimeErrors.push(err.message))
 
   await realPage.goto(`${web}${route}`)
   await realPage.getByRole('heading', { name: 'Paso 1 · Seleccionar cursos' }).waitFor()
@@ -528,12 +544,55 @@ try {
   const savedRow = savedProposals.locator('.academic-scheduling__saved-row').filter({ hasText: draftTitle })
   assert.equal(await savedRow.count(), 1, 'P9: Propuesta guardada listada en Mis propuestas')
 
+  await realPage.reload()
+  await realPage.getByRole('button', { name: 'Mis propuestas' }).click()
+  const resumedRow = realPage.locator('.academic-scheduling__saved-row').filter({ hasText: draftTitle })
+  await resumedRow.locator('summary').click()
+  const resumeResponse = realPage.waitForResponse((res) => res.url().endsWith(`/borradores/${savedData.id}/continuar`))
+  await resumedRow.getByRole('button', { name: 'Continuar edición', exact: true }).click()
+  const resumedRes = await resumeResponse
+  assert.equal(resumedRes.status(), 200)
+  let saved = (await resumedRes.json()).draft
+  assert.deepEqual(saved.configuration.request.demands, savedData.configuration.request.demands)
+  assert.equal(await realPage.getByLabel(`Seleccionar ${c1.courseId}`, { exact: true }).isChecked(), true)
+  assert.equal(await realPage.getByLabel(`Demanda ${c2.courseId}`).inputValue(), '25')
+
+  const post = async (path, body) => {
+    const response = await fetch(`${api}/local/programacion-academica/v1/${path}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    })
+    const value = await response.json()
+    assert.equal(response.status, 200, JSON.stringify(value))
+    return value
+  }
+  assert.equal(saved.proposal.status, 'complete', 'P6 requires a complete actual proposal')
+  saved = (await post(`borradores/${saved.id}/revision/enviar`, { expectedVersion: saved.version })).draft
+  for (const teacher of saved.review.teachers) {
+    saved = (await post(`borradores/${saved.id}/revision/responder`, { expectedVersion: saved.version,
+      round: saved.review.round, teacherId: teacher.teacherId, decision: 'conformity', observation: '' })).draft
+  }
+  saved = (await post(`borradores/${saved.id}/aprobar`, { expectedVersion: saved.version })).draft
+  assert.equal(saved.state, 'approved')
+  await realPage.reload()
+  await realPage.getByRole('button', { name: 'Mis propuestas' }).click()
+  const approvedRow = realPage.locator('.academic-scheduling__saved-row').filter({ hasText: draftTitle })
+  await approvedRow.locator('summary').click()
+  const approvedResume = realPage.waitForResponse((res) => res.url().endsWith(`/borradores/${saved.id}/continuar`))
+  await approvedRow.getByRole('button', { name: 'Consultar', exact: true }).click()
+  assert.equal((await approvedResume).status(), 200)
+  for (const label of [`Seleccionar ${c1.courseId}`, `Demanda ${c1.courseId}`, `Capacidad ${c1.courseId}`]) {
+    assert.equal(await realPage.getByLabel(label, { exact: true }).isDisabled(), true)
+  }
+  assert.equal(await realPage.getByRole('button', { name: /Edición en lote/ }).isDisabled(), true)
+  console.log('✓ P6: Real approved draft resumed; preparation mutations remain disabled')
+
   console.log('✓ P9: Real client -> own NestJS generation, save, and draft resume preserved with built-in catalog')
 
+  assert.deepEqual(runtimeErrors, [], 'No browser runtime errors')
   await realContext.close()
   await cleanup()
   console.log('\n=========================================')
-  console.log('ALL P1-P9 ACCEPTANCE CRITERIA VERIFIED SUCCESSFULLY!')
+  console.log('PASS UI96 simulated and P9 real API; CSS zoom200 checked, native browser zoom not covered')
   console.log('=========================================')
   process.exit(0)
 } catch (error) {
