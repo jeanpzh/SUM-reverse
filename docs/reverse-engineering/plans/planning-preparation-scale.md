@@ -1,6 +1,6 @@
 # Preparación de una oferta grande
 
-Fecha: 2026-11-07. Estado: plan local listo para el ticket UI P96-UI; estimador e integración de 96 pendientes. Base: `1649962` en `feat/planning-program`. Fuente funcional: petición del usuario de continuar tras el diagnóstico de los 96 cursos, [arquitectura](../../design/academic-planning-architecture.md) y [dirección vinculante](../../design-direction.md). Todo el diseño es `local-only`; no representa comportamiento observado en SUM.
+Fecha: 2026-11-07. Estado: P96-UI integrada en `1ac4499`, comprobaciones locales ejecutadas y auditoría pendiente; estimador e integración de 96 pendientes. Base: `1649962` en `feat/planning-program`. Fuente funcional: petición del usuario de continuar tras el diagnóstico de los 96 cursos, [arquitectura](../../design/academic-planning-architecture.md) y [dirección vinculante](../../design-direction.md). Todo el diseño es `local-only`; no representa comportamiento observado en SUM.
 
 ## Alcance y contrato fijo del ticket UI
 
@@ -43,3 +43,6 @@ El catálogo sintético actual tiene **56 cursos**, comprobado ejecutando exclus
 Leer `AGENTS.md`, `client/AGENTS.md`, `client/.agents/skills/sum-react-implement/SKILL.md`, `/home/ubuntu/.codex/RTK.md`, este plan y dirección de diseño. Nunca acceder directa ni indirectamente a `datos-reales/`, snapshots, servicios privados o producción. No delegar. Comprobar CodeGraph; si falta el índice local, validar primero exclusiones explícitas de privados/dependencias/symlinks ajenos en `codegraph.json` y ejecutar `codegraph init` conforme la instrucción del usuario. No leer privados para validar exclusiones.
 
 Entregar commit local, archivos modificados, evidencia de P1–P9 realmente ejecutados, comandos y resultados, bloqueos y límites. Principal revisa e integra; ningún worker certifica P10/P11 ni amplía el contrato para hacer pasar la UI.
+
+
+Verificación por criterio y límites: [informe local](../../../evidence/local/programacion-academica-preparation/fullstack-verification.md). Corrección puntual del principal: foco del diálogo y bloqueo de confirmación de una vista previa desactualizada; sin nueva ronda de reparación delegada.
