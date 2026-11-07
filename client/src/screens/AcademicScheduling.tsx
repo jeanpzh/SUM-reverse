@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { DataTable } from '../components/Common'
-import { fetchAcademicCatalog, estimateAcademicDemand, createAcademicProposal, adjustAcademicProposal, fetchAcademicDrafts, saveAcademicDraft, resumeAcademicDraft, submitAcademicTeacherReview, respondAcademicTeacherReview, formatAcademicInterval, formatAcademicMinute, formatAcademicDuration, toAcademicScheduleEvents, academicSectionLabel, academicSessionLabel, aggregateAcademicBlocks, academicSectionCoverage, approveAcademicDraft, publishAcademicDraft, forkAcademicDraft, createAcademicPlanningDefaults, buildAcademicPlanningRequest, PLANNING_LIMITS } from '../data/academicScheduling'
+import { fetchAcademicCatalog, estimateAcademicDemand, createAcademicProposal, adjustAcademicProposal, fetchAcademicDrafts, saveAcademicDraft, resumeAcademicDraft, submitAcademicTeacherReview, respondAcademicTeacherReview, formatAcademicInterval, formatAcademicMinute, formatAcademicDuration, toAcademicScheduleEvents, academicSectionLabel, aggregateAcademicBlocks, approveAcademicDraft, publishAcademicDraft, forkAcademicDraft, createAcademicPlanningDefaults, buildAcademicPlanningRequest, PLANNING_LIMITS } from '../data/academicScheduling'
 import type { PlanningPeriod, PlanningPolicy } from '../data/academicScheduling'
 import type { AcademicCatalog, AcademicDemandEstimate, AcademicProposal } from '../data/academicScheduling'
 import type { AcademicAdjustment, AcademicPlanningResources, AcademicAllocationPolicy, AcademicDemandRequest, AcademicDraftList, AcademicDraftState, AcademicWorkspace, AcademicTeacherReview, AcademicSavedDraft } from '../../../shared/programacion-academica-api.mjs'
@@ -13,18 +13,13 @@ import { AcademicIntentionDemandPanel } from './AcademicIntentionDemandPanel'
 import { WeeklySchedule } from './WeeklySchedule'
 import { PlanningScopeHeader } from './PlanningScopeHeader'
 import { PlanningStageNav } from './PlanningStageNav'
+import { PlanningStatusBar } from './PlanningStatusBar'
+import { PlanningSectionsTable } from './PlanningSectionsTable'
+import { PlanningInspector } from './PlanningInspector'
 import type { PlanningStage } from '../routes/local.programacion-academica'
 import './AcademicScheduling.css'
 import './PlanningWorkbench.css'
-
-function statusLabel(status: AcademicProposal['status']) {
-  switch (status) {
-    case 'complete': return 'Programación completa'
-    case 'impossible': return 'Sin solución completa en el dominio configurado'
-    case 'search-limit': return 'Búsqueda inconclusa por límite computacional'
-    case 'invalid-input': return 'Demanda fuera de los límites del generador'
-  }
-}
+import './PlanningSections.css'
 
 function emptyScheduleData() {
   return null
@@ -37,6 +32,8 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
   const [proposal, setProposal] = useState<AcademicProposal | null>(null)
   const [proposalResources, setProposalResources] = useState<AcademicPlanningResources | null>(null)
   const [editingBlock, setEditingBlock] = useState<AcademicAdjustment | null>(null)
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'tabla' | 'semana'>('tabla')
   const [adjusting, setAdjusting] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [proposalError, setProposalError] = useState<string | null>(null)
@@ -607,6 +604,7 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
     if (!proposal) return
     const assignments = proposal.assignments.filter((assignment) => block.sessionIds.includes(assignment.sessionId))
       .sort((left, right) => left.startMinute - right.startMinute || left.sessionId.localeCompare(right.sessionId))
+    setSelectedSectionId(block.sectionId)
     setAdjustmentError(null)
     setEditingBlock({ expectedVersion: proposal.editVersion ?? 0, sectionId: block.sectionId,
       sessionIds: assignments.map((assignment) => assignment.sessionId), teacherId: block.teacherId,
@@ -647,25 +645,6 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
   const availableCycles = [...new Set(catalog?.courses.map((course) => course.cycle).filter((cycle): cycle is number => cycle !== undefined) ?? [])]
     .sort((left, right) => left - right)
   const blocks = proposal ? aggregateAcademicBlocks(proposal) : []
-  const sectionCoverage = proposal ? academicSectionCoverage(proposal) : { complete: 0, partial: 0, pending: 0 }
-  const blocksBySection = new Map<string, typeof blocks>()
-  for (const block of blocks) blocksBySection.set(block.sectionId, [...(blocksBySection.get(block.sectionId) ?? []), block])
-  const sectionRows = proposal?.sections.map((section) => [
-    section.courseId,
-    section.courseName,
-    academicSectionLabel(proposal!, section.sectionId),
-    section.capacity,
-    proposal.assignments.find((assignment) => assignment.sectionId === section.sectionId)?.teacherName ?? 'Pendiente',
-    <div className="academic-scheduling__section-actions">
-      {proposal.manuallyAdjustedSectionIds?.includes(section.sectionId) && <span className="academic-scheduling__manual-badge">Ajustada</span>}
-      {(blocksBySection.get(section.sectionId)?.length ?? 0) > 0
-        ? <button type="button" className="academic-scheduling__text-button" disabled={adjusting}
-          aria-expanded={editingBlock?.sectionId === section.sectionId}
-          aria-controls="academic-scheduling-manual-editor"
-          onClick={() => startBlockReview(blocksBySection.get(section.sectionId)![0])}>Editar horario</button>
-        : <span className="academic-scheduling__no-schedule">Sin asignaciones</span>}
-    </div>,
-  ]) ?? []
   const assignmentRows = blocks.map((block) => [
     block.courseName,
     `${academicSectionLabel(proposal!, block.sectionId)} · ${proposal!.manuallyAdjustedSectionIds?.includes(block.sectionId) ? 'Ajustada manualmente' : 'Automática'}`,
@@ -675,13 +654,6 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
     `${formatAcademicMinute(block.startMinute)}–${formatAcademicMinute(block.endMinute)}`,
     block.componentDetails.map((component) => `${component.type} · ${formatAcademicDuration(component.durationMinutes)}`).join(' + '),
   ]) ?? []
-  const activeBlock = editingBlock && blocks.find((block) => block.sectionId === editingBlock.sectionId
-    && block.sessionIds.length === editingBlock.sessionIds.length
-    && block.sessionIds.every((id, index) => id === editingBlock.sessionIds[index]))
-  const activeSection = activeBlock && proposal?.sections.find((item) => item.sectionId === activeBlock.sectionId)
-  const activeBlocks = activeBlock ? blocksBySection.get(activeBlock.sectionId) ?? [] : []
-  const activeAssignments = activeBlock && proposal ? proposal.assignments.filter((assignment) => activeBlock.sessionIds.includes(assignment.sessionId))
-    .sort((left, right) => left.startMinute - right.startMinute || left.sessionId.localeCompare(right.sessionId)) : []
 
   const canSave = Boolean(catalog) && !draftBusy && !lockedDraft && validDemands
   const disabledSaveReason = !catalog
@@ -933,123 +905,99 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
           </div>
         )}
         {proposal && <>
-          <section className={`academic-scheduling__result academic-scheduling__result--${proposal.status}`} aria-labelledby="academic-scheduling-result" role="status">
-            <div className="academic-scheduling__result-heading">
-              <div><h3 id="academic-scheduling-result">Paso 4 · Resultados · {statusLabel(proposal.status)}</h3>
-                <p>{proposal.coverageComplete ? 'Todos los componentes requeridos fueron asignados.'
-                  : proposal.counts.scheduledSessions === 0 ? 'Sin asignaciones. Las secciones pendientes no demuestran por sí solas que falte un docente.'
-                    : `Propuesta parcial no definitiva: ${sectionCoverage.complete} secciones completas, ${sectionCoverage.partial} parciales y ${sectionCoverage.pending} pendientes.`}</p>
-              </div>
-              <span><span className="academic-scheduling__status-code">{proposal.status}</span> · COMPONENTES {proposal.counts.scheduledSessions} / {proposal.counts.requiredSessions}</span>
-            </div>
-            <dl className="academic-scheduling__counts">
-              <div><dt>Secciones</dt><dd>{proposal.counts.sections}</dd></div>
-              <div><dt>Completas</dt><dd>{sectionCoverage.complete}</dd></div>
-              <div><dt>Parciales</dt><dd>{sectionCoverage.partial}</dd></div>
-              <div><dt>Pendientes</dt><dd>{sectionCoverage.pending}</dd></div>
-              <div><dt>Componentes asignados</dt><dd>{proposal.counts.scheduledSessions}</dd></div>
-              <div><dt>Componentes requeridos</dt><dd>{proposal.counts.requiredSessions}</dd></div>
-              <div><dt>Bloques generados</dt><dd>{blocks.length}</dd></div>
-            </dl>
-            {proposal.preferenceReport && <div className="academic-scheduling__preference-report">
-              <h4>Resultado de preferencias · {proposal.preferenceReport.policy}</h4>
-              <p>{proposal.preferenceReport.withinPreferenceSections} secciones dentro de preferencia, {proposal.preferenceReport.outsidePreferenceSections} fuera y {proposal.preferenceReport.withoutPreferenceSections} sin preferencia evaluable. La búsqueda no demuestra un óptimo global.</p>
-            </div>}
-            <p className="academic-scheduling__stats">Búsqueda local: {proposal.stats.exploredCandidates} candidatos explorados, {proposal.stats.candidateVisits} visitas y {proposal.stats.backtracks} retrocesos.
-              {proposal.stats.limitReason && <> Límite: {proposal.stats.limitReason}.</>}</p>
-            {proposal.pending.length > 0 && <>
-              <h4>Componentes pendientes</h4>
-              <DataTable headers={['Curso', 'Sección', 'Componente', 'Duración']} rows={proposal.pending.map((pending) => [
-                proposal.sections.find((section) => section.sectionId === pending.sectionId)?.courseName ?? pending.courseId,
-                academicSectionLabel(proposal, pending.sectionId), 'Componente pendiente', formatAcademicDuration(pending.durationMinutes),
-              ])} />
-            </>}
-            {proposal.diagnostics.length > 0 && <div className="academic-scheduling__diagnostics">
-              <h4>Diagnósticos</h4>
-              <ul>{proposal.diagnostics.map((diagnostic, index) => <li key={`${diagnostic.code}-${index}`}>
-                <strong>{diagnostic.code}</strong> — {diagnostic.message}
-                {diagnostic.sessionIds.length > 0 && <span> Sesiones: {diagnostic.sessionIds.map((id) => academicSessionLabel(proposal, id)).join('; ')}.</span>}
-              </li>)}</ul>
-            </div>}
-          </section>
+          <PlanningStatusBar
+            proposal={proposal}
+            onRegenerate={() => void generate()}
+            onReviewPending={() => {
+              const firstPending = proposal.pending[0]
+              if (firstPending) setSelectedSectionId(firstPending.sectionId)
+            }}
+            isLocked={lockedDraft || draftBusy}
+          />
 
-          <section className="academic-scheduling__section" aria-labelledby="academic-scheduling-sections">
-            <h3 id="academic-scheduling-sections">Secciones propuestas</h3>
-            <DataTable className="academic-scheduling__sections-table" headers={['Código', 'Asignatura', 'Sección', 'Capacidad', 'Docente responsable', 'Acciones']} rows={sectionRows} empty="La propuesta no generó secciones." />
-            {proposalResources && activeBlock && editingBlock && activeSection && <section id="academic-scheduling-manual-editor" className="academic-scheduling__manual-review" aria-labelledby="academic-scheduling-manual-review">
-              <header className="academic-scheduling__manual-heading">
-                <div>
-                  <h4 id="academic-scheduling-manual-review">Editar horario · {activeBlock.courseName} · Sección {academicSectionLabel(proposal, activeBlock.sectionId)}</h4>
-                  <p>El ajuste usa los recursos originales de esta propuesta. Las preferencias ordenan alternativas, pero no garantizan un óptimo global.</p>
-                </div>
-                {activeBlocks.length > 1 && <label className="academic-scheduling__block-select">Bloque horario
-                  <select aria-label={`Bloque horario ${activeBlock.sectionId}`} value={activeBlock.sessionIds.join('|')} disabled={adjusting}
-                    onChange={(event) => {
-                      const nextBlock = activeBlocks.find((block) => block.sessionIds.join('|') === event.currentTarget.value)
-                      if (nextBlock) startBlockReview(nextBlock)
-                    }}>
-                    {activeBlocks.map((block) => <option key={block.sessionIds.join('|')} value={block.sessionIds.join('|')}>
-                      {['—', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][block.day]} {formatAcademicMinute(block.startMinute)}–{formatAcademicMinute(block.endMinute)} · {block.componentDetails.map((component) => component.type).join(' + ')}
-                    </option>)}
-                  </select>
-                </label>}
-              </header>
-              <div className="academic-scheduling__manual-fields">
-                {adjustmentError && <p className="academic-scheduling__inline-error academic-scheduling__manual-error" role="alert">{adjustmentError}</p>}
-                <p className="academic-scheduling__manual-preview">Vista previa: {['—', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][editingBlock.day]} {formatAcademicMinute(editingBlock.startMinute)}–{editingBlock.startMinute + activeBlock.durationMinutes <= 1440 ? formatAcademicMinute(editingBlock.startMinute + activeBlock.durationMinutes) : 'fuera del día'} · duración conservada {formatAcademicDuration(activeBlock.durationMinutes)}.{activeSection.deliveryMode === 'split' ? ' Cambiar docente modifica la responsabilidad de toda la sección; los demás bloques mantienen sus horarios.' : ' Se conserva el bloque continuo completo.'}</p>
-                <label>Docente responsable
-                  <select aria-label={`Docente revisión ${activeBlock.sectionId}`} value={editingBlock.teacherId} disabled={adjusting}
-                    onChange={(event) => setEditingBlock({ ...editingBlock, teacherId: event.currentTarget.value })}>
-                    {proposalResources.teachers.filter((teacher) => teacher.courseIds.includes(activeBlock.courseId)).map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}
-                  </select>
-                </label>
-                <label>Día
-                  <select aria-label={`Día revisión ${activeBlock.sectionId}`} value={editingBlock.day} disabled={adjusting}
-                    onChange={(event) => setEditingBlock({ ...editingBlock, day: Number(event.currentTarget.value) })}>
-                    {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map((day, index) => <option key={day} value={index + 1}>{day}</option>)}
-                  </select>
-                </label>
-                <label>Hora de inicio
-                  <input aria-label={`Inicio revisión ${activeBlock.sectionId}`} type="time" step={catalog?.startStepMinutes ? catalog.startStepMinutes * 60 : 1800}
-                    value={formatAcademicMinute(editingBlock.startMinute)} disabled={adjusting}
-                    onChange={(event) => {
-                      const [hours, minutes] = event.currentTarget.value.split(':').map(Number)
-                      if (Number.isFinite(hours) && Number.isFinite(minutes)) setEditingBlock({ ...editingBlock, startMinute: hours * 60 + minutes })
-                    }} />
-                </label>
-                <div className="academic-scheduling__manual-components">
-                  {activeAssignments.map((assignment, index) => {
-                    const originalRoom = proposalResources.rooms.find((room) => room.id === assignment.roomId)
-                    const rooms = proposalResources.rooms.filter((room) => room.capacity >= activeSection.capacity
-                      && (!originalRoom?.kind || room.kind === originalRoom.kind))
-                    return <label key={assignment.sessionId}>{assignment.sessionType ?? 'Componente'} · {formatAcademicDuration(assignment.endMinute - assignment.startMinute)}
-                      <select aria-label={`Ambiente ${assignment.sessionType ?? index + 1} revisión ${activeBlock.sectionId}`}
-                        value={editingBlock.roomIds[index] ?? ''} disabled={adjusting}
-                        onChange={(event) => setEditingBlock({ ...editingBlock, roomIds: editingBlock.roomIds.map((id, roomIndex) => roomIndex === index ? event.currentTarget.value : id) })}>
-                        {rooms.map((room) => <option key={room.id} value={room.id}>{room.name} · capacidad {room.capacity}</option>)}
-                      </select>
-                    </label>
-                  })}
-                </div>
-                <div className="academic-scheduling__manual-actions">
-                  <button type="button" className="academic-scheduling__button" disabled={adjusting || proposalResources.teachers.filter((teacher) => teacher.courseIds.includes(activeBlock.courseId)).length === 0}
-                    onClick={() => void submitBlockReview()}>{adjusting ? 'Aplicando…' : 'Aplicar ajuste'}</button>
-                  <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary" disabled={adjusting}
-                    onClick={() => { setEditingBlock(null); setAdjustmentError(null) }}>Cancelar</button>
-                </div>
-              </div>
-            </section>}
-          </section>
+          <div className="planning-workbench-container">
+            <div className="planning-workbench-main">
+              {viewMode === 'tabla' ? (
+                <>
+                  <PlanningSectionsTable
+                    proposal={proposal}
+                    catalog={catalog}
+                    demands={demands}
+                    selectedSectionId={selectedSectionId}
+                    onSelectSection={setSelectedSectionId}
+                    onEditBlock={startBlockReview}
+                    isLocked={lockedDraft || draftBusy}
+                    viewMode={viewMode}
+                    onToggleView={setViewMode}
+                  />
 
-          <section className="academic-scheduling__section" aria-labelledby="academic-scheduling-assignments">
-            <h3 id="academic-scheduling-assignments">Asignaciones de horario</h3>
-            <p className="academic-scheduling__resource-note">Los nombres identifican recursos de esta propuesta local. Un nombre de referencia sintético no confirma una asignación para el nuevo periodo.</p>
-            <div role="region" aria-label="Programación generada">
-              <DataTable className="academic-scheduling__assignments-table" headers={['Asignatura', 'Sección', 'Docente asignado · nuevo periodo', 'Ambiente(s)', 'Día', 'Hora', 'Componentes incluidos']} rows={assignmentRows} empty="No hay componentes asignados." />
+                  <section className="academic-scheduling__section" aria-labelledby="academic-scheduling-assignments">
+                    <h3 id="academic-scheduling-assignments">Asignaciones de horario</h3>
+                    <p className="academic-scheduling__resource-note">Los nombres identifican recursos de esta propuesta local. Un nombre de referencia sintético no confirma una asignación para el nuevo periodo.</p>
+                    <div role="region" aria-label="Programación generada">
+                      <DataTable className="academic-scheduling__assignments-table" headers={['Asignatura', 'Sección', 'Docente asignado · nuevo periodo', 'Ambiente(s)', 'Día', 'Hora', 'Componentes incluidos']} rows={assignmentRows} empty="No hay componentes asignados." />
+                    </div>
+                    <p className="academic-scheduling__resource-note">Asignaciones propuestas para el nuevo periodo; no están confirmadas.</p>
+                    <WeeklySchedule data={emptyScheduleData()} displayEvents={toAcademicScheduleEvents(proposal)} />
+                  </section>
+                </>
+              ) : (
+                <div className="planning-sections">
+                  <div className="planning-sections__toolbar">
+                    <div className="planning-sections__toolbar-left">
+                      <h3 className="planning-sections__title">Vista semanal</h3>
+                    </div>
+                    <div className="planning-sections__toolbar-right">
+                      <div className="planning-sections__view-toggle" role="group" aria-label="Vista">
+                        <button
+                          type="button"
+                          className="planning-sections__toggle-btn"
+                          aria-pressed={false}
+                          onClick={() => setViewMode('tabla')}
+                        >
+                          Tabla
+                        </button>
+                        <button
+                          type="button"
+                          className="planning-sections__toggle-btn planning-sections__toggle-btn--active"
+                          aria-pressed={true}
+                          onClick={() => setViewMode('semana')}
+                        >
+                          Semana
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <WeeklySchedule data={emptyScheduleData()} displayEvents={toAcademicScheduleEvents(proposal)} />
+                </div>
+              )}
             </div>
-            <p className="academic-scheduling__resource-note">Asignaciones propuestas para el nuevo periodo; no están confirmadas.</p>
-            <WeeklySchedule data={emptyScheduleData()} displayEvents={toAcademicScheduleEvents(proposal)} />
-          </section>
+
+            {selectedSectionId && (
+              <PlanningInspector
+                sectionId={selectedSectionId}
+                proposal={proposal}
+                proposalResources={proposalResources}
+                catalog={catalog}
+                editingBlock={editingBlock}
+                adjusting={adjusting}
+                adjustmentError={adjustmentError}
+                isLocked={lockedDraft || draftBusy}
+                onClose={() => {
+                  setSelectedSectionId(null)
+                  setEditingBlock(null)
+                  setAdjustmentError(null)
+                }}
+                onStartEdit={startBlockReview}
+                onCancelEdit={() => {
+                  setEditingBlock(null)
+                  setAdjustmentError(null)
+                }}
+                onSubmitEdit={submitBlockReview}
+                onChangeEditingBlock={setEditingBlock}
+              />
+            )}
+          </div>
         </>}
       </fieldset>
     </section>

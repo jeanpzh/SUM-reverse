@@ -88,12 +88,12 @@
 .academic-scheduling__sections-table td,
 .academic-scheduling__assignments-table th,
 .academic-scheduling__assignments-table td { overflow-wrap: anywhere; }
-.academic-scheduling__sections-table th:nth-child(1) { width: 11%; }
-.academic-scheduling__sections-table th:nth-child(2) { width: 27%; }
-.academic-scheduling__sections-table th:nth-child(3) { width: 9%; }
-.academic-scheduling__sections-table th:nth-child(4) { width: 10%; }
-.academic-scheduling__sections-table th:nth-child(5) { width: 22%; }
-.academic-scheduling__sections-table th:nth-child(6) { width: 21%; }
+.academic-scheduling__sections-table:not(.planning-sections__table) th:nth-child(1) { width: 11%; }
+.academic-scheduling__sections-table:not(.planning-sections__table) th:nth-child(2) { width: 27%; }
+.academic-scheduling__sections-table:not(.planning-sections__table) th:nth-child(3) { width: 9%; }
+.academic-scheduling__sections-table:not(.planning-sections__table) th:nth-child(4) { width: 10%; }
+.academic-scheduling__sections-table:not(.planning-sections__table) th:nth-child(5) { width: 22%; }
+.academic-scheduling__sections-table:not(.planning-sections__table) th:nth-child(6) { width: 21%; }
 .academic-scheduling__assignments-table th:nth-child(1) { width: 18%; }
 .academic-scheduling__assignments-table th:nth-child(2) { width: 14%; }
 .academic-scheduling__assignments-table th:nth-child(3) { width: 21%; }
