@@ -24,6 +24,9 @@
     "**/*.log",
     "**/exports/**",
     "**/snapshots/**",
-    "**/.pnpm-store/**"
+    "**/.pnpm-store/**",
+    "client/.claude/",
+    "client/.cline/",
+    "client/.codebuddy/"
   ]
 }
