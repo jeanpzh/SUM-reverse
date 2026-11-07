@@ -92,6 +92,7 @@ Además de los valores existentes, se necesita especificar metadata de preparaci
 | --- | --- | --- | --- |
 | 0 | Especificación de la experiencia y contratos | Flujo, inventario de estados, reglas de revisión y compatibilidad acordados; contrato fijado antes de implementar | Feedback/aprobación de este plan |
 | 1 | Recursos compactos | Docentes y ambientes en tablas buscables, un inspector, sin botones sueltos ni fichas abiertas al entrar | 0; reutilizar PA-DEMO-1 cuando no cambie el contrato |
+| 1.5 | Sesión de programación, kit de interfaz y tema oscuro ([detalle](planning-session-ui-kit.md)) | Flujo del cliente en un módulo probado sin navegador; superposiciones accesibles en vez de scroll largo; tema oscuro; Acción principal por etapa | 1; aprobada 2026-11-07 |
 | 2 | Base reutilizable y revisión de datos | Iniciar desde una copia permitida, procedencia visible, revisión por conjuntos y guardado/recuperación por periodo | 0; extensión compartida/API y persistencia, luego UI |
 | 3 | Preparación orientada a generar | Resumen inicial con oferta, recursos y pendientes; Cursos/Recursos bajo demanda; acción principal clara | 1 y 2 |
 | 4 | Resolución guiada y regeneración | Pendientes con causas respaldadas; resultado anterior identificado; conservación de asignaciones aceptadas donde el contrato lo permita | 3, contrato de rondas y backend correspondiente integrado |
