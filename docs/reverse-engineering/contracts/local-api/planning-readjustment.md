@@ -103,6 +103,7 @@ DTO:
      - `origin: { draftId, version, publicationVersion }` of P, as `fork()` does
      - no `review` and no `rounds`
      - the optional `readjustment` record (§5)
+     - `configuration.demandBaseRequest` and `demandBase` copied unchanged from P. The validator couples them to the request only by course ID, `targetCapacity` and course count (`validateAcademicWorkspace`, `validateAcademicSavedDraft`), and readjustment changes only `estimatedDemand` and `sectionCapacities`. The E2 demand used is recorded through `basisFingerprint`, not in `demandBase`.
 
 Response 201: `{ draft: AcademicSavedDraft }`.
 
@@ -207,7 +208,7 @@ Checks: backend vitest (`pnpm --dir backend test`), shared tests (`node --test s
 | S5 | Acceptance creates a draft and never moves published sections | Accept `open:A` and a `widen` | vitest: new draft version 1, `state: draft`, origin set, `readjustment` stored; every assignment of v1 deep-equal in the draft; new ordinal placed; widened section capacity changed | F-S5.2 |
 | S6 | A changed basis is refused | Proposal, then SYN-SIS-B changes its intention, then accept | vitest `409 READJUSTMENT_BASIS_CHANGED`; no draft written | F-S5.2 |
 | S7 | Failed placement creates nothing | No free room or window for the new section | vitest `422 READJUSTMENT_PLACEMENT_FAILED`; draft count unchanged | F-S5.2 |
-| S8 | No lock deadlock | Two concurrent acceptances with the same basis | vitest: one 201, the other `409 PUBLICATION_NOT_CURRENT` or `READJUSTMENT_BASIS_CHANGED`, or both 201 as separate drafts; both settle within the test timeout | F-S5.2 |
+| S8 | No lock deadlock; acceptance is not exclusive | Two concurrent acceptances with the same basis | vitest: both return 201 with distinct draft IDs (acceptance changes neither the publication nor the demand); both settle within the test timeout | F-S5.2 |
 | S9 | Existing drafts and publications are unaffected | Existing publication fixtures | vitest: approval fingerprints and publication listing unchanged; existing publication and E2 specs pass | F-S5.2 |
 | S10 | The readjusted draft publishes as v2 | Accept, full review round, approve, publish | vitest: publication version 2 is current; `getDemand` for v2 starts at zero | F-S5.2 |
 | S11 | The notice reports changes | Student registered on v1; v2 changes that student's section schedule and adds a section to another chosen course | vitest: `changed: true`, `schedule-changed`, `newSectionCourseIds` | F-S5.4 |

@@ -92,7 +92,7 @@ The registry holds exactly one synthetic profile:
 | `deadline.mode` | `school-entered` | L-ROUNDS-1 (FISI value pending, PROP-13.5) |
 | `deadline.required` | `false` | L-ROUNDS-1, which keeps current clients and scripts working |
 
-Any other scope resolves to `null`. Submitting such a draft fails with `422 ROUND_PROFILE_MISSING`, an explicit gap with no fallback to another profile (root `AGENTS.md` §7). Every existing test and script uses 2027-I, so no current flow loses submission.
+The scope comes from the saved draft's `configuration.schoolId` and `configuration.academicPeriod` (`AcademicWorkspace`); the faculty is FISI for every planning draft. Any other scope resolves to `null`. Submitting such a draft fails with `422 ROUND_PROFILE_MISSING`, an explicit gap with no fallback to another profile (root `AGENTS.md` §7). Every existing test and script uses 2027-I, so no current flow loses submission. `isPlanningPeriod` accepts any `20xx-I|II`, so a 2026-II draft can be saved and the path is reachable through the API.
 
 A `fixed-days` deadline mode is a later revision once the faculty gives a value. It is not part of `PA-ROUNDS-PROFILE-1`.
 

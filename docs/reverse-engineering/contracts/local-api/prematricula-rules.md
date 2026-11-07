@@ -91,11 +91,11 @@ Prerequisites stay with the existing eligibility check: a failed course that is 
 
 ### 3.3 Missing profile
 
-A scope without a profile produces one `insufficient` issue, `RULE_PROFILE_MISSING`, with no fallback. Under the existing E2 rule, `insufficient` blocks registration. Every current E2 test and script uses 2027-I, so none loses registration.
+The scope comes from the E2 record's `schoolId` and `academicPeriod`; the faculty is FISI for the regular E2 scenario. A scope without a profile produces one `insufficient` issue, `RULE_PROFILE_MISSING`, with no fallback. Today the E2 scope validator (`shared/prematricula-api.mjs`, `scope`) accepts only SISTEMAS / 2027-I, so this is a defensive path the API cannot reach. Under the existing E2 rule, `insufficient` blocks registration. Every current E2 test and script uses 2027-I, so none loses registration.
 
 ## 4. Wire changes
 
-- `E2Validation` (validated in `shared/prematricula-api.mjs` with strict keys) gains `rulesProfile: { profileId: string, revision: 'ENR-RULES-1' } | null`. It is `null` only for an empty selection.
+- `E2Validation` (validated in `shared/prematricula-api.mjs` with strict keys) gains `rulesProfile: { profileId: string, revision: 'ENR-RULES-1' } | null`. It names the profile resolved for the scope, including for an empty selection (which still returns only `EMPTY_SELECTION`). It is `null` exactly when no profile resolved, and then the issues include `RULE_PROFILE_MISSING`.
 - `E2Issue.code` gains `CREDIT_ABOVE_MAX`, `CREDIT_BELOW_MIN`, `CREDIT_EXCEPTION_UNKNOWN`, `RETAKE_REQUIRED`, `REPETITION_RULE_NOT_EVALUATED` and `RULE_PROFILE_MISSING`. The issue kinds stay `unmet | insufficient | incomplete`.
 - `E2_REVISION` stays `'E2-LOCAL-1'`. It is persisted in stored E2 drafts, and changing it would invalidate them.
 - Registration keeps its existing rule: `422` on any `unmet` or `insufficient` issue, or on an empty selection.
@@ -163,7 +163,7 @@ Checks: shared `node --test shared/enrollment-rule-profiles.test.mjs`, backend v
 | E3 | Exceptions | 8 credits with each kind applicable, not applicable, unknown, and a kind not enabled | shared test: none; `CREDIT_BELOW_MIN`; `CREDIT_EXCEPTION_UNKNOWN`; `CREDIT_BELOW_MIN` | F-E2.1 |
 | E4 | Retake inclusion | failed and offered and not selected; selected; not offered; not eligible; three attempts; `seat-priority` mode | shared test: `RETAKE_REQUIRED` only in the first case; `REPETITION_RULE_NOT_EVALUATED` for three attempts; none in seat-priority | F-E2.1 |
 | E5 | Server validation carries the profile and issues | SYN-SIS-A selects 27 credits; then a valid ≥12-credit selection | vitest: `422` with `CREDIT_ABOVE_MAX`; then `201` with `rulesProfile.profileId` set | F-E2.2 |
-| E6 | Missing profile blocks without fallback | A publication for 2026-II | vitest: `insufficient` `RULE_PROFILE_MISSING`, `422` on registration | F-E2.2 |
+| E6 | Missing profile blocks without fallback | The server's validation helper called directly with a 2026-II scope object (unreachable through the API, §3.3) | vitest: `insufficient` `RULE_PROFILE_MISSING`, `rulesProfile: null`, and the helper's registration gate rejects it | F-E2.2 |
 | E7 | Demand excludes intentions that fail the rules | An intention stored before the rules (one 4-credit course) | vitest: `getDemand` reports it under `excluded` with the code; counted demand excludes it | F-E2.2 |
 | E8 | `E2_REVISION` and stored data unchanged | Existing stored E2 drafts and intentions | vitest: drafts load; `E2_REVISION === 'E2-LOCAL-1'` | F-E2.2 |
 | E9 | Existing flows pass after fixture updates | Updated ≥12-credit scenarios | existing specs, `test:data`, `verify-e2-intention.mjs`, `verify-e2-prematricula.mjs`, `verify-cycle-complete.mjs` | F-E2.2 |
