@@ -40,16 +40,47 @@ Status was checked with CodeGraph and `grep` against `feat/planning-shell` on 20
 
 | ID | Ticket | Depends on |
 | --- | --- | --- |
-| F-R | Teacher rounds: limit, recorded deadline, fixed accepted sections, closed objection list as constraints, regenerate pending only, school decision after the limit | contract |
-| F-S5 | Readjustment by demand and v2 publication | contract |
-| F-E2 | Credit range and art. 18 inclusion as profile rules in E2 validation | contract |
-| F-E3 | Change-only view and alternatives (gap check first) | F-S5 |
+Contracts (fixed 2026-11-07): [PA-ROUNDS-1 and F-0](../contracts/local-api/planning-rounds.md), [PA-READJUST-1](../contracts/local-api/planning-readjustment.md), [ENR-RULES-1 and the F-E3 gap check](../contracts/local-api/prematricula-rules.md). Exclusive files, acceptance criteria and roles are in each contract's ticket and acceptance sections.
+
+| ID | Ticket | Depends on | Role · model | ACs |
+| --- | --- | --- | --- | --- |
+| F-0 | Planning core: generator seed (fixed assignments, excluded teachers and rooms), per-section capacity, `regenerateRetention` | contract | Backend · Sonnet 5.5 high | 5 (R1–R5) |
+| F-R.1 | Shared rounds module: profile, DTOs, objection→operation mapping, record validator, `isRoundReviewReady` | contract | Backend · Sonnet 5.5 high | 4 (R7, R9–R11, shared part) |
+| F-R.2 | Server rounds: deadline, limit, objections, school decision, partial regeneration, resolution after the limit, migration | F-0, F-R.1 | Backend · Sonnet 5.5 high | 15 (R6–R9, R11–R21) |
+| F-R.3 | Rounds UI in the Revisión docente stage | F-R.2, V1 | UI · Gemini 3.8 Flash high | 3 (R22–R24) |
+| F-S5.1 | Shared readjustment rules and validators, schedule-change notice validator | contract | Backend · Sonnet 5.5 high | 2 (S1–S2) |
+| F-S5.2 | Server readjustment: proposal, basis CAS, acceptance into a new draft | F-0, F-S5.1, F-R.2 (shared files); soft F-E2.2 | Backend · Sonnet 5.5 high | 8 (S3–S10) |
+| F-S5.3 | Readjustment UI in the Aprobación stage | F-S5.2, V5 | UI · Gemini 3.8 Flash high | 2 (S12–S13) |
+| F-S5.4 | Student schedule-change notice endpoint (no UI) | F-S5.1, F-E2.2 | Backend · Sonnet 5.5 high | 1 (S11) |
+| F-E2.1 | Shared rule profile and pure credit and retake evaluators | contract | Backend · Sonnet 5.5 high | 4 (E1–E4) |
+| F-E2.2 | Server E2 validation and demand with the profile; scenario fixtures raised to ≥12 credits | F-E2.1; **merge blocked on ER-Q1/ER-Q2** | Backend · Sonnet 5.5 high | 5 (E5–E9) |
+| F-E2.3 | Optional: E3 `rules.ts` adopts the shared evaluators | F-E2.1 | Backend · Sonnet 5.5 high | 1 (E10) |
+| F-E2.4 | Student-visible issue presentation | **blocked on user approval** | UI · Gemini 3.8 Flash high | — |
+| F-E3 | Change-only view and alternatives | F-S5; **unplanned** pending ER-Q3 (gap check: change-only partially exists in the E3 transfer, alternatives absent) | — | — |
+
+Dependency graph (an arrow means "must be integrated before"):
+
+```text
+PR #38 ─► V1 ─┬─► V2 ─► V3
+              ├─► V4
+              ├─► F-R.3 ◄── F-R.2
+              └─► V5 ─► F-S5.3 ◄── F-S5.2
+
+F-0 ───┬─► F-R.2 ─► F-S5.2
+F-R.1 ─┘            ▲
+F-S5.1 ─────────────┤
+F-S5.1 ─► F-S5.4 ◄── F-E2.2 ◄── F-E2.1 ─► F-E2.3
+F-E2.2 ┄┄► F-S5.2   (soft: demand baselines)
+F-S5 ┄┄► F-E3       (unplanned)
+```
+
+Ready immediately, in parallel and with disjoint files: F-0, F-R.1, F-S5.1, F-E2.1. F-R.2 and F-S5.2 both edit `shared/programacion-academica-api.mjs`, `saved-draft.service.ts` and `academic-release.ts`, so they run in that order. F-E2.2 and F-S5.4 both edit `prematricula.service.ts`, so they also run in that order. The backend tickets do not touch the client files owned by the V queue.
 
 ## Ownership rules
 
 - `client/src/screens/AcademicScheduling.tsx` and `client/src/data/academicScheduling.ts` have one owner at a time. V1 owns them first.
 - Every UI ticket keeps the accessible names and selectors used by `client/scripts/verify-academic-*.mjs` (for example `Docente revisión …`, `Día revisión …`, `Aplicar ajuste`, `Rol simulado de revisión`, `.academic-scheduling__manual-components`), or updates those scripts in the same ticket.
-- Functional contracts live in new `shared/` modules where possible, so F-R and F-S5 do not share files.
+- Functional contracts live in new `shared/` modules where possible. Where F-R and F-S5 must edit the same existing files (`programacion-academica-api.mjs`, `saved-draft.service.ts`, `academic-release.ts`), they are serialized, with F-R.2 first.
 - Student SUM screens (E2/E3) change only with evidence or explicit user approval.
 
 ## Status
@@ -58,4 +89,7 @@ Status was checked with CodeGraph and `grep` against `feat/planning-shell` on 20
 | --- | --- | --- |
 | Slice 1 | PR #38 open | AC8 script repair in progress (pre-existing failure on `master`) |
 | V1 | dispatched | UI worker |
-| F-R, F-S5, F-E2 | planning | Planner writes the contracts and tickets |
+| F-0, F-R.1, F-S5.1, F-E2.1 | ready | Contracts fixed 2026-11-07; disjoint files; can run in parallel |
+| F-R.2, F-S5.2, F-S5.4, F-E2.2, F-E2.3 | contract fixed | Waiting on dependencies above |
+| F-R.3, F-S5.3 | contract fixed | Wait for V1 and V5 respectively, plus their backend tickets |
+| F-E2.4, F-E3 | blocked | User decisions ER-Q1–ER-Q3 in [prematricula-rules.md](../contracts/local-api/prematricula-rules.md) §11 |

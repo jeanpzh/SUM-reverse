@@ -1,5 +1,7 @@
 # PA-DEMO-1: API e interfaz local de programación académica
 
+> Extensiones fijadas el 2026-11-07, pendientes de implementación: rondas docentes, núcleo de regeneración parcial y capacidad por sección en [planning-rounds.md](planning-rounds.md); reajuste posprematrícula en [planning-readjustment.md](planning-readjustment.md). Este contrato sigue vigente para todo lo que ellas no modifican.
+
 ## Extensión2026-11-04: aprobación y publicación simuladas
 
 Plan preciso y criterios: ../../plans/programacion-academica-publication.md.
