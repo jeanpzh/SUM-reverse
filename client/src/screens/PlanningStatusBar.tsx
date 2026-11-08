@@ -66,12 +66,16 @@ export function PlanningStatusBar({ proposal, onRegenerate, onReviewPending, isL
     subtext = `${coverage.complete}/${totalSections} secciones completas · ${conflicts} cruces en lo asignado`
     diagnosisText = 'La búsqueda alcanzó su límite computacional. No prueba que no exista solución en el dominio configurado.'
   } else if (proposal.status === 'impossible') {
-    badgeText = 'Sin solución completa'
-    headline = `Sin solución completa · ${scheduled}/${required} componentes`
-    subtext = `${coverage.complete}/${totalSections} secciones completas · ${conflicts} cruces en lo asignado`
-    diagnosisText = proposal.diagnostics.length === 1
+    const partial = proposal.diagnostics.some((d) => d.code === 'PARTIAL_PROPOSAL')
+    const notices = proposal.diagnostics.length
+    badgeText = partial ? 'Propuesta parcial' : 'Sin solución completa'
+    headline = `${badgeText} · ${scheduled}/${required} componentes`
+    subtext = `${coverage.complete}/${totalSections} secciones completas · ${conflicts} cruces en lo asignado${notices > 1 ? ` · ${notices} avisos` : ''}`
+    diagnosisText = notices === 1
       ? proposal.diagnostics[0].message
-      : 'Sin solución completa en el dominio configurado.'
+      : partial
+        ? 'Quedan secciones sin colocar; no se demostró que sea imposible completarlas. Revisa los avisos.'
+        : 'Sin solución completa en el dominio configurado.'
   } else if (proposal.status === 'invalid-input') {
     badgeText = 'Entrada inválida'
     headline = 'Demanda fuera de los límites del generador'
