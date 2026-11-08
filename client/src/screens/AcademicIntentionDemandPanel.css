@@ -11,9 +11,29 @@
 }
 
 .academic-intention-demand > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
   font-size: 18px;
   font-weight: 600;
   cursor: pointer;
+  list-style: none;
+}
+.academic-intention-demand > summary::-webkit-details-marker {
+  display: none;
+}
+.academic-intention-demand > summary::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  margin-left: auto;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+.academic-intention-demand[open] > summary::after {
+  transform: rotate(-135deg);
 }
 
 .academic-intention-demand__body {

@@ -191,3 +191,8 @@
 .planning-root :is(input, select, textarea):disabled {
   cursor: not-allowed;
 }
+
+/* App.css gives every h3 the SUM heading blue (#335276); internal headings use the planning text token. */
+.planning-root h3 {
+  color: var(--planning-text);
+}
