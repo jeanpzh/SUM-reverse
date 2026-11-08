@@ -1,0 +1,37 @@
+/* Sonner injects unlayered defaults with literal colors; map the pieces it hard-codes. */
+.planning-root [data-sonner-toaster] {
+  font-family: inherit;
+}
+
+.planning-root [data-sonner-toast][data-styled='true'] {
+  font-size: 0.875rem;
+  box-shadow: var(--planning-shadow);
+}
+
+.planning-root [data-sonner-toast][data-styled='true'] [data-description] {
+  color: var(--planning-muted);
+  font-size: 0.8125rem;
+}
+
+.planning-root [data-sonner-toast][data-type='success'] [data-icon] {
+  color: var(--planning-primary);
+}
+
+.planning-root [data-sonner-toast][data-type='error'] [data-icon] {
+  color: var(--planning-error);
+}
+
+.planning-root [data-sonner-toast][data-type='warning'] [data-icon] {
+  color: var(--planning-warning);
+}
+
+.planning-root [data-sonner-toast][data-styled='true'] [data-close-button]:hover {
+  background: var(--planning-canvas);
+  border-color: var(--planning-border);
+}
+
+.planning-root [data-sonner-toast]:focus-visible,
+.planning-root [data-sonner-toast] [data-close-button]:focus-visible {
+  outline: 2px solid var(--planning-primary);
+  outline-offset: 2px;
+}
