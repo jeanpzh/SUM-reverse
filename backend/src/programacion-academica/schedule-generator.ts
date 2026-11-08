@@ -26,7 +26,7 @@ function validateSeedShape(seed: GeneratorSeed): void {
   }
 }
 
-/** Deterministic finite-domain DFS. No enrollment mutation, persistence or quality optimization. */
+/** Deterministic partial construction with bounded repair for small domains. */
 export function generateAcademicSchedule(value: unknown, options: GeneratorExecutionOptions = {}, seed?: GeneratorSeed): GeneratorResult {
   if (seed !== undefined) validateSeedShape(seed)
   const now = options.now ?? (() => performance.now())
@@ -80,7 +80,65 @@ export function generateAcademicSchedule(value: unknown, options: GeneratorExecu
     }
     schedule.assignments = fixedAssignments
   }
-  const units = makeUnits(input, requirements.filter((item) => !fixedSectionIds.has(item.sectionId)))
+  // Qualification rejections are removed from the hot loop: this index includes only
+  // qualified, eligible, non-excluded teachers. Rejection counts describe attempted placements.
+  const teachersByCourse = new Map(input.courses.map((course) => [course.courseId, input.teachers.filter((teacher) =>
+    teacher.courseIds.includes(course.courseId) && !excludedTeachers.has(teacher.id) && isEligibleForCourse(teacher, course.courseId, input))]))
+  const precheckDiagnostics: GeneratorDiagnostic[] = []
+  const excludedSections = new Set<string>()
+  const remainingRequirements = requirements.filter((item) => !fixedSectionIds.has(item.sectionId))
+  for (const course of input.courses) {
+    const rows = remainingRequirements.filter((item) => item.courseId === course.courseId)
+    const sections = schedule.sections.filter((section) => rows.some((item) => item.sectionId === section.id))
+    if (!sections.length) continue
+    const teachers = teachersByCourse.get(course.courseId)!
+    const minutes = course.weeklySessions.reduce((sum, item) => sum + item.durationMinutes, 0)
+    const availableMinutes = (teacher: GeneratorInput['teachers'][number]) => Math.max(0, teacher.maxWeeklyMinutes
+      - fixedAssignments.filter((item) => item.teacherId === teacher.id).reduce((sum, item) => sum + item.interval.endMinute - item.interval.startMinute, 0))
+    const capacity = teachers.reduce((sum, teacher) => {
+      const fixedCount = new Set(fixedAssignments.filter((item) => item.teacherId === teacher.id
+        && schedule.sections.some((section) => section.id === item.sectionId && section.courseId === course.courseId)).map((item) => item.sectionId)).size
+      const cap = teacher.sectionLimits?.find((item) => item.courseId === course.courseId)?.maxSections
+      return sum + Math.min(Math.floor(availableMinutes(teacher) / minutes), cap === undefined ? sections.length : Math.max(0, cap - fixedCount))
+    }, 0)
+    const exclude = (sectionIds: string[], code: string, message: string) => {
+      if (!sectionIds.length) return
+      sectionIds.forEach((id) => excludedSections.add(id))
+      precheckDiagnostics.push({ code, message, sessionIds: rows.filter((item) => sectionIds.includes(item.sectionId)).map((item) => item.id) })
+    }
+    if (!teachers.length) {
+      exclude(sections.map((item) => item.id), 'NO_QUALIFIED_TEACHER', `${course.courseId} requiere ${sections.length} secciones de ${minutes} min; hay 0 docentes habilitados`)
+      continue
+    }
+    // Keep the lowest ordinals; each section needs one responsible teacher even in split mode.
+    exclude(sections.slice(capacity).map((item) => item.id), 'TEACHER_CAPACITY_SHORTFALL',
+      `${course.courseId} requiere ${sections.length} secciones de ${minutes} min; los docentes habilitados cubren ${capacity} (${teachers.reduce((sum, teacher) => sum + availableMinutes(teacher), 0)} min disponibles)`)
+    for (const section of sections) {
+      if (excludedSections.has(section.id)) continue
+      const sectionRows = rows.filter((item) => item.sectionId === section.id)
+      const hasRooms = sectionRows.every((item) => input.rooms.some((room) => room.capacity >= section.capacity
+        && !excludedRooms.get(section.id)?.has(room.id) && (!input.planningPolicy || item.type !== 'L' || room.kind === 'laboratory')))
+      if (!hasRooms) {
+        exclude([section.id], 'NO_COMPATIBLE_ROOM', `${course.courseId}, sección ${section.id}: 0 ambientes compatibles para ${section.capacity} plazas y los tipos requeridos`)
+        continue
+      }
+      const blocks = course.deliveryMode === 'split' ? sectionRows.map((item) => item.durationMinutes) : [minutes]
+      // Input windows alone prove this bound; resource availability remains candidate work.
+      const hasWindow = blocks.every((duration) => input.windows.some((window) => {
+        for (let start = window.startMinute; start + duration <= window.endMinute; start += input.startStepMinutes) {
+          if (planningTimeRank(sectionRows[0]!, start, window.day, input, duration) !== null) return true
+        }
+        return false
+      }))
+      if (!hasWindow) exclude([section.id], 'NO_SCHEDULING_WINDOW', `${course.courseId}, sección ${section.id}: 0 franjas para bloques de ${blocks.join('/')} min`)
+    }
+  }
+  const sectionsById = new Map(schedule.sections.map((section) => [section.id, section]))
+  const units = makeUnits(input, remainingRequirements.filter((item) => !excludedSections.has(item.sectionId)))
+  units.sort((left, right) => teachersByCourse.get(left.requirements[0]!.courseId)!.length - teachersByCourse.get(right.requirements[0]!.courseId)!.length
+    || right.requirements.reduce((sum, item) => sum + item.durationMinutes, 0) - left.requirements.reduce((sum, item) => sum + item.durationMinutes, 0)
+    || compareIds(left.requirements[0]!.sectionId, right.requirements[0]!.sectionId)
+    || left.requirements[0]!.order - right.requirements[0]!.order)
   let exploredCandidates = 0
   let backtracks = 0
   let limitReason: GeneratorResult['limitReason'] = null
@@ -89,6 +147,14 @@ export function generateAcademicSchedule(value: unknown, options: GeneratorExecu
   const authority = createCoverageAuthority(input)
   let best: AcademicAssignment[] = structuredClone(fixedAssignments)
   const rejectionCounts: GeneratorResult['rejectionCounts'] = {}
+  // Static capacity failures count once per excluded session, rather than per room/start.
+  for (const diagnostic of precheckDiagnostics) {
+    if (diagnostic.code === 'NO_COMPATIBLE_ROOM' && diagnostic.sessionIds.some((id) => {
+      const sectionId = requirements.find((item) => item.id === id)!.sectionId
+      const capacity = schedule.sections.find((item) => item.id === sectionId)!.capacity
+      return input.rooms.every((room) => room.capacity < capacity)
+    })) rejectionCounts.ROOM_CAPACITY = (rejectionCounts.ROOM_CAPACITY ?? 0) + diagnostic.sessionIds.length
+  }
 
   function checkpoint(): boolean {
     const time = now()
@@ -105,15 +171,13 @@ export function generateAcademicSchedule(value: unknown, options: GeneratorExecu
     const blockDuration = componentRequirements.reduce((total, item) => total + item.durationMinutes, 0)
     const assignedTeacher = schedule.assignments.find((item) => item.sectionId === first.sectionId)?.teacherId
 
-    const eligibleTeachers = input.teachers.filter((teacher) => (!assignedTeacher || teacher.id === assignedTeacher)
-      && !excludedTeachers.has(teacher.id) && isEligibleForCourse(teacher, first.courseId, input))
+    const eligibleTeachers = teachersByCourse.get(first.courseId)!.filter((teacher) => !assignedTeacher || teacher.id === assignedTeacher)
     const hasPreferenceWindows = input.allocationPolicy !== 'first-feasible'
-      && eligibleTeachers.some((teacher) => teacher.courseIds.includes(first.courseId) && teacher.preferences?.length)
+      && eligibleTeachers.some((teacher) => teacher.preferences?.length)
     const rankOrder = input.planningPolicy ? [0, 1, 2, 3, 4, 5, 6, 7, 8] : hasPreferenceWindows ? [0, 1, 2] : [1]
     const duration = mode === 'continuous' ? blockDuration : first.durationMinutes
     for (const targetRank of rankOrder) {
-      let teachers = input.teachers.filter((teacher) => (!assignedTeacher || teacher.id === assignedTeacher)
-        && !excludedTeachers.has(teacher.id) && isEligibleForCourse(teacher, first.courseId, input))
+      let teachers = eligibleTeachers
       if (input.allocationPolicy === 'balanced') {
         teachers = teachers.slice().sort((left, right) => {
           const load = (id: string) => schedule.assignments.filter((item) => item.teacherId === id)
@@ -127,10 +191,6 @@ export function generateAcademicSchedule(value: unknown, options: GeneratorExecu
         })
       }
       for (const teacher of teachers) {
-        if (!teacher.courseIds.includes(first.courseId)) {
-          rejectionCounts.TEACHER_NOT_QUALIFIED = (rejectionCounts.TEACHER_NOT_QUALIFIED ?? 0) + 1
-          continue
-        }
         const teacherRows = schedule.assignments.filter((item) => item.teacherId === teacher.id)
         const assignedMinutes = teacherRows.reduce((sum, item) => sum + item.interval.endMinute - item.interval.startMinute, 0)
         if (assignedMinutes + blockDuration > teacher.maxWeeklyMinutes) {
@@ -184,6 +244,20 @@ export function generateAcademicSchedule(value: unknown, options: GeneratorExecu
             rejectionCounts.ROOM_CONFLICT = (rejectionCounts.ROOM_CONFLICT ?? 0) + conflictingRoomAssignments.length
             continue
           }
+          // Prune room-independent conflicts once per slot, before the room product.
+          const section = sectionsById.get(first.sectionId)!
+          let blocked = false
+          for (const assignment of schedule.assignments) {
+            if (!componentIntervals.some((interval) => intervalsOverlap(assignment.interval, interval))) continue
+            const other = sectionsById.get(assignment.sectionId)!
+            const code = other.id === section.id ? 'SECTION_CONFLICT'
+              : input.planningPolicy && other.courseId !== section.courseId && section.cycle !== undefined
+                && section.cycle === other.cycle && section.ordinal === other.ordinal ? 'COHORT_CONFLICT'
+                : other.courseId !== section.courseId && input.compatibleGroups.some((group) => group.courseIds.includes(section.courseId)
+                  && group.courseIds.includes(other.courseId)) ? 'COURSE_GROUP_CONFLICT' : null
+            if (code) { rejectionCounts[code] = (rejectionCounts[code] ?? 0) + 1; blocked = true }
+          }
+          if (blocked) continue
           function* selectRooms(index: number): Generator<AcademicAssignment[]> {
             if (index === partial.length) {
               const candidate = partial.map((assignment) => ({ ...assignment }))
@@ -200,12 +274,19 @@ export function generateAcademicSchedule(value: unknown, options: GeneratorExecu
                 rejectionCounts.ROOM_KIND_MISMATCH = (rejectionCounts.ROOM_KIND_MISMATCH ?? 0) + 1
                 continue
               }
+              const assignment = partial[index]!
+              const capacity = sectionsById.get(first.sectionId)!.capacity
+              if (room.capacity < capacity) { rejectionCounts.ROOM_CAPACITY = (rejectionCounts.ROOM_CAPACITY ?? 0) + 1; continue }
+              if (!availabilityCovers(room.availability, assignment.interval.day, assignment.interval.startMinute, assignment.interval.endMinute)) {
+                rejectionCounts.ROOM_UNAVAILABLE = (rejectionCounts.ROOM_UNAVAILABLE ?? 0) + 1
+                continue
+              }
+              if (schedule.assignments.some((item) => item.roomId === room.id && intervalsOverlap(item.interval, assignment.interval))) {
+                rejectionCounts.ROOM_CONFLICT = (rejectionCounts.ROOM_CONFLICT ?? 0) + 1
+                continue
+              }
               partial[index]!.roomId = room.id
-              // Capacity, room availability and synchronous conflicts prune this branch before
-              // the remaining room product is explored.
-              const validation = validateAcademicSchedule({ ...schedule, assignments: [...schedule.assignments, ...partial.slice(0, index + 1)] }, { planningPolicy: Boolean(input.planningPolicy) })
-              if (validation.valid) yield* selectRooms(index + 1)
-              else for (const issue of validation.issues) rejectionCounts[issue.code] = (rejectionCounts[issue.code] ?? 0) + 1
+              yield* selectRooms(index + 1)
               if (limitReason) return
             }
           }
@@ -227,19 +308,38 @@ export function generateAcademicSchedule(value: unknown, options: GeneratorExecu
       if (search(index + 1)) return true
       backtracks++
       schedule.assignments.splice(-candidate.length, candidate.length)
-      if (limitReason) return false
+      if (limitReason || backtracks >= GENERATOR_LIMITS.repairBacktracks) return false
     }
     return false
   }
 
-  const found = search(0)
-  if (!found) schedule.assignments = best
+  // Build a useful partial proposal first: an empty domain never blocks later units.
+  for (const unit of units) {
+    const candidate = candidates(unit).next().value as AcademicAssignment[] | undefined
+    if (candidate) {
+      if (exploredCandidates >= input.maxExplorations) { limitReason = 'explorations'; break }
+      exploredCandidates++
+      schedule.assignments.push(...candidate)
+      if (schedule.assignments.length > best.length) best = structuredClone(schedule.assignments)
+    }
+    if (limitReason) break
+  }
+  // Repair small partial domains only after preserving the useful construction above.
+  if (!limitReason && units.length <= GENERATOR_LIMITS.repairUnits && !precheckDiagnostics.length
+    && schedule.assignments.length < requirements.length) {
+    schedule.assignments = structuredClone(fixedAssignments)
+    search(0)
+  }
+  schedule.assignments = best
   const coverage = authority.check(schedule)
-  if (found && !coverage.complete) throw new Error('Invariante interna: la búsqueda terminó sin cobertura válida')
-  const status = found ? 'complete' : limitReason ? 'search-limit' : 'impossible'
+  const status = limitReason ? 'search-limit' : coverage.complete ? 'complete' : 'impossible'
   const diagnostic = getDiagnostic(status, limitReason, input, requirements, rejectionCounts, coverage.missingSessionIds, schedule.sections)
-  const diagnostics: GeneratorDiagnostic[] = [diagnostic]
-  if (status === 'impossible' && fixedAssignments.length && diagnostic.code === 'FINITE_DOMAIN_EXHAUSTED') {
+  if (diagnostic.code === 'FINITE_DOMAIN_EXHAUSTED' && (units.length > GENERATOR_LIMITS.repairUnits || backtracks >= GENERATOR_LIMITS.repairBacktracks)) {
+    diagnostic.code = 'PARTIAL_PROPOSAL'
+    diagnostic.message = 'La construcción parcial dejó sesiones pendientes; no se ha demostrado imposibilidad global ni optimalidad.'
+  }
+  const diagnostics: GeneratorDiagnostic[] = [diagnostic, ...precheckDiagnostics]
+  if (status === 'impossible' && units.length <= GENERATOR_LIMITS.repairUnits && !precheckDiagnostics.length && fixedAssignments.length && diagnostic.code === 'FINITE_DOMAIN_EXHAUSTED') {
     // Observation, not proof: the non-fixed sections alone fit under the same exclusions, so the fixed placements are what blocks the search.
     const stats = { exploredCandidates, backtracks, candidateVisits }
     const saved = { assignments: schedule.assignments, best, rejections: { ...rejectionCounts } }

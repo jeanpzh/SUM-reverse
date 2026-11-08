@@ -9,6 +9,8 @@ export const GENERATOR_LIMITS = Object.freeze({
   sessions: PLANNING_LIMITS.sessions,
   candidateVisits: 200000,
   defaultElapsedMs: 2000,
+  repairUnits: 16,
+  repairBacktracks: 32,
   maxElapsedMs: 5000,
 })
 
