@@ -239,7 +239,7 @@
 }
 
 .academic-history__table-scroll:focus-visible {
-  outline: 3px solid var(--planning-focus-ring);
+  outline: 3px solid rgba(101, 88, 223, 0.4);
   outline-offset: -3px;
 }
 
