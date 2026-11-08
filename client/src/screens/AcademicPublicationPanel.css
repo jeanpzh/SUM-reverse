@@ -82,6 +82,8 @@
 .academic-publication__table {
   max-width: 100%;
   padding: 0.65rem;
+  /* The preview table keeps its 1120px minimum and scrolls inside its card. */
+  overflow-x: auto;
 }
 
 .academic-publication__table table {
