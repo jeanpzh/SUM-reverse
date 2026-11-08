@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState, useEffect } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { AcademicCatalog } from '../data/academicScheduling.ts'
 import { filterAcademicResources, PLANNING_LIMITS } from '../data/academicScheduling.ts'
 import type {
@@ -25,6 +25,7 @@ import {
   filterUnifiedTeachers,
   formatAvailabilitySummary,
 } from '../data/academicResources.ts'
+import { Dialog, DialogContent, DialogTitle } from '../components/ui/Dialog'
 import './AcademicResourceEditor.css'
 
 export type AcademicResourceEditorProps = {
@@ -464,11 +465,11 @@ export function AcademicResourceEditor({
     }
   }
 
-  useEffect(() => {
-    if (activeModal && modalFirstControlRef.current) {
-      modalFirstControlRef.current.focus()
-    }
-  }, [activeModal])
+  const focusModalFirstControl = (event: Event) => {
+    if (!modalFirstControlRef.current) return
+    event.preventDefault()
+    modalFirstControlRef.current.focus()
+  }
 
   // Confirming bulk incorporate
   const confirmBulkIncorporateTeachers = () => {
@@ -569,7 +570,6 @@ export function AcademicResourceEditor({
     setSelectedRoomIds((prev) => prev.filter((id) => !visibleSet.has(id)))
   }
 
-  const modalTitleId = useId()
 
   return (
     <div className="academic-scheduling__resource-editor academic-resource-workbench">
@@ -1499,40 +1499,20 @@ export function AcademicResourceEditor({
 
       {/* Multi-Selection Preview Modals / Dialogs */}
       {activeModal === 'incorporate-teacher' && teacherIncorporatePreview && (
-        <div className="academic-resource-modal-backdrop" onClick={closeModal}>
-          <div
+        <Dialog open onOpenChange={(open) => { if (!open) closeModal() }}>
+          <DialogContent
             className="academic-resource-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={modalTitleId}
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                e.preventDefault()
-                closeModal()
-              }
-              if (e.key === 'Tab') {
-                const focusables = e.currentTarget.querySelectorAll<HTMLElement>(
-                  'button:not([disabled]), input:not([disabled]), [tabindex="0"]',
-                )
-                if (focusables.length === 0) return
-                const first = focusables[0]
-                const last = focusables[focusables.length - 1]
-                if (e.shiftKey && document.activeElement === first) {
-                  e.preventDefault()
-                  last.focus()
-                } else if (!e.shiftKey && document.activeElement === last) {
-                  e.preventDefault()
-                  first.focus()
-                }
-              }
-            }}
+            showCloseButton={false}
+            aria-describedby={undefined}
+            onOpenAutoFocus={focusModalFirstControl}
           >
             <div className="academic-resource-modal__header">
               <div>
-                <h4 id={modalTitleId} className="academic-resource-modal__title">
-                  Vista previa de incorporación múltiple de docentes
-                </h4>
+                <DialogTitle asChild>
+                  <h4 className="academic-resource-modal__title">
+                    Vista previa de incorporación múltiple de docentes
+                  </h4>
+                </DialogTitle>
                 <p className="academic-resource-modal__subtitle">
                   Los valores iniciales de carga y disponibilidad son sintéticos y no confirman asignaciones institucionales.
                 </p>
@@ -1611,45 +1591,25 @@ export function AcademicResourceEditor({
                 Confirmar incorporación ({teacherIncorporatePreview.counts.toIncorporate})
               </button>
             </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
 
       {activeModal === 'incorporate-room' && roomIncorporatePreview && (
-        <div className="academic-resource-modal-backdrop" onClick={closeModal}>
-          <div
+        <Dialog open onOpenChange={(open) => { if (!open) closeModal() }}>
+          <DialogContent
             className="academic-resource-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={modalTitleId}
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                e.preventDefault()
-                closeModal()
-              }
-              if (e.key === 'Tab') {
-                const focusables = e.currentTarget.querySelectorAll<HTMLElement>(
-                  'button:not([disabled]), input:not([disabled]), [tabindex="0"]',
-                )
-                if (focusables.length === 0) return
-                const first = focusables[0]
-                const last = focusables[focusables.length - 1]
-                if (e.shiftKey && document.activeElement === first) {
-                  e.preventDefault()
-                  last.focus()
-                } else if (!e.shiftKey && document.activeElement === last) {
-                  e.preventDefault()
-                  first.focus()
-                }
-              }
-            }}
+            showCloseButton={false}
+            aria-describedby={undefined}
+            onOpenAutoFocus={focusModalFirstControl}
           >
             <div className="academic-resource-modal__header">
               <div>
-                <h4 id={modalTitleId} className="academic-resource-modal__title">
-                  Vista previa de incorporación múltiple de ambientes
-                </h4>
+                <DialogTitle asChild>
+                  <h4 className="academic-resource-modal__title">
+                    Vista previa de incorporación múltiple de ambientes
+                  </h4>
+                </DialogTitle>
                 <p className="academic-resource-modal__subtitle">
                   La disponibilidad inicial de cada ambiente incorporado es sintética.
                 </p>
@@ -1728,45 +1688,25 @@ export function AcademicResourceEditor({
                 Confirmar incorporación ({roomIncorporatePreview.counts.toIncorporate})
               </button>
             </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
 
       {activeModal === 'remove-teacher' && teacherRemovePreview && (
-        <div className="academic-resource-modal-backdrop" onClick={closeModal}>
-          <div
+        <Dialog open onOpenChange={(open) => { if (!open) closeModal() }}>
+          <DialogContent
             className="academic-resource-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={modalTitleId}
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                e.preventDefault()
-                closeModal()
-              }
-              if (e.key === 'Tab') {
-                const focusables = e.currentTarget.querySelectorAll<HTMLElement>(
-                  'button:not([disabled]), input:not([disabled]), [tabindex="0"]',
-                )
-                if (focusables.length === 0) return
-                const first = focusables[0]
-                const last = focusables[focusables.length - 1]
-                if (e.shiftKey && document.activeElement === first) {
-                  e.preventDefault()
-                  last.focus()
-                } else if (!e.shiftKey && document.activeElement === last) {
-                  e.preventDefault()
-                  first.focus()
-                }
-              }
-            }}
+            showCloseButton={false}
+            aria-describedby={undefined}
+            onOpenAutoFocus={focusModalFirstControl}
           >
             <div className="academic-resource-modal__header">
               <div>
-                <h4 id={modalTitleId} className="academic-resource-modal__title">
-                  Vista previa de retiro múltiple de docentes
-                </h4>
+                <DialogTitle asChild>
+                  <h4 className="academic-resource-modal__title">
+                    Vista previa de retiro múltiple de docentes
+                  </h4>
+                </DialogTitle>
                 <p className="academic-resource-modal__subtitle">
                   Retirar un docente lo elimina de la configuración del borrador. Las referencias del catálogo permanecerán disponibles.
                 </p>
@@ -1827,45 +1767,25 @@ export function AcademicResourceEditor({
                 Confirmar retiro ({teacherRemovePreview.counts.toRemove})
               </button>
             </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
 
       {activeModal === 'remove-room' && roomRemovePreview && (
-        <div className="academic-resource-modal-backdrop" onClick={closeModal}>
-          <div
+        <Dialog open onOpenChange={(open) => { if (!open) closeModal() }}>
+          <DialogContent
             className="academic-resource-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={modalTitleId}
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                e.preventDefault()
-                closeModal()
-              }
-              if (e.key === 'Tab') {
-                const focusables = e.currentTarget.querySelectorAll<HTMLElement>(
-                  'button:not([disabled]), input:not([disabled]), [tabindex="0"]',
-                )
-                if (focusables.length === 0) return
-                const first = focusables[0]
-                const last = focusables[focusables.length - 1]
-                if (e.shiftKey && document.activeElement === first) {
-                  e.preventDefault()
-                  last.focus()
-                } else if (!e.shiftKey && document.activeElement === last) {
-                  e.preventDefault()
-                  first.focus()
-                }
-              }
-            }}
+            showCloseButton={false}
+            aria-describedby={undefined}
+            onOpenAutoFocus={focusModalFirstControl}
           >
             <div className="academic-resource-modal__header">
               <div>
-                <h4 id={modalTitleId} className="academic-resource-modal__title">
-                  Vista previa de retiro múltiple de ambientes
-                </h4>
+                <DialogTitle asChild>
+                  <h4 className="academic-resource-modal__title">
+                    Vista previa de retiro múltiple de ambientes
+                  </h4>
+                </DialogTitle>
                 <p className="academic-resource-modal__subtitle">
                   Retirar un ambiente lo elimina de la configuración del borrador. Las referencias del catálogo permanecerán disponibles.
                 </p>
@@ -1926,8 +1846,8 @@ export function AcademicResourceEditor({
                 Confirmar retiro ({roomRemovePreview.counts.toRemove})
               </button>
             </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   )

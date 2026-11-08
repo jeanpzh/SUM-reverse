@@ -366,29 +366,14 @@ fieldset.academic-scheduling__locked-workspace {
   box-shadow: 0 0 0 2px var(--planning-selected);
 }
 
-/* Bulk change modal / dialog */
-.academic-preparation__modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  z-index: 1100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: calc(var(--planning-spacing) * 4);
-}
-
-.academic-preparation__modal {
-  background: var(--planning-surface);
-  border: 1px solid var(--planning-border);
-  border-radius: var(--planning-radius-panel);
+/* Bulk change dialog: position, overlay, shadow and size come from the shadcn Dialog (components/ui). */
+.academic-preparation__modal.academic-preparation__modal {
   max-width: 680px;
-  width: 100%;
-  max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-  z-index: 1101;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 .academic-preparation__modal-header {
@@ -414,6 +399,7 @@ fieldset.academic-scheduling__locked-workspace {
 }
 
 .academic-preparation__modal-body {
+  min-height: 0;
   padding: calc(var(--planning-spacing) * 4);
   overflow-y: auto;
   display: flex;

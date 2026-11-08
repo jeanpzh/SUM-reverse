@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { Fragment, useId, useMemo, useState } from 'react'
 import type { AcademicCatalog, AcademicDemandEstimate, AcademicProposal, PlanningPeriod } from '../data/academicScheduling.ts'
 import { formatAcademicInterval, PLANNING_LIMITS } from '../data/academicScheduling.ts'
 import {
@@ -12,6 +12,7 @@ import {
 } from '../data/academicPreparation.ts'
 import type { BulkChangePreview } from '../data/academicPreparation.ts'
 import { AcademicDemandPanel } from './AcademicDemandPanel.tsx'
+import { Dialog, DialogContent, DialogTitle } from '../components/ui/Dialog'
 import './AcademicPreparationCourses.css'
 
 export interface AcademicPreparationCoursesProps {
@@ -88,15 +89,6 @@ export function AcademicPreparationCourses({
   const [bulkCapacityInput, setBulkCapacityInput] = useState('')
   const [bulkPreview, setBulkPreview] = useState<BulkChangePreview | null>(null)
 
-  const bulkDialogRef = useRef<HTMLDivElement>(null)
-  const bulkOpenerRef = useRef<HTMLElement | null>(null)
-  useEffect(() => {
-    if (!isBulkOpen) return
-    bulkDialogRef.current?.querySelector<HTMLElement>('button')?.focus()
-    return () => bulkOpenerRef.current?.focus()
-  }, [isBulkOpen])
-
-  const bulkModalTitleId = useId()
   const searchInputId = useId()
   const cycleSelectId = useId()
 
@@ -143,7 +135,6 @@ export function AcademicPreparationCourses({
 
   const handleOpenBulkModal = () => {
     if (isLocked) return
-    bulkOpenerRef.current = document.activeElement as HTMLElement | null
     setIsBulkOpen(true)
     setBulkApplyDemand(false)
     setBulkApplyCapacity(false)
@@ -615,43 +606,19 @@ export function AcademicPreparationCourses({
           )}
 
           {/* Bulk Changes Modal / Dialog */}
-          {isBulkOpen && (
-            <div
-              className="academic-preparation__modal-backdrop"
-              onClick={handleCloseBulkModal}
-            >
-              <div
+          <Dialog open={isBulkOpen} onOpenChange={(open) => { if (!open) handleCloseBulkModal() }}>
+              <DialogContent
                 className="academic-preparation__modal"
-                ref={bulkDialogRef}
-                onKeyDown={(event) => {
-                  if (event.key === 'Escape') {
-                    event.preventDefault()
-                    handleCloseBulkModal()
-                  }
-                  if (event.key !== 'Tab') return
-                  const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(
-                    'button:not(:disabled), input:not(:disabled), select:not(:disabled), [tabindex="0"]'
-                  ))
-                  const first = controls[0]
-                  const last = controls.at(-1)
-                  if (event.shiftKey && document.activeElement === first) {
-                    event.preventDefault()
-                    last?.focus()
-                  } else if (!event.shiftKey && document.activeElement === last) {
-                    event.preventDefault()
-                    first?.focus()
-                  }
-                }}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby={bulkModalTitleId}
-                onClick={(e) => e.stopPropagation()}
+                showCloseButton={false}
+                aria-describedby={undefined}
               >
                 <div className="academic-preparation__modal-header">
                   <div>
-                    <h4 id={bulkModalTitleId} className="academic-preparation__modal-title">
-                      Edición en lote de cursos seleccionados
-                    </h4>
+                    <DialogTitle asChild>
+                      <h4 className="academic-preparation__modal-title">
+                        Edición en lote de cursos seleccionados
+                      </h4>
+                    </DialogTitle>
                     <p className="academic-preparation__modal-subtitle">
                       Se aplicará exclusivamente a los {selectedCourses.length} cursos seleccionados.
                     </p>
@@ -840,9 +807,8 @@ export function AcademicPreparationCourses({
                     Confirmar cambios en lote
                   </button>
                 </div>
-              </div>
-            </div>
-          )}
+              </DialogContent>
+          </Dialog>
         </div>
       )}
     </section>

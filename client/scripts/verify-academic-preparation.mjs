@@ -293,7 +293,7 @@ try {
 
   // --- P3: Seleccionar visibles, cambiar de filtro, generar: payload includes all selected ---
   await page.getByLabel('Filtrar cursos por ciclo').selectOption('1')
-  await page.getByRole('button', { name: 'Seleccionar visibles', exact: true }).click()
+  await page.locator('section[aria-labelledby="academic-scheduling-courses"]').getByRole('button', { name: 'Seleccionar visibles', exact: true }).click()
   const cycle1Selected = await page.locator('.academic-scheduling__selection input:checked').count()
   assert.ok(cycle1Selected > 0, 'P3: Visibles de Ciclo 1 seleccionados')
 
@@ -344,7 +344,7 @@ try {
   // --- P4: Lote válido y límite/inválido; cancelar y confirmar ---
   // Select first 3 courses
   await page.getByLabel('Filtrar cursos por ciclo').selectOption('all')
-  await page.getByRole('button', { name: 'Deseleccionar visibles', exact: true }).click()
+  await page.locator('section[aria-labelledby="academic-scheduling-courses"]').getByRole('button', { name: 'Deseleccionar visibles', exact: true }).click()
   await page.getByLabel('Seleccionar CS-001', { exact: true }).check()
   await page.getByLabel('Seleccionar CS-002', { exact: true }).check()
   await page.getByLabel('Seleccionar CS-003', { exact: true }).check()

@@ -416,28 +416,14 @@
 }
 
 /* Modals / Dialogs for Bulk Preview */
-.academic-resource-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  z-index: 1100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: calc(var(--planning-spacing) * 4);
-}
-
-.academic-resource-modal {
-  background: var(--planning-surface);
-  border: 1px solid var(--planning-border);
-  border-radius: var(--planning-radius-panel);
+/* Resource dialogs: position, overlay, shadow and size come from the shadcn Dialog (components/ui). */
+.academic-resource-modal.academic-resource-modal {
   max-width: 640px;
-  width: 100%;
-  max-height: 85vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-  z-index: 1101;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 .academic-resource-modal__header {
@@ -463,6 +449,7 @@
 }
 
 .academic-resource-modal__body {
+  min-height: 0;
   padding: calc(var(--planning-spacing) * 4);
   overflow-y: auto;
   display: flex;

@@ -40,6 +40,20 @@
   --spacing: 0.25rem;
 }
 
+/* shadcn/ui semantic colors for the internal planning kit (components/ui). They resolve only
+   inside .planning-root, where the --planning-* tokens and the dark theme are defined. */
+@theme inline {
+  --color-background: var(--planning-surface);
+  --color-foreground: var(--planning-text);
+  --color-muted-foreground: var(--planning-muted);
+  --color-border: var(--planning-border);
+  --color-ring: var(--planning-primary);
+  --color-overlay: var(--planning-overlay);
+  --shadow-planning: var(--planning-shadow);
+  --radius-planning-control: var(--planning-radius-control);
+  --radius-planning-floating: var(--planning-radius-floating);
+}
+
 :root {
   --sidebar-width: 280px;
 }
