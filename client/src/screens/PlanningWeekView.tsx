@@ -1,3 +1,8 @@
+import { Button } from '../components/ui/Button'
+import { NativeSelect } from '../components/ui/NativeSelect'
+import { Label } from '../components/ui/Label'
+import { Badge } from '../components/ui/Badge'
+import { Input } from '../components/ui/Input'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AcademicAdjustment, AcademicPlanningResources } from '../../../shared/programacion-academica-api.mjs'
 import type { AcademicCatalog, AcademicProposal } from '../data/academicScheduling'
@@ -233,7 +238,7 @@ export function PlanningWeekView({
         </div>
 
         <div className="planning-sections__toolbar-right">
-          <input
+          <Input
             type="search"
             className="planning-sections__search"
             placeholder="Buscar por curso, sección o recurso…"
@@ -243,22 +248,22 @@ export function PlanningWeekView({
           />
 
           <div className="planning-sections__view-toggle" role="group" aria-label="Vista">
-            <button
+            <Button variant={viewMode === 'tabla' ? 'secondary' : 'ghost'}
               type="button"
-              className={`planning-sections__toggle-btn ${viewMode === 'tabla' ? 'planning-sections__toggle-btn--active' : ''}`}
+              size="sm"
               aria-pressed={viewMode === 'tabla'}
               onClick={() => onToggleView('tabla')}
             >
               Tabla
-            </button>
-            <button
+            </Button>
+            <Button variant={viewMode === 'semana' ? 'secondary' : 'ghost'}
               type="button"
-              className={`planning-sections__toggle-btn ${viewMode === 'semana' ? 'planning-sections__toggle-btn--active' : ''}`}
+              size="sm"
               aria-pressed={viewMode === 'semana'}
               onClick={() => onToggleView('semana')}
             >
               Semana
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -267,7 +272,7 @@ export function PlanningWeekView({
       {editingBlock && activeBlock && (
         <div className="planning-week__editing-banner" role="status">
           <div className="planning-week__editing-main">
-            <span className="planning-week__editing-badge">Ajustando bloque</span>
+            <Badge variant="warning">Ajustando bloque</Badge>
             <strong>
               {activeBlock.courseName} · Sección {academicSectionLabel(proposal, editingBlock.sectionId)}
             </strong>
@@ -350,7 +355,7 @@ export function PlanningWeekView({
                   {editingBlock && !isLocked && (
                     <div className="planning-week__slots-overlay">
                       {hours.slice(0, -1).map((minute) => (
-                        <button
+                        <Button variant="ghost"
                           key={minute}
                           type="button"
                           className="planning-week__slot-target"
@@ -432,9 +437,9 @@ export function PlanningWeekView({
                           </span>
                         </div>
                         {isBeingEdited && (
-                          <div className="planning-week__placement-tag planning-week__placement-tag--current">
+                          <Badge variant="outline" className="planning-week__placement-tag planning-week__placement-tag--current">
                             Ubicación actual
-                          </div>
+                          </Badge>
                         )}
                       </article>
                     )
@@ -462,9 +467,9 @@ export function PlanningWeekView({
                           proposedTeacherName
                         }, ambiente ${proposedRoomNames.join(', ')}.`}
                       >
-                        <div className="planning-week__placement-tag planning-week__placement-tag--proposed">
+                        <Badge variant="outline" className="planning-week__placement-tag planning-week__placement-tag--proposed">
                           Propuesta (vista previa)
-                        </div>
+                        </Badge>
                         <div className="planning-week__block-header">
                           <strong className="planning-week__block-course">{activeBlock.courseName}</strong>
                           <span className="planning-week__block-section">
@@ -496,10 +501,10 @@ export function PlanningWeekView({
       {/* Narrow Screen Agenda / List (<= 720px) */}
       <div className="planning-week__agenda" ref={agendaRef} aria-label="Agenda de horario por día">
         <div className="planning-week__agenda-nav">
-          <label htmlFor="planning-week-day-select" className="planning-week__agenda-nav-label">
+          <Label htmlFor="planning-week-day-select" className="planning-week__agenda-nav-label">
             Día de la semana:
-          </label>
-          <select
+          </Label>
+          <NativeSelect
             id="planning-week-day-select"
             className="planning-week__agenda-day-select"
             value={selectedAgendaDay}
@@ -512,7 +517,7 @@ export function PlanningWeekView({
                 {dayNamesFull[day]} ({filteredBlocks.filter((b) => b.day === day).length})
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
 
         <div className="planning-week__agenda-content">
@@ -526,9 +531,9 @@ export function PlanningWeekView({
                 <section key={day} className="planning-week__agenda-day-group" aria-label={dayNamesFull[day]}>
                   <header className="planning-week__agenda-day-header">
                     <h4 className="planning-week__agenda-day-title">{dayNamesFull[day]}</h4>
-                    <span className="planning-week__agenda-day-count">
+                    <Badge variant="outline" className="planning-week__agenda-day-count">
                       {dayBlocks.length} {dayBlocks.length === 1 ? 'bloque' : 'bloques'}
-                    </span>
+                    </Badge>
                   </header>
 
                   {dayBlocks.length === 0 && !hasProposedHere ? (
@@ -546,9 +551,9 @@ export function PlanningWeekView({
                             proposedTeacherName
                           }.`}
                         >
-                          <div className="planning-week__placement-tag planning-week__placement-tag--proposed">
+                          <Badge variant="outline" className="planning-week__placement-tag planning-week__placement-tag--proposed">
                             Ubicación propuesta (vista previa)
-                          </div>
+                          </Badge>
                           <div className="planning-week__agenda-card-title">
                             <strong>{activeBlock.courseName}</strong>
                             <span>Sec. {academicSectionLabel(proposal, editingBlock.sectionId)}</span>
@@ -587,9 +592,9 @@ export function PlanningWeekView({
                             onClick={() => onSelectSection(block.sectionId)}
                           >
                             {isBeingEdited && (
-                              <div className="planning-week__placement-tag planning-week__placement-tag--current">
+                              <Badge variant="outline" className="planning-week__placement-tag planning-week__placement-tag--current">
                                 Ubicación actual
-                              </div>
+                              </Badge>
                             )}
                             <div className="planning-week__agenda-card-title">
                               <strong>{block.courseName}</strong>
@@ -605,7 +610,7 @@ export function PlanningWeekView({
                               <span>Componentes: {block.componentDetails.map((c) => c.type).join(' + ')}</span>
                             </div>
                             <div className="planning-week__agenda-card-actions">
-                              <button
+                              <Button variant="outline"
                                 type="button"
                                 className="planning-sections__action-button"
                                 disabled={isLocked}
@@ -616,7 +621,7 @@ export function PlanningWeekView({
                                 }}
                               >
                                 Editar horario
-                              </button>
+                              </Button>
                             </div>
                           </article>
                         )

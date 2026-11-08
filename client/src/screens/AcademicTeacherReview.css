@@ -1,30 +1,100 @@
-.academic-teacher-review { margin-top: 0.8rem; padding: 0.7rem 0.8rem; border: 1px solid var(--planning-border); border-radius: var(--planning-radius-panel); background: var(--planning-surface); }
-.academic-teacher-review > summary { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; color: var(--planning-text); cursor: pointer; font-size: var(--text-data); font-weight: 650; }
-.academic-teacher-review > summary span { color: var(--planning-muted); font-size: var(--text-meta); font-weight: 500; }
-.academic-teacher-review__disclaimer,
+.academic-teacher-review {
+  min-width: 0;
+  max-width: 100%;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--planning-border);
+  color: var(--planning-text);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.academic-teacher-review > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 600;
+}
+
 .academic-teacher-review__state,
-.academic-teacher-review__warning,
-.academic-teacher-review__error { margin: 0.5rem 0; color: var(--planning-muted); font-size: var(--text-meta); }
-.academic-teacher-review__warning,
-.academic-teacher-review__error { color: var(--planning-warning); }
-.academic-teacher-review__toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 0.6rem; }
-.academic-teacher-review__toolbar label,
-.academic-teacher-review__observation { display: grid; gap: 0.25rem; color: var(--planning-muted); font-size: var(--text-meta); font-weight: 600; }
-.academic-teacher-review__toolbar select,
-.academic-teacher-review__observation textarea { box-sizing: border-box; min-height: 2.25rem; padding: 0.4rem 0.55rem; border: 1px solid var(--planning-border); border-radius: var(--planning-radius-control); background: var(--planning-surface); color: var(--planning-text); font: inherit; }
-.academic-teacher-review__counts { display: flex; flex-wrap: wrap; gap: 0.4rem; color: var(--planning-muted); font-size: var(--text-meta); }
-.academic-teacher-review__counts span { padding: 0.25rem 0.45rem; border: 1px solid var(--planning-border); border-radius: var(--planning-radius-control); background: var(--planning-canvas); }
-.academic-teacher-review__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.55rem; margin-top: 0.55rem; }
-.academic-teacher-review__table-wrap { overflow-x: auto; margin: 0.5rem 0; }
-.academic-teacher-review__table-wrap table { width: 100%; border-collapse: collapse; color: var(--planning-text); font-size: var(--text-meta); }
-.academic-teacher-review__table-wrap th,
-.academic-teacher-review__table-wrap td { padding: 0.45rem; border-bottom: 1px solid var(--planning-border); text-align: left; vertical-align: top; }
-.academic-teacher-review__table-wrap th { color: var(--planning-text); white-space: nowrap; }
-.academic-teacher-review__observation { margin-top: 0.65rem; }
-.academic-teacher-review__observation-readonly { margin: 0.4rem 0; padding: 0.5rem; border: 1px solid var(--planning-border); border-radius: var(--planning-radius-control); background: var(--planning-canvas); color: var(--planning-text); font-size: var(--text-meta); white-space: pre-wrap; }
-.academic-teacher-review__observation textarea { min-height: 4.5rem; resize: vertical; }
-.academic-teacher-review__history { margin-top: 0.65rem; color: var(--planning-muted); font-size: var(--text-meta); }
-.academic-teacher-review__history > summary { color: var(--planning-primary); cursor: pointer; }
-.academic-teacher-review__history ol { display: grid; gap: 0.45rem; margin: 0.5rem 0 0; padding-left: 1.25rem; }
-.academic-teacher-review__history li { display: grid; gap: 0.15rem; }
-.academic-teacher-review__history p { margin: 0.15rem 0; white-space: pre-wrap; }
+.academic-teacher-review__warning {
+  margin: 8px 0;
+  color: var(--planning-muted);
+  font-size: 13px;
+}
+
+.academic-teacher-review__warning {
+  color: var(--planning-warning);
+}
+
+.academic-teacher-review__toolbar,
+.academic-teacher-review__counts,
+.academic-teacher-review__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.academic-teacher-review__field,
+.academic-teacher-review__observation {
+  display: grid;
+  min-width: 0;
+  max-width: 100%;
+  gap: 4px;
+}
+
+.academic-teacher-review__table-wrap {
+  min-width: 0;
+  max-width: 100%;
+  margin: 8px 0;
+}
+
+.academic-teacher-review__table-wrap table {
+  min-width: 640px;
+}
+
+.academic-teacher-review__observation {
+  margin-top: 12px;
+}
+
+.academic-teacher-review__observation-readonly {
+  margin: 8px 0;
+  white-space: pre-wrap;
+  font-size: 14px;
+}
+
+.academic-teacher-review__history {
+  margin-top: 12px;
+  color: var(--planning-muted);
+  font-size: 13px;
+}
+
+.academic-teacher-review__history ol {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.academic-teacher-review__history li {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--planning-border);
+}
+
+.academic-teacher-review__history p {
+  margin: 4px 0;
+  white-space: pre-wrap;
+}
+
+.academic-teacher-review > summary:focus-visible {
+  outline: 2px solid var(--planning-primary);
+  outline-offset: 4px;
+}
