@@ -50,6 +50,16 @@ test('academic planning defaults cover both parity patterns and build a syntheti
   assert.deepEqual(first.planningPolicy, { revision: 'FISI-PLANNING-1', period: '2027-I', allowAfternoon: false, allowSaturday: false })
 })
 
+test('academic API distinguishes a non-JSON gateway failure from malformed success and validates error envelopes', async () => {
+  const fetchWith = (response: Response): typeof fetch => async () => response
+  await assert.rejects(fetchAcademicCatalog(fetchWith(new Response('bad gateway', { status: 502 }))),
+    /El servicio local no está disponible \(HTTP 502\)/)
+  await assert.rejects(fetchAcademicCatalog(fetchWith(new Response('not json', { status: 200 }))),
+    /La API local devolvió una respuesta que no es JSON válido/)
+  await assert.rejects(fetchAcademicCatalog(fetchWith(new Response(JSON.stringify({ error: { code: 'DOWN', message: 'Servicio detenido' } }), { status: 502 }))),
+    /^Error: Servicio detenido$/)
+})
+
 test('academic resource search ignores accents and case while preserving the source list', () => {
   const resources = [{ id: 'DOC-1', name: 'José Núñez' }, { id: 'DOC-2', name: 'Ana Pérez' }]
   assert.deepEqual(filterAcademicResources(resources, 'jose nunez'), [resources[0]])

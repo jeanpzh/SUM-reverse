@@ -68,6 +68,7 @@ async function readJson(response: Response) {
   try {
     body = await response.json()
   } catch {
+    if (!response.ok) throw new Error(`El servicio local no está disponible (HTTP ${response.status}). Reintenta en unos segundos.`)
     throw new Error('La API local devolvió una respuesta que no es JSON válido.')
   }
   if (!response.ok) {

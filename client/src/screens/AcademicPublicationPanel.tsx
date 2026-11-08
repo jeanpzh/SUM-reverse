@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AcademicDraftState, AcademicPublication, AcademicPublicationList, AcademicReleasePreview, AcademicScheduleSnapshot } from '../../../shared/programacion-academica-api.mjs'
 import { aggregateAcademicBlocks, academicSectionLabel, formatAcademicDuration, formatAcademicMinute } from '../data/academicScheduling'
 import { fetchAcademicPublication, fetchAcademicPublications, fetchAcademicReleasePreview, fetchCurrentAcademicPublication } from '../data/academicScheduling'
@@ -86,6 +86,11 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
     }
   }
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void refreshPublications() }, 0)
+    return () => window.clearTimeout(timer)
+  }, [])
+
   const refreshPreview = async () => {
     const selected = selectedSummary
     if (!selected && (!draftId || !draftVersion)) return
@@ -129,6 +134,8 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
         onError(null)
         onMessage(null)
         await onApprove()
+        await refreshPublications()
+        await refreshPreview()
       },
     })
   }

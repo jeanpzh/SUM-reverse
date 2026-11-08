@@ -257,5 +257,6 @@
 .planning-root *, .planning-root *::before, .planning-root *::after { box-sizing: inherit; }
 .planning-root select { font: inherit; color: inherit; background: var(--planning-surface); border: 1px solid var(--planning-border); border-radius: var(--planning-radius-control); padding: .25rem; }
 .planning-theme-label { color: var(--planning-rail-text); display: block; font-size: .8rem; margin: 0 0 .25rem .75rem; }
+.planning-root .planning-rail__footer select { width: calc(100% - 1.5rem); margin-inline: .75rem; color: var(--planning-text); background: var(--planning-surface); }
 .planning-root[data-theme='dark'] .planning-rail__item,
 .planning-root[data-theme='dark'] .planning-rail__back { color: var(--planning-rail-text); }
