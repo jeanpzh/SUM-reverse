@@ -1,0 +1,15 @@
+@reference '../../styles/theme.css';
+
+/* No preflight: scope the shadcn table utilities above legacy global th/td rules.
+   Keep student tables and the transitional planning tables unchanged. */
+.planning-root [data-slot='table-head'] {
+  @apply box-border h-10 whitespace-normal border-0 border-b border-solid border-border bg-muted px-4 text-left align-middle font-[inherit] text-[13px] font-medium text-muted-foreground;
+}
+
+.planning-root [data-slot='table-cell'] {
+  @apply box-border h-auto border-0 border-b border-solid border-border bg-transparent p-4 text-left align-middle font-[inherit] text-sm;
+}
+
+.planning-root [data-slot='table-body'] > [data-slot='table-row'] {
+  @apply bg-background hover:bg-muted data-[state=selected]:bg-accent;
+}

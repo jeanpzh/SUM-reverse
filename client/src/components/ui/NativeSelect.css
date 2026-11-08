@@ -1,0 +1,11 @@
+@reference '../../styles/theme.css';
+
+/* The planning shell has an unlayered select bridge for unmigrated controls. */
+.planning-root [data-slot='native-select'] {
+  @apply box-border min-w-0 max-w-full rounded-planning-control border border-solid border-input bg-background px-3 py-2 font-[inherit] text-sm leading-5 text-foreground;
+}
+
+.planning-root [data-slot='native-select']:not([multiple]):not([size]),
+.planning-root [data-slot='native-select'][size='1']:not([multiple]) {
+  @apply pr-8;
+}
