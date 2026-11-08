@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { toast } from '../components/ui/Sonner'
 import { Button } from '../components/ui/Button'
 import { NativeSelect } from '../components/ui/NativeSelect'
 import { Label } from '../components/ui/Label'
@@ -64,10 +63,7 @@ export function AcademicIntentionDemandPanel({ dirty, busy, onFork, potential, f
         : `¿Crear un nuevo borrador desde «${source.title}»? La publicación permanecerá sin cambios.`,
       confirmLabel: 'Crear borrador',
       destructive: dirty,
-      onConfirm: () => {
-        toast.success('La solicitud de nuevo borrador se atiende en el panel de propuesta; revisa allí su resultado.')
-        onFork(source.id, source.approvedVersion + 1)
-      },
+      onConfirm: () => onFork(source.id, source.approvedVersion + 1),
     })
   }
 

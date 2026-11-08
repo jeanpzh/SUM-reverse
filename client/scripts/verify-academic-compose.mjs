@@ -88,7 +88,7 @@ try {
     assert.equal(await page.getByLabel(`Modalidad de sesiones ${course.courseId}`).inputValue(), 'continuous')
     if (course.history?.sections.length) {
       const details = page.locator('.academic-preparation__inspector .academic-scheduling__history')
-      await details.getByRole('button', { name: /^Referencia histórica/ }).click()
+      await details.locator('summary').click()
       assert.equal(await details.locator('ul li').count(), course.history.sections.reduce((sum, section) => sum + section.sessions.length, 0))
     }
   }

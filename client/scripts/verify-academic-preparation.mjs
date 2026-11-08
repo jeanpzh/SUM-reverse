@@ -225,7 +225,7 @@ try {
   })
 
   await page.goto(`${web}${route}`)
-  await page.getByRole('heading', { name: 'Paso 1 · Seleccionar cursos' }).waitFor()
+  await page.getByRole('heading', { name: 'Seleccionar cursos', exact: true }).waitFor()
 
   // --- P1: 96 compact rows, no 96 expanded forms, at most 1 inspector ---
   const rows = page.locator('.academic-preparation__row')
@@ -430,11 +430,11 @@ try {
   // Check history under disclosure
   const historyDetails = inspector.locator('.academic-scheduling__history')
   assert.equal(await historyDetails.count(), 1, 'P5: Referencia histórica presente en inspector')
-  const historyTrigger = historyDetails.getByRole('button', { name: /^Referencia histórica/ })
-  assert.equal(await historyTrigger.getAttribute('aria-expanded'), 'false', 'P5: Historial cerrado inicialmente')
+  const historyTrigger = historyDetails.locator('summary', { hasText: /^Referencia histórica/ })
+  assert.equal(await historyDetails.getAttribute('open'), null, 'P5: Historial cerrado inicialmente')
   assert.equal(await historyDetails.locator('ul li').isVisible(), false, 'P5: Contenido de historial no visible inicialmente')
   await historyTrigger.click()
-  assert.equal(await historyTrigger.getAttribute('aria-expanded'), 'true', 'P5: Historial abierto bajo disclosure')
+  assert.equal(await historyDetails.getAttribute('open'), '', 'P5: Historial abierto bajo disclosure')
   assert.equal(await historyDetails.locator('ul li').isVisible(), true, 'P5: Contenido de historial visible al abrir')
 
   // Close inspector
@@ -499,7 +499,7 @@ try {
   realPage.on('pageerror', (err) => runtimeErrors.push(err.message))
 
   await realPage.goto(`${web}${route}`)
-  await realPage.getByRole('heading', { name: 'Paso 1 · Seleccionar cursos' }).waitFor()
+  await realPage.getByRole('heading', { name: 'Seleccionar cursos', exact: true }).waitFor()
 
   // Check real catalog courses count (built-in 56 courses)
   const realCatalogBadge = realPage.locator('[data-testid="count-catalog"]')

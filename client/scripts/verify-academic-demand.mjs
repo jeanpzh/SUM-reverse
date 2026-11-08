@@ -42,7 +42,7 @@ try {
   assert.equal(teachers.length, 2)
   await page.goto(`${base}/local/modulos`)
   await page.getByRole('link', { name: /^Escuela · Programación académica/ }).click()
-  await page.getByRole('heading', { name: 'Paso 1 · Seleccionar cursos' }).waitFor()
+  await page.getByRole('heading', { name: 'Seleccionar cursos', exact: true }).waitFor()
   await page.getByLabel('Filtrar cursos por ciclo').selectOption(String(course.cycle ?? 'all'))
   await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }))
   await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).fill('180')

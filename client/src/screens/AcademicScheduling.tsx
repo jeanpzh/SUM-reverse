@@ -102,7 +102,9 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
 
   useEffect(() => {
     if (!draftMessage) return
-    toast.success(draftMessage)
+    // Session messages are plain strings; the non-success outcomes say an edit was not applied or is still pending.
+    if (/^No se aplicó|pendiente/.test(draftMessage)) toast.warning(draftMessage, { duration: Infinity })
+    else toast.success(draftMessage)
     commands.edit({ type: 'setDraftMessage', message: null })
   }, [draftMessage, commands])
 
@@ -295,7 +297,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       </div>
       <div className="planning-preparation-view" hidden={preparationView !== 'recursos'}>
         {catalog && <section className="academic-scheduling__section" aria-labelledby="academic-scheduling-resource-editor">
-          <div className="academic-scheduling__step-heading"><h3 id="academic-scheduling-resource-editor" aria-label="Paso 2 · Configurar recursos">Configurar recursos</h3>
+          <div className="academic-scheduling__step-heading"><h3 id="academic-scheduling-resource-editor">Configurar recursos</h3>
             <p>Los nombres de referencia provienen del escenario sintético y no confirman asignaciones del nuevo periodo.</p></div>
           <AcademicResourceEditor
             catalog={catalog}
@@ -319,7 +321,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
           teachers={resources.teachers.length} rooms={resources.rooms.length} offerReady={preparationAction?.id === 'generate'}>
           <div className="academic-scheduling__locked-workspace">
             {catalog && <section className="academic-scheduling__section academic-scheduling__generate" aria-labelledby="academic-scheduling-generate">
-              <h3 id="academic-scheduling-generate" aria-label="Paso 3 · Generar propuesta">Generar propuesta</h3>
+              <h3 id="academic-scheduling-generate">Generar propuesta</h3>
               <p>Periodo: {planningPeriod}. Se envían todos los cursos seleccionados, incluidos los que estén ocultos por el filtro de ciclo.</p>
               <Collapsible className="academic-scheduling__advanced">
                 <CollapsibleTrigger asChild><Button type="button" variant="ghost">Opciones avanzadas</Button></CollapsibleTrigger>

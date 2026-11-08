@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Button } from '../components/ui/Button'
+import { Button, buttonVariants } from '../components/ui/Button'
 import { NativeSelect } from '../components/ui/NativeSelect'
 import { Label } from '../components/ui/Label'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../components/ui/Collapsible'
@@ -50,10 +50,11 @@ export function AcademicTeacherReview({ primaryActionId, review, proposal, draft
         <summary onClick={(event) => { event.preventDefault(); setExpanded((value) => !value) }}>Revisión docente simulada <Badge variant="outline">{review ? `Ronda ${review.round}` : 'Sin enviar'}</Badge></summary>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <Collapsible>
-          <CollapsibleTrigger asChild><Button variant="ghost" type="button">Alcance de la simulación</Button></CollapsibleTrigger>
-          <CollapsibleContent><p>Prototipo local sin autenticación: este selector demuestra una interacción y no concede permisos.</p></CollapsibleContent>
-        </Collapsible>
+        {/* Native details: read-only disclosures stay openable inside the locked fieldset. */}
+        <details>
+          <summary className={buttonVariants({ variant: 'ghost' })}>Alcance de la simulación</summary>
+          <p>Prototipo local sin autenticación: este selector demuestra una interacción y no concede permisos.</p>
+        </details>
         <div className="academic-teacher-review__toolbar">
           <div className="academic-teacher-review__field"><Label htmlFor="academic-review-role">Vista simulada</Label>
             <NativeSelect id="academic-review-role" aria-label="Rol simulado de revisión" value={role} onChange={(event) => setRole(event.currentTarget.value as 'school' | 'teacher')}>
@@ -108,14 +109,14 @@ export function AcademicTeacherReview({ primaryActionId, review, proposal, draft
         </> : null}
         {error && <Alert variant="destructive" role="alert">{error}</Alert>}
         {busy && <p className="academic-teacher-review__state" role="status">Actualizando revisión…</p>}
-        {review && <Collapsible className="academic-teacher-review__history"><CollapsibleTrigger asChild><Button variant="ghost" type="button">Historial ({review.history.length})</Button></CollapsibleTrigger><CollapsibleContent><ol>
+        {review && <details className="academic-teacher-review__history"><summary className={buttonVariants({ variant: 'ghost' })}>Historial ({review.history.length})</summary><ol>
           {review.history.map((event, index) => <li key={`${event.version}-${event.round}-${event.type}-${index}`}>
             <strong>{event.type === 'submitted' ? 'Envío' : event.type === 'invalidated' ? 'Revisión invalidada' : statusLabels[event.decision === 'conformity' ? 'conformity' : 'changes-requested']}</strong>
             <span>Ronda {event.round} · v{event.version} · {new Date(event.at).toLocaleString('es-PE')}</span>
             {event.teacherId && <span>{teachers.find((teacher) => teacher.teacherId === event.teacherId)?.teacherName ?? event.teacherId}</span>}
             {event.observation && <p>{event.observation}</p>}
           </li>)}
-        </ol></CollapsibleContent></Collapsible>}
+        </ol></details>}
       </CollapsibleContent>
     </details>
   </Collapsible>

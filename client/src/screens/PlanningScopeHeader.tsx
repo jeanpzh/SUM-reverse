@@ -59,7 +59,7 @@ export function PlanningScopeHeader({
         <div className="planning-scope-header__context flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
           <PageTitle>Programación académica asistida</PageTitle>
           <span className="planning-scope-header__scope text-sm font-semibold tabular-nums text-muted-foreground">{school} / {period}</span>
-          <Badge variant="secondary" title="No es una pantalla oficial SUM y no requiere ni otorga permisos administrativos.">Prototipo local · datos sintéticos</Badge>
+          <Badge variant="secondary" title="No es una pantalla oficial SUM y no requiere ni otorga permisos administrativos.">Prototipo local · datos sintéticos<span className="sr-only">. No es una pantalla oficial SUM y no requiere ni otorga permisos administrativos.</span></Badge>
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Button id="planning-tour-guide" type="button" variant="ghost" onClick={onGuide}>Guía</Button>

@@ -1,10 +1,9 @@
 import { Checkbox } from '../components/ui/Checkbox'
-import { Button } from '../components/ui/Button'
+import { Button, buttonVariants } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Input } from '../components/ui/Input'
 import { NativeSelect } from '../components/ui/NativeSelect'
 import { Label } from '../components/ui/Label'
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../components/ui/Collapsible'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table'
 import { Fragment, useId, useMemo, useState } from 'react'
 import type { AcademicCatalog, AcademicDemandEstimate, AcademicProposal, PlanningPeriod } from '../data/academicScheduling.ts'
@@ -185,7 +184,7 @@ export function AcademicPreparationCourses({
     <section className="academic-scheduling__panel" aria-labelledby="academic-scheduling-courses">
       <header className="academic-scheduling__panel-heading">
         <div>
-          <h3 id="academic-scheduling-courses">Paso 1 · Seleccionar cursos</h3>
+          <h3 id="academic-scheduling-courses">Seleccionar cursos</h3>
 
         </div>
         <div className="academic-scheduling__panel-meta">
@@ -394,7 +393,6 @@ export function AcademicPreparationCourses({
                             <TableRow
                               key={course.courseId}
                               data-course-id={course.courseId}
-                              aria-selected={isSelected}
                               data-state={isSelected ? 'selected' : undefined}
                               className={`academic-preparation__row ${
                                 isInspected ? 'academic-preparation__row--inspected' : ''
@@ -555,14 +553,10 @@ export function AcademicPreparationCourses({
                     </NativeSelect>
                   </Label>
 
+                  {/* Native details: read-only reference stays openable inside the locked fieldset. */}
                   {inspectedCourse.history && (
-                    <Collapsible className="academic-scheduling__history">
-                      <CollapsibleTrigger asChild>
-                        <Button variant="ghost" type="button">
-                        Referencia histórica · {inspectedCourse.history.sections.length} secciones
-                      </Button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
+                    <details className="academic-scheduling__history">
+                      <summary className={buttonVariants({ variant: 'ghost' })}>Referencia histórica · {inspectedCourse.history.sections.length} secciones</summary>
                       <div className="academic-scheduling__history-content">
                         {inspectedCourse.history.sections.map((section) => (
                           <div
@@ -585,8 +579,8 @@ export function AcademicPreparationCourses({
                           </div>
                         ))}
                       </div>
-                    </CollapsibleContent>
-                    </Collapsible>
+                    
+                    </details>
                   )}
                 </div>
               </aside>

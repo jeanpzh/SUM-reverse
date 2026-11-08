@@ -125,7 +125,7 @@ try {
 
   await page.goto(`${webUrl}${route}`, { waitUntil: 'domcontentloaded' })
   page.on('pageerror', (err) => console.error('[BROWSER PAGE ERROR]', err.message))
-  await page.getByRole('heading', { name: 'Paso 2 · Configurar recursos' }).waitFor()
+  await page.getByRole('heading', { name: 'Configurar recursos', exact: true }).waitFor()
 
   // -------------------------------------------------------------
   if (!['integration', 'layout'].includes(process.env.SUM_TEST_PHASE)) {
@@ -390,7 +390,7 @@ try {
 
   // Recargar y continuar edición
   await page.reload()
-  await page.getByRole('heading', { name: 'Paso 2 · Configurar recursos' }).waitFor()
+  await page.getByRole('heading', { name: 'Configurar recursos', exact: true }).waitFor()
   await page.getByRole('button', { name: 'Mis propuestas', exact: true }).click()
   const savedProposals = page.locator('#academic-scheduling-saved-proposals')
   await savedProposals.waitFor()
@@ -450,7 +450,7 @@ try {
   // Regresar a Preparación, recargar y Consultar
   await stage('Preparación', 'preparacion')
   await page.reload()
-  await page.getByRole('heading', { name: 'Paso 2 · Configurar recursos' }).waitFor()
+  await page.getByRole('heading', { name: 'Configurar recursos', exact: true }).waitFor()
   await page.getByRole('button', { name: 'Mis propuestas', exact: true }).click()
   const approvedSavedRow = page.locator('.academic-scheduling__saved-row').filter({ hasText: draftTitle })
 

@@ -45,7 +45,6 @@
 .academic-scheduling__course input:focus-visible { outline: 2px solid var(--planning-primary); outline-offset: 1px; }
 .academic-scheduling__course select:focus-visible { outline: 2px solid var(--planning-primary); outline-offset: 1px; }
 .academic-scheduling__history { margin-top: 0.85rem; border-top: 1px solid var(--planning-border); padding-top: 0.65rem; }
-.academic-scheduling__history summary { color: var(--planning-primary); font-size: var(--text-meta); font-weight: 650; cursor: pointer; }
 .academic-scheduling__history-content { display: grid; gap: 0.7rem; margin-top: 0.65rem; }
 .academic-scheduling__history-section { padding: 0.65rem; border: 1px solid var(--planning-border); border-radius: var(--planning-radius-control); background: var(--planning-surface); font-size: var(--text-meta); }
 .academic-scheduling__history-section strong { color: var(--planning-text); }

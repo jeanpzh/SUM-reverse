@@ -149,6 +149,9 @@ try {
     await page.getByRole('button', { name: 'Actualizar vista previa', exact: true }).click()
     const activated = responseFor(`${e3}/ofertas/activar`)
     await page.getByRole('button', { name: 'Activar publicación seleccionada', exact: true }).click()
+    const confirmDialog = page.getByRole('alertdialog')
+    await Promise.race([activated, confirmDialog.waitFor().then(() =>
+      confirmDialog.getByRole('button', { name: 'Activar publicación seleccionada', exact: true }).click()).catch(() => {})])
     const activationResponse = await activated
     assert.equal(activationResponse.status(), 200, await activationResponse.text())
     assert.deepEqual(activationResponse.request().postDataJSON(), { publicationId: publication.id,

@@ -241,11 +241,13 @@ export function AcademicPublicationPanel({ primaryActionId, draftId, draftVersio
       setOfferCatalog(current)
       const existing = current.items.find((item) => item.publicationId === publication.id
         && item.publicationVersion === publication.publicationVersion)
+      if (current.activeRunId && !existing) setActivating(false)
       if (current.activeRunId && !existing && !(await confirm({
         title: 'Activar publicación seleccionada',
         description: `Ya existe una oferta operativa activa (${current.activeRunId}). ¿Crear un contexto nuevo para publicación ${publication.publicationVersion}? Las ofertas anteriores conservarán sus matrículas.`,
         confirmLabel: 'Activar publicación seleccionada',
       }))) return
+      setActivating(true)
       const result = await activateEnrollmentOffer({ publicationId: publication.id,
         publicationVersion: publication.publicationVersion, expectedActiveRunId: current.activeRunId })
       setActivation(result)
