@@ -9,6 +9,7 @@ import { AcademicPreparationCourses } from './AcademicPreparationCourses'
 import { AcademicTeacherReview as AcademicTeacherReviewPanel } from './AcademicTeacherReview'
 import { AcademicPublicationPanel } from './AcademicPublicationPanel'
 import { AcademicIntentionDemandPanel } from './AcademicIntentionDemandPanel'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/Dialog'
 import { PlanningScopeHeader } from './PlanningScopeHeader'
 import { PlanningStageNav } from './PlanningStageNav'
 import { PlanningStatusBar } from './PlanningStatusBar'
@@ -165,11 +166,10 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
           </label>
           <div className="academic-scheduling__draft-actions">
             <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary"
-              aria-expanded={draftListOpen} aria-controls="academic-scheduling-saved-proposals"
+              aria-haspopup="dialog"
               onClick={() => {
-                const opening = !draftListOpen
-                setDraftListOpen(opening)
-                if (opening) void refreshDraftList()
+                setDraftListOpen(true)
+                void refreshDraftList()
               }}>Mis propuestas</button>
           </div>
         </div>
@@ -179,16 +179,25 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
         </p>}
         {draftMessage && <p className="academic-scheduling__draft-note" role="status">{draftMessage}</p>}
         {draftError && <p className="academic-scheduling__error" role="alert">{draftError}</p>}
-        {draftListOpen && <div id="academic-scheduling-saved-proposals" className="academic-scheduling__saved-proposals">
-          {draftList?.unavailableCount ? <p role="status">{draftList.unavailableCount} propuesta(s) no se pudieron leer.</p> : null}
-          {draftList?.items.length === 0 && <p>No hay propuestas guardadas.</p>}
-          {draftList && draftList.items.map((item) => <details className="academic-scheduling__saved-row" key={item.id}>
-            <summary>{item.title} · {item.schoolId} · {item.academicPeriod} · {item.state === 'draft' ? 'Borrador' : item.state === 'ready-for-review' ? 'Lista para revisión' : item.state === 'in-review' ? 'En revisión docente' : item.state === 'ready-for-approval' ? 'Lista para aprobación' : item.state === 'approved' ? 'Aprobada (simulada)' : 'Publicada (simulada)'} · v{item.version}</summary>
-            <div><span>Actualizada {new Date(item.updatedAt).toLocaleString('es-PE')} · {item.hasSchedule ? 'Con horario' : 'Solo configuración'}</span>
-              <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary"
-                disabled={draftBusy} onClick={() => void resumeDraft(item.id, item.version)}>{item.state === 'approved' || item.state === 'published' ? 'Consultar' : 'Continuar edición'}</button></div>
-          </details>)}
-        </div>}
+        <Dialog open={draftListOpen} onOpenChange={setDraftListOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Mis propuestas</DialogTitle>
+              <DialogDescription>Almacenamiento local compartido; no está asociado a una cuenta.</DialogDescription>
+            </DialogHeader>
+            {draftError && <p className="academic-scheduling__error" role="alert">{draftError}</p>}
+            <div id="academic-scheduling-saved-proposals" className="academic-scheduling__saved-proposals">
+              {draftList?.unavailableCount ? <p role="status">{draftList.unavailableCount} propuesta(s) no se pudieron leer.</p> : null}
+              {draftList?.items.length === 0 && <p>No hay propuestas guardadas.</p>}
+              {draftList && draftList.items.map((item) => <details className="academic-scheduling__saved-row" key={item.id}>
+                <summary>{item.title} · {item.schoolId} · {item.academicPeriod} · {item.state === 'draft' ? 'Borrador' : item.state === 'ready-for-review' ? 'Lista para revisión' : item.state === 'in-review' ? 'En revisión docente' : item.state === 'ready-for-approval' ? 'Lista para aprobación' : item.state === 'approved' ? 'Aprobada (simulada)' : 'Publicada (simulada)'} · v{item.version}</summary>
+                <div><span>Actualizada {new Date(item.updatedAt).toLocaleString('es-PE')} · {item.hasSchedule ? 'Con horario' : 'Solo configuración'}</span>
+                  <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary"
+                    disabled={draftBusy} onClick={() => void resumeDraft(item.id, item.version)}>{item.state === 'approved' || item.state === 'published' ? 'Consultar' : 'Continuar edición'}</button></div>
+              </details>)}
+            </div>
+          </DialogContent>
+        </Dialog>
       </section>
 
       <fieldset className="academic-scheduling__locked-workspace" disabled={lockedDraft || draftBusy}>
