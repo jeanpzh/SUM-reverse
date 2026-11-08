@@ -14,6 +14,7 @@ import {
   useFloating,
 } from '@floating-ui/react-dom'
 import { cn } from '../../lib/utils'
+import { getTourStepTransition } from './tourNavigation'
 import * as DirectionPrimitive from '@radix-ui/react-direction'
 import * as SlotPrimitive from '@radix-ui/react-slot'
 import { useComposedRefs } from '@radix-ui/react-compose-refs'
@@ -612,6 +613,7 @@ function Tour(props: TourProps) {
       },
       setState: (key, value) => {
         if (Object.is(stateRef.current[key], value)) return
+        const previousValue = stateRef.current.value
         stateRef.current[key] = value
 
         if (key === 'open' && typeof value === 'boolean') {
@@ -629,13 +631,15 @@ function Tour(props: TourProps) {
             }
           }
         } else if (key === 'value' && typeof value === 'number') {
-          const prevStep = stateRef.current.steps[stateRef.current.value]
-          const nextStep = stateRef.current.steps[value]
+          const transition = getTourStepTransition(previousValue, value, stateRef.current.steps.length)
+          stateRef.current.value = transition.value
+          const prevStep = stateRef.current.steps[transition.previousValue]
+          const nextStep = stateRef.current.steps[transition.value]
 
           prevStep?.onStepLeave?.()
           nextStep?.onStepEnter?.()
 
-          if (value >= stateRef.current.steps.length) {
+          if (transition.complete) {
             propsRef.current.onComplete?.()
 
             if (propsRef.current.valueProp !== undefined) {
@@ -643,15 +647,13 @@ function Tour(props: TourProps) {
             }
 
             store.setState('open', false)
+            store.notify()
             return
           }
 
-          if (propsRef.current.valueProp !== undefined) {
-            propsRef.current.onValueChange?.(value)
-            return
-          }
-
-          propsRef.current.onValueChange?.(value)
+          // Controlled props synchronise back to this already-written value. Always
+          // notify subscribers below; an early return leaves every step on the old snapshot.
+          propsRef.current.onValueChange?.(transition.value)
 
           if (nextStep && propsRef.current.autoScroll) {
             const targetElement = getTargetElement(nextStep.target)

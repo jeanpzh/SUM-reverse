@@ -49,6 +49,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
   const [confirmElement, confirm] = useConfirm()
   const [tourOpen, setTourOpen] = useState(false)
   const [tourStep, setTourStep] = useState(0)
+  const guideOrigin = useRef<{ stage: PlanningStage; view: PlanningPreparationView; scrollY: number } | null>(null)
   const [draftListOpen, setDraftListOpen] = useState(false)
   const viewScrollPositions = useRef<{ tabla: number; semana: number }>({ tabla: 0, semana: 0 })
 
@@ -120,11 +121,28 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
   }, [draftBusy, generating, draftError, proposalError])
 
   const openGuide = async () => {
-    // Every target is visible in the preparation summary, including the next valid action.
+    guideOrigin.current = { stage: currentStage, view: preparationView, scrollY: window.scrollY }
+    // Preparation holds the stable targets; restore the caller's context on close.
     await navigate({ to: '/local/programacion-academica', search: { etapa: 'preparacion', vista: 'resumen' } })
     setTourStep(0)
     setTourOpen(true)
   }
+
+  const restoreGuideContext = () => {
+    const origin = guideOrigin.current
+    guideOrigin.current = null
+    if (!origin) return
+    void navigate({
+      to: '/local/programacion-academica',
+      search: { etapa: origin.stage, ...(origin.stage === 'preparacion' ? { vista: origin.view } : {}) },
+      resetScroll: false,
+    }).then(() => {
+      window.scrollTo({ top: origin.scrollY, behavior: 'instant' })
+      document.getElementById('planning-tour-guide')?.focus({ preventScroll: true })
+    })
+  }
+
+  const hasGuidePrimaryTarget = preparationAction?.id === 'generate' || preparationAction?.id === 'review-offer'
 
   const retryCatalog = () => void commands.loadCatalog()
   const refreshDraftList = () => commands.refreshDrafts()
@@ -509,7 +527,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
         finalDemand={Object.fromEntries(selectedCourses.map((courseId) => [courseId, demands[courseId] ?? '']))} />
     </section>
     <Tour open={tourOpen} onOpenChange={setTourOpen} value={tourStep} onValueChange={setTourStep}
-      onCloseAutoFocus={(event) => { event.preventDefault(); document.getElementById('planning-tour-guide')?.focus() }}>
+      onCloseAutoFocus={(event) => { event.preventDefault(); restoreGuideContext() }}>
       <TourPortal>
         <TourSpotlight />
         <TourSpotlightRing />
@@ -517,10 +535,12 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
           ['stages', 'Etapas', 'Avanza de la preparación a la publicación desde estas etapas.'],
           ['preparation', 'Preparación', 'Revisa el resumen, los cursos y los recursos antes de generar.'],
           ['save', 'Guardar', 'Guarda explícitamente la versión que quieres conservar.'],
-          ['primary', 'Siguiente acción', 'Esta acción indica el siguiente paso según el estado de la propuesta.'],
+          [hasGuidePrimaryTarget ? 'primary' : 'preparation', 'Siguiente acción', hasGuidePrimaryTarget
+            ? 'Esta acción indica el siguiente paso según el estado de la propuesta.'
+            : 'La siguiente acción está en otra etapa. Usa las etapas para continuar con la propuesta.'],
           ['proposals', 'Mis propuestas', 'Continúa una edición guardada o consulta una versión congelada.'],
-        ].map(([target, title, description], index) => <TourStep key={target} target={`#planning-tour-${target}`} role="dialog" aria-labelledby={`planning-guide-title-${target}`}>
-          <TourHeader><TourTitle id={`planning-guide-title-${target}`}>{title}</TourTitle><TourDescription>{description}</TourDescription></TourHeader>
+        ].map(([target, title, description], index) => <TourStep key={index} target={`#planning-tour-${target}`} role="dialog" aria-labelledby={`planning-guide-title-${index}`}>
+          <TourHeader><TourTitle id={`planning-guide-title-${index}`}>{title}</TourTitle><TourDescription>{description}</TourDescription></TourHeader>
           <TourStepCounter format={(current, total) => `Paso ${current} de ${total}`} />
           <TourFooter>
             <TourSkip variant="ghost" aria-label="Cerrar guía">Cerrar</TourSkip>
