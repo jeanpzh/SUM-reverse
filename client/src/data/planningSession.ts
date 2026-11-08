@@ -143,6 +143,10 @@ export type PlanningSessionEvent =
   | { type: 'startBlockReview'; block: PlanningBlock }
   | { type: 'changeEditingBlock'; adjustment: AcademicAdjustment }
   | { type: 'cancelBlockReview' }
+  // Feedback written by AcademicPublicationPanel for its own preview/publication reads.
+  | { type: 'setDraftBusy'; busy: boolean }
+  | { type: 'setDraftError'; message: string | null }
+  | { type: 'setDraftMessage'; message: string | null }
   | { type: 'demand/started' }
   | { type: 'demand/succeeded'; token: number; estimate: AcademicDemandEstimate; baseRequest: AcademicDemandRequest }
   | { type: 'demand/failed'; token: number; message: string | null }
@@ -313,7 +317,13 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
     case 'changeEditingBlock':
       return { ...state, editingBlock: event.adjustment }
     case 'cancelBlockReview':
-      return { ...state, editingBlock: null }
+      return { ...state, editingBlock: null, errors: { ...state.errors, adjustment: null } }
+    case 'setDraftBusy':
+      return { ...state, busy: { ...state.busy, draft: event.busy } }
+    case 'setDraftError':
+      return { ...state, errors: { ...state.errors, draft: event.message } }
+    case 'setDraftMessage':
+      return { ...state, message: event.message }
 
     case 'demand/started':
       return { ...state, intents: { ...state.intents, demand: state.intents.demand + 1 }, demandEstimate: null,
@@ -582,7 +592,8 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
     edit: (event: Extract<PlanningSessionEvent, { type: 'toggleCourse' | 'selectCourses' | 'applyBulkChanges' | 'updateDemand'
       | 'updateCapacity' | 'changeDemandSource' | 'updatePattern' | 'updateDeliveryMode' | 'updateResources'
       | 'updateAllocationPolicy' | 'updatePlanningException' | 'applyPeriodDefaults' | 'setTitle' | 'setDraftState'
-      | 'startBlockReview' | 'changeEditingBlock' | 'cancelBlockReview' }>) => dispatch(event),
+      | 'startBlockReview' | 'changeEditingBlock' | 'cancelBlockReview' | 'setDraftBusy' | 'setDraftError'
+      | 'setDraftMessage' }>) => dispatch(event),
 
     async loadCatalog() {
       dispatch({ type: 'catalog/started' })
@@ -680,6 +691,7 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
       }
     },
 
+    // Resolves true when the requested draft replaced the workspace.
     async resume(id: string, version: number) {
       const mutation = state.mutation
       dispatch({ type: 'resume/started' })
@@ -689,9 +701,11 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
       try {
         const { draft } = await client.resumeDraft(id, version, controller.signal)
         dispatch({ type: 'resume/succeeded', token, mutation, draft })
+        return state.draft.id === draft.id && state.draft.version === draft.version
       } catch (error) {
         dispatch({ type: 'resume/failed', token, message: controller.signal.aborted ? null
           : errorText(error, 'No se abrió la propuesta; se conserva la edición actual. ', 'No se abrió la propuesta; se conserva la edición actual.') })
+        return false
       }
     },
 
@@ -722,15 +736,18 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
       }
     },
 
+    // Resolves true when the forked draft replaced the workspace.
     async fork(id: string, version: number) {
-      if (!idle()) return
+      if (!idle()) return false
       const mutation = state.mutation
       dispatch({ type: 'release/started' })
       try {
         const draft = await client.forkDraft(id, version)
         dispatch({ type: 'fork/succeeded', mutation, draft, sourceId: id })
+        return state.draft.id === draft.id
       } catch (error) {
         dispatch({ type: 'release/failed', message: errorText(error, 'No se creó el nuevo borrador. ', 'No se creó el nuevo borrador.') })
+        return false
       }
     },
 

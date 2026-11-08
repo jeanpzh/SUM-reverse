@@ -228,7 +228,7 @@ test('resume hydrates the saved workspace and proposal', async () => {
   await writer.commands.save()
   const reader = createPlanningSession(shared.client)
   await reader.commands.loadCatalog()
-  await reader.commands.resume(draftId, 1)
+  assert.equal(await reader.commands.resume(draftId, 1), true)
   const state = reader.getState()
   assert.deepEqual(state.selectedCourses, ['CS101'])
   assert.equal(state.demands.CS101, '33')
@@ -236,6 +236,15 @@ test('resume hydrates the saved workspace and proposal', async () => {
   assert.equal(state.dirty, false)
   assert.equal(state.proposal?.proposalId, 'proposal-synthetic')
   assert.match(state.message ?? '', /recuperada\. Puedes continuar/)
+})
+
+test('resume and fork resolve false when the workspace was not replaced', async () => {
+  const { session } = await loadedSession()
+  assert.equal(await session.commands.resume('missing-draft', 1), false)
+  assert.equal(session.getState().draft.id, null)
+  assert.ok(session.getState().errors.draft)
+  assert.equal(await session.commands.fork(draftId, 1), false)
+  assert.equal(session.getState().draft.id, null)
 })
 
 test('approve and publish move the saved state and lock the draft', async () => {

@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { fetchAcademicCatalog, estimateAcademicDemand, createAcademicProposal, adjustAcademicProposal, fetchAcademicDrafts, saveAcademicDraft, resumeAcademicDraft, submitAcademicTeacherReview, respondAcademicTeacherReview, formatAcademicInterval, aggregateAcademicBlocks, approveAcademicDraft, publishAcademicDraft, forkAcademicDraft, createAcademicPlanningDefaults, buildAcademicPlanningRequest, PLANNING_LIMITS } from '../data/academicScheduling'
-import type { PlanningPeriod, PlanningPolicy } from '../data/academicScheduling'
-import type { AcademicCatalog, AcademicDemandEstimate, AcademicProposal } from '../data/academicScheduling'
-import type { AcademicAdjustment, AcademicPlanningResources, AcademicAllocationPolicy, AcademicDemandRequest, AcademicDraftList, AcademicDraftState, AcademicWorkspace, AcademicTeacherReview, AcademicSavedDraft } from '../../../shared/programacion-academica-api.mjs'
-import { validateAcademicResources, validateAcademicRequest, validateAcademicWorkspace } from '../../../shared/programacion-academica-api.mjs'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { formatAcademicInterval } from '../data/academicScheduling'
+import type { PlanningPeriod } from '../data/academicScheduling'
+import type { AcademicAdjustment, AcademicAllocationPolicy, AcademicDraftState, AcademicPlanningResources } from '../../../shared/programacion-academica-api.mjs'
+import { usePlanningSession } from '../data/planningSession'
+import type { PlanningBlock } from '../data/planningSession'
 import { AcademicResourceEditor } from './AcademicResourceEditor'
 import { AcademicPreparationCourses } from './AcademicPreparationCourses'
 import { AcademicTeacherReview as AcademicTeacherReviewPanel } from './AcademicTeacherReview'
@@ -21,15 +21,13 @@ import './PlanningWorkbench.css'
 import './PlanningSections.css'
 
 export function AcademicScheduling({ currentStage = 'preparacion' }: { currentStage?: PlanningStage } = {}) {
-  const [catalog, setCatalog] = useState<AcademicCatalog | null>(null)
-  const [catalogError, setCatalogError] = useState<string | null>(null)
-  const [loadingCatalog, setLoadingCatalog] = useState(true)
-  const [proposal, setProposal] = useState<AcademicProposal | null>(null)
-  const [proposalResources, setProposalResources] = useState<AcademicPlanningResources | null>(null)
-  const [editingBlock, setEditingBlock] = useState<AcademicAdjustment | null>(null)
+  // Workflow state and rules live in the Sesión de programación (client/src/data/planningSession.ts).
+  const { state, view, commands } = usePlanningSession()
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'tabla' | 'semana'>('tabla')
   const [searchQuery, setSearchQuery] = useState('')
+  const [cycleFilter, setCycleFilter] = useState('all')
+  const [draftListOpen, setDraftListOpen] = useState(false)
   const viewScrollPositions = useRef<{ tabla: number; semana: number }>({ tabla: 0, semana: 0 })
 
   const handleToggleView = useCallback((nextMode: 'tabla' | 'semana') => {
@@ -46,638 +44,85 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
     })
     return () => cancelAnimationFrame(rafId)
   }, [viewMode])
-  const [adjusting, setAdjusting] = useState(false)
-  const [generating, setGenerating] = useState(false)
-  const [proposalError, setProposalError] = useState<string | null>(null)
-  const [adjustmentError, setAdjustmentError] = useState<string | null>(null)
-  const [demands, setDemands] = useState<Record<string, string>>({})
-  const [capacities, setCapacities] = useState<Record<string, string>>({})
-  const [patterns, setPatterns] = useState<Record<string, string>>({})
-  const [deliveryModes, setDeliveryModes] = useState<Record<string, 'continuous' | 'split'>>({})
-  const [selectedCourses, setSelectedCourses] = useState<string[]>([])
-  const [demandSourceId, setDemandSourceId] = useState<'existing-regular-v1' | 'independent-120-v1'>('existing-regular-v1')
-  const [demandEstimate, setDemandEstimate] = useState<AcademicDemandEstimate | null>(null)
-  const [demandLoading, setDemandLoading] = useState(false)
-  const [demandError, setDemandError] = useState<string | null>(null)
-  const [cycleFilter, setCycleFilter] = useState('all')
-  const [resources, setResources] = useState<AcademicPlanningResources>({ teachers: [], rooms: [] })
-  const [planningPeriod, setPlanningPeriod] = useState<PlanningPeriod>('2027-I')
-  const [planningPolicy, setPlanningPolicy] = useState<PlanningPolicy | null>(null)
-  const [allocationPolicy, setAllocationPolicy] = useState<AcademicAllocationPolicy>('preferences')
-  const [draftTitle, setDraftTitle] = useState('Propuesta SISTEMAS 2027-I')
-  const [draftState, setDraftState] = useState<AcademicDraftState>('draft')
-  const [draftId, setDraftId] = useState<string | null>(null)
-  const [draftVersion, setDraftVersion] = useState<number | null>(null)
-  const [savedDraftState, setSavedDraftState] = useState<AcademicDraftState>('draft')
-  const [savedReview, setSavedReview] = useState<AcademicTeacherReview | undefined>()
-  const [workspaceDirty, setWorkspaceDirty] = useState(false)
-  const [draftList, setDraftList] = useState<AcademicDraftList | null>(null)
-  const [draftListOpen, setDraftListOpen] = useState(false)
-  const [draftBusy, setDraftBusy] = useState(false)
-  const [draftMessage, setDraftMessage] = useState<string | null>(null)
-  const [draftError, setDraftError] = useState<string | null>(null)
-  const [reviewError, setReviewError] = useState<string | null>(null)
-  const [demandBaseRequest, setDemandBaseRequest] = useState<AcademicDemandRequest | null>(null)
-  const latestIntent = useRef(0)
-  const catalogController = useRef<AbortController | null>(null)
-  const demandIntent = useRef(0)
-  const demandController = useRef<AbortController | null>(null)
-  const draftListIntent = useRef(0)
-  const draftSaveIntent = useRef(0)
-  const draftResumeIntent = useRef(0)
-  const draftController = useRef<AbortController | null>(null)
-  const draftListController = useRef<AbortController | null>(null)
-  const hydratedFromDraft = useRef(false)
-  const workspaceMutation = useRef(0)
-  const lockedDraft = savedDraftState === 'approved' || savedDraftState === 'published'
 
-  const markWorkspaceDirty = (configurationChanged = false) => {
-    workspaceMutation.current += 1
-    setWorkspaceDirty(true)
-    setDraftMessage(null)
-    if (configurationChanged) setDraftState((current) => current === 'ready-for-review' ? 'draft' : current)
-  }
+  const { catalog, proposal, proposalResources, editingBlock, demands, capacities, patterns, deliveryModes,
+    selectedCourses, demandSourceId, demandEstimate, resources, allocationPolicy } = state
+  const planningPeriod = state.period
+  const planningPolicy = state.policy
+  const draftTitle = state.draft.title
+  const draftId = state.draft.id
+  const draftVersion = state.draft.version
+  const savedDraftState = state.draft.savedState
+  const savedReview = state.draft.review
+  const workspaceDirty = state.dirty
+  const draftList = state.draftList
+  const draftBusy = state.busy.draft
+  const loadingCatalog = state.busy.catalog
+  const generating = state.busy.generate
+  const adjusting = state.busy.adjust
+  const demandLoading = state.busy.demand
+  const catalogError = state.errors.catalog
+  const proposalError = state.errors.proposal
+  const adjustmentError = state.errors.adjustment
+  const demandError = state.errors.demand
+  const draftError = state.errors.draft
+  const reviewError = state.errors.review
+  const draftMessage = state.message
+  const lockedDraft = view.locked
+  const validDemands = view.offerValid
+  const canSave = view.canSave
+  const disabledSaveReason = view.disabledSaveReason
 
-  const invalidateDemandEstimate = useCallback(() => {
-    demandIntent.current += 1
-    demandController.current?.abort()
-    demandController.current = null
-    setDemandEstimate(null)
-    setDemandLoading(false)
-    setDemandError(null)
-  }, [])
-
-  const loadCatalog = useCallback(async () => {
-    catalogController.current?.abort()
-    const controller = new AbortController()
-    catalogController.current = controller
-    try {
-      const value = await fetchAcademicCatalog(globalThis.fetch, controller.signal)
-      setCatalog(value)
-      if (!hydratedFromDraft.current) {
-        const defaults = createAcademicPlanningDefaults(value, '2027-I')
-        setDemands(defaults.demands)
-        setCapacities(defaults.capacities)
-        setPatterns(Object.fromEntries(value.courses.flatMap((course) => course.planningPatterns?.length
-          ? [[course.courseId, course.planningPatterns[0].id]] : [])))
-        setSelectedCourses([])
-      }
-      invalidateDemandEstimate()
-      if (!hydratedFromDraft.current) {
-        const defaults = createAcademicPlanningDefaults(value, '2027-I')
-        setResources(defaults.resources)
-        setPlanningPolicy(defaults.planningPolicy)
-      }
-    } catch (error) {
-      if (!controller.signal.aborted) setCatalogError(error instanceof Error ? error.message : 'No se pudo consultar el catálogo local.')
-    } finally {
-      if (!controller.signal.aborted) setLoadingCatalog(false)
-    }
-  }, [invalidateDemandEstimate])
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => void loadCatalog(), 0)
-    return () => {
-      window.clearTimeout(timer)
-      catalogController.current?.abort()
-      demandController.current?.abort()
-      draftController.current?.abort()
-      draftListController.current?.abort()
-    }
-  }, [loadCatalog])
-
-  const retryCatalog = () => {
-    setLoadingCatalog(true)
-    setCatalogError(null)
-    void loadCatalog()
-  }
-
-  const refreshDraftList = async () => {
-    const intent = ++draftListIntent.current
-    draftListController.current?.abort()
-    const controller = new AbortController()
-    draftListController.current = controller
-    setDraftError(null)
-    try {
-      const value = await fetchAcademicDrafts(globalThis.fetch, controller.signal)
-      if (intent === draftListIntent.current) setDraftList(value)
-    } catch (error) {
-      if (intent === draftListIntent.current && !controller.signal.aborted) setDraftError(error instanceof Error
-        ? `No se pudieron consultar las propuestas locales. ${error.message}` : 'No se pudieron consultar las propuestas locales.')
-    }
-  }
-
-  const buildWorkspace = (): AcademicWorkspace => {
-    if (!catalog) throw new Error('Espera a que cargue el catálogo local antes de guardar.')
-    const requestBase = {
-      revision: catalog.revision,
-      demands: catalog.courses.filter((course) => selectedCourses.includes(course.courseId)).map((course) => ({
-        courseId: course.courseId,
-        estimatedDemand: Number(demands[course.courseId]),
-        targetCapacity: Number(capacities[course.courseId]),
-        ...(patterns[course.courseId] ? { patternId: patterns[course.courseId] } : {}),
-        deliveryMode: deliveryModes[course.courseId] ?? 'continuous',
-      })),
-      allocationPolicy,
-      resources: {
-        teachers: resources.teachers.map((teacher) => ({ ...teacher, courseIds: [...teacher.courseIds],
-          availability: teacher.availability.map((interval) => ({ ...interval })),
-          ...(teacher.preferences ? { preferences: teacher.preferences.map((interval) => ({ ...interval })) } : {}),
-          ...(teacher.sectionLimits ? { sectionLimits: teacher.sectionLimits.map((limit) => ({ ...limit })) } : {}) })),
-        rooms: resources.rooms.map((room) => ({ ...room, availability: room.availability.map((interval) => ({ ...interval })) })),
-      },
-    }
-    const request = planningPolicy ? buildAcademicPlanningRequest(requestBase, planningPolicy) : requestBase
-    validateAcademicRequest(request)
-    validateAcademicResources(request.resources)
-    const baseRequest = planningPeriod === '2027-I' && demandBaseRequest && demandEstimate ? { ...demandBaseRequest,
-      courses: demandEstimate.rows.map((row) => ({ courseId: row.courseId, targetCapacity: row.targetCapacity })) } : null
-    const workspace: AcademicWorkspace = { schoolId: 'SISTEMAS', academicPeriod: planningPeriod, request,
-      demandSourceId, demandBaseRequest: baseRequest }
-    validateAcademicWorkspace(workspace)
-    return workspace
-  }
-
-  const saveDraft = async () => {
-    if (draftBusy || lockedDraft) return
-    if (!validDemands) {
-      setDraftError('Completa demandas y capacidades válidas para todos los cursos seleccionados antes de guardar.')
-      return
-    }
-    if (draftState === 'ready-for-review' && (!proposal || proposal.status !== 'complete'
-      || !proposal.coverageComplete || proposal.assignments.length === 0)) {
-      setDraftError('Para marcarla lista, genera una propuesta completa con asignaciones válidas.')
-      return
-    }
-    let configuration: AcademicWorkspace
-    try {
-      configuration = buildWorkspace()
-    } catch (error) {
-      setDraftError(error instanceof Error ? error.message : 'La configuración no es válida para guardar.')
-      return
-    }
-    const intent = ++draftSaveIntent.current
-    const mutation = workspaceMutation.current
-    const controller = new AbortController()
-    setDraftBusy(true)
-    setDraftError(null)
-    setDraftMessage(null)
-    try {
-      const saved = await saveAcademicDraft({ id: draftId, expectedVersion: draftVersion, title: draftTitle,
-        state: savedReview ? 'draft' : draftState === 'ready-for-review' ? 'ready-for-review' : 'draft', configuration,
-        proposalId: proposal && proposal.status !== 'invalid-input' ? proposal.proposalId : null,
-        proposalEditVersion: proposal && proposal.status !== 'invalid-input' ? proposal.editVersion ?? 0 : null,
-      }, globalThis.fetch, controller.signal)
-      if (intent !== draftSaveIntent.current) return
-      setSavedDraftState(saved.state)
-      setSavedReview(saved.review)
-      if (mutation === workspaceMutation.current) {
-        setDraftId(saved.id)
-        setDraftVersion(saved.version)
-        setWorkspaceDirty(false)
-        setDraftMessage(`Guardada · versión ${saved.version}.`)
-      } else {
-        setDraftId(saved.id)
-        setDraftVersion(saved.version)
-        setWorkspaceDirty(true)
-        setDraftMessage('Se guardó una captura anterior; la configuración actual sigue pendiente de guardar.')
-      }
-      void refreshDraftList()
-    } catch (error) {
-      if (intent === draftSaveIntent.current) setDraftError(error instanceof Error
-        ? `No se guardaron los cambios. ${error.message}` : 'No se guardaron los cambios.')
-    } finally {
-      if (intent === draftSaveIntent.current) setDraftBusy(false)
-    }
-  }
-
-  const hydrateDraft = (draft: AcademicSavedDraft, message: string) => {
-    const config = draft.configuration
-    const nextProposal = draft.proposal
-    hydratedFromDraft.current = true
-    setDraftId(draft.id)
-    setDraftVersion(draft.version)
-    setDraftTitle(draft.title)
-    setDraftState(draft.state)
-    setSavedDraftState(draft.state)
-    setSavedReview(draft.review)
-    setWorkspaceDirty(false)
-    workspaceMutation.current += 1
-    setPlanningPeriod(config.academicPeriod)
-    setPlanningPolicy(config.request.planningPolicy ? { ...config.request.planningPolicy } : null)
-    setAllocationPolicy(config.request.allocationPolicy ?? 'preferences')
-    setSelectedCourses(config.request.demands.map((item) => item.courseId))
-    setDemands((current) => ({ ...current, ...Object.fromEntries(config.request.demands.map((item) => [item.courseId, String(item.estimatedDemand)])) }))
-    setCapacities((current) => ({ ...current, ...Object.fromEntries(config.request.demands.map((item) => [item.courseId, String(item.targetCapacity ?? '')])) }))
-    setPatterns((current) => ({ ...current, ...Object.fromEntries(config.request.demands.flatMap((item) => item.patternId ? [[item.courseId, item.patternId]] : [])) }))
-    setDeliveryModes((current) => ({ ...current, ...Object.fromEntries(config.request.demands.map((item) => [item.courseId, item.deliveryMode ?? 'continuous'])) }))
-    setDemandSourceId(config.demandSourceId)
-    setDemandBaseRequest(config.demandBaseRequest)
-    setDemandEstimate(draft.demandBase)
-    setResources({ teachers: config.request.resources.teachers.map((teacher) => ({ ...teacher,
-      courseIds: [...teacher.courseIds], availability: teacher.availability.map((interval) => ({ ...interval })),
-      ...(teacher.preferences ? { preferences: teacher.preferences.map((interval) => ({ ...interval })) } : {}),
-      ...(teacher.sectionLimits ? { sectionLimits: teacher.sectionLimits.map((limit) => ({ ...limit })) } : {}) })),
-    rooms: config.request.resources.rooms.map((room) => ({ ...room, availability: room.availability.map((interval) => ({ ...interval })) })) })
-    setProposal(nextProposal)
-    setProposalResources(nextProposal ? config.request.resources : null)
-    setEditingBlock(null)
-    setDraftMessage(message)
-    setDraftListOpen(false)
-  }
+  const retryCatalog = () => void commands.loadCatalog()
+  const refreshDraftList = () => commands.refreshDrafts()
+  const saveDraft = () => commands.save()
+  const estimateDemand = () => commands.estimateDemand()
+  const generate = () => commands.generate()
+  const submitBlockReview = () => commands.adjust()
+  const approveDraft = () => commands.approve()
+  const publishDraft = (expectedCurrentId: string | null) => commands.publish(expectedCurrentId)
+  const submitTeacherReview = () => commands.submitReview()
+  const respondTeacherReview = (teacherId: string, decision: 'conformity' | 'changes-requested', observation: string) =>
+    commands.respondReview(teacherId, decision, observation)
 
   const resumeDraft = async (id: string, version: number) => {
     if (workspaceDirty && !window.confirm('Hay cambios locales sin guardar. ¿Descartarlos y continuar con esta propuesta?')) return
-    const intent = ++draftResumeIntent.current
-    const mutation = workspaceMutation.current
-    latestIntent.current += 1
-    demandIntent.current += 1
-    draftSaveIntent.current += 1
-    draftController.current?.abort()
-    demandController.current?.abort()
-    setGenerating(false)
-    setAdjusting(false)
-    setDemandLoading(false)
-    setProposalError(null)
-    setAdjustmentError(null)
-    setDemandError(null)
-    setDraftError(null)
-    setDraftMessage(null)
-    setDraftBusy(true)
-    const controller = new AbortController()
-    draftController.current = controller
-    try {
-      const { draft } = await resumeAcademicDraft(id, version, globalThis.fetch, controller.signal)
-      if (intent !== draftResumeIntent.current) return
-      if (mutation !== workspaceMutation.current) {
-        setDraftMessage('No se aplicó la recuperación porque la edición cambió mientras se consultaba. Puedes volver a abrir la propuesta.')
-        return
-      }
-      hydrateDraft(draft, `Propuesta ${draft.title} recuperada.${draft.state === 'approved' || draft.state === 'published'
-        ? ' Es una versión congelada de solo lectura; crea un nuevo borrador para continuar.' : ' Puedes continuar editando el horario.'}`)
-    } catch (error) {
-      if (intent === draftResumeIntent.current && !controller.signal.aborted) setDraftError(error instanceof Error
-        ? `No se abrió la propuesta; se conserva la edición actual. ${error.message}` : 'No se abrió la propuesta; se conserva la edición actual.')
-    } finally {
-      if (intent === draftResumeIntent.current) setDraftBusy(false)
-    }
-  }
-
-  const approveDraft = async () => {
-    if (!draftId || !draftVersion || workspaceDirty || draftBusy || generating || adjusting || demandLoading || savedDraftState !== 'ready-for-approval') return
-    setDraftBusy(true)
-    setDraftError(null)
-    setDraftMessage(null)
-    try {
-      const saved = await approveAcademicDraft(draftId, draftVersion)
-      setDraftId(saved.id)
-      setDraftVersion(saved.version)
-      setDraftState(saved.state)
-      setSavedDraftState(saved.state)
-      setSavedReview(saved.review)
-      setDraftMessage(`Aprobada (simulada) · versión ${saved.version}.`)
-      void refreshDraftList()
-    } catch (error) {
-      setDraftError(error instanceof Error ? `No se aprobó la propuesta. ${error.message}` : 'No se aprobó la propuesta.')
-    } finally {
-      setDraftBusy(false)
-    }
-  }
-
-  const publishDraft = async (expectedCurrentId: string | null) => {
-    if (!draftId || !draftVersion || workspaceDirty || draftBusy || generating || adjusting || demandLoading || savedDraftState !== 'approved') return
-    setDraftBusy(true)
-    setDraftError(null)
-    setDraftMessage(null)
-    try {
-      const saved = await publishAcademicDraft(draftId, { expectedVersion: draftVersion, expectedCurrentId })
-      setDraftId(saved.id)
-      setDraftVersion(saved.version)
-      setDraftState(saved.state)
-      setSavedDraftState(saved.state)
-      setSavedReview(saved.review)
-      setDraftMessage(`Publicada (simulada) · publicación ${saved.publication?.publicationVersion ?? '—'} · versión ${saved.version}.`)
-      void refreshDraftList()
-    } catch (error) {
-      setDraftError(error instanceof Error ? `No se publicó la propuesta. ${error.message}` : 'No se publicó la propuesta.')
-    } finally {
-      setDraftBusy(false)
-    }
+    if (await commands.resume(id, version)) setDraftListOpen(false)
   }
 
   const forkDraft = async (id: string, version: number) => {
     if (workspaceDirty && !window.confirm('Hay cambios locales sin guardar. ¿Descartarlos y crear un nuevo borrador?')) return
-    if (draftBusy || generating || adjusting || demandLoading) return
-    const mutation = workspaceMutation.current
-    setDraftBusy(true)
-    setDraftError(null)
-    setDraftMessage(null)
-    try {
-      const draft = await forkAcademicDraft(id, version)
-      if (mutation !== workspaceMutation.current) {
-        setDraftMessage('No se aplicó el nuevo borrador porque la edición cambió mientras se consultaba. Puedes volver a intentarlo.')
-        return
-      }
-      hydrateDraft(draft, `Nuevo borrador creado desde ${id.slice(0, 8)}. Puedes continuar editando el horario.`)
-    } catch (error) {
-      setDraftError(error instanceof Error ? `No se creó el nuevo borrador. ${error.message}` : 'No se creó el nuevo borrador.')
-    } finally {
-      setDraftBusy(false)
-    }
-  }
-
-  const submitTeacherReview = async () => {
-    if (!draftId || !draftVersion || workspaceDirty || draftBusy || !proposal || proposal.status !== 'complete'
-      || !proposal.coverageComplete || proposal.assignments.length === 0) return
-    const mutation = workspaceMutation.current
-    setDraftBusy(true)
-    setReviewError(null)
-    setDraftError(null)
-    try {
-      const saved = await submitAcademicTeacherReview(draftId, { expectedVersion: draftVersion })
-      setDraftId(saved.id)
-      setDraftVersion(saved.version)
-      setSavedDraftState(saved.state)
-      setSavedReview(saved.review)
-      if (mutation !== workspaceMutation.current) {
-        setWorkspaceDirty(true)
-        setDraftMessage('La revisión se actualizó sobre la versión guardada; los cambios locales siguen pendientes de guardar.')
-      } else setDraftMessage(`Enviada a revisión · ronda ${saved.review?.round ?? '—'} · versión ${saved.version}.`)
-      void refreshDraftList()
-    } catch (error) {
-      setReviewError(error instanceof Error ? error.message : 'No se pudo enviar la revisión local.')
-    } finally {
-      setDraftBusy(false)
-    }
-  }
-
-  const respondTeacherReview = async (teacherId: string, decision: 'conformity' | 'changes-requested', observation: string) => {
-    if (!draftId || !draftVersion || !savedReview || workspaceDirty || draftBusy) return
-    const mutation = workspaceMutation.current
-    setDraftBusy(true)
-    setReviewError(null)
-    setDraftError(null)
-    try {
-      const saved = await respondAcademicTeacherReview(draftId, { expectedVersion: draftVersion,
-        round: savedReview.round, teacherId, decision, observation })
-      setDraftId(saved.id)
-      setDraftVersion(saved.version)
-      setSavedDraftState(saved.state)
-      setSavedReview(saved.review)
-      if (mutation !== workspaceMutation.current) {
-        setWorkspaceDirty(true)
-        setDraftMessage('La respuesta se guardó sobre la versión anterior; los cambios locales siguen pendientes de guardar.')
-      } else setDraftMessage(`Respuesta guardada · versión ${saved.version}.`)
-      void refreshDraftList()
-    } catch (error) {
-      setReviewError(error instanceof Error ? error.message : 'No se pudo guardar la respuesta local.')
-    } finally {
-      setDraftBusy(false)
-    }
-  }
-
-  const updateDemand = (courseId: string, value: string) => {
-    markWorkspaceDirty(true)
-    latestIntent.current += 1
-    setProposal(null)
-    setProposalResources(null)
-    setEditingBlock(null)
-    setProposalError(null)
-    setAdjustmentError(null)
-    setGenerating(false)
-    setAdjusting(false)
-    setDemands((current) => ({ ...current, [courseId]: value }))
-  }
-
-  const invalidateProposal = () => {
-    latestIntent.current += 1
-    setProposal(null)
-    setProposalResources(null)
-    setEditingBlock(null)
-    setAdjusting(false)
-    setProposalError(null)
-    setAdjustmentError(null)
-    setGenerating(false)
-  }
-
-  const toggleCourse = (courseId: string, checked: boolean) => {
-    if (checked && selectedCourses.length >= PLANNING_LIMITS.courses) return
-    invalidateProposal()
-    invalidateDemandEstimate()
-    setDemandBaseRequest(null)
-    markWorkspaceDirty(true)
-    setSelectedCourses((current) => checked
-      ? current.includes(courseId) ? current : [...current, courseId]
-      : current.filter((id) => id !== courseId))
-  }
-
-  const selectCourses = (courseIds: string[]) => {
-    invalidateProposal()
-    invalidateDemandEstimate()
-    setDemandBaseRequest(null)
-    markWorkspaceDirty(true)
-    setSelectedCourses(courseIds)
-  }
-
-  const applyBulkChanges = (newDemands: Record<string, string>, newCapacities: Record<string, string>) => {
-    invalidateProposal()
-    invalidateDemandEstimate()
-    setDemandBaseRequest(null)
-    markWorkspaceDirty(true)
-    setDemands(newDemands)
-    setCapacities(newCapacities)
-  }
-
-  const updateCapacity = (courseId: string, value: string) => {
-    invalidateProposal()
-    invalidateDemandEstimate()
-    setDemandBaseRequest(null)
-    markWorkspaceDirty(true)
-    setCapacities((current) => ({ ...current, [courseId]: value }))
-  }
-
-  const changeDemandSource = (value: 'existing-regular-v1' | 'independent-120-v1') => {
-    if (value === demandSourceId) return
-    invalidateDemandEstimate()
-    setDemandBaseRequest(null)
-    markWorkspaceDirty(true)
-    setDemandSourceId(value)
-  }
-
-  const estimateDemand = async () => {
-    if (!catalog || planningPeriod !== '2027-I' || !selectedCourses.length) return
-    const courses = catalog.courses.filter((course) => selectedCourses.includes(course.courseId))
-    const intent = ++demandIntent.current
-    demandController.current?.abort()
-    const controller = new AbortController()
-    demandController.current = controller
-    setDemandEstimate(null)
-    setDemandError(null)
-    setDemandLoading(true)
-    try {
-      const baseRequest: AcademicDemandRequest = {
-        revision: catalog.revision,
-        sourceId: demandSourceId,
-        targetPeriod: '2027-I',
-        courses: courses.map((course) => ({ courseId: course.courseId, targetCapacity: Number(capacities[course.courseId]) })),
-      }
-      const value = await estimateAcademicDemand(baseRequest, globalThis.fetch, controller.signal)
-      if (intent === demandIntent.current) {
-        setDemandEstimate(value)
-        setDemandBaseRequest(baseRequest)
-        markWorkspaceDirty(true)
-      }
-    } catch (error) {
-      if (intent === demandIntent.current && !controller.signal.aborted) setDemandError(error instanceof Error
-        ? `No se pudo estimar la demanda potencial local. ${error.message}`
-        : 'No se pudo estimar la demanda potencial local.')
-    } finally {
-      if (intent === demandIntent.current) setDemandLoading(false)
-    }
-  }
-
-  const updatePattern = (courseId: string, value: string) => {
-    invalidateProposal()
-    markWorkspaceDirty(true)
-    setPatterns((current) => ({ ...current, [courseId]: value }))
-  }
-
-  const updateDeliveryMode = (courseId: string, value: 'continuous' | 'split') => {
-    invalidateProposal()
-    markWorkspaceDirty(true)
-    setDeliveryModes((current) => ({ ...current, [courseId]: value }))
-  }
-
-  const updateResources = (value: AcademicPlanningResources) => {
-    invalidateProposal()
-    markWorkspaceDirty(true)
-    setResources(value)
-  }
-
-  const updateAllocationPolicy = (value: AcademicAllocationPolicy) => {
-    invalidateProposal()
-    markWorkspaceDirty(true)
-    setAllocationPolicy(value)
+    if (await commands.fork(id, version)) setDraftListOpen(false)
   }
 
   const applyPeriodDefaults = (period: PlanningPeriod, force = false) => {
     if (!catalog || (period === planningPeriod && !force)) return
     if (workspaceDirty && !window.confirm('Aplicar valores iniciales para este periodo? Se reemplazarán las demandas y capacidades editadas.')) return
-    const defaults = createAcademicPlanningDefaults(catalog, period)
-    setPlanningPeriod(period)
-    setPlanningPolicy((current) => ({ ...(current ?? defaults.planningPolicy), period }))
-    setDemands(defaults.demands)
-    setCapacities(defaults.capacities)
-    setDemandBaseRequest(null)
-    invalidateDemandEstimate()
-    invalidateProposal()
-    markWorkspaceDirty(true)
+    commands.edit({ type: 'applyPeriodDefaults', period, force })
   }
 
-  const updatePlanningException = (key: 'allowAfternoon' | 'allowSaturday', checked: boolean) => {
-    setPlanningPolicy((current) => ({ revision: 'FISI-PLANNING-1', period: planningPeriod,
-      allowAfternoon: current?.allowAfternoon ?? false, allowSaturday: current?.allowSaturday ?? false,
-      [key]: checked }))
-    invalidateProposal()
-    markWorkspaceDirty(true)
-  }
-
-  const generate = async () => {
-    if (!catalog) return
-    markWorkspaceDirty(true)
-    const intent = ++latestIntent.current
-    setProposal(null)
-    setProposalResources(null)
-    setEditingBlock(null)
-    setAdjusting(false)
-    setProposalError(null)
-    setAdjustmentError(null)
-    setGenerating(true)
-    const requestBase = {
-      revision: catalog.revision,
-      demands: catalog.courses.filter((course) => selectedCourses.includes(course.courseId)).map((course) => ({
-        courseId: course.courseId,
-        estimatedDemand: demands[course.courseId] === '' ? Number.NaN : Number(demands[course.courseId]),
-        targetCapacity: capacities[course.courseId] === '' ? Number.NaN : Number(capacities[course.courseId]),
-        ...(patterns[course.courseId] ? { patternId: patterns[course.courseId] } : {}),
-        deliveryMode: deliveryModes[course.courseId] ?? 'continuous',
-      })),
-      allocationPolicy,
-      resources: {
-        teachers: resources.teachers.map((teacher) => ({ ...teacher, courseIds: [...teacher.courseIds],
-          availability: teacher.availability.map((interval) => ({ ...interval })),
-          ...(teacher.preferences ? { preferences: teacher.preferences.map((interval) => ({ ...interval })) } : {}),
-          ...(teacher.sectionLimits ? { sectionLimits: teacher.sectionLimits.map((limit) => ({ ...limit })) } : {}) })),
-        rooms: resources.rooms.map((room) => ({ ...room, availability: room.availability.map((interval) => ({ ...interval })) })),
-      },
-    }
-    try {
-      const request = planningPolicy ? buildAcademicPlanningRequest(requestBase, planningPolicy) : requestBase
-      validateAcademicResources(request.resources)
-      const value = await createAcademicProposal(request)
-      if (intent === latestIntent.current) {
-        setProposal(value)
-        setProposalResources(request.resources)
-        markWorkspaceDirty()
-      }
-    } catch (error) {
-      if (intent === latestIntent.current) setProposalError(error instanceof Error
-        ? `No se pudo generar la propuesta local. Revisa docentes, aulas y disponibilidad: ${error.message}`
-        : 'No se pudo generar la propuesta local.')
-    } finally {
-      if (intent === latestIntent.current) setGenerating(false)
-    }
-  }
-
-  const startBlockReview = (block: ReturnType<typeof aggregateAcademicBlocks>[number]) => {
+  const markTitle = (title: string) => commands.edit({ type: 'setTitle', title })
+  const markDraftState = (value: AcademicDraftState) => commands.edit({ type: 'setDraftState', state: value })
+  const toggleCourse = (courseId: string, checked: boolean) => commands.edit({ type: 'toggleCourse', courseId, checked })
+  const selectCourses = (courseIds: string[]) => commands.edit({ type: 'selectCourses', courseIds })
+  const applyBulkChanges = (newDemands: Record<string, string>, newCapacities: Record<string, string>) =>
+    commands.edit({ type: 'applyBulkChanges', demands: newDemands, capacities: newCapacities })
+  const updateDemand = (courseId: string, value: string) => commands.edit({ type: 'updateDemand', courseId, value })
+  const updateCapacity = (courseId: string, value: string) => commands.edit({ type: 'updateCapacity', courseId, value })
+  const changeDemandSource = (value: 'existing-regular-v1' | 'independent-120-v1') => commands.edit({ type: 'changeDemandSource', value })
+  const updatePattern = (courseId: string, value: string) => commands.edit({ type: 'updatePattern', courseId, value })
+  const updateDeliveryMode = (courseId: string, value: 'continuous' | 'split') => commands.edit({ type: 'updateDeliveryMode', courseId, value })
+  const updateResources = (value: AcademicPlanningResources) => commands.edit({ type: 'updateResources', value })
+  const updateAllocationPolicy = (value: AcademicAllocationPolicy) => commands.edit({ type: 'updateAllocationPolicy', value })
+  const updatePlanningException = (key: 'allowAfternoon' | 'allowSaturday', checked: boolean) =>
+    commands.edit({ type: 'updatePlanningException', key, checked })
+  const setEditingBlock = (adjustment: AcademicAdjustment) => commands.edit({ type: 'changeEditingBlock', adjustment })
+  const cancelBlockReview = () => commands.edit({ type: 'cancelBlockReview' })
+  const startBlockReview = (block: PlanningBlock) => {
     if (!proposal || lockedDraft || draftBusy) return
-    const assignments = proposal.assignments.filter((assignment) => block.sessionIds.includes(assignment.sessionId))
-      .sort((left, right) => left.startMinute - right.startMinute || left.sessionId.localeCompare(right.sessionId))
     setSelectedSectionId(block.sectionId)
-    setAdjustmentError(null)
-    setEditingBlock({ expectedVersion: proposal.editVersion ?? 0, sectionId: block.sectionId,
-      sessionIds: assignments.map((assignment) => assignment.sessionId), teacherId: block.teacherId,
-      day: block.day, startMinute: block.startMinute, roomIds: assignments.map((assignment) => assignment.roomId) })
+    commands.edit({ type: 'startBlockReview', block })
   }
-
-  const submitBlockReview = async () => {
-    if (!proposal || !editingBlock || adjusting || lockedDraft || draftBusy) return
-    const intent = ++latestIntent.current
-    setAdjusting(true)
-    setAdjustmentError(null)
-    try {
-      const value = await adjustAcademicProposal(proposal.proposalId, editingBlock)
-      if (intent === latestIntent.current) {
-        setProposal(value)
-        setEditingBlock(null)
-        markWorkspaceDirty()
-      }
-    } catch (error) {
-      if (intent === latestIntent.current) setAdjustmentError(error instanceof Error
-        ? `No se aplicó el ajuste; la propuesta anterior se conserva. ${error.message}`
-        : 'No se aplicó el ajuste; la propuesta anterior se conserva.')
-    } finally {
-      if (intent === latestIntent.current) setAdjusting(false)
-    }
-  }
-
-  const validDemands = Boolean(catalog) && selectedCourses.length <= PLANNING_LIMITS.courses && catalog!.courses
-    .filter((course) => selectedCourses.includes(course.courseId)).every((course) => {
-    const value = demands[course.courseId]
-    const capacity = capacities[course.courseId]
-    const patternIds = course.planningPatterns?.map((pattern) => pattern.id) ?? []
-    return value !== undefined && value.trim() !== '' && Number.isSafeInteger(Number(value)) && Number(value) >= 0
-      && capacity !== undefined && capacity.trim() !== '' && Number.isSafeInteger(Number(capacity)) && Number(capacity) > 0
-      && (!patternIds.length || patternIds.includes(patterns[course.courseId]))
-  })
-  const canSave = Boolean(catalog) && !draftBusy && !lockedDraft && validDemands
-  const disabledSaveReason = !catalog
-    ? 'Catálogo local no disponible'
-    : lockedDraft
-      ? 'Versión congelada de solo lectura'
-      : !validDemands
-        ? 'Demanda y capacidad requeridas'
-        : null
 
   return <section className="screen-academic-scheduling">
     <PlanningScopeHeader
@@ -705,14 +150,11 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
         <div className="academic-scheduling__draft-heading">
           <label>Propuesta
             <input aria-label="Nombre de la propuesta" maxLength={100} value={draftTitle} disabled={lockedDraft || draftBusy}
-              onChange={(event) => { setDraftTitle(event.currentTarget.value); markWorkspaceDirty() }} />
+              onChange={(event) => markTitle(event.currentTarget.value)} />
           </label>
           <label>Estado
-            <select aria-label="Estado de la propuesta" disabled={lockedDraft || draftBusy} value={workspaceDirty && savedDraftState === 'ready-for-approval'
-              ? 'draft' : savedReview && ['in-review', 'ready-for-approval'].includes(savedDraftState) ? savedDraftState : draftState} onChange={(event) => {
-              setDraftState(event.currentTarget.value as AcademicDraftState)
-              markWorkspaceDirty()
-            }}>
+            <select aria-label="Estado de la propuesta" disabled={lockedDraft || draftBusy} value={view.displayedDraftState}
+              onChange={(event) => markDraftState(event.currentTarget.value as AcademicDraftState)}>
               <option value="draft">Borrador</option>
               <option value="ready-for-review" disabled={!proposal || proposal.status !== 'complete' || !proposal.coverageComplete || proposal.assignments.length === 0}>Lista para revisión</option>
               <option value="in-review" disabled>En revisión docente</option>
@@ -918,14 +360,10 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
                 isLocked={lockedDraft || draftBusy}
                 onClose={() => {
                   setSelectedSectionId(null)
-                  setEditingBlock(null)
-                  setAdjustmentError(null)
+                  cancelBlockReview()
                 }}
                 onStartEdit={startBlockReview}
-                onCancelEdit={() => {
-                  setEditingBlock(null)
-                  setAdjustmentError(null)
-                }}
+                onCancelEdit={cancelBlockReview}
                 onSubmitEdit={submitBlockReview}
                 onChangeEditingBlock={setEditingBlock}
               />
@@ -960,7 +398,9 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
     >
       <AcademicPublicationPanel draftId={draftId} draftVersion={draftVersion} draftTitle={draftTitle}
         draftState={savedDraftState} dirty={workspaceDirty} busy={draftBusy || generating || adjusting || demandLoading} onApprove={approveDraft}
-        onPublish={publishDraft} onFork={forkDraft} onBusyChange={setDraftBusy} onError={setDraftError} onMessage={setDraftMessage} />
+        onPublish={publishDraft} onFork={forkDraft} onBusyChange={(busy) => commands.edit({ type: 'setDraftBusy', busy })}
+        onError={(message) => commands.edit({ type: 'setDraftError', message })}
+        onMessage={(message) => commands.edit({ type: 'setDraftMessage', message })} />
       <AcademicIntentionDemandPanel dirty={workspaceDirty} busy={draftBusy || generating || adjusting || demandLoading}
         onFork={(id, version) => void forkDraft(id, version)} potential={demandEstimate}
         finalDemand={Object.fromEntries(selectedCourses.map((courseId) => [courseId, demands[courseId] ?? '']))} />
