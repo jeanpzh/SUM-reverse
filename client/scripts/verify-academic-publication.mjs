@@ -1,5 +1,6 @@
 // Two-phase browser acceptance against the dedicated, explicitly synthetic 5280 service only.
 import assert from 'node:assert/strict'
+import { setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
@@ -35,7 +36,6 @@ try {
   const page = await context.newPage()
   page.on('pageerror', (error) => errors.push(error.message))
   page.on('request', (request) => assert.ok(request.url().startsWith(`${base}/`) || request.url().startsWith('data:'), `Solicitud externa inesperada: ${request.url()}`))
-  page.on('dialog', (dialog) => void dialog.accept())
   await page.goto(`${base}/local/programacion-academica`)
   await page.getByRole('heading', { name: 'Programación académica asistida', exact: true }).waitFor()
   const readOffer = async () => {
@@ -123,7 +123,7 @@ try {
       && catalog.rooms.some((room) => room.capacity >= item.targetCapacity))
     assert.ok(course, 'El catálogo debe ofrecer al menos un patrón sintético programable')
     const pattern = course.planningPatterns.find((item) => item.weeklySessions.length > 0)
-    await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).check()
+    await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }))
     await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).fill('1')
     await page.getByLabel(`Patrón ${course.courseId}`, { exact: true }).selectOption(pattern.id)
     const generate = page.waitForResponse((response) => apiResponse(response, '/propuestas', 'POST'))
@@ -199,7 +199,6 @@ try {
     await stage('Preparación', 'preparacion')
     await page.getByRole('button', { name: 'Mis propuestas', exact: true }).click()
     const row = page.locator('.academic-scheduling__saved-row').filter({ hasText: saved.title })
-    await row.locator('summary').click()
     const resumeResponse = page.waitForResponse((response) => apiResponse(response, `/borradores/${saved.second.id}/continuar`, 'POST'))
     await row.getByRole('button', { name: 'Consultar', exact: true }).click()
     const recovered = (await (await resumeResponse).json()).draft

@@ -81,7 +81,6 @@ export async function verifyWeekScenarios({ page, api, catalog, goToStage }) {
     await goToStage('Preparación', 'preparacion')
     await page.getByRole('button', { name: 'Mis propuestas', exact: true }).click()
     const row = page.locator('.academic-scheduling__saved-row').filter({ hasText: saved.title })
-    await row.locator('summary').click()
     const response = page.waitForResponse((res) => res.url().endsWith(`/borradores/${saved.id}/continuar`))
     await row.getByRole('button', { name: locked ? 'Consultar' : 'Continuar edición', exact: true }).click()
     const received = await response

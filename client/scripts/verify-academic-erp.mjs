@@ -1,5 +1,6 @@
 // Run only against our freshly built, independently synthetic Compose acceptance project.
 import assert from 'node:assert/strict'
+import { setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -57,7 +58,7 @@ try {
   }
   await page.goto(`${base}/local/programacion-academica`)
   await page.getByLabel('Filtrar cursos por ciclo').selectOption('10')
-  await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).check()
+  await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }))
   await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).fill('180')
   await page.getByLabel(`Capacidad ${course.courseId}`, { exact: true }).fill('45')
   await page.getByLabel(`Patrón ${course.courseId}`).selectOption(pattern.id)
@@ -70,7 +71,7 @@ try {
     assert.equal(await page.getByLabel('Nombre docente', { exact: true }).inputValue(), teacher.name)
     await page.getByLabel('Carga semanal docente', { exact: true }).fill('480')
     await page.getByLabel('Buscar asignatura habilitada').fill(course.courseId)
-    await page.getByLabel(`${teacher.name} habilitado para ${course.courseId}`, { exact: true }).check()
+    await setPlanningCheckbox(page.getByRole('checkbox', { name: `${teacher.name} habilitado para ${course.courseId}`, exact: true }))
     await page.getByLabel(`Máximo de secciones ${course.courseId}`, { exact: true }).fill('2')
     await setIntervals('Disponibilidad docente', [1, 2, 3, 4])
     await setIntervals(preferenceLabel, index === 0 ? [1, 2] : [3, 4])

@@ -1,5 +1,6 @@
 // Synthetic local integration only. Starts dedicated processes, never attaches to existing servers.
 import assert from 'node:assert/strict'
+import { setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { spawn } from 'node:child_process'
 import { createServer } from 'node:net'
 import { PLANNING_LIMITS } from '../../shared/academic-planning-policy.mjs'
@@ -91,10 +92,10 @@ try {
   // the limit; then every course must stay selectable, otherwise the first course past the limit must be disabled.
   const limit = PLANNING_LIMITS.courses
   const selectable = catalog.courses.slice(0, limit)
-  for (const course of selectable) await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).check()
-  assert.equal(await page.locator('.academic-scheduling__selection input:checked').count(), selectable.length)
+  for (const course of selectable) await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }))
+  assert.equal(await page.locator('.academic-scheduling__selection [role=checkbox][aria-checked=true]').count(), selectable.length)
   if (catalog.courses.length > limit) assert.equal(await page.getByLabel(`Seleccionar ${catalog.courses[limit].courseId}`).isDisabled(), true)
-  for (const course of selectable) await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).uncheck()
+  for (const course of selectable) await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }), false)
   const firstCycleCourse = catalog.courses.find((course) => course.cycle !== undefined) ?? catalog.courses[0]
   const chosen = [firstCycleCourse, catalog.courses.find((course) => course.cycle !== undefined && course.cycle !== firstCycleCourse.cycle)
     ?? catalog.courses.find((course) => course.courseId !== firstCycleCourse.courseId)]
@@ -102,13 +103,13 @@ try {
   if (chosen[0].cycle !== undefined && chosen[1].cycle !== undefined) assert.notEqual(chosen[0].cycle, chosen[1].cycle)
   if (chosen[0].cycle !== undefined) await page.getByLabel('Filtrar cursos por ciclo').selectOption(String(chosen[0].cycle))
   for (const course of chosen.slice(0, 1)) {
-    await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).check()
+    await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }))
   }
   if (chosen[1].cycle !== undefined) await page.getByLabel('Filtrar cursos por ciclo').selectOption(String(chosen[1].cycle))
-  assert.equal(await page.locator('.academic-scheduling__selection input:checked').count(), 0, 'el curso seleccionado de otro ciclo está oculto')
-  for (const course of chosen.slice(1)) await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).check()
+  assert.equal(await page.locator('.academic-scheduling__selection [role=checkbox][aria-checked=true]').count(), 0, 'el curso seleccionado de otro ciclo está oculto')
+  for (const course of chosen.slice(1)) await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }))
   await page.getByLabel('Filtrar cursos por ciclo').selectOption('all')
-  assert.equal(await page.locator('.academic-scheduling__selection input:checked').count(), 2)
+  assert.equal(await page.locator('.academic-scheduling__selection [role=checkbox][aria-checked=true]').count(), 2)
   for (const course of chosen) {
     await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).fill(course === chosen[0] ? '31' : '20')
     await page.getByLabel(`Capacidad ${course.courseId}`, { exact: true }).fill('30')
@@ -123,8 +124,8 @@ try {
       }
     }
     if (course.history?.sections.length) {
-      const details = page.locator('.academic-scheduling__course').filter({ hasText: course.courseId }).locator('details')
-      await details.locator('summary').click()
+      const details = page.locator('.academic-preparation__inspector .academic-scheduling__history')
+      await details.getByRole('button', { name: /^Referencia histórica/ }).click()
       assert.equal(await details.locator('ul li').count(), course.history.sections.reduce((sum, section) => sum + section.sessions.length, 0))
     }
   }
@@ -149,8 +150,8 @@ try {
   await page.getByLabel('Carga semanal docente').fill('1800')
   await page.getByLabel('Disponibilidad docente fin 1', { exact: true }).fill('18:00')
   for (const course of catalog.courses) {
-    const eligibility = page.getByLabel(`${reference.name} habilitado para ${course.courseId}`, { exact: true })
-    if (!(await eligibility.isChecked())) await eligibility.check()
+    const eligibility = page.getByRole('checkbox', { name: `${reference.name} habilitado para ${course.courseId}`, exact: true })
+    await setPlanningCheckbox(eligibility)
   }
   await page.getByLabel('Buscar asignatura habilitada').fill(catalog.courses[0].courseId)
   assert.equal(await page.locator('.academic-scheduling__course-options label').count(), 1, 'la búsqueda filtra por código')
@@ -160,6 +161,7 @@ try {
   await preferences.getByRole('button', { name: 'Agregar intervalo' }).click()
   await page.getByLabel('Preferencias semanales · prioridad blanda inicio 1', { exact: true }).fill('08:00')
   await page.getByLabel('Preferencias semanales · prioridad blanda fin 1', { exact: true }).fill('12:00')
+  await page.getByRole('button', { name: 'Opciones avanzadas', exact: true }).click()
   await page.getByLabel('Criterio de asignación').selectOption('balanced')
   await page.getByRole('tab', { name: /Aulas y laboratorios/ }).click()
   await clearIncluded('rooms')
@@ -175,7 +177,7 @@ try {
   const plannedCourses = patternCourse && !chosen.some((course) => course.courseId === patternCourse.courseId)
     ? [...chosen, patternCourse] : chosen
   if (patternCourse && !chosen.some((course) => course.courseId === patternCourse.courseId)) {
-    await page.getByLabel(`Seleccionar ${patternCourse.courseId}`, { exact: true }).check()
+    await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${patternCourse.courseId}`, exact: true }))
     await page.getByLabel(`Demanda ${patternCourse.courseId}`, { exact: true }).fill('1')
     await page.getByLabel(`Capacidad ${patternCourse.courseId}`, { exact: true }).fill('30')
   }
@@ -235,14 +237,14 @@ try {
   assert.deepEqual(retained, first)
 
   await stage('Preparación', 'preparacion')
-  for (const course of plannedCourses) await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).uncheck()
+  for (const course of plannedCourses) await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }), false)
   const empty = await generate()
   assert.equal(empty.status, 'complete')
   assert.equal(empty.counts.requiredSessions, 0)
   assert.equal(empty.assignments.length, 0)
 
   await stage('Preparación', 'preparacion')
-  for (const course of plannedCourses) await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).check()
+  for (const course of plannedCourses) await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }))
   await page.getByLabel(`Demanda ${chosen[0].courseId}`, { exact: true }).fill('1')
   await page.getByLabel(`Capacidad ${chosen[0].courseId}`, { exact: true }).fill('41')
   await page.getByLabel(`Demanda ${chosen[1].courseId}`, { exact: true }).fill('20')

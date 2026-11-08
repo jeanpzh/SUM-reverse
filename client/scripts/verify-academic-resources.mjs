@@ -3,6 +3,7 @@
 // Does NOT attach to, reuse, or interfere with user demo on 3210/5176.
 
 import assert from 'node:assert/strict'
+import { setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
@@ -121,7 +122,6 @@ try {
   const page = await context.newPage()
   page.setDefaultTimeout(10000)
   page.setDefaultNavigationTimeout(45000)
-  page.on('dialog', (dialog) => void dialog.accept())
 
   await page.goto(`${webUrl}${route}`, { waitUntil: 'domcontentloaded' })
   page.on('pageerror', (err) => console.error('[BROWSER PAGE ERROR]', err.message))
@@ -359,7 +359,7 @@ try {
   const schedCourse = catalogData.courses.find((item) => item.planningPatterns?.some((p) => p.weeklySessions.length > 0)) || catalogData.courses[0]
   const pattern = schedCourse.planningPatterns?.find((p) => p.weeklySessions.length > 0)
 
-  await page.getByLabel(`Seleccionar ${schedCourse.courseId}`, { exact: true }).check()
+  await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${schedCourse.courseId}`, exact: true }))
   await page.getByLabel(`Demanda ${schedCourse.courseId}`, { exact: true }).fill('1')
   if (pattern) {
     await page.getByLabel(`Patrón ${schedCourse.courseId}`, { exact: true }).selectOption(pattern.id)
@@ -395,7 +395,6 @@ try {
   const savedProposals = page.locator('#academic-scheduling-saved-proposals')
   await savedProposals.waitFor()
   const savedRow = savedProposals.locator('.academic-scheduling__saved-row').filter({ hasText: draftTitle })
-  await savedRow.locator('summary').click()
   const resumeResponse = page.waitForResponse((res) => res.url().endsWith(`/borradores/${savedData.id}/continuar`))
   await savedRow.getByRole('button', { name: 'Continuar edición', exact: true }).click()
   const resumedRes = await resumeResponse
@@ -454,7 +453,6 @@ try {
   await page.getByRole('heading', { name: 'Paso 2 · Configurar recursos' }).waitFor()
   await page.getByRole('button', { name: 'Mis propuestas', exact: true }).click()
   const approvedSavedRow = page.locator('.academic-scheduling__saved-row').filter({ hasText: draftTitle })
-  await approvedSavedRow.locator('summary').click()
 
   const consultResponse = page.waitForResponse((res) => res.url().endsWith(`/borradores/${savedData.id}/continuar`))
   await approvedSavedRow.getByRole('button', { name: 'Consultar', exact: true }).click()

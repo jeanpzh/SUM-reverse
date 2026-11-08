@@ -1,6 +1,7 @@
 // Synthetic local acceptance script for Planning Preparation Scale (P96-UI).
 // Implements tests for P1-P7 (simulated 96-course catalog) and P9 (real own NestJS backend with built-in catalog).
 import assert from 'node:assert/strict'
+import { isPlanningCheckboxChecked, setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { spawn } from 'node:child_process'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { createServer } from 'node:net'
@@ -257,21 +258,21 @@ try {
   assert.equal(await visibleCountEl.textContent(), String(visibleInCycle1), 'P2: Visibles en Ciclo 1')
 
   const firstCourseId = 'CS-001'
-  await page.getByLabel(`Seleccionar ${firstCourseId}`, { exact: true }).check()
+  await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${firstCourseId}`, exact: true }))
   assert.equal(await includedCountEl.textContent(), '1', 'P2: 1 curso incluido')
 
   // Switch to Cycle 2 and select a course there
   await page.getByLabel('Filtrar cursos por ciclo').selectOption('2')
   assert.equal(await includedCountEl.textContent(), '1', 'P2: Incluidos se conserva en 1 al cambiar de filtro')
   const secondCourseId = 'CS-002'
-  await page.getByLabel(`Seleccionar ${secondCourseId}`, { exact: true }).check()
+  await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${secondCourseId}`, exact: true }))
   assert.equal(await includedCountEl.textContent(), '2', 'P2: 2 cursos incluidos en total')
 
   // Switch back to "all" and verify both remain checked
   await page.getByLabel('Filtrar cursos por ciclo').selectOption('all')
   assert.equal(await includedCountEl.textContent(), '2', 'P2: Incluidos sigue en 2')
-  assert.equal(await page.getByLabel(`Seleccionar ${firstCourseId}`).isChecked(), true, 'P2: CS-001 sigue seleccionado')
-  assert.equal(await page.getByLabel(`Seleccionar ${secondCourseId}`).isChecked(), true, 'P2: CS-002 sigue seleccionado')
+  assert.equal(await isPlanningCheckboxChecked(page.getByRole('checkbox', { name: `Seleccionar ${firstCourseId}` })), true, 'P2: CS-001 sigue seleccionado')
+  assert.equal(await isPlanningCheckboxChecked(page.getByRole('checkbox', { name: `Seleccionar ${secondCourseId}` })), true, 'P2: CS-002 sigue seleccionado')
 
   // Search by code
   const searchInput = page.getByLabel('Buscar curso por código o nombre')
@@ -294,7 +295,7 @@ try {
   // --- P3: Seleccionar visibles, cambiar de filtro, generar: payload includes all selected ---
   await page.getByLabel('Filtrar cursos por ciclo').selectOption('1')
   await page.locator('section[aria-labelledby="academic-scheduling-courses"]').getByRole('button', { name: 'Seleccionar visibles', exact: true }).click()
-  const cycle1Selected = await page.locator('.academic-scheduling__selection input:checked').count()
+  const cycle1Selected = await page.locator('.academic-scheduling__selection [role=checkbox][aria-checked=true]').count()
   assert.ok(cycle1Selected > 0, 'P3: Visibles de Ciclo 1 seleccionados')
 
   // Switch to cycle 3
@@ -325,7 +326,7 @@ try {
 
   // Fill valid demand & capacity for selected courses to enable generate button
   await page.getByLabel('Filtrar cursos por ciclo').selectOption('all')
-  const allChecked = page.locator('.academic-scheduling__selection input:checked')
+  const allChecked = page.locator('.academic-scheduling__selection [role=checkbox][aria-checked=true]')
   const totalChecked = await allChecked.count()
   assert.ok(totalChecked >= cycle1Selected, 'P3: Selección persiste al cambiar filtro')
 
@@ -345,9 +346,9 @@ try {
   // Select first 3 courses
   await page.getByLabel('Filtrar cursos por ciclo').selectOption('all')
   await page.locator('section[aria-labelledby="academic-scheduling-courses"]').getByRole('button', { name: 'Deseleccionar visibles', exact: true }).click()
-  await page.getByLabel('Seleccionar CS-001', { exact: true }).check()
-  await page.getByLabel('Seleccionar CS-002', { exact: true }).check()
-  await page.getByLabel('Seleccionar CS-003', { exact: true }).check()
+  await setPlanningCheckbox(page.getByRole('checkbox', { name: 'Seleccionar CS-001', exact: true }))
+  await setPlanningCheckbox(page.getByRole('checkbox', { name: 'Seleccionar CS-002', exact: true }))
+  await setPlanningCheckbox(page.getByRole('checkbox', { name: 'Seleccionar CS-003', exact: true }))
 
   // Initial values
   const initDem1 = await page.getByLabel('Demanda CS-001').inputValue()
@@ -367,9 +368,9 @@ try {
   await page.getByRole('button', { name: /Edición en lote/ }).click()
 
   // Test invalid capacity (0 is invalid: capacity must be >= 1)
-  await bulkDialog.getByLabel('Modificar demanda final').check()
+  await setPlanningCheckbox(bulkDialog.getByRole('checkbox', { name: 'Modificar demanda final' }))
   await bulkDialog.getByLabel('Nueva demanda en lote').fill('55')
-  await bulkDialog.getByLabel('Modificar capacidad objetivo').check()
+  await setPlanningCheckbox(bulkDialog.getByRole('checkbox', { name: 'Modificar capacidad objetivo' }))
   await bulkDialog.getByLabel('Nueva capacidad en lote').fill('0')
   await bulkDialog.getByRole('button', { name: 'Calcular vista previa' }).click()
 
@@ -385,9 +386,9 @@ try {
 
   // Test Valid bulk edit
   await page.getByRole('button', { name: /Edición en lote/ }).click()
-  await bulkDialog.getByLabel('Modificar demanda final').check()
+  await setPlanningCheckbox(bulkDialog.getByRole('checkbox', { name: 'Modificar demanda final' }))
   await bulkDialog.getByLabel('Nueva demanda en lote').fill('55')
-  await bulkDialog.getByLabel('Modificar capacidad objetivo').check()
+  await setPlanningCheckbox(bulkDialog.getByRole('checkbox', { name: 'Modificar capacidad objetivo' }))
   await bulkDialog.getByLabel('Nueva capacidad en lote').fill('25')
   await bulkDialog.getByRole('button', { name: 'Calcular vista previa' }).click()
 
@@ -429,10 +430,11 @@ try {
   // Check history under disclosure
   const historyDetails = inspector.locator('.academic-scheduling__history')
   assert.equal(await historyDetails.count(), 1, 'P5: Referencia histórica presente en inspector')
-  assert.equal(await historyDetails.getAttribute('open'), null, 'P5: Historial cerrado inicialmente')
+  const historyTrigger = historyDetails.getByRole('button', { name: /^Referencia histórica/ })
+  assert.equal(await historyTrigger.getAttribute('aria-expanded'), 'false', 'P5: Historial cerrado inicialmente')
   assert.equal(await historyDetails.locator('ul li').isVisible(), false, 'P5: Contenido de historial no visible inicialmente')
-  await historyDetails.locator('summary').click()
-  assert.notEqual(await historyDetails.getAttribute('open'), null, 'P5: Historial abierto bajo disclosure')
+  await historyTrigger.click()
+  assert.equal(await historyTrigger.getAttribute('aria-expanded'), 'true', 'P5: Historial abierto bajo disclosure')
   assert.equal(await historyDetails.locator('ul li').isVisible(), true, 'P5: Contenido de historial visible al abrir')
 
   // Close inspector
@@ -509,8 +511,8 @@ try {
   const c1 = realCourses.courses[0]
   const c2 = realCourses.courses[1]
 
-  await realPage.getByLabel(`Seleccionar ${c1.courseId}`, { exact: true }).check()
-  await realPage.getByLabel(`Seleccionar ${c2.courseId}`, { exact: true }).check()
+  await setPlanningCheckbox(realPage.getByRole('checkbox', { name: `Seleccionar ${c1.courseId}`, exact: true }))
+  await setPlanningCheckbox(realPage.getByRole('checkbox', { name: `Seleccionar ${c2.courseId}`, exact: true }))
   assert.equal(await realPage.locator('[data-testid="count-included"]').textContent(), '2', 'P9: 2 cursos incluidos en la propuesta real')
 
   // Fill demands & capacities
@@ -547,14 +549,13 @@ try {
   await realPage.reload()
   await realPage.getByRole('button', { name: 'Mis propuestas' }).click()
   const resumedRow = realPage.locator('.academic-scheduling__saved-row').filter({ hasText: draftTitle })
-  await resumedRow.locator('summary').click()
   const resumeResponse = realPage.waitForResponse((res) => res.url().endsWith(`/borradores/${savedData.id}/continuar`))
   await resumedRow.getByRole('button', { name: 'Continuar edición', exact: true }).click()
   const resumedRes = await resumeResponse
   assert.equal(resumedRes.status(), 200)
   let saved = (await resumedRes.json()).draft
   assert.deepEqual(saved.configuration.request.demands, savedData.configuration.request.demands)
-  assert.equal(await realPage.getByLabel(`Seleccionar ${c1.courseId}`, { exact: true }).isChecked(), true)
+  assert.equal(await isPlanningCheckboxChecked(realPage.getByRole('checkbox', { name: `Seleccionar ${c1.courseId}`, exact: true })), true)
   assert.equal(await realPage.getByLabel(`Demanda ${c2.courseId}`).inputValue(), '25')
 
   const post = async (path, body) => {
@@ -576,7 +577,6 @@ try {
   await realPage.reload()
   await realPage.getByRole('button', { name: 'Mis propuestas' }).click()
   const approvedRow = realPage.locator('.academic-scheduling__saved-row').filter({ hasText: draftTitle })
-  await approvedRow.locator('summary').click()
   const approvedResume = realPage.waitForResponse((res) => res.url().endsWith(`/borradores/${saved.id}/continuar`))
   await approvedRow.getByRole('button', { name: 'Consultar', exact: true }).click()
   assert.equal((await approvedResume).status(), 200)

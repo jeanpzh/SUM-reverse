@@ -1,5 +1,6 @@
 // Browser verification for the independently synthetic Compose project only.
 import assert from 'node:assert/strict'
+import { setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { existsSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
@@ -43,7 +44,7 @@ try {
   await page.getByRole('link', { name: /^Escuela · Programación académica/ }).click()
   await page.getByRole('heading', { name: 'Paso 1 · Seleccionar cursos' }).waitFor()
   await page.getByLabel('Filtrar cursos por ciclo').selectOption(String(course.cycle ?? 'all'))
-  await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).check()
+  await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }))
   await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).fill('180')
   await page.getByLabel(`Capacidad ${course.courseId}`, { exact: true }).fill('45')
   await page.getByLabel(`Patrón ${course.courseId}`).selectOption(pattern.id)
@@ -121,8 +122,8 @@ try {
     await page.getByLabel('Seleccionar o agregar docente').selectOption(teacher.id)
     await page.getByLabel('Carga semanal docente', { exact: true }).fill('480')
     await page.getByLabel('Buscar asignatura habilitada').fill(course.courseId)
-    const enabled = page.getByLabel(`${teacher.name} habilitado para ${course.courseId}`, { exact: true })
-    if (!(await enabled.isChecked())) await enabled.check()
+    const enabled = page.getByRole('checkbox', { name: `${teacher.name} habilitado para ${course.courseId}`, exact: true })
+    await setPlanningCheckbox(enabled)
     await page.getByLabel(`Máximo de secciones ${course.courseId}`).fill('2')
     const availability = page.getByRole('group', { name: /^Disponibilidad docente/ })
     while (await availability.getByRole('button', { name: /^Quitar Disponibilidad docente intervalo/ }).count()) {
