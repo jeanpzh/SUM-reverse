@@ -311,7 +311,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
             {proposalError && <p className="academic-scheduling__error" role="alert">{proposalError}</p>}
           </fieldset>
           {preparationAction?.id === 'review-offer' && <button type="button" className="academic-scheduling__button"
-            onClick={() => onPreparationViewChange('cursos')}>Revisar oferta ({preparationAction.count ?? 0})</button>}
+            onClick={() => onPreparationViewChange('cursos')}>{preparationAction.label}</button>}
         </PlanningPreparationSummary>
       </div>
     </section>
