@@ -101,9 +101,11 @@ export function PlanningStatusBar({ primaryActionId, proposal, onRegenerate, onR
             {badgeText}
           </Badge>
           {isDraft && <Badge variant="outline">Borrador · sin confirmar</Badge>}
-          <span className="planning-status-bar__status-full text-[13px] text-muted-foreground">
-            {statusLabel(proposal.status)}
-          </span>
+          {!diagnosisText && (
+            <span className="planning-status-bar__status-full text-[13px] text-muted-foreground">
+              {statusLabel(proposal.status)}
+            </span>
+          )}
         </div>
         <h3 id="academic-scheduling-result" className="planning-status-bar__headline m-0 text-lg font-semibold leading-6 tabular-nums">
           {headline}
