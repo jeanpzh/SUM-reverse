@@ -18,9 +18,6 @@
 .planning-sections {
   display: flex;
   flex-direction: column;
-  background: var(--planning-surface);
-  border: 1px solid var(--planning-border);
-  border-radius: var(--planning-radius-panel);
 }
 
 .planning-sections__toolbar {
@@ -41,7 +38,7 @@
 
 .planning-sections__title {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: var(--planning-text);
 }
@@ -60,22 +57,7 @@
 }
 
 .planning-sections__search {
-  min-height: calc(var(--planning-spacing) * 8);
   width: min(100%, 280px);
-  box-sizing: border-box;
-  padding: calc(var(--planning-spacing) * 1) calc(var(--planning-spacing) * 2.5);
-  font: inherit;
-  font-size: 0.875rem;
-  font-variant-numeric: tabular-nums;
-  color: var(--planning-text);
-  background: var(--planning-surface);
-  border: 1px solid var(--planning-border);
-  border-radius: var(--planning-radius-control);
-}
-
-.planning-sections__search:focus-visible {
-  outline: 2px solid var(--planning-primary);
-  outline-offset: 1px;
 }
 
 .planning-sections__view-toggle {
@@ -85,7 +67,8 @@
   overflow: hidden;
 }
 
-.planning-sections__toggle-btn {
+/* Native Semana controls retain their styling until their own migration. */
+.planning-sections__toggle-btn:where(:not([data-slot='button'])) {
   padding: calc(var(--planning-spacing) * 1) calc(var(--planning-spacing) * 3);
   font: inherit;
   font-size: 0.8125rem;
@@ -96,7 +79,7 @@
   cursor: pointer;
 }
 
-.planning-sections__toggle-btn:hover {
+.planning-sections__toggle-btn:where(:not([data-slot='button'])):hover {
   background: var(--planning-canvas);
   color: var(--planning-text);
 }
@@ -109,7 +92,8 @@
 
 /* Sections table */
 .planning-sections__table-wrapper {
-  overflow-x: auto;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .planning-sections__table {
@@ -160,11 +144,7 @@
 }
 
 .planning-sections__row--selected {
-  background-color: var(--planning-selected) !important;
-}
-
-.planning-sections__row--pending {
-  border-left: 3px solid var(--planning-warning);
+  background-color: var(--planning-selected);
 }
 
 .planning-sections__row td {
@@ -209,15 +189,6 @@
   font-weight: 500;
 }
 
-.planning-sections__status--complete {
-  color: var(--planning-primary);
-}
-
-.planning-sections__status--pending {
-  color: var(--planning-warning);
-  font-weight: 600;
-}
-
 .planning-sections__blocks-compact {
   display: flex;
   flex-direction: column;
@@ -225,40 +196,10 @@
   font-size: 0.8125rem;
 }
 
-.planning-sections__link-button {
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--planning-primary);
-  font: inherit;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-align: left;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
 .planning-sections__row-actions {
   display: flex;
   align-items: center;
   gap: calc(var(--planning-spacing) * 2);
-}
-
-.planning-sections__action-button {
-  padding: calc(var(--planning-spacing) * 0.75) calc(var(--planning-spacing) * 2);
-  font: inherit;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  border: 1px solid var(--planning-border);
-  border-radius: var(--planning-radius-control);
-  background: var(--planning-surface);
-  color: var(--planning-text);
-  cursor: pointer;
-}
-
-.planning-sections__action-button:hover {
-  background: var(--planning-canvas);
-  border-color: var(--planning-primary);
 }
 
 .planning-sections__empty {
@@ -307,7 +248,7 @@
 
 .planning-inspector__title {
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: var(--planning-text);
   line-height: 1.3;
@@ -318,22 +259,6 @@
   font-size: 0.8125rem;
   color: var(--planning-muted);
   font-variant-numeric: tabular-nums;
-}
-
-.planning-inspector__close-btn {
-  padding: calc(var(--planning-spacing) * 0.5) calc(var(--planning-spacing) * 1.5);
-  font: inherit;
-  font-size: 0.875rem;
-  border: 1px solid transparent;
-  border-radius: var(--planning-radius-control);
-  background: transparent;
-  color: var(--planning-muted);
-  cursor: pointer;
-}
-
-.planning-inspector__close-btn:hover {
-  background: var(--planning-canvas);
-  color: var(--planning-text);
 }
 
 .planning-inspector__content {
@@ -373,9 +298,6 @@
   flex-direction: column;
   gap: calc(var(--planning-spacing) * 1);
   padding: calc(var(--planning-spacing) * 2.5);
-  border: 1px solid var(--planning-border);
-  border-radius: var(--planning-radius-control);
-  background: var(--planning-canvas);
   font-size: 0.8125rem;
 }
 
@@ -405,16 +327,6 @@
   margin-top: calc(var(--planning-spacing) * 0.5);
 }
 
-.planning-inspector__component-tag {
-  display: inline-flex;
-  padding: 1px calc(var(--planning-spacing) * 1.5);
-  background: var(--planning-surface);
-  border: 1px solid var(--planning-border);
-  border-radius: var(--planning-radius-control);
-  font-size: 0.75rem;
-  color: var(--planning-text);
-}
-
 .planning-inspector__explanation {
   margin: 0;
   font-size: 0.8125rem;
@@ -439,14 +351,11 @@
   flex-direction: column;
   gap: calc(var(--planning-spacing) * 1);
   padding: calc(var(--planning-spacing) * 2);
-  border: 1px solid var(--planning-border);
-  border-radius: var(--planning-radius-control);
-  background: var(--planning-canvas);
 }
 
 .planning-inspector__avail-title {
   margin: 0;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--planning-text);
 }
@@ -460,7 +369,7 @@
 
 .planning-inspector__avail-note {
   margin: 0;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--planning-muted);
 }
 
@@ -488,9 +397,6 @@
   flex-direction: column;
   gap: calc(var(--planning-spacing) * 1.5);
   padding: calc(var(--planning-spacing) * 2);
-  background: var(--planning-canvas);
-  border: 1px solid var(--planning-border);
-  border-radius: var(--planning-radius-control);
   margin-top: calc(var(--planning-spacing) * 1);
 }
 
@@ -503,31 +409,67 @@
   font-size: 0.8125rem;
 }
 
-.planning-inspector__placement-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px calc(var(--planning-spacing) * 1.5);
-  border-radius: var(--planning-radius-control);
-  font-size: 0.75rem;
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.planning-inspector__placement-badge--current {
-  background: var(--planning-surface);
-  border: 1px solid var(--planning-border);
-  color: var(--planning-muted);
-}
-
-.planning-inspector__placement-badge--proposed {
-  background: var(--planning-selected);
-  border: 1px solid var(--planning-primary);
-  color: var(--planning-primary);
-}
-
 .planning-inspector__placement-val {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--planning-text);
 }
 
+.planning-workbench-container,
+.planning-sections,
+.planning-sections__toolbar-left,
+.planning-sections__toolbar-right,
+.planning-inspector__heading-info {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.planning-sections__toolbar-left,
+.planning-sections__row-actions,
+.planning-inspector__header,
+.planning-inspector__section-header,
+.planning-inspector__block-time {
+  flex-wrap: wrap;
+}
+
+.planning-root .planning-sections__table [data-slot='table-cell'] {
+  padding: 8px 12px;
+}
+
+/* Group headers scroll with their rows, below the sticky column header. */
+.planning-root .planning-sections__table [data-slot='table-body'] [data-slot='table-row'] [data-slot='table-head'] {
+  position: static;
+  z-index: auto;
+  padding: 8px 12px;
+}
+
+.planning-inspector__block-card + .planning-inspector__block-card {
+  border-top: 1px solid var(--planning-border);
+}
+
+.planning-inspector {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 639.98px) {
+  .planning-root .planning-inspector .academic-scheduling__manual-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.planning-sections__action-button:where(:not([data-slot='button'])) {
+  padding: calc(var(--planning-spacing) * 0.75) calc(var(--planning-spacing) * 2);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border: 1px solid var(--planning-border);
+  border-radius: var(--planning-radius-control);
+  background: var(--planning-surface);
+  color: var(--planning-text);
+  cursor: pointer;
+}
+
+.planning-sections__action-button:where(:not([data-slot='button'])):hover {
+  background: var(--planning-canvas);
+  border-color: var(--planning-primary);
+}
