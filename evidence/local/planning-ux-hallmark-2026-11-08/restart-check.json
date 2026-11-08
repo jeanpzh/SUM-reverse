@@ -1,0 +1,15 @@
+{
+  "result": "PASS",
+  "assertion": "Draft and publication lists identical after API restart",
+  "drafts": [
+    [
+      2,
+      "draft"
+    ],
+    [
+      6,
+      "published"
+    ]
+  ],
+  "currentPublicationId": "c189d2af-6f38-4cba-849a-da4331ebc5e0"
+}

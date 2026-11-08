@@ -1,0 +1,876 @@
+{
+  "sourceClass": "observed",
+  "verification": "local-only",
+  "date": "2026-11-08",
+  "scope": "Planning UI with independently configured temporary synthetic demo; never SUM production",
+  "records": [
+    {
+      "key": "auditInitialSnapshot",
+      "url": "http://localhost:5295/local/programacion-academica?etapa=preparacion&vista=resumen",
+      "visibleText": "Programación académica asistida\nSistemas / 2027-I\nPrototipo local · datos sintéticos\n. No es una pantalla oficial SUM y no requiere ni otorga permisos administrativos.\nGuía\nTema\nClaro\nOscuro\nSistema\n← Módulos locales\nBorrador nuevo · Guardado\nGuardar propuesta\n1.\nPreparación\n· Actual\n2.\nHorario\n3.\nRevisión docente\n4.\nAprobación\nResumen\nCursos\nRecursos\nPropuesta\nEstado\nBorrador\nLista para revisión\nEn revisión docente\nLista para aprobación\nMis propuestas\nResumen de preparación\nCursos seleccionados\n0\nCursos inválidos\n0\nDocentes\n91\nAmbientes\n49\nEstado de la oferta\nOferta incompleta\nGenerar propuesta\n\nPeriodo: 2027-I. Se envían todos los cursos seleccionados, incluidos los que estén ocultos por el filtro de ciclo.\n\nOpciones avanzadas\nGenerar horarios\nRevisar oferta",
+      "network": [
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/catalogo",
+          "method": "GET",
+          "status": null,
+          "failed": true,
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": null,
+          "failed": true,
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/catalogo",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        }
+      ],
+      "screenshot": "01-entry.png"
+    },
+    {
+      "key": "guideSnapshot",
+      "url": "http://localhost:5295/local/programacion-academica?etapa=preparacion&vista=resumen",
+      "visibleText": "Programación académica asistida\nSistemas / 2027-I\nPrototipo local · datos sintéticos\n. No es una pantalla oficial SUM y no requiere ni otorga permisos administrativos.\nGuía\nTema\nClaro\nOscuro\nSistema\n← Módulos locales\nBorrador nuevo · Guardado\nGuardar propuesta\n1.\nPreparación\n· Actual\n2.\nHorario\n3.\nRevisión docente\n4.\nAprobación\nResumen\nCursos\nRecursos\nPropuesta\nEstado\nBorrador\nLista para revisión\nEn revisión docente\nLista para aprobación\nMis propuestas\nResumen de preparación\nCursos seleccionados\n0\nCursos inválidos\n0\nDocentes\n91\nAmbientes\n49\nEstado de la oferta\nOferta incompleta\nGenerar propuesta\n\nPeriodo: 2027-I. Se envían todos los cursos seleccionados, incluidos los que estén ocultos por el filtro de ciclo.\n\nOpciones avanzadas\nGenerar horarios\nRevisar oferta\nEtapas\nAvanza de la preparación a la publicación desde estas etapas.\nPaso 1 de 5\nCerrar\nAnterior\nSiguiente",
+      "network": [
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/catalogo",
+          "method": "GET",
+          "status": null,
+          "failed": true,
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": null,
+          "failed": true,
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/catalogo",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        }
+      ],
+      "screenshot": "02-guide.png"
+    },
+    {
+      "key": "coursesSnapshot",
+      "url": "http://localhost:5295/local/programacion-academica?etapa=preparacion&vista=cursos",
+      "visibleText": "…",
+      "network": [],
+      "screenshot": "03-courses.png"
+    },
+    {
+      "key": "savedListSnapshot",
+      "url": "http://localhost:5295/local/programacion-academica?etapa=preparacion&vista=resumen",
+      "visibleText": "Programación académica asistida\nSistemas / 2027-I\nPrototipo local · datos sintéticos\n. No es una pantalla oficial SUM y no requiere ni otorga permisos administrativos.\nGuía\nTema\nClaro\nOscuro\nSistema\n← Módulos locales\nBorrador nuevo · Guardado\nGuardar propuesta\n1.\nPreparación\n· Actual\n2.\nHorario\n3.\nRevisión docente\n4.\nAprobación\nResumen\nCursos\nRecursos\nPropuesta\nEstado\nBorrador\nLista para revisión\nEn revisión docente\nLista para aprobación\nMis propuestas\nResumen de preparación\nCursos seleccionados\n0\nCursos inválidos\n0\nDocentes\n91\nAmbientes\n49\nEstado de la oferta\nOferta incompleta\nGenerar propuesta\n\nPeriodo: 2027-I. Se envían todos los cursos seleccionados, incluidos los que estén ocultos por el filtro de ciclo.\n\nOpciones avanzadas\nGenerar horarios\nRevisar oferta\nMis propuestas\n\nAlmacenamiento local compartido; no está asociado a una cuenta.\n\nAuditoría Hallmark sintética · SISTEMAS · 2027-I · Borrador · v1\nActualizada 8/11/2026, 5:13:43 a. m. · Solo configuración\nContinuar edición\nCerrar",
+      "network": [
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/catalogo",
+          "method": "GET",
+          "status": null,
+          "failed": true,
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": null,
+          "failed": true,
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/catalogo",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        }
+      ],
+      "screenshot": "04-savedList.png"
+    },
+    {
+      "key": "scheduleSnapshot",
+      "url": "http://localhost:5295/local/programacion-academica?etapa=horario",
+      "visibleText": "Programación académica asistida\nSistemas / 2027-I\nPrototipo local · datos sintéticos\n. No es una pantalla oficial SUM y no requiere ni otorga permisos administrativos.\nGuía\nTema\nClaro\nOscuro\nSistema\n← Módulos locales\nCambios sin guardar · versión guardada 1.\nGuardar propuesta\n1.\nPreparación\n2.\nHorario\n· Actual\n3.\nRevisión docente\n4.\nAprobación\nGuardar borrador\nCompleta\nBorrador · sin confirmar\nProgramación completa\nProgramación completa · 2/2 componentes\n\n1/1 secciones colocadas · 1 avisos\n\nVer avisos\nVolver a generar\nDetalles de búsqueda\nSecciones\nMostrando 1 de 1\nTabla\nSemana\nSección\tCapacidad\tDocente\tAmbiente\tHorario\tEstado\tAcciones\nINE002 · PROGRAMACIÓN Y COMPUTACIÓN · Demanda 30 · 1 sección\n1\t45\tPABLO JESUS ROMERO NAUPARI\t101AP\tLun 08:00–11:00\tCompleta\t\nInspeccionar\nEditar horario",
+      "network": [
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/catalogo",
+          "method": "GET",
+          "status": null,
+          "failed": true,
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": null,
+          "failed": true,
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/catalogo",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/c189d2af-6f38-4cba-849a-da4331ebc5e0/continuar",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/propuestas",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        }
+      ],
+      "screenshot": "05-schedule.png"
+    },
+    {
+      "key": "mobileWeekSnapshot",
+      "url": "http://localhost:5295/local/programacion-academica?etapa=horario",
+      "visibleText": "Programación académica asistida\nSistemas / 2027-I\nPrototipo local · datos sintéticos\n. No es una pantalla oficial SUM y no requiere ni otorga permisos administrativos.\nGuía\nTema\nClaro\nOscuro\nSistema\n← Módulos locales\nBorrador r2 · Guardado\nGuardar propuesta\n1.\nPreparación\n2.\nHorario\n· Actual\n3.\nRevisión docente\n4.\nAprobación\nEnviar a revisión docente\nCompleta\nBorrador · sin confirmar\nProgramación completa\nProgramación completa · 2/2 componentes\n\n1/1 secciones colocadas · 1 avisos\n\nVer avisos\nVolver a generar\nDetalles de búsqueda\nSemana\nMostrando 1 de 1 bloque\nTabla\nSemana\nDía de la semana:\nTodos los días\nLunes (1)\nMartes (0)\nMiércoles (0)\nJueves (0)\nViernes (0)\nLunes\n1 bloque\nPROGRAMACIÓN Y COMPUTACIÓN\nSección 1\nHora: 08:00–11:00 (3 h (180 min))\nDocente: PABLO JESUS ROMERO NAUPARI\nAmbiente: 101AP\nComponentes: T + P\nEditar horario\nMartes\n0 bloques\n\nSin clases programadas este día.\n\nMiércoles\n0 bloques\n\nSin clases programadas este día.\n\nJueves\n0 bloques\n\nSin clases programadas este día.\n\nViernes\n0 bloques\n\nSin clases programadas este día.",
+      "network": [
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/catalogo",
+          "method": "GET",
+          "status": null,
+          "failed": true,
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": null,
+          "failed": true,
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/catalogo",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/c189d2af-6f38-4cba-849a-da4331ebc5e0/continuar",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/propuestas",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/guardar",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        }
+      ],
+      "screenshot": "06-mobileWeek.png"
+    },
+    {
+      "key": "mobileDarkTourSnapshot",
+      "url": "http://localhost:5295/local/programacion-academica?etapa=preparacion&vista=resumen",
+      "visibleText": "Programación académica asistida\nSistemas / 2027-I\nPrototipo local · datos sintéticos\n. No es una pantalla oficial SUM y no requiere ni otorga permisos administrativos.\nGuía\nTema\nClaro\nOscuro\nSistema\n← Módulos locales\nBorrador r2 · Guardado\nGuardar propuesta\n1.\nPreparación\n· Actual\n2.\nHorario\n3.\nRevisión docente\n4.\nAprobación\nResumen\nCursos\nRecursos\nPropuesta\nEstado\nBorrador\nLista para revisión\nEn revisión docente\nLista para aprobación\nMis propuestas\nResumen de preparación\nCursos seleccionados\n1\nCursos inválidos\n0\nDocentes\n91\nAmbientes\n49\nEstado de la oferta\nOferta lista\nGenerar propuesta\n\nPeriodo: 2027-I. Se envían todos los cursos seleccionados, incluidos los que estén ocultos por el filtro de ciclo.\n\nOpciones avanzadas\nGenerar horarios\nEtapas\nAvanza de la preparación a la publicación desde estas etapas.\nPaso 1 de 5\nCerrar\nAnterior\nSiguiente",
+      "network": [
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/catalogo",
+          "method": "GET",
+          "status": null,
+          "failed": true,
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": null,
+          "failed": true,
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/catalogo",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/c189d2af-6f38-4cba-849a-da4331ebc5e0/continuar",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/propuestas",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/guardar",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        }
+      ],
+      "screenshot": "07-mobileDarkTour.png"
+    },
+    {
+      "key": "teacherReviewSnapshot",
+      "url": "http://localhost:5295/local/programacion-academica?etapa=revision",
+      "visibleText": "Programación académica asistida\nSistemas / 2027-I\nPrototipo local · datos sintéticos\n. No es una pantalla oficial SUM y no requiere ni otorga permisos administrativos.\nGuía\nTema\nClaro\nOscuro\nSistema\n← Módulos locales\nBorrador r3 · Guardado\nGuardar propuesta\n1.\nPreparación\n2.\nHorario\n3.\nRevisión docente\n· Actual\n4.\nAprobación\nRevisión docente simulada\nRonda 1\nAlcance de la simulación\nVista simulada\nEscuela\nDocente\nDocente\nPABLO JESUS ROMERO NAUPARI · Pendiente\nPendientes 1\nObservados 0\nDesactualizados 0\nConformes 0\n\nEstado de la versión guardada: En revisión docente · versión 3\n\nEnviar a revisión\nEditar horario\n\nPABLO JESUS ROMERO NAUPARI · Pendiente\n\nCurso\tSección\tDía\tHorario\tComponentes\tAmbiente\nPROGRAMACIÓN Y COMPUTACIÓN\t1 · 45\tLun\t08:00–11:00 · 3 h (180 min)\tT + P\t101AP\nHistorial (1)\nEnviada a revisión · ronda 1 · versión 3.",
+      "network": [
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/catalogo",
+          "method": "GET",
+          "status": null,
+          "failed": true,
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": null,
+          "failed": true,
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/catalogo",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/c189d2af-6f38-4cba-849a-da4331ebc5e0/continuar",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/propuestas",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/guardar",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/c189d2af-6f38-4cba-849a-da4331ebc5e0/revision/enviar",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        }
+      ],
+      "screenshot": "08-teacherReview.png"
+    },
+    {
+      "key": "mobileReviewSnapshot",
+      "url": "http://localhost:5295/local/programacion-academica?etapa=revision",
+      "visibleText": "Programación académica asistida\nSistemas / 2027-I\nPrototipo local · datos sintéticos\n. No es una pantalla oficial SUM y no requiere ni otorga permisos administrativos.\nGuía\nTema\nClaro\nOscuro\nSistema\n← Módulos locales\nBorrador r3 · Guardado\nGuardar propuesta\n1.\nPreparación\n2.\nHorario\n3.\nRevisión docente\n· Actual\n4.\nAprobación\nRevisión docente simulada\nRonda 1\nAlcance de la simulación\nVista simulada\nEscuela\nDocente\nDocente\nPABLO JESUS ROMERO NAUPARI · Pendiente\nPendientes 1\nObservados 0\nDesactualizados 0\nConformes 0\n\nEstado de la versión guardada: En revisión docente · versión 3\n\nPABLO JESUS ROMERO NAUPARI · Pendiente\n\nCurso\tSección\tDía\tHorario\tComponentes\tAmbiente\nPROGRAMACIÓN Y COMPUTACIÓN\t1 · 45\tLun\t08:00–11:00 · 3 h (180 min)\tT + P\t101AP\nObservación\n\nEscribe una observación para solicitar cambios; la conformidad puede enviarse sin texto.\n\nSolicitar cambios\nDar conformidad\nHistorial (1)",
+      "network": [
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/catalogo",
+          "method": "GET",
+          "status": null,
+          "failed": true,
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": null,
+          "failed": true,
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/catalogo",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/c189d2af-6f38-4cba-849a-da4331ebc5e0/continuar",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/propuestas",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/guardar",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/c189d2af-6f38-4cba-849a-da4331ebc5e0/revision/enviar",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        }
+      ],
+      "screenshot": "09-mobileReview.png"
+    },
+    {
+      "key": "approvalConfirmSnapshot",
+      "url": "http://localhost:5295/local/programacion-academica?etapa=aprobacion",
+      "visibleText": "Programación académica asistida\nSistemas / 2027-I\nPrototipo local · datos sintéticos\n. No es una pantalla oficial SUM y no requiere ni otorga permisos administrativos.\nGuía\nTema\nClaro\nOscuro\nSistema\n← Módulos locales\nBorrador r4 · Guardado\nGuardar propuesta\n1.\nPreparación\n2.\nHorario\n3.\nRevisión docente\n4.\nAprobación\n· Actual\nAprobación y publicación simuladas\nAlcance de la simulación\nActualizar publicaciones\nActualizar vista previa\nAprobar (simulada)\nPublicar (simulada)\nPrimero aprueba la versión\nConsultar publicación\nPropuesta actual · Auditoría Hallmark sintética\n\nNo hay una publicación vigente.\n\nAuditoría Hallmark sintética · SISTEMAS · 2027-I · Versión 4 · Lista para aprobación\n\nCódigo\tAsignatura\tCiclo\tSección\tCapacidad\tDocente\tAmbiente\tDía\tHorario\tComponentes\nINE002\tPROGRAMACIÓN Y COMPUTACIÓN\t1\t1\t45\tPABLO JESUS ROMERO NAUPARI\t101AP\tLunes\t08:00–11:00 · 3 h (180 min)\tT · 1 h (60 min) + P · 2 h (120 min)\nMatrícula local 2027-I\nAlcance de la activación\nActualizar ofertas operativas\nActivar publicación seleccionada\n\nSelecciona una publicación y actualiza su vista previa para habilitar la activación.\n\nIntenciones de prematrícula\nAprobar (simulada)\n\n¿Aprobar (simulada) la propuesta «Auditoría Hallmark sintética», versión 4?\n\nCancelar\nAprobar",
+      "network": [
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/catalogo",
+          "method": "GET",
+          "status": null,
+          "failed": true,
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": null,
+          "failed": true,
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/catalogo",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/c189d2af-6f38-4cba-849a-da4331ebc5e0/continuar",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/propuestas",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/guardar",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/c189d2af-6f38-4cba-849a-da4331ebc5e0/revision/enviar",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/c189d2af-6f38-4cba-849a-da4331ebc5e0/revision/responder",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/c189d2af-6f38-4cba-849a-da4331ebc5e0/vista-previa",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        }
+      ],
+      "screenshot": "10-approvalConfirm.png"
+    },
+    {
+      "key": "publishedSnapshot",
+      "url": "http://localhost:5295/local/programacion-academica?etapa=aprobacion",
+      "visibleText": "Programación académica asistida\nSistemas / 2027-I\nPrototipo local · datos sintéticos\n. No es una pantalla oficial SUM y no requiere ni otorga permisos administrativos.\nGuía\nTema\nClaro\nOscuro\nSistema\n← Módulos locales\nPublicada (simulada) r6 · Guardado\nVersión congelada de solo lectura\nGuardar propuesta\n1.\nPreparación\n2.\nHorario\n3.\nRevisión docente\n4.\nAprobación\n· Actual\nAprobación y publicación simuladas\nAlcance de la simulación\nActualizar publicaciones\nActualizar vista previa\nAprobar (simulada)\nActualiza la vista previa de la versión actual\nPublicar (simulada)\nEsta versión ya está publicada\nConsultar publicación\nPropuesta actual · Auditoría Hallmark sintética\nVigente · Publicación 1 · Auditoría Hallmark sintética · 8/11/2026, 5:20:00 a. m.\n\nVigente: publicación 1 · Auditoría Hallmark sintética.\n\nPublicada (simulada) · Auditoría Hallmark sintética · versión 6\nCrear nuevo borrador\nMatrícula local 2027-I\nAlcance de la activación\nActualizar ofertas operativas\nActivar publicación seleccionada\n\nSelecciona una publicación y actualiza su vista previa para habilitar la activación.\n\nPropuesta actual · Auditoría Hallmark sintética · versión 6 · Publicada (simulada). Actualiza la vista previa para continuar.\n\nIntenciones de prematrícula\nPublicada (simulada) · publicación 1 · versión 6.",
+      "network": [
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/catalogo",
+          "method": "GET",
+          "status": null,
+          "failed": true,
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": null,
+          "failed": true,
+          "errorText": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/catalogo",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/c189d2af-6f38-4cba-849a-da4331ebc5e0/continuar",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/propuestas",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/guardar",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/c189d2af-6f38-4cba-849a-da4331ebc5e0/revision/enviar",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/c189d2af-6f38-4cba-849a-da4331ebc5e0/revision/responder",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/c189d2af-6f38-4cba-849a-da4331ebc5e0/vista-previa",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/c189d2af-6f38-4cba-849a-da4331ebc5e0/aprobar",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/c189d2af-6f38-4cba-849a-da4331ebc5e0/vista-previa",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores/c189d2af-6f38-4cba-849a-da4331ebc5e0/publicar",
+          "method": "POST",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/borradores",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        },
+        {
+          "url": "http://localhost:5295/api/local/programacion-academica/v1/publicaciones",
+          "method": "GET",
+          "status": 200,
+          "failed": false
+        }
+      ],
+      "screenshot": "11-published.png"
+    }
+  ],
+  "widthMetrics": [
+    {
+      "width": 320,
+      "documentWidth": 320,
+      "overflow": false,
+      "route": "?etapa=preparacion&vista=cursos",
+      "scrollContainers": [
+        {
+          "clientHeight": 628,
+          "scrollHeight": 12810,
+          "clientWidth": 265,
+          "scrollWidth": 708,
+          "overflowY": "auto"
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "documentWidth": 390,
+      "overflow": false,
+      "route": "?etapa=preparacion&vista=cursos",
+      "scrollContainers": [
+        {
+          "clientHeight": 628,
+          "scrollHeight": 12810,
+          "clientWidth": 335,
+          "scrollWidth": 708,
+          "overflowY": "auto"
+        }
+      ]
+    },
+    {
+      "width": 768,
+      "documentWidth": 768,
+      "overflow": false,
+      "route": "?etapa=preparacion&vista=cursos",
+      "scrollContainers": [
+        {
+          "clientHeight": 628,
+          "scrollHeight": 12810,
+          "clientWidth": 692,
+          "scrollWidth": 708,
+          "overflowY": "auto"
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "documentWidth": 1280,
+      "overflow": false,
+      "route": "?etapa=preparacion&vista=cursos",
+      "scrollContainers": [
+        {
+          "clientHeight": 628,
+          "scrollHeight": 7080,
+          "clientWidth": 852,
+          "scrollWidth": 852,
+          "overflowY": "auto"
+        }
+      ]
+    },
+    {
+      "width": 1920,
+      "documentWidth": 1920,
+      "overflow": false,
+      "route": "?etapa=preparacion&vista=cursos",
+      "scrollContainers": [
+        {
+          "clientHeight": 628,
+          "scrollHeight": 4840,
+          "clientWidth": 1108,
+          "scrollWidth": 1108,
+          "overflowY": "auto"
+        }
+      ]
+    }
+  ],
+  "tourSteps": [
+    {
+      "step": 1,
+      "dialog": "dialog \"Etapas\"",
+      "hasNext": true,
+      "tree": "  - dialog \"Etapas\" [ref=t3-b6a4e5ed-o-e92] [box=480,265,320,195]:\n    - generic [ref=t3-b6a4e5ed-o-e93] [box=497,282,286,69]:\n      - generic [ref=t3-b6a4e5ed-o-e94] [box=497,282,254,23]: Etapas\n      - generic [ref=t3-b6a4e5ed-o-e95] [box=497,311,254,40]: Avanza de la preparación a la publicación desde estas etapas.\n    - generic [ref=t3-b6a4e5ed-o-e96] [box=497,367,286,20]: Paso 1 de 5\n    - generic [ref=t3-b6a4e5ed-o-e97] [box=497,403,286,40]:\n      - button \"Cerrar guía\" [active] [ref=t3-b6a4e5ed-o-e98] [cursor=pointer] [box=498,403,78,40]: Cerrar\n      - button \"Paso anterior\" [disabled] [box=584,403,91,40]: Anterior\n      - button \"Paso siguiente\" [ref=t3-b6a4e5ed-o-e99] [cursor=pointer] [box=683,403,100,40]: Siguiente\n"
+    },
+    {
+      "step": 2,
+      "dialog": "dialog \"Etapas\"",
+      "hasNext": true,
+      "tree": "  - dialog \"Etapas\" [ref=t3-b6a4e5ed-p-e92] [box=480,265,320,195]:\n    - generic [ref=t3-b6a4e5ed-p-e93] [box=497,282,286,69]:\n      - generic [ref=t3-b6a4e5ed-p-e94] [box=497,282,254,23]: Etapas\n      - generic [ref=t3-b6a4e5ed-p-e95] [box=497,311,254,40]: Avanza de la preparación a la publicación desde estas etapas.\n    - generic [ref=t3-b6a4e5ed-p-e96] [box=497,367,286,20]: Paso 1 de 5\n    - generic [ref=t3-b6a4e5ed-p-e97] [box=497,403,286,40]:\n      - button \"Cerrar guía\" [ref=t3-b6a4e5ed-p-e98] [cursor=pointer] [box=498,403,78,40]: Cerrar\n      - button \"Paso anterior\" [disabled] [box=584,403,91,40]: Anterior\n      - button \"Paso siguiente\" [active] [ref=t3-b6a4e5ed-p-e99] [cursor=pointer] [box=683,403,100,40]: Siguiente\n"
+    },
+    {
+      "step": 3,
+      "dialog": "dialog \"Etapas\"",
+      "hasNext": true,
+      "tree": "  - dialog \"Etapas\" [ref=t3-b6a4e5ed-q-e92] [box=480,265,320,195]:\n    - generic [ref=t3-b6a4e5ed-q-e93] [box=497,282,286,69]:\n      - generic [ref=t3-b6a4e5ed-q-e94] [box=497,282,254,23]: Etapas\n      - generic [ref=t3-b6a4e5ed-q-e95] [box=497,311,254,40]: Avanza de la preparación a la publicación desde estas etapas.\n    - generic [ref=t3-b6a4e5ed-q-e96] [box=497,367,286,20]: Paso 1 de 5\n    - generic [ref=t3-b6a4e5ed-q-e97] [box=497,403,286,40]:\n      - button \"Cerrar guía\" [ref=t3-b6a4e5ed-q-e98] [cursor=pointer] [box=498,403,78,40]: Cerrar\n      - button \"Paso anterior\" [disabled] [box=584,403,91,40]: Anterior\n      - button \"Paso siguiente\" [active] [ref=t3-b6a4e5ed-q-e99] [cursor=pointer] [box=683,403,100,40]: Siguiente\n"
+    },
+    {
+      "step": 4,
+      "dialog": "dialog \"Etapas\"",
+      "hasNext": true,
+      "tree": "  - dialog \"Etapas\" [ref=t3-b6a4e5ed-r-e92] [box=480,265,320,195]:\n    - generic [ref=t3-b6a4e5ed-r-e93] [box=497,282,286,69]:\n      - generic [ref=t3-b6a4e5ed-r-e94] [box=497,282,254,23]: Etapas\n      - generic [ref=t3-b6a4e5ed-r-e95] [box=497,311,254,40]: Avanza de la preparación a la publicación desde estas etapas.\n    - generic [ref=t3-b6a4e5ed-r-e96] [box=497,367,286,20]: Paso 1 de 5\n    - generic [ref=t3-b6a4e5ed-r-e97] [box=497,403,286,40]:\n      - button \"Cerrar guía\" [ref=t3-b6a4e5ed-r-e98] [cursor=pointer] [box=498,403,78,40]: Cerrar\n      - button \"Paso anterior\" [disabled] [box=584,403,91,40]: Anterior\n      - button \"Paso siguiente\" [active] [ref=t3-b6a4e5ed-r-e99] [cursor=pointer] [box=683,403,100,40]: Siguiente\n"
+    },
+    {
+      "step": 5,
+      "dialog": "dialog \"Etapas\"",
+      "hasNext": true,
+      "tree": "  - dialog \"Etapas\" [ref=t3-b6a4e5ed-s-e92] [box=480,265,320,195]:\n    - generic [ref=t3-b6a4e5ed-s-e93] [box=497,282,286,69]:\n      - generic [ref=t3-b6a4e5ed-s-e94] [box=497,282,254,23]: Etapas\n      - generic [ref=t3-b6a4e5ed-s-e95] [box=497,311,254,40]: Avanza de la preparación a la publicación desde estas etapas.\n    - generic [ref=t3-b6a4e5ed-s-e96] [box=497,367,286,20]: Paso 1 de 5\n    - generic [ref=t3-b6a4e5ed-s-e97] [box=497,403,286,40]:\n      - button \"Cerrar guía\" [ref=t3-b6a4e5ed-s-e98] [cursor=pointer] [box=498,403,78,40]: Cerrar\n      - button \"Paso anterior\" [disabled] [box=584,403,91,40]: Anterior\n      - button \"Paso siguiente\" [active] [ref=t3-b6a4e5ed-s-e99] [cursor=pointer] [box=683,403,100,40]: Siguiente\n"
+    }
+  ],
+  "approvalKeyboard": [
+    {
+      "text": "Aprobar",
+      "inside": true,
+      "focusVisible": true
+    },
+    {
+      "text": "Cancelar",
+      "inside": true,
+      "focusVisible": true
+    },
+    {
+      "text": "Aprobar",
+      "inside": true,
+      "focusVisible": true
+    },
+    {
+      "text": "Cancelar",
+      "inside": true,
+      "focusVisible": true
+    }
+  ]
+}
