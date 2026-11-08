@@ -397,8 +397,8 @@
   font-size: 0.875rem;
 }
 
-/* Row Inspector */
-.planning-inspector {
+/* Preparación course panel (AcademicPreparationCourses) keeps the original inline inspector. */
+.planning-inspector:not(.planning-inspector--sheet) {
   width: 320px;
   flex-shrink: 0;
   box-sizing: border-box;
@@ -411,8 +411,18 @@
   gap: calc(var(--planning-spacing) * 3);
 }
 
-.planning-inspector__backdrop {
-  display: none;
+/* Horario section inspector: a non-modal shadcn Sheet (components/ui) fixed to the right edge. */
+.planning-inspector--sheet.planning-inspector--sheet {
+  width: min(100vw, 22.5rem);
+  padding: calc(var(--planning-spacing) * 4);
+  gap: calc(var(--planning-spacing) * 3);
+}
+
+/* While it is open on wide screens, the page reserves its width so nothing is covered. */
+@media (min-width: 1024px) {
+  .planning-root:has(.planning-inspector--sheet[data-state='open']) .planning-main {
+    padding-right: calc(22.5rem + 1.5rem);
+  }
 }
 
 .planning-inspector__header {
@@ -583,13 +593,9 @@
   color: var(--planning-muted);
 }
 
-/* Responsive inspector below 1024px */
+/* Preparación course panel below 1024px: fixed drawer, unchanged from before the Sheet. */
 @media (max-width: 1023.98px) {
-  .planning-workbench-container {
-    flex-direction: column;
-  }
-
-  .planning-inspector {
+  .planning-inspector:not(.planning-inspector--sheet) {
     position: fixed;
     top: 0;
     right: 0;
@@ -602,14 +608,6 @@
     border-bottom: none;
     border-right: none;
     overflow-y: auto;
-  }
-
-  .planning-inspector__backdrop {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.35);
-    z-index: 999;
   }
 }
 

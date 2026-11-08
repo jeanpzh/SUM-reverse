@@ -7,6 +7,7 @@ import type {
   AcademicCatalog,
   AcademicProposal,
 } from '../data/academicScheduling'
+import { Sheet, SheetContent, SheetTitle } from '../components/ui/Sheet'
 import {
   academicSectionLabel,
   aggregateAcademicBlocks,
@@ -83,15 +84,25 @@ export function PlanningInspector({
   const dayNamesFull = ['—', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
   const sLabel = academicSectionLabel(proposal, section.sectionId)
 
+  // Non-modal shadcn Sheet: the sections table and the Semana grid stay usable behind it
+  // (selecting another section or dragging a block keeps it open); Escape or ✕ closes it.
   return (
-    <>
-      <div className="planning-inspector__backdrop" onClick={onClose} aria-hidden="true" />
-      <aside className="planning-inspector" aria-label={`Inspector de sección ${sLabel}`}>
+    <Sheet open modal={false} onOpenChange={(open) => { if (!open) onClose() }}>
+      <SheetContent
+        className="planning-inspector planning-inspector--sheet"
+        aria-label={`Inspector de sección ${sLabel}`}
+        aria-describedby={undefined}
+        showCloseButton={false}
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        onInteractOutside={(event) => event.preventDefault()}
+      >
         <div className="planning-inspector__header">
           <div className="planning-inspector__heading-info">
-            <h4 className="planning-inspector__title">
-              {section.courseName} · Sección {sLabel}
-            </h4>
+            <SheetTitle asChild>
+              <h4 className="planning-inspector__title">
+                {section.courseName} · Sección {sLabel}
+              </h4>
+            </SheetTitle>
             <p className="planning-inspector__meta">
               {section.courseId} · Capacidad {section.capacity}
             </p>
@@ -379,7 +390,7 @@ export function PlanningInspector({
             )}
           </div>
         )}
-      </aside>
-    </>
+      </SheetContent>
+    </Sheet>
   )
 }
