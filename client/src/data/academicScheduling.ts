@@ -63,6 +63,34 @@ export function isLocalAcademicArea(pathname: string,
     || pathname === `${ACADEMIC_ROUTE}/`
 }
 
+// Human messages at the planning data seam; wire field names never become UI labels.
+export function academicPlanningErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) return 'No se pudo completar la acción. Inténtalo de nuevo.'
+  const message = error.message
+  if (/^title:/.test(message)) return 'Escribe un nombre para la propuesta.'
+  if (/^Nombre de propuesta:/.test(message)) return 'El nombre de la propuesta debe tener entre 1 y 100 caracteres, sin espacios al inicio ni al final.'
+  const field = message.match(/^([\w.[\]-]+):/u)?.[1]
+  if (field) {
+    const labels: Record<string, string> = {
+      estimatedDemand: 'la demanda estimada', targetCapacity: 'la capacidad por sección',
+      courseId: 'el curso', teacherId: 'el docente', roomId: 'el ambiente',
+      day: 'el día', startMinute: 'la hora de inicio', endMinute: 'la hora de fin',
+      durationMinutes: 'la duración', observation: 'la observación docente',
+      expectedVersion: 'la versión de la propuesta', title: 'el nombre de la propuesta',
+      demands: 'la demanda de los cursos', resources: 'los recursos disponibles',
+      teachers: 'los docentes', rooms: 'los ambientes', windows: 'la disponibilidad',
+      academicPeriod: 'el periodo académico', patternId: 'el patrón de sesiones',
+    }
+    const name = field.split(/[.[\]]/u).filter(Boolean).reverse().find((part) => labels[part])
+    return name ? `Revisa ${labels[name]}; el valor no es válido.`
+      : 'Revisa los datos de la propuesta; hay un valor no válido.'
+  }
+  if (/^(Failed to fetch|fetch failed|NetworkError|Load failed)/i.test(message)) {
+    return 'No se pudo conectar con el servicio local. Revisa la conexión e inténtalo de nuevo.'
+  }
+  return message
+}
+
 async function readJson(response: Response) {
   let body: unknown
   try {
@@ -80,7 +108,7 @@ async function readJson(response: Response) {
       || typeof error.code !== 'string' || !error.code || typeof error.message !== 'string' || !error.message) {
       throw new Error('La API local devolvió un error con formato inválido.')
     }
-    throw new Error(error.message)
+    throw new Error(academicPlanningErrorMessage(new Error(error.message)))
   }
   return body
 }
@@ -161,7 +189,11 @@ export async function fetchAcademicDrafts(fetchImpl: typeof fetch = globalThis.f
 
 export async function saveAcademicDraft(request: AcademicDraftSaveRequest,
   fetchImpl: typeof fetch = globalThis.fetch, signal?: AbortSignal): Promise<AcademicSavedDraft> {
-  validateAcademicDraftSaveRequest(request)
+  try {
+    validateAcademicDraftSaveRequest(request)
+  } catch (error) {
+    throw new Error(academicPlanningErrorMessage(error))
+  }
   const body = await readJson(await fetchImpl(`${ACADEMIC_API}/borradores/guardar`, {
     method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
     credentials: 'omit', signal, body: JSON.stringify(request),

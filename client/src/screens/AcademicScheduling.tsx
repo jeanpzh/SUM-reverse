@@ -146,9 +146,19 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
 
   const retryCatalog = () => void commands.loadCatalog()
   const refreshDraftList = () => commands.refreshDrafts()
-  const saveDraft = () => commands.save()
+  const saveDraft = async () => {
+    await commands.save()
+    if (!draftTitle.trim() || draftTitle.trim() !== draftTitle) {
+      await navigate({ to: '/local/programacion-academica', search: { etapa: 'preparacion', vista: 'resumen' } })
+      document.getElementById('planning-proposal-title')?.focus()
+    }
+  }
   const estimateDemand = () => commands.estimateDemand()
-  const generate = () => commands.generate()
+  const generate = async () => {
+    if (await commands.generate()) {
+      await navigate({ to: '/local/programacion-academica', search: { etapa: 'horario' } })
+    }
+  }
   const submitBlockReview = () => commands.adjust()
   const approveDraft = () => commands.approve()
   const publishDraft = (expectedCurrentId: string | null) => commands.publish(expectedCurrentId)
@@ -201,9 +211,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       onGuide={() => void openGuide()}
       school="Sistemas"
       period={planningPeriod}
-      draftVersion={draftVersion}
-      draftId={draftId}
-      savedDraftState={savedDraftState}
+      draftStateText={view.draftLabel}
       workspaceDirty={workspaceDirty}
       canSave={canSave}
       draftBusy={draftBusy}
@@ -212,7 +220,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
     />
 
     <PlanningStageNav currentStage={currentStage} />
-    {draftError && !draftListOpen && <Alert variant="destructive" role="alert"><AlertDescription>{draftError}</AlertDescription></Alert>}
+    {draftError && !draftListOpen && <Alert id="planning-draft-error" variant="destructive" role="alert"><AlertDescription>{draftError}</AlertDescription></Alert>}
     {currentStage === 'preparacion' && <nav id="planning-tour-preparation" className="planning-preparation-views" aria-label="Vistas de preparación">
       {(['resumen', 'cursos', 'recursos'] as const).map((vista) => <Link key={vista}
         to="/local/programacion-academica" search={{ etapa: 'preparacion', vista }}
@@ -233,7 +241,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       <section className="academic-scheduling__draft-bar" aria-label="Propuestas locales">
         <div className="academic-scheduling__draft-heading">
           <div className="academic-scheduling__draft-field"><Label htmlFor="planning-proposal-title">Propuesta</Label>
-            <Input id="planning-proposal-title" aria-label="Nombre de la propuesta" maxLength={100} value={draftTitle} disabled={lockedDraft || draftBusy}
+            <Input id="planning-proposal-title" aria-label="Nombre de la propuesta" aria-invalid={Boolean(draftError && (!draftTitle.trim() || draftTitle.trim() !== draftTitle))} aria-describedby={draftError && !draftListOpen ? 'planning-draft-error' : undefined} maxLength={100} value={draftTitle} disabled={lockedDraft || draftBusy}
               onChange={(event) => markTitle(event.currentTarget.value)} />
           </div>
           <div className="academic-scheduling__draft-field"><Label htmlFor="planning-proposal-state">Estado</Label>

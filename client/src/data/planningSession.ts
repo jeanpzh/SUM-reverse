@@ -32,7 +32,7 @@ import type {
   AcademicReviewSubmission, AcademicSavedDraft, AcademicTeacherReview, AcademicWorkspace,
 } from '../../../shared/programacion-academica-api.mjs'
 import {
-  PLANNING_LIMITS, academicSectionCoverage, adjustAcademicProposal, aggregateAcademicBlocks, approveAcademicDraft,
+  PLANNING_LIMITS, academicPlanningErrorMessage, academicSectionCoverage, adjustAcademicProposal, aggregateAcademicBlocks, approveAcademicDraft,
   buildAcademicPlanningRequest, createAcademicPlanningDefaults, createAcademicProposal, estimateAcademicDemand,
   fetchAcademicCatalog, fetchAcademicDrafts, forkAcademicDraft, publishAcademicDraft, respondAcademicTeacherReview,
   resumeAcademicDraft, saveAcademicDraft, submitAcademicTeacherReview,
@@ -441,7 +441,7 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
 }
 
 function errorText(error: unknown, prefix: string, fallback: string): string {
-  return error instanceof Error ? `${prefix}${error.message}` : fallback
+  return error instanceof Error ? `${prefix}${academicPlanningErrorMessage(error)}` : fallback
 }
 
 function requestBase(state: PlanningSessionState, catalog: AcademicCatalog, blankAsNaN: boolean) {
@@ -493,13 +493,14 @@ function proposalComplete(proposal: AcademicProposal | null): boolean {
 }
 
 export type PlanningPrimaryActionId = 'review-offer' | 'generate' | 'back-preparation' | 'resolve-pending' | 'save'
-  | 'submit-review' | 'record-response' | 'to-approval' | 'back-schedule' | 'back-review' | 'approve' | 'publish'
+  | 'submit-review' | 'record-response' | 'to-approval' | 'back-schedule' | 'back-review' | 'approve'
 export type PlanningPrimaryAction = { id: PlanningPrimaryActionId; label: string; count?: number }
 
 // D7 (local-only). Decisions beyond the plan table, recorded here:
 // - Horario counts as pending every section that is not complete (partial + pending coverage).
 // - Revisión docente without a review, or with changes requested/outdated teachers, sends back to Horario.
-// - Aprobación before 'ready-for-approval' sends back to Revisión docente; a published version has no action.
+// - Aprobación before 'ready-for-approval' sends back to Revisión docente; approve is primary.
+//   Approved/published versions have no primary action; publishing remains secondary with confirmation.
 export function derivePlanningPrimaryAction(state: PlanningSessionState, stage: PlanningStageId): PlanningPrimaryAction | null {
   switch (stage) {
     case 'preparacion': {
@@ -527,12 +528,23 @@ export function derivePlanningPrimaryAction(state: PlanningSessionState, stage: 
     }
     case 'aprobacion': {
       const saved = state.draft.savedState
-      if (saved === 'published') return null
-      if (saved === 'approved') return { id: 'publish', label: 'Publicar' }
+      if (saved === 'published' || saved === 'approved') return null
       if (saved === 'ready-for-approval' && state.draft.id && !state.dirty) return { id: 'approve', label: 'Aprobar versión' }
       return { id: 'back-review', label: 'Volver a Revisión docente' }
     }
   }
+}
+
+export function derivePlanningDraftLabel(state: Pick<PlanningSessionState, 'draft' | 'dirty'>): string {
+  const { draft, dirty } = state
+  if (dirty) return draft.id && draft.version !== null
+    ? `Cambios sin guardar · versión guardada ${draft.version}.` : 'Cambios sin guardar.'
+  if (!draft.id || draft.version === null) return 'Borrador nuevo · Sin guardar'
+  const labels: Record<AcademicDraftState, string> = {
+    draft: 'Borrador', 'ready-for-review': 'Lista para revisión', 'in-review': 'En revisión docente',
+    'ready-for-approval': 'Lista para aprobación', approved: 'Aprobada (simulada)', published: 'Publicada (simulada)',
+  }
+  return `${labels[draft.savedState]} r${draft.version} · Guardado`
 }
 
 export function derivePlanningView(state: PlanningSessionState) {
@@ -541,6 +553,7 @@ export function derivePlanningView(state: PlanningSessionState) {
   const offerValid = Boolean(state.catalog) && state.selectedCourses.length <= PLANNING_LIMITS.courses && invalidCourses.length === 0
   return {
     locked,
+    draftLabel: derivePlanningDraftLabel(state),
     offerValid,
     invalidCourses,
     proposalComplete: proposalComplete(state.proposal),
@@ -606,7 +619,7 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
         dispatch({ type: 'catalog/succeeded', catalog: await client.fetchCatalog(controller.signal) })
       } catch (error) {
         dispatch({ type: 'catalog/failed', message: controller.signal.aborted ? null
-          : error instanceof Error ? error.message : 'No se pudo consultar el catálogo local.' })
+          : error instanceof Error ? academicPlanningErrorMessage(error) : 'No se pudo consultar el catálogo local.' })
       }
     },
 
@@ -632,7 +645,7 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
 
     async generate() {
       const catalog = state.catalog
-      if (!catalog) return
+      if (!catalog) return false
       dispatch({ type: 'generate/started' })
       const token = state.intents.proposal
       const base = requestBase(state, catalog, true)
@@ -641,9 +654,11 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
         validateAcademicResources(request.resources)
         const proposal = await client.createProposal(request)
         dispatch({ type: 'generate/succeeded', token, proposal, resources: request.resources })
+        return token === state.intents.proposal && state.proposal === proposal && proposal.status !== 'invalid-input'
       } catch (error) {
         dispatch({ type: 'generate/failed', token, message: errorText(error,
           'No se pudo generar la propuesta local. Revisa docentes, aulas y disponibilidad: ', 'No se pudo generar la propuesta local.') })
+        return false
       }
     },
 
@@ -676,7 +691,7 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
       try {
         configuration = buildPlanningWorkspace(state)
       } catch (error) {
-        dispatch({ type: 'draft/rejected', message: error instanceof Error ? error.message : 'La configuración no es válida para guardar.' })
+        dispatch({ type: 'draft/rejected', message: error instanceof Error ? academicPlanningErrorMessage(error) : 'La configuración no es válida para guardar.' })
         return
       }
       const { proposal, draft } = state
@@ -767,7 +782,7 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
           staleMessage: 'La revisión se actualizó sobre la versión guardada; los cambios locales siguen pendientes de guardar.' })
         void refreshDrafts()
       } catch (error) {
-        dispatch({ type: 'review/failed', message: error instanceof Error ? error.message : 'No se pudo enviar la revisión local.' })
+        dispatch({ type: 'review/failed', message: error instanceof Error ? academicPlanningErrorMessage(error) : 'No se pudo enviar la revisión local.' })
       }
     },
 
@@ -782,7 +797,7 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
           staleMessage: 'La respuesta se guardó sobre la versión anterior; los cambios locales siguen pendientes de guardar.' })
         void refreshDrafts()
       } catch (error) {
-        dispatch({ type: 'review/failed', message: error instanceof Error ? error.message : 'No se pudo guardar la respuesta local.' })
+        dispatch({ type: 'review/failed', message: error instanceof Error ? academicPlanningErrorMessage(error) : 'No se pudo guardar la respuesta local.' })
       }
     },
   }

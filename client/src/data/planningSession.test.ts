@@ -5,7 +5,7 @@ import type {
   AcademicCatalog, AcademicDraftSaveRequest, AcademicProposal, AcademicSavedDraft, AcademicTeacherReview,
 } from '../../../shared/programacion-academica-api.mjs'
 import {
-  createPlanningSession, derivePlanningPrimaryAction, initialPlanningSessionState, reducePlanningSession,
+  createPlanningSession, derivePlanningDraftLabel, derivePlanningPrimaryAction, initialPlanningSessionState, reducePlanningSession,
 } from './planningSession.ts'
 import type { PlanningBlock, PlanningSessionClient, PlanningSessionState } from './planningSession.ts'
 
@@ -310,6 +310,47 @@ test('primary action follows every D7 row', () => {
 
   assert.equal(derivePlanningPrimaryAction(withDraft({ savedState: 'ready-for-approval' }), 'aprobacion')?.id, 'approve')
   assert.equal(derivePlanningPrimaryAction(withDraft({ savedState: 'ready-for-approval' }, { dirty: true }), 'aprobacion')?.id, 'back-review')
-  assert.equal(derivePlanningPrimaryAction(withDraft({ savedState: 'approved' }), 'aprobacion')?.id, 'publish')
+  assert.equal(derivePlanningPrimaryAction(withDraft({ savedState: 'approved' }), 'aprobacion'), null, 'publication stays secondary')
   assert.equal(derivePlanningPrimaryAction(withDraft({ savedState: 'published' }), 'aprobacion'), null)
+})
+
+
+test('draft label distinguishes unsaved work from every persisted lifecycle state', () => {
+  const state = initialPlanningSessionState()
+  assert.equal(derivePlanningDraftLabel(state), 'Borrador nuevo · Sin guardar')
+  assert.equal(derivePlanningDraftLabel({ ...state, dirty: true }), 'Cambios sin guardar.')
+  const labels = {
+    draft: 'Borrador', 'ready-for-review': 'Lista para revisión', 'in-review': 'En revisión docente',
+    'ready-for-approval': 'Lista para aprobación', approved: 'Aprobada (simulada)', published: 'Publicada (simulada)',
+  } as const
+  for (const savedState of Object.keys(labels) as (keyof typeof labels)[]) {
+    const persisted = { ...state, draft: { ...state.draft, id: draftId, version: 4, savedState } }
+    assert.equal(derivePlanningDraftLabel(persisted), `${labels[savedState]} r4 · Guardado`)
+    assert.equal(derivePlanningDraftLabel({ ...persisted, dirty: true }), 'Cambios sin guardar · versión guardada 4.')
+  }
+})
+
+test('generation reports only an accepted result so the caller can navigate safely', async () => {
+  const { session } = await loadedSession()
+  session.commands.edit({ type: 'toggleCourse', courseId: 'CS101', checked: true })
+  assert.equal(await session.commands.generate(), true)
+  const failed = await loadedSession({ createProposal: async () => { throw new Error('Servicio no disponible') } })
+  assert.equal(await failed.session.commands.generate(), false)
+  const invalid = await loadedSession({ createProposal: async () => makeProposal({ status: 'invalid-input' }) })
+  assert.equal(await invalid.session.commands.generate(), false)
+  const pending = deferred<AcademicProposal>()
+  const stale = await loadedSession({ createProposal: () => pending.promise })
+  const generating = stale.session.commands.generate()
+  stale.session.commands.edit({ type: 'toggleCourse', courseId: 'CS101', checked: true })
+  pending.resolve(makeProposal())
+  assert.equal(await generating, false, 'an invalidated result must not navigate')
+})
+
+test('save translates a title validation error without losing local edits', async () => {
+  const { session } = await loadedSession({ saveDraft: async () => { throw new TypeError('title: texto inválido') } })
+  session.commands.edit({ type: 'setTitle', title: '' })
+  await session.commands.save()
+  assert.equal(session.getState().errors.draft, 'No se guardaron los cambios. Escribe un nombre para la propuesta.')
+  assert.equal(session.getState().draft.title, '')
+  assert.equal(session.getState().dirty, true)
 })

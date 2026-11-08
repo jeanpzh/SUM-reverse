@@ -3,14 +3,11 @@ import { PageTitle } from '../components/Common'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { PlanningShellControls } from '../components/PlanningShell'
-import type { AcademicDraftState } from '../../../shared/programacion-academica-api.mjs'
 
 export interface PlanningScopeHeaderProps {
   school?: string
   period?: string
-  draftVersion: number | null
-  draftId: string | null
-  savedDraftState: AcademicDraftState
+  draftStateText: string
   workspaceDirty: boolean
   canSave: boolean
   draftBusy: boolean
@@ -19,31 +16,10 @@ export interface PlanningScopeHeaderProps {
   disabledReason?: string | null
 }
 
-function formatDraftStateLabel(
-  draftVersion: number | null,
-  workspaceDirty: boolean,
-  savedDraftState: AcademicDraftState,
-  draftId: string | null
-): string {
-  if (workspaceDirty) {
-    return draftId && draftVersion !== null
-      ? `Cambios sin guardar · versión guardada ${draftVersion}.`
-      : 'Cambios sin guardar.'
-  }
-  if (draftVersion !== null) {
-    if (savedDraftState === 'approved') return `Aprobada (simulada) r${draftVersion} · Guardado`
-    if (savedDraftState === 'published') return `Publicada (simulada) r${draftVersion} · Guardado`
-    return `Borrador r${draftVersion} · Guardado`
-  }
-  return 'Borrador nuevo · Guardado'
-}
-
 export function PlanningScopeHeader({
   school = 'Sistemas',
   period = '2027-I',
-  draftVersion,
-  draftId,
-  savedDraftState,
+  draftStateText,
   workspaceDirty,
   canSave,
   draftBusy,
@@ -51,7 +27,6 @@ export function PlanningScopeHeader({
   onSave,
   disabledReason,
 }: PlanningScopeHeaderProps): ReactNode {
-  const draftStateText = formatDraftStateLabel(draftVersion, workspaceDirty, savedDraftState, draftId)
 
   return (
     <header className="planning-scope-header mb-4 box-border flex min-w-0 flex-col gap-3 text-foreground [overflow-wrap:anywhere]" aria-label="Ámbito y estado de programación">

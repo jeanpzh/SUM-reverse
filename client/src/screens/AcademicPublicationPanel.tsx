@@ -45,7 +45,6 @@ function dateLabel(value: string) {
 export function AcademicPublicationPanel({ primaryActionId, draftId, draftVersion, draftTitle, draftState, dirty, busy,
   onApprove, onPublish, onFork, onError, onMessage }: Props) {
   const [confirmElement, confirm] = useConfirm()
-  const [expanded, setExpanded] = useState(false)
   const [publicationList, setPublicationList] = useState<AcademicPublicationList | null>(null)
   const [listError, setListError] = useState<string | null>(null)
   const [listLoading, setListLoading] = useState(false)
@@ -80,10 +79,13 @@ export function AcademicPublicationPanel({ primaryActionId, draftId, draftVersio
     : listError ? 'No se pudieron cargar las publicaciones'
     : selectedPublicationId ? 'Selecciona la versión actual (estás consultando una publicación anterior)'
     : dirty ? 'Hay cambios sin guardar'
-    : !currentPreview || currentPreview.state !== 'approved' ? 'Actualiza la vista previa de la versión aprobada'
+    : previewError ? 'No se pudo cargar la vista previa. Usa Actualizar vista previa para reintentar.'
+    : !currentPreview || currentPreview.state !== 'approved' ? 'Espera a que cargue la vista previa de la versión aprobada'
     : !canPublish ? 'La publicación no está disponible en este estado' : ''
   const approveDisabledReason = dirty ? 'Hay cambios sin guardar'
-    : !currentPreview ? 'Actualiza la vista previa de la versión actual'
+    : draftState !== 'ready-for-approval' ? 'La versión debe estar lista para aprobación'
+    : previewError ? 'No se pudo cargar la vista previa. Usa Actualizar vista previa para reintentar.'
+    : !currentPreview ? 'Espera a que cargue la vista previa de la versión actual'
     : 'La versión debe estar lista para aprobación'
 
   const blocks = useMemo(() => preview ? aggregateAcademicBlocks(preview.schedule) : [], [preview])
@@ -150,13 +152,16 @@ export function AcademicPublicationPanel({ primaryActionId, draftId, draftVersio
 
   useEffect(() => {
     let timer: number | undefined
-    if (draftState === 'approved' && draftId && draftVersion && !dirty && !selectedPublicationId) {
+    if (selectedSummary || (draftId && draftVersion && !dirty)) {
       timer = window.setTimeout(() => { void refreshPreview() }, 0)
     }
-    return () => { if (timer !== undefined) window.clearTimeout(timer) }
-    // The preview is refreshed only when the approved draft identity/state becomes current.
+    return () => {
+      if (timer !== undefined) window.clearTimeout(timer)
+      requestIntent.current += 1
+    }
+    // Reload on source/version changes; cleanup invalidates late responses from the previous source.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draftId, draftVersion, draftState, dirty, selectedPublicationId])
+  }, [draftId, draftVersion, draftState, dirty, selectedPublicationId, selectedSummary?.id, selectedSummary?.publicationVersion])
 
   const approve = () => {
     if (!canApprove || !draftId || !draftVersion) return
@@ -260,24 +265,10 @@ export function AcademicPublicationPanel({ primaryActionId, draftId, draftVersio
     }
   }
 
-  // Keep native details/summary for verification selectors; Radix owns disclosure state.
-  return <Collapsible asChild open={expanded} onOpenChange={setExpanded}>
-    <details className="academic-publication" open={expanded}>
-      <CollapsibleTrigger asChild>
-        <summary onClick={(event) => { event.preventDefault(); setExpanded((value) => !value) }}>Aprobación y publicación simuladas</summary>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <Collapsible className="academic-publication__evidence">
-          <CollapsibleTrigger asChild><Button variant="ghost" type="button">Alcance de la simulación</Button></CollapsibleTrigger>
-          <CollapsibleContent><p>Prototipo local sin autenticación ni efecto oficial. La aprobación congela el documento.</p></CollapsibleContent>
-        </Collapsible>
+  // The decision stays visible; only supporting evidence is disclosed on demand.
+  return <section className="academic-publication" aria-labelledby="academic-publication-title">
+      <h3 id="academic-publication-title">Aprobación y publicación simuladas</h3>
         <div className="academic-publication__actions">
-          <Button variant="outline" type="button"
-            disabled={working || busy || listLoading} onClick={() => void refreshPublications()}>{listLoading ? 'Actualizando…' : 'Actualizar publicaciones'}</Button>
-          <Button variant="outline" type="button"
-            disabled={working || busy || (selectedSummary ? !selectedSummary : !draftId)} onClick={() => void refreshPreview()}>
-            {working ? 'Consultando…' : 'Actualizar vista previa'}
-          </Button>
           <Button type="button" variant={primaryActionId === 'approve' && canApprove ? 'default' : 'outline'}
             disabled={!canApprove} aria-describedby={!canApprove ? 'academic-approve-reason' : undefined} onClick={approve}>Aprobar (simulada)</Button>
           {!canApprove && <span id="academic-approve-reason" className="academic-publication__status">{approveDisabledReason}</span>}
@@ -285,6 +276,18 @@ export function AcademicPublicationPanel({ primaryActionId, draftId, draftVersio
             aria-describedby={!canPublish ? 'academic-publish-reason' : undefined} onClick={publish}>Publicar (simulada)</Button>
           {!canPublish && <span id="academic-publish-reason" className="academic-publication__status">{publishDisabledReason}</span>}
         </div>
+        <div className="academic-publication__actions">
+          <Button variant="outline" type="button"
+            disabled={working || busy || listLoading} onClick={() => void refreshPublications()}>{listLoading ? 'Actualizando…' : 'Actualizar publicaciones'}</Button>
+          <Button variant="outline" type="button"
+            disabled={working || busy || (selectedSummary ? !selectedSummary : !draftId)} onClick={() => void refreshPreview()}>
+            {working ? 'Consultando…' : 'Actualizar vista previa'}
+          </Button>
+        </div>
+        <Collapsible className="academic-publication__evidence">
+          <CollapsibleTrigger asChild><Button variant="ghost" type="button">Alcance de la simulación</Button></CollapsibleTrigger>
+          <CollapsibleContent><p>Prototipo local sin autenticación ni efecto oficial. La aprobación congela el documento.</p></CollapsibleContent>
+        </Collapsible>
         <div className="academic-publication__history"><Label htmlFor="academic-publication-select">Consultar publicación</Label>
           <NativeSelect id="academic-publication-select" aria-label="Consultar publicación" value={selectedPublicationId} disabled={working || busy}
             onChange={(event) => { requestIntent.current += 1; setWorkingScope(null); setSelectedPublicationId(event.currentTarget.value); setPreview(null); setPreviewError(null) }}>
@@ -333,7 +336,7 @@ export function AcademicPublicationPanel({ primaryActionId, draftId, draftVersio
             <Button variant="outline" type="button" disabled={!canActivate}
               onClick={() => void activatePublication()}>{activating ? 'Activando…' : 'Activar publicación seleccionada'}</Button>
           </div>
-          {!selectedSummary && <p className="academic-publication__status">Selecciona una publicación y actualiza su vista previa para habilitar la activación.</p>}
+          {!selectedSummary && <p className="academic-publication__status">Selecciona una publicación para habilitar la activación cuando cargue su vista previa.</p>}
           {selectedSummary && publicationPreview && !canActivate && <p className="academic-publication__status">La activación requiere una publicación de Sistemas 2027-I con vista previa vigente.</p>}
           {offerError && <Alert variant="destructive" role="alert">{offerError}</Alert>}
           {activation && <p className="academic-publication__status" role="status">
@@ -349,12 +352,10 @@ export function AcademicPublicationPanel({ primaryActionId, draftId, draftVersio
           </div>}
         </section>
         {!displayPreview && <p className="academic-publication__status">{selectedSummary
-          ? 'Actualiza la vista previa para consultar esta publicación sin editarla.'
-          : draftId ? `Propuesta actual · ${draftTitle} · versión ${draftVersion} · ${stateLabels[draftState]}${dirty ? ' · cambios locales sin guardar' : ''}. Actualiza la vista previa para continuar.`
+          ? 'La vista previa de esta publicación se carga automáticamente; puedes reintentar si falla.'
+          : draftId ? `Propuesta actual · ${draftTitle} · versión ${draftVersion} · ${stateLabels[draftState]}${dirty ? ' · cambios locales sin guardar' : ''}. La vista previa se carga al guardar los cambios.`
             : 'Guarda una propuesta antes de consultar una vista previa.'}</p>}
         {confirmElement}
         <ConfirmDialog request={confirmRequest} onClose={() => setConfirmRequest(null)} />
-      </CollapsibleContent>
-    </details>
-  </Collapsible>
+    </section>
 }

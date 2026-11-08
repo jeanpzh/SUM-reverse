@@ -17,11 +17,10 @@
   font-variant-numeric: tabular-nums;
 }
 
-.academic-publication > summary {
-  width: fit-content;
+.planning-root .academic-publication > h3 {
+  margin: 0;
   font-size: 18px;
   font-weight: 600;
-  cursor: pointer;
 }
 
 .academic-publication__status {
@@ -79,9 +78,4 @@
 
 .academic-publication__table table {
   min-width: 1120px;
-}
-
-.academic-publication > summary:focus-visible {
-  outline: 2px solid var(--planning-primary);
-  outline-offset: 4px;
 }

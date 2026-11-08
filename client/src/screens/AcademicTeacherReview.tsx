@@ -77,6 +77,7 @@ export function AcademicTeacherReview({ primaryActionId, review, proposal, draft
         {dirty && <p className="academic-teacher-review__warning" role="status">Revisión guardada, cambios locales pendientes. Guarda el horario antes de enviar o responder; el estado no refleja todavía la edición actual.</p>}
         {review && <p className="academic-teacher-review__state" role="status">Estado de la versión guardada: {derivedState} · versión {draftVersion}</p>}
         {!review && <p className="academic-teacher-review__state">Guarda una propuesta con horario completo para iniciar la revisión.</p>}
+        {role === 'school' && teachers.length > 0 && <p className="academic-teacher-review__state">Para registrar una respuesta, selecciona Docente en Vista simulada.</p>}
         {role === 'school' && <div className="academic-teacher-review__actions">
           <Button variant="outline" type="button"
             disabled={!enabled || !hasSchedule} onClick={onSubmit}>Enviar a revisión</Button>
