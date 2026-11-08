@@ -14,7 +14,7 @@ import {
   useFloating,
 } from '@floating-ui/react-dom'
 import { cn } from '../../lib/utils'
-import { getTourStepTransition } from './tourNavigation'
+import { getTourArrowKeyRequest, getTourStepTransition } from './tourNavigation'
 import * as DirectionPrimitive from '@radix-ui/react-direction'
 import * as SlotPrimitive from '@radix-ui/react-slot'
 import { useComposedRefs } from '@radix-ui/react-compose-refs'
@@ -857,6 +857,7 @@ function TourStep(props: TourStepProps) {
     onPointerDownCapture: onPointerDownCaptureProp,
     onFocusCapture: onFocusCaptureProp,
     onBlurCapture: onBlurCaptureProp,
+    onKeyDown: onKeyDownProp,
     children,
     className,
     style,
@@ -1172,6 +1173,24 @@ function TourStep(props: TourStepProps) {
     }
   }, [open, isCurrentStep, targetElement])
 
+  const onKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<StepElement>) => {
+      onKeyDownProp?.(event)
+      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
+
+      // Arrow keys keep their native meaning inside editable controls.
+      const target = event.target as HTMLElement | null
+      if (target?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return
+
+      const requested = getTourArrowKeyRequest(event.key, context.dir, store.getState().value)
+      if (requested === null) return
+
+      event.preventDefault()
+      store.setState('value', requested)
+    },
+    [onKeyDownProp, context.dir, store],
+  )
+
   useFocusGuards()
   useFocusTrap(stepRef, open && isCurrentStep, open, context.onOpenAutoFocus, context.onCloseAutoFocus)
 
@@ -1194,6 +1213,7 @@ function TourStep(props: TourStepProps) {
         onPointerDownCapture={onPointerDownCapture}
         onFocusCapture={onFocusCapture}
         onBlurCapture={onBlurCapture}
+        onKeyDown={onKeyDown}
         className={cn(
           'fixed z-[1000] box-border flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-4 rounded-planning-floating border border-solid border-border bg-background p-4 font-[inherit] text-sm text-foreground shadow-planning outline-none',
           className,
