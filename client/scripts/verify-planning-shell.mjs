@@ -141,6 +141,17 @@ try {
     await page.screenshot({ path: join(evidenceDir, 'scheduling-800.png') })
   }))
 
+  // Mobile width on every planning stage (route `?etapa=`). Asserts the document itself,
+  // not inner scroll containers.
+  await criterion('AC5-390', 'at 390px the document does not scroll horizontally on any planning stage', () => withPage(390, 844, async (page) => {
+    for (const etapa of ['preparacion', 'horario', 'revision', 'aprobacion']) {
+      await page.goto(`${scheduling}?etapa=${etapa}`, { waitUntil: 'networkidle' })
+      const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth)
+      expectTrue(scrollWidth <= 390, `stage ${etapa}: document scrollWidth ${scrollWidth} exceeds 390`)
+      await page.screenshot({ path: join(evidenceDir, `scheduling-390-${etapa}.png`) })
+    }
+  }))
+
   // 200% text size checks only the shell. Screen panels inside main still overflow at
   // this size; that is a recorded slice-2 gap, not a shell failure.
   await criterion('ZOOM-TEXT', 'at 200% root text size the header controls do not overflow and the shell stays within the viewport', () => withPage(1440, 900, async (page) => {
