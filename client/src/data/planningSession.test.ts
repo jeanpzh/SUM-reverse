@@ -238,6 +238,22 @@ test('resume hydrates the saved workspace and proposal', async () => {
   assert.match(state.message ?? '', /recuperada\. Puedes continuar/)
 })
 
+test('fork of a published draft replaces the workspace with the new draft', async () => {
+  const forkedId = '123e4567-e89b-42d3-a456-426614174001'
+  const { session, drafts } = await loadedSession({
+    forkDraft: async (id) => ({ ...drafts.get(id)!, id: forkedId, version: 1, state: 'draft' as const }),
+  })
+  session.commands.edit({ type: 'toggleCourse', courseId: 'CS101', checked: true })
+  await session.commands.save()
+  drafts.set(draftId, { ...drafts.get(draftId)!, state: 'published' })
+  assert.equal(await session.commands.fork(draftId, 1), true)
+  const state = session.getState()
+  assert.equal(state.draft.id, forkedId)
+  assert.equal(state.draft.version, 1)
+  assert.equal(state.busy.draft, false)
+  assert.equal(state.dirty, false)
+})
+
 test('resume and fork resolve false when the workspace was not replaced', async () => {
   const { session } = await loadedSession()
   assert.equal(await session.commands.resume('missing-draft', 1), false)

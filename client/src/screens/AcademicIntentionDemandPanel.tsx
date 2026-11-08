@@ -3,6 +3,7 @@ import { academicSectionLabel, fetchAcademicPublication, fetchAcademicPublicatio
 import type { AcademicDemandEstimate, AcademicPublication, AcademicPublicationList } from '../../../shared/programacion-academica-api.mjs'
 import { fetchIntentionDemand } from '../data/prematricula-intention'
 import type { E2Demand } from '../data/prematricula-intention'
+import { ConfirmDialog, type ConfirmRequest } from '../components/ui/ConfirmDialog'
 import './AcademicIntentionDemandPanel.css'
 
 type Props = { dirty: boolean; busy: boolean; onFork: (id: string, expectedVersion: number) => void; potential: AcademicDemandEstimate | null; finalDemand: Record<string, string> }
@@ -16,6 +17,7 @@ export function AcademicIntentionDemandPanel({ dirty, busy, onFork, potential, f
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [publicationListVersion, setPublicationListVersion] = useState(0)
+  const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null)
   const queryToken = useRef(0)
   const queryController = useRef<AbortController | null>(null)
 
@@ -47,9 +49,18 @@ export function AcademicIntentionDemandPanel({ dirty, busy, onFork, potential, f
 
   const fork = () => {
     if (!publication) return
-    if (dirty && !window.confirm('Hay cambios locales sin guardar. ¿Descartarlos y crear un nuevo borrador desde esta publicación?')) return
-    setNotice('La solicitud de nuevo borrador se atiende en el panel de propuesta; revisa allí su resultado.')
-    onFork(publication.id, publication.approvedVersion + 1)
+    const source = publication
+    setConfirmRequest({
+      title: 'Crear borrador E1',
+      description: dirty
+        ? 'Hay cambios locales sin guardar. ¿Descartarlos y crear un nuevo borrador desde esta publicación?'
+        : `¿Crear un nuevo borrador desde «${source.title}»? La publicación permanecerá sin cambios.`,
+      confirmLabel: 'Crear borrador',
+      onConfirm: () => {
+        setNotice('La solicitud de nuevo borrador se atiende en el panel de propuesta; revisa allí su resultado.')
+        onFork(source.id, source.approvedVersion + 1)
+      },
+    })
   }
 
   return <details className="academic-intention-demand">
@@ -79,5 +90,6 @@ export function AcademicIntentionDemandPanel({ dirty, busy, onFork, potential, f
       </>}
       <p className="academic-intention-demand__distinction">El potencial estimado E1 ({potential?.source.label ?? 'sin estimación actual'}) proviene del espacio de trabajo abierto y puede referirse a otra configuración. La intención registrada y la demanda final editable de planificación son fuentes y poblaciones distintas. Estos valores no se suman ni modifican automáticamente la demanda final.</p>
     </div>
+    <ConfirmDialog request={confirmRequest} onClose={() => setConfirmRequest(null)} />
   </details>
 }

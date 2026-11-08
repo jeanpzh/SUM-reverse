@@ -90,8 +90,8 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
     if (await commands.resume(id, version)) setDraftListOpen(false)
   }
 
+  // The panels that offer a new draft confirm it (including discarding local changes) themselves.
   const forkDraft = async (id: string, version: number) => {
-    if (workspaceDirty && !window.confirm('Hay cambios locales sin guardar. ¿Descartarlos y crear un nuevo borrador?')) return
     if (await commands.fork(id, version)) setDraftListOpen(false)
   }
 
@@ -398,7 +398,7 @@ export function AcademicScheduling({ currentStage = 'preparacion' }: { currentSt
     >
       <AcademicPublicationPanel draftId={draftId} draftVersion={draftVersion} draftTitle={draftTitle}
         draftState={savedDraftState} dirty={workspaceDirty} busy={draftBusy || generating || adjusting || demandLoading} onApprove={approveDraft}
-        onPublish={publishDraft} onFork={forkDraft} onBusyChange={(busy) => commands.edit({ type: 'setDraftBusy', busy })}
+        onPublish={publishDraft} onFork={forkDraft}
         onError={(message) => commands.edit({ type: 'setDraftError', message })}
         onMessage={(message) => commands.edit({ type: 'setDraftMessage', message })} />
       <AcademicIntentionDemandPanel dirty={workspaceDirty} busy={draftBusy || generating || adjusting || demandLoading}

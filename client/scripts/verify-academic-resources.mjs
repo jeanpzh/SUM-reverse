@@ -435,6 +435,7 @@ try {
 
   const approvalResponse = page.waitForResponse((res) => res.url().includes('/aprobar') && res.request().method() === 'POST')
   await page.getByRole('button', { name: 'Aprobar (simulada)', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Aprobar', exact: true }).click()
   const approvedDraft = (await (await approvalResponse).json()).draft
   assert.equal(approvedDraft.state, 'approved')
 

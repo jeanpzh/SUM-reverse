@@ -144,7 +144,6 @@ export type PlanningSessionEvent =
   | { type: 'changeEditingBlock'; adjustment: AcademicAdjustment }
   | { type: 'cancelBlockReview' }
   // Feedback written by AcademicPublicationPanel for its own preview/publication reads.
-  | { type: 'setDraftBusy'; busy: boolean }
   | { type: 'setDraftError'; message: string | null }
   | { type: 'setDraftMessage'; message: string | null }
   | { type: 'demand/started' }
@@ -318,8 +317,6 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
       return { ...state, editingBlock: event.adjustment }
     case 'cancelBlockReview':
       return { ...state, editingBlock: null, errors: { ...state.errors, adjustment: null } }
-    case 'setDraftBusy':
-      return { ...state, busy: { ...state.busy, draft: event.busy } }
     case 'setDraftError':
       return { ...state, errors: { ...state.errors, draft: event.message } }
     case 'setDraftMessage':
@@ -592,7 +589,7 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
     edit: (event: Extract<PlanningSessionEvent, { type: 'toggleCourse' | 'selectCourses' | 'applyBulkChanges' | 'updateDemand'
       | 'updateCapacity' | 'changeDemandSource' | 'updatePattern' | 'updateDeliveryMode' | 'updateResources'
       | 'updateAllocationPolicy' | 'updatePlanningException' | 'applyPeriodDefaults' | 'setTitle' | 'setDraftState'
-      | 'startBlockReview' | 'changeEditingBlock' | 'cancelBlockReview' | 'setDraftBusy' | 'setDraftError'
+      | 'startBlockReview' | 'changeEditingBlock' | 'cancelBlockReview' | 'setDraftError'
       | 'setDraftMessage' }>) => dispatch(event),
 
     async loadCatalog() {

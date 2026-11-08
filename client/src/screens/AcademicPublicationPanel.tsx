@@ -4,6 +4,7 @@ import { aggregateAcademicBlocks, academicSectionLabel, formatAcademicDuration, 
 import { fetchAcademicPublication, fetchAcademicPublications, fetchAcademicReleasePreview, fetchCurrentAcademicPublication } from '../data/academicScheduling'
 import { activateEnrollmentOffer, fetchOperationalOffers } from '../data/enrollmentOffer'
 import type { OperationalOffer, OperationalOfferCatalog } from '../data/enrollmentOffer'
+import { ConfirmDialog, type ConfirmRequest } from '../components/ui/ConfirmDialog'
 import './AcademicPublicationPanel.css'
 
 type PreviewSource = { id: string; version: number; schedule: AcademicScheduleSnapshot; title: string; label: string; source: 'draft' | 'publication'; state: AcademicDraftState }
@@ -18,7 +19,6 @@ type Props = {
   onApprove: () => Promise<void>
   onPublish: (expectedCurrentId: string | null) => Promise<void>
   onFork: (id: string, version: number) => Promise<void>
-  onBusyChange: (busy: boolean) => void
   onError: (message: string | null) => void
   onMessage: (message: string | null) => void
 }
@@ -34,7 +34,7 @@ function dateLabel(value: string) {
 }
 
 export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, draftState, dirty, busy,
-  onApprove, onPublish, onFork, onBusyChange, onError, onMessage }: Props) {
+  onApprove, onPublish, onFork, onError, onMessage }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [publicationList, setPublicationList] = useState<AcademicPublicationList | null>(null)
   const [listError, setListError] = useState<string | null>(null)
@@ -47,6 +47,7 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
   const [offerError, setOfferError] = useState<string | null>(null)
   const [activation, setActivation] = useState<{ offer: OperationalOffer; reused: boolean } | null>(null)
   const [activating, setActivating] = useState(false)
+  const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null)
   const requestIntent = useRef(0)
   const listIntent = useRef(0)
   const scopeKey = `${draftId ?? ''}|${draftVersion ?? ''}|${dirty}|${selectedPublicationId}`
@@ -118,41 +119,55 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
     }
   }
 
-  const approve = async () => {
+  const approve = () => {
     if (!canApprove || !draftId || !draftVersion) return
-    if (!window.confirm(`¿Aprobar (simulada) la propuesta «${draftTitle}», versión ${draftVersion}?`)) return
-    onError(null)
-    onMessage(null)
-    await onApprove()
+    setConfirmRequest({
+      title: 'Aprobar (simulada)',
+      description: `¿Aprobar (simulada) la propuesta «${draftTitle}», versión ${draftVersion}?`,
+      confirmLabel: 'Aprobar',
+      onConfirm: async () => {
+        onError(null)
+        onMessage(null)
+        await onApprove()
+      },
+    })
   }
 
-  const publish = async () => {
+  const publish = () => {
     if (!canPublish) return
     const currentId = publicationList!.currentId
     const replacing = currentLabel ? ` La publicación vigente será la versión ${currentLabel.publicationVersion} (${currentLabel.title}).` : ' No hay una publicación vigente.'
-    if (!window.confirm(`¿Publicar (simulada) «${draftTitle}»?${replacing}`)) return
-    onError(null)
-    onMessage(null)
-    await onPublish(currentId)
-    await refreshPublications()
+    setConfirmRequest({
+      title: 'Publicar (simulada)',
+      description: `¿Publicar (simulada) «${draftTitle}»?${replacing}`,
+      confirmLabel: 'Publicar',
+      onConfirm: async () => {
+        onError(null)
+        onMessage(null)
+        await onPublish(currentId)
+        await refreshPublications()
+      },
+    })
   }
 
-  const fork = async () => {
+  const fork = () => {
     const sourceId = selectedSummary?.id ?? (frozen ? draftId : null)
     const sourceVersion = selectedSummary ? selectedSummary.approvedVersion + 1 : draftVersion
     const sourceTitle = selectedSummary?.title ?? draftTitle
     if (!sourceId || !sourceVersion || (!selectedSummary && !frozen) || dirty || busy || working) return
-    if (!window.confirm(`¿Crear un nuevo borrador desde «${sourceTitle}»? El documento de origen permanecerá sin cambios.`)) return
-    onError(null)
-    onMessage(null)
-    onBusyChange(true)
-    try {
-      await onFork(sourceId, sourceVersion)
-      setSelectedPublicationId('')
-      setPreview(null)
-    } finally {
-      onBusyChange(false)
-    }
+    setConfirmRequest({
+      title: 'Crear nuevo borrador',
+      description: `¿Crear un nuevo borrador desde «${sourceTitle}»? El documento de origen permanecerá sin cambios.`,
+      confirmLabel: 'Crear borrador',
+      onConfirm: async () => {
+        onError(null)
+        onMessage(null)
+        // The planning session tracks its own busy state for the new draft.
+        await onFork(sourceId, sourceVersion)
+        setSelectedPublicationId('')
+        setPreview(null)
+      },
+    })
   }
 
   const displayPreview = selectedSummary ? preview?.source === 'publication' && preview.id === selectedSummary.id ? preview : null : currentPreview
@@ -210,9 +225,9 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
         {working ? 'Consultando…' : 'Actualizar vista previa'}
       </button>
       <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary"
-        disabled={!canApprove} onClick={() => void approve()}>Aprobar (simulada)</button>
+        disabled={!canApprove} onClick={approve}>Aprobar (simulada)</button>
       <button type="button" className="academic-scheduling__button" disabled={!canPublish}
-        onClick={() => void publish()}>Publicar (simulada)</button>
+        onClick={publish}>Publicar (simulada)</button>
     </div>
     <label className="academic-publication__history">Consultar publicación
       <select aria-label="Consultar publicación" value={selectedPublicationId} disabled={working || busy}
@@ -234,7 +249,7 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
         <span>Versión aprobada {selectedSummary.approvedVersion}</span>
       </> : <span>{draftState === 'approved' ? 'Aprobada (simulada)' : 'Publicada (simulada)'} · {draftTitle} · versión {draftVersion}</span>}
       <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary"
-        disabled={busy || working || dirty} onClick={() => void fork()}>Crear nuevo borrador</button>
+        disabled={busy || working || dirty} onClick={fork}>Crear nuevo borrador</button>
     </div>}
     {previewError && <p className="academic-publication__error" role="alert">No se pudo consultar la vista previa: {previewError}</p>}
     {displayPreview && <section className="academic-publication__preview" aria-label="Horario de la propuesta consultada">
@@ -278,5 +293,6 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
       ? 'Actualiza la vista previa para consultar esta publicación sin editarla.'
       : draftId ? `Propuesta actual · ${draftTitle} · versión ${draftVersion} · ${stateLabels[draftState]}${dirty ? ' · cambios locales sin guardar' : ''}. Actualiza la vista previa para continuar.`
         : 'Guarda una propuesta antes de consultar una vista previa.'}</p>}
+    <ConfirmDialog request={confirmRequest} onClose={() => setConfirmRequest(null)} />
   </details>
 }

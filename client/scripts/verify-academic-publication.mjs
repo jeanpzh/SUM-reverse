@@ -93,6 +93,7 @@ try {
     assert.equal(preview.state, 'ready-for-approval')
     const approvalResponse = page.waitForResponse((value) => apiResponse(value, `/borradores/${saved.id}/aprobar`, 'POST'))
     await page.getByRole('button', { name: 'Aprobar (simulada)', exact: true }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Aprobar', exact: true }).click()
     const approved = (await (await approvalResponse).json()).draft
     assert.equal(approved.state, 'approved')
     assert.equal(approved.version, saved.version + 1)
@@ -103,6 +104,7 @@ try {
     const list = await refreshPublicationList()
     const publishResponse = page.waitForResponse((value) => apiResponse(value, `/borradores/${saved.id}/publicar`, 'POST'))
     await page.getByRole('button', { name: 'Publicar (simulada)', exact: true }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Publicar', exact: true }).click()
     const publishedResponse = await publishResponse
     const published = (await publishedResponse.json()).draft
     assert.equal(published.state, 'published')
@@ -143,6 +145,7 @@ try {
     await page.getByLabel('Consultar publicación', { exact: true }).selectOption(first.publication.id)
     const forkResponse = page.waitForResponse((response) => apiResponse(response, `/borradores/${first.draft.id}/nuevo-borrador`, 'POST'))
     await page.getByRole('button', { name: 'Crear nuevo borrador', exact: true }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Crear borrador', exact: true }).click()
     const forkedResponse = await forkResponse
     const forked = (await forkedResponse.json()).draft
     assert.notEqual(forked.id, first.draft.id)
@@ -205,6 +208,7 @@ try {
     await stage('Aprobación', 'aprobacion')
     const forkResponse = page.waitForResponse((response) => apiResponse(response, `/borradores/${saved.second.id}/nuevo-borrador`, 'POST'))
     await page.getByRole('button', { name: 'Crear nuevo borrador', exact: true }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Crear borrador', exact: true }).click()
     const forked = (await (await forkResponse).json()).draft
     assert.notEqual(forked.id, saved.second.id)
     assert.equal(forked.origin.draftId, saved.second.id)

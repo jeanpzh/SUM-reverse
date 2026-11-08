@@ -186,6 +186,7 @@ try {
     await page.locator('.academic-intention-demand').screenshot({path:resolve(evidence,'demanda-agregada.png')})
     const forked=responseFor(page,`${e1}/borradores/${state.pubB.id}/nuevo-borrador`)
     await page.getByRole('button',{name:'Crear borrador E1 de esta publicación',exact:true}).click()
+    await page.getByRole('alertdialog').getByRole('button',{name:'Crear borrador',exact:true}).click()
     const response=await forked; assert.equal(response.status(),200,await response.text())
     const draft=(await response.json()).draft
     assert.equal(draft.origin.draftId,state.pubB.id); assert.notEqual(draft.id,state.pubB.id)
