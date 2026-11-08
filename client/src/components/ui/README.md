@@ -37,6 +37,8 @@ target existing stable ids; never open it automatically more than once.
 There is **no Tailwind preflight**. Set box sizing, border style, background
 and font explicitly. Unlayered legacy CSS beats utility layers: remove the
 conflicting screen rule during migration; never add `!important`.
+The scoped `controls.css` and `Table.css` bridges restore control/table typography,
+button variant colors and focus above global SUM element rules.
 Keep existing texts, ids, ARIA, route searches, handlers and API effects.
 Use `min-w-0`, wrapping and an overflow container for wide tables.
 

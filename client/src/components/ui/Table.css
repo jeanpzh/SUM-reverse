@@ -26,3 +26,28 @@
 .planning-root [data-slot='table-container'][data-sticky-header] [data-slot='table-body'] > [data-slot='table-row']:last-child > [data-slot='table-cell'] {
   border-bottom: 0;
 }
+
+/* Without preflight, `border-solid border-b` leaves the other sides at the default `medium`
+   width (3px). Set every side explicitly. */
+.planning-root [data-slot='table-header'],
+.planning-root [data-slot='table-body'],
+.planning-root [data-slot='table-footer'] {
+  border: 0;
+}
+
+.planning-root [data-slot='table-row'] {
+  border-width: 0 0 1px;
+  border-style: solid;
+  border-color: var(--planning-border);
+}
+
+.planning-root [data-slot='table-body'] > [data-slot='table-row']:last-child {
+  border-bottom-width: 0;
+}
+
+/* Screens set `overflow-wrap: anywhere` on their roots; inside tables it splits words
+   (e.g. «Incorpo-rado»). Wrap at spaces; the table container scrolls horizontally. */
+.planning-root [data-slot='table-head'],
+.planning-root [data-slot='table-cell'] {
+  overflow-wrap: normal;
+}

@@ -60,8 +60,10 @@
   margin: 0;
 }
 
-.planning-preparation-summary__counts > div {
-  display: block;
+.planning-root .planning-preparation-summary__counts > div {
+  display: grid;
+  align-content: start;
+  gap: var(--planning-spacing);
   min-height: 0;
   padding: 0;
   border: 0;
@@ -73,7 +75,8 @@
   font-size: 0.8125rem;
 }
 
-.planning-preparation-summary__counts dd {
+.planning-root .planning-preparation-summary__counts dd {
+  font-size: var(--text-section, 1.125rem);
   margin: 0.5rem 0 0;
   color: var(--planning-text);
 }

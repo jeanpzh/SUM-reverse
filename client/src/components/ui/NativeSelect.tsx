@@ -1,3 +1,4 @@
+import './controls.css'
 import './NativeSelect.css'
 import type { ComponentProps } from 'react'
 import { cn } from '../../lib/utils'

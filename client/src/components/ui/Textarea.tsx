@@ -1,3 +1,4 @@
+import './controls.css'
 import type { ComponentProps } from 'react'
 import { cn } from '../../lib/utils'
 

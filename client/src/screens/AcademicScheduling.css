@@ -181,7 +181,7 @@
 .academic-demand__course-heading span { color: var(--planning-muted); font-weight: 400; }
 .academic-demand__course dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(95px, 1fr)); gap: 0.45rem; margin: 0.55rem 0; }
 .academic-demand__course dl > div { display: grid; grid-template-columns: 1fr; gap: 0.2rem; align-content: start; min-width: 0; }
-.academic-demand__course dt { color: var(--planning-muted); font-size: var(--text-meta); }
+.planning-root .academic-demand__course dt { width: auto; color: var(--planning-muted); font-size: var(--text-meta); }
 .academic-demand__course dd { margin: 0; color: var(--planning-text); font-size: var(--text-data); font-weight: 650; }
 .academic-demand__course details { margin-top: 0.4rem; color: var(--planning-muted); font-size: var(--text-meta); }
 .academic-demand__course details summary { color: var(--planning-primary); cursor: pointer; }
