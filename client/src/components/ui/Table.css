@@ -13,3 +13,16 @@
 .planning-root [data-slot='table-body'] > [data-slot='table-row'] {
   @apply bg-background hover:bg-muted data-[state=selected]:bg-accent;
 }
+
+/* stickyHeader: collapsed borders scroll away with the body, so the separator is an inset shadow. */
+.planning-root [data-slot='table-container'][data-sticky-header] [data-slot='table-head'] {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: var(--planning-canvas);
+  box-shadow: inset 0 -1px 0 var(--planning-border);
+}
+
+.planning-root [data-slot='table-container'][data-sticky-header] [data-slot='table-body'] > [data-slot='table-row']:last-child > [data-slot='table-cell'] {
+  border-bottom: 0;
+}

@@ -2,8 +2,23 @@ import './Table.css'
 import type { ComponentProps } from 'react'
 import { cn } from '../../lib/utils'
 
-export function Table({ className, ...props }: ComponentProps<'table'>) {
-  return <div className="relative min-w-0 w-full overflow-auto"><table data-slot="table" className={cn('box-border w-full border-collapse border-0 bg-background font-[inherit] text-sm tabular-nums text-foreground', className)} {...props} /></div>
+export interface TableProps extends ComponentProps<'table'> {
+  /** Long tables: the wrapper scrolls in both axes and the header row stays visible. */
+  stickyHeader?: boolean
+  /** Extra classes for the scroll wrapper, e.g. a different max-height. */
+  containerClassName?: string
+}
+
+export function Table({ className, stickyHeader = false, containerClassName, ...props }: TableProps) {
+  return (
+    <div
+      data-slot="table-container"
+      data-sticky-header={stickyHeader ? '' : undefined}
+      className={cn('relative min-w-0 w-full overflow-auto', stickyHeader && 'max-h-[min(70dvh,40rem)] rounded-planning-panel border border-solid border-border', containerClassName)}
+    >
+      <table data-slot="table" className={cn('box-border w-full border-collapse border-0 bg-background font-[inherit] text-sm tabular-nums text-foreground', className)} {...props} />
+    </div>
+  )
 }
 export function TableHeader({ className, ...props }: ComponentProps<'thead'>) {
   return <thead data-slot="table-header" className={cn('box-border border-solid border-border font-[inherit] tabular-nums border-0 bg-muted [&_tr]:border-b', className)} {...props} />
