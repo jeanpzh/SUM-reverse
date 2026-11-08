@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { chromium } from 'playwright'
@@ -92,7 +93,7 @@ async function planningControls() {
   for (const course of catalog.courses) assert.equal(await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).inputValue(), String(course.cycle % 2 ? 90 : 180))
   await page.getByLabel('Periodo de planificación', { exact: true }).selectOption('2027-I')
   const course = catalog.courses[0]
-  await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).check()
+  await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }))
   await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).fill('123')
   await page.getByLabel('Buscar docentes por nombre o código', { exact: true }).fill(teacher.id)
   assert.equal(await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).inputValue(), '123')

@@ -1,5 +1,6 @@
 // Split-process local acceptance helper. Each phase launches a fresh browser context.
 import assert from 'node:assert/strict'
+import { isPlanningCheckboxChecked, setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
@@ -43,7 +44,7 @@ try {
       && catalog.teachers.some((teacher) => teacher.courseIds.includes(item.courseId))
       && catalog.rooms.some((room) => room.capacity >= item.targetCapacity))
     assert.ok(course, 'El catálogo sintético requiere un patrón completo con docente y ambiente compatibles')
-    await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).check()
+    await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }))
     const estimatePending = page.waitForResponse((response) => response.url().endsWith('/demanda/estimar') && response.request().method() === 'POST')
     await page.getByRole('button', { name: 'Estimar demanda potencial', exact: true }).click()
     const estimateResponse = await estimatePending
@@ -113,7 +114,7 @@ try {
     assert.equal(staleResponse.status(), 409)
     await page.getByRole('alert').filter({ hasText: 'No se guardaron los cambios' }).waitFor()
     assert.equal(await page.getByLabel('Nombre de la propuesta', { exact: true }).inputValue(), 'Edición local desactualizada')
-    assert.match(await page.locator('.academic-scheduling__draft-note').allInnerTexts().then((rows) => rows.join(' ')), /Cambios sin guardar/)
+    await page.locator('.planning-scope-header__draft-state').filter({ hasText: 'Cambios sin guardar' }).waitFor()
     await page.locator('.academic-scheduling__draft-bar').screenshot({ path: outputPath })
     await page.locator('.academic-scheduling__result').screenshot({ path: resolve(evidenceDir, 'phase-save-result.png') })
     const runtimeProposalId = saved.proposal.proposalId
@@ -137,7 +138,6 @@ try {
     assert.equal(row.academicPeriod, '2027-I')
     const resumePending = page.waitForResponse((response) => response.url().endsWith(`/borradores/${saved.id}/continuar`) && response.request().method() === 'POST')
     const savedRow = page.locator('.academic-scheduling__saved-row').filter({ hasText: saved.title })
-    await savedRow.locator('summary').click()
     await savedRow.getByRole('button', { name: 'Continuar edición', exact: true }).click()
     const resumedResponse = await resumePending
     assert.equal(resumedResponse.status(), 200, await resumedResponse.text())
@@ -145,7 +145,7 @@ try {
     assert.equal(resumed.draft.id, saved.id)
     assert.equal(resumed.draft.version, saved.version)
     assert.notEqual(resumed.draft.proposal.proposalId, saved.runtimeProposalId)
-    assert.equal(await page.getByLabel(`Seleccionar ${saved.courseId}`, { exact: true }).isChecked(), true)
+    assert.equal(await isPlanningCheckboxChecked(page.getByRole('checkbox', { name: `Seleccionar ${saved.courseId}`, exact: true })), true)
     assert.equal(await page.getByLabel(`Demanda ${saved.courseId}`, { exact: true }).inputValue(), String(saved.finalDemand))
     assert.deepEqual(resumed.draft.proposal.manuallyAdjustedSectionIds, saved.manuallyAdjustedSectionIds)
     assert.equal(await page.getByLabel('Estado de la propuesta', { exact: true }).inputValue(), 'ready-for-review')
@@ -178,7 +178,6 @@ try {
     await freshPage.getByRole('button', { name: 'Mis propuestas', exact: true }).click()
     await freshListPending
     const freshRow = freshPage.locator('.academic-scheduling__saved-row').filter({ hasText: saved.title })
-    await freshRow.locator('summary').click()
     const freshResumePending = freshPage.waitForResponse((response) => response.url().endsWith(`/borradores/${saved.id}/continuar`))
     await freshRow.getByRole('button', { name: 'Continuar edición', exact: true }).click()
     const freshResume = await freshResumePending

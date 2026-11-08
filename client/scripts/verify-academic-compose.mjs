@@ -1,5 +1,6 @@
 // Run only against a freshly created, explicitly synthetic Compose acceptance project.
 import assert from 'node:assert/strict'
+import { setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
@@ -73,12 +74,12 @@ try {
   assert.equal(chosen.length, 2, 'el catálogo sintético debe exponer al menos dos cursos')
   if (chosen[0].cycle !== undefined && chosen[1].cycle !== undefined) assert.notEqual(chosen[0].cycle, chosen[1].cycle)
   if (chosen[0].cycle !== undefined) await page.getByLabel('Filtrar cursos por ciclo').selectOption(String(chosen[0].cycle))
-  await page.getByLabel(`Seleccionar ${chosen[0].courseId}`, { exact: true }).check()
+  await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${chosen[0].courseId}`, exact: true }))
   if (chosen[1].cycle !== undefined) await page.getByLabel('Filtrar cursos por ciclo').selectOption(String(chosen[1].cycle))
-  assert.equal(await page.locator('.academic-scheduling__selection input:checked').count(), 0, 'el curso seleccionado de otro ciclo está oculto')
-  await page.getByLabel(`Seleccionar ${chosen[1].courseId}`, { exact: true }).check()
+  assert.equal(await page.locator('.academic-scheduling__selection [role=checkbox][aria-checked=true]').count(), 0, 'el curso seleccionado de otro ciclo está oculto')
+  await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${chosen[1].courseId}`, exact: true }))
   await page.getByLabel('Filtrar cursos por ciclo').selectOption('all')
-  assert.equal(await page.locator('.academic-scheduling__selection input:checked').count(), 2)
+  assert.equal(await page.locator('.academic-scheduling__selection [role=checkbox][aria-checked=true]').count(), 2)
   for (const course of chosen) {
     await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).fill(course === chosen[0] ? '31' : '20')
     await page.getByLabel(`Capacidad ${course.courseId}`, { exact: true }).fill('30')
@@ -86,8 +87,8 @@ try {
     if (course.planningPatterns?.length) assert.equal(await page.getByLabel(`Patrón ${course.courseId}`).inputValue(), course.planningPatterns[0].id)
     assert.equal(await page.getByLabel(`Modalidad de sesiones ${course.courseId}`).inputValue(), 'continuous')
     if (course.history?.sections.length) {
-      const details = page.locator('.academic-scheduling__course').filter({ hasText: course.courseId }).locator('details')
-      await details.locator('summary').click()
+      const details = page.locator('.academic-preparation__inspector .academic-scheduling__history')
+      await details.getByRole('button', { name: /^Referencia histórica/ }).click()
       assert.equal(await details.locator('ul li').count(), course.history.sections.reduce((sum, section) => sum + section.sessions.length, 0))
     }
   }
@@ -100,8 +101,8 @@ try {
   await page.getByLabel('Carga semanal docente').fill('1800')
   await page.getByLabel('Disponibilidad docente fin 1', { exact: true }).fill('18:00')
   for (const course of chosen) {
-    const eligibility = page.getByLabel(`${referenceTeacher.name} habilitado para ${course.courseId}`, { exact: true })
-    if (!(await eligibility.isChecked())) await eligibility.check()
+    const eligibility = page.getByRole('checkbox', { name: `${referenceTeacher.name} habilitado para ${course.courseId}`, exact: true })
+    await setPlanningCheckbox(eligibility)
   }
   await page.getByLabel('Máximo de secciones ' + chosen[0].courseId).fill('3')
   await page.getByLabel('Seleccionar o agregar docente').selectOption(referenceTeacher.id)
@@ -114,6 +115,7 @@ try {
   await page.getByLabel('Seleccionar o agregar docente').selectOption(referenceTeacher.id)
   assert.equal(await page.getByLabel('Identificación docente').inputValue(), 'DOC-LOCAL-COMPARTIDO', 'al volver al docente se conserva su configuración')
   assert.equal(await page.locator('[aria-label="Docentes incorporados"] .academic-scheduling__roster-item').count(), 2)
+  await page.getByRole('button', { name: 'Opciones avanzadas', exact: true }).click()
   await page.getByLabel('Criterio de asignación').selectOption('balanced')
   for (const room of academicCatalog.rooms) await page.getByLabel(`Quitar ambiente ${room.name}`, { exact: true }).click()
   const referenceClassroom = academicCatalog.referenceRooms.find((room) => room.kind === 'classroom')

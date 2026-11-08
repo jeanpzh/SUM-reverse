@@ -1,6 +1,7 @@
 // Synthetic local acceptance script for Planning Week View (Semana) V3 correction cycle.
 // Starts dedicated processes on ports 3291/5291 with provenance env -i and synthetic fixtures.
 import assert from 'node:assert/strict'
+import { setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
@@ -165,12 +166,12 @@ try {
   const course1 = catalog.courses[0]
   const course2 = catalog.courses[1]
 
-  await page.getByLabel(`Seleccionar ${course1.courseId}`, { exact: true }).check()
+  await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course1.courseId}`, exact: true }))
   await page.getByLabel(`Demanda ${course1.courseId}`, { exact: true }).fill('90')
   await page.getByLabel(`Capacidad ${course1.courseId}`, { exact: true }).fill('45')
 
   if (course2) {
-    await page.getByLabel(`Seleccionar ${course2.courseId}`, { exact: true }).check()
+    await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course2.courseId}`, exact: true }))
     await page.getByLabel(`Demanda ${course2.courseId}`, { exact: true }).fill('90')
     await page.getByLabel(`Capacidad ${course2.courseId}`, { exact: true }).fill('45')
   }

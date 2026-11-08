@@ -1,5 +1,6 @@
 // Two-phase browser acceptance against the dedicated, explicitly synthetic 5280 service only.
 import assert from 'node:assert/strict'
+import { setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
@@ -50,7 +51,7 @@ try {
       && catalog.teachers.some((teacher) => teacher.courseIds.includes(item.courseId))
       && catalog.rooms.some((room) => room.capacity >= item.targetCapacity))
     assert.ok(course, 'El catálogo debe ofrecer un curso sintético programable')
-    await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).check()
+    await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }))
     await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).fill('1')
     const generation = page.waitForResponse((response) => response.url().endsWith('/propuestas') && response.request().method() === 'POST')
     await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
@@ -132,7 +133,6 @@ try {
     await page.getByRole('button', { name: 'Mis propuestas', exact: true }).click()
     await json(await list)
     const row = page.locator('.academic-scheduling__saved-row').filter({ hasText: saved.title })
-    await row.locator('summary').click()
     const resume = page.waitForResponse((response) => response.url().endsWith(`/borradores/${saved.id}/continuar`))
     await row.getByRole('button', { name: 'Continuar edición', exact: true }).click()
     const recovered = (await json(await resume)).draft
