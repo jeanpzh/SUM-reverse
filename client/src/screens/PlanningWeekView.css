@@ -36,7 +36,7 @@
   padding: 2px calc(var(--planning-spacing) * 2);
   border-radius: var(--planning-radius-control);
   background: var(--planning-primary);
-  color: #ffffff;
+  color: var(--planning-primary-foreground);
   font-size: 0.75rem;
   font-weight: 600;
   line-height: 1.3;
@@ -249,7 +249,7 @@
 
 .planning-week__placement-tag--proposed {
   background: var(--planning-primary);
-  color: #ffffff;
+  color: var(--planning-primary-foreground);
 }
 
 .planning-week__block-header {

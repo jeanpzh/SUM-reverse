@@ -299,13 +299,13 @@ fieldset.academic-scheduling__locked-workspace {
 
 .academic-preparation__inspect-btn--active {
   background: var(--planning-primary);
-  color: #ffffff;
+  color: var(--planning-primary-foreground);
   border-color: var(--planning-primary);
 }
 
 .academic-preparation__inspect-btn--active:hover {
   background: var(--planning-primary);
-  color: #ffffff;
+  color: var(--planning-primary-foreground);
 }
 
 /* Single Inspector */

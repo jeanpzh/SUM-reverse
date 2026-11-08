@@ -13,6 +13,7 @@
   --planning-error: #a12622;
   --planning-error-surface: #fdeceb;
   --planning-primary-foreground: #ffffff;
+  --planning-focus-ring: rgba(101, 88, 223, 0.4);
   --planning-error-foreground: #ffffff;
   --planning-overlay: rgb(0 0 0 / 45%);
   --planning-shadow: 0 8px 32px rgb(0 0 0 / 20%);
@@ -243,6 +244,7 @@
   --planning-rail-text: #f1f5f2;
   --planning-primary: #67c995;
   --planning-primary-foreground: #102419;
+  --planning-focus-ring: rgb(169 156 255 / 65%);
   --planning-selected: #304b3b;
   --planning-border: #526158;
   --planning-warning: #ffd27a;
