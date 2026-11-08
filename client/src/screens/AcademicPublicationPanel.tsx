@@ -63,6 +63,16 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
   const canPublish = canUseRelease && draftState === 'approved'
     && currentPreview?.id === draftId && currentPreview.version === draftVersion && currentPreview.state === 'approved'
     && Boolean(publicationList) && !listLoading && !listError && !selectedPublicationId
+  const publishDisabledReason = !publicationList || listLoading
+    ? 'Cargando publicaciones…'
+    : listError ? 'No se pudieron cargar las publicaciones'
+    : selectedPublicationId ? 'Selecciona la versión actual (estás consultando una publicación anterior)'
+    : dirty ? 'Hay cambios sin guardar'
+    : !currentPreview || currentPreview.state !== 'approved' ? 'Actualiza la vista previa de la versión aprobada'
+    : !canPublish ? 'La publicación no está disponible en este estado' : ''
+  const approveDisabledReason = dirty ? 'Hay cambios sin guardar'
+    : !currentPreview ? 'Actualiza la vista previa de la versión actual'
+    : 'La versión debe estar lista para aprobación'
 
   const blocks = useMemo(() => preview ? aggregateAcademicBlocks(preview.schedule) : [], [preview])
   const cycleByCourse = useMemo(() => new Map(preview?.schedule.courses.map((course) => [course.courseId, course.cycle]) ?? []), [preview])
@@ -89,6 +99,8 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
   useEffect(() => {
     const timer = window.setTimeout(() => { void refreshPublications() }, 0)
     return () => window.clearTimeout(timer)
+    // Load once on mount; refreshes after writes are explicit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const refreshPreview = async () => {
@@ -124,6 +136,16 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
     }
   }
 
+  useEffect(() => {
+    let timer: number | undefined
+    if (draftState === 'approved' && draftId && draftVersion && !dirty && !selectedPublicationId) {
+      timer = window.setTimeout(() => { void refreshPreview() }, 0)
+    }
+    return () => { if (timer !== undefined) window.clearTimeout(timer) }
+    // The preview is refreshed only when the approved draft identity/state becomes current.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftId, draftVersion, draftState, dirty, selectedPublicationId])
+
   const approve = () => {
     if (!canApprove || !draftId || !draftVersion) return
     setConfirmRequest({
@@ -135,7 +157,6 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
         onMessage(null)
         await onApprove()
         await refreshPublications()
-        await refreshPreview()
       },
     })
   }
@@ -232,9 +253,11 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
         {working ? 'Consultando…' : 'Actualizar vista previa'}
       </button>
       <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary"
-        disabled={!canApprove} onClick={approve}>Aprobar (simulada)</button>
+        disabled={!canApprove} aria-describedby={!canApprove ? 'academic-approve-reason' : undefined} onClick={approve}>Aprobar (simulada)</button>
+      {!canApprove && <span id="academic-approve-reason" className="academic-publication__status">{approveDisabledReason}</span>}
       <button type="button" className="academic-scheduling__button" disabled={!canPublish}
-        onClick={publish}>Publicar (simulada)</button>
+        aria-describedby={!canPublish ? 'academic-publish-reason' : undefined} onClick={publish}>Publicar (simulada)</button>
+      {!canPublish && <span id="academic-publish-reason" className="academic-publication__status">{publishDisabledReason}</span>}
     </div>
     <label className="academic-publication__history">Consultar publicación
       <select aria-label="Consultar publicación" value={selectedPublicationId} disabled={working || busy}

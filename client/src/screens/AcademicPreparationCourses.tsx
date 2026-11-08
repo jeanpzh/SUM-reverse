@@ -12,7 +12,7 @@ import {
 } from '../data/academicPreparation.ts'
 import type { BulkChangePreview } from '../data/academicPreparation.ts'
 import { AcademicDemandPanel } from './AcademicDemandPanel.tsx'
-import { Dialog, DialogContent, DialogTitle } from '../components/ui/Dialog'
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../components/ui/Dialog'
 import './AcademicPreparationCourses.css'
 
 export interface AcademicPreparationCoursesProps {
@@ -80,6 +80,7 @@ export function AcademicPreparationCourses({
 }: AcademicPreparationCoursesProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [inspectedCourseId, setInspectedCourseId] = useState<string | null>(null)
+  const [demandOpen, setDemandOpen] = useState(false)
 
   // Bulk edit modal state
   const [isBulkOpen, setIsBulkOpen] = useState(false)
@@ -348,6 +349,8 @@ export function AcademicPreparationCourses({
                       <th scope="col">Ciclo</th>
                       <th scope="col">Asignatura</th>
                       <th scope="col">Demanda final</th>
+                      <th scope="col">Demanda base</th>
+                      <th scope="col">Sec. sugeridas</th>
                       <th scope="col">Capacidad obj.</th>
                       <th scope="col">Sec. prev.</th>
                       <th scope="col">Inspector</th>
@@ -356,7 +359,7 @@ export function AcademicPreparationCourses({
                   <tbody>
                     {visibleCourses.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="planning-sections__empty">
+                        <td colSpan={9} className="planning-sections__empty">
                           No hay cursos que coincidan con los filtros aplicados.
                         </td>
                       </tr>
@@ -364,7 +367,7 @@ export function AcademicPreparationCourses({
                     {cycleGroups.map((group) => (
                       <Fragment key={String(group.cycle)}>
                         <tr className="academic-preparation__group-row">
-                          <th colSpan={7} scope="colgroup">
+                          <th colSpan={9} scope="colgroup">
                             {group.label} · {group.courses.length}{' '}
                             {group.courses.length === 1 ? 'curso' : 'cursos'}
                           </th>
@@ -374,6 +377,7 @@ export function AcademicPreparationCourses({
                           const isInspected = inspectedCourseId === course.courseId
                           const demandVal = demands[course.courseId] ?? ''
                           const capVal = capacities[course.courseId] ?? ''
+                          const demandRow = demandEstimate?.rows.find((row) => row.courseId === course.courseId)
                           const dNum = Number(demandVal)
                           const cNum = Number(capVal)
                           const computedSections =
@@ -436,6 +440,8 @@ export function AcademicPreparationCourses({
                                   className="academic-preparation__num-input"
                                 />
                               </td>
+                              <td>{demandRow?.baseDemand ?? '—'}</td>
+                              <td>{demandRow?.suggestedSections ?? '—'}</td>
                               <td className="academic-preparation__td-capacity">
                                 <input
                                   type="number"
@@ -580,9 +586,16 @@ export function AcademicPreparationCourses({
             )}
           </div>
 
-          {/* Academic Demand Panel (2027-I) */}
+          {/* Academic Demand Summary (2027-I) */}
           {planningPeriod === '2027-I' ? (
-            <AcademicDemandPanel
+            <>
+            <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary academic-demand__summary-trigger"
+              aria-haspopup="dialog" onClick={() => setDemandOpen(true)}>Resumen de demanda</button>
+            <Dialog open={demandOpen} onOpenChange={setDemandOpen}>
+              <DialogContent className="academic-demand__dialog">
+                <DialogTitle>Resumen de demanda potencial</DialogTitle>
+                <DialogDescription>Fuente, estimación y desglose por curso seleccionado.</DialogDescription>
+                <AcademicDemandPanel
               sourceId={demandSourceId}
               onSourceChange={onChangeDemandSource}
               courses={catalog.courses
@@ -599,6 +612,9 @@ export function AcademicPreparationCourses({
               onEstimate={onEstimateDemand}
               onUseBase={onUseBaseDemand}
             />
+              </DialogContent>
+            </Dialog>
+            </>
           ) : (
             <p className="academic-scheduling__resource-note" role="note">
               El estimador de demanda potencial solo tiene ámbito sintético 2027-I. Para {planningPeriod}, ingresa la demanda de planificación manualmente.
