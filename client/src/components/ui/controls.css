@@ -27,3 +27,13 @@
   outline: revert-layer;
   outline-offset: revert-layer;
 }
+
+/* The unlayered shell rule sets box-sizing: inherit and wins over box-border
+   utilities. Size fields directly, independent of intermediate containers. */
+.planning-root [data-slot='input'],
+.planning-root [data-slot='textarea'],
+.planning-root [data-slot='native-select'] {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
