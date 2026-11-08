@@ -19,6 +19,7 @@ import {
   formatAcademicDuration,
   formatAcademicMinute,
 } from '../data/academicScheduling'
+import { formatAvailabilitySummary } from '../data/academicResources'
 
 export interface PlanningInspectorProps {
   sectionId: string | null
@@ -348,41 +349,64 @@ export function PlanningInspector({
             )}
 
             {pendingComponents.length > 0 && (
-              <div className="planning-inspector__section planning-inspector__section--pending">
-                <h5 className="planning-inspector__section-title"><Badge variant="warning">
-                  {pendingComponents.length} {pendingComponents.length === 1 ? 'componente pendiente' : 'componentes pendientes'}
-                </Badge></h5>
+              <div className="planning-inspector__section planning-inspector__section--pending typeset typeset-planning">
+                <div className="not-typeset flex items-center gap-2">
+                  <Badge variant="warning">
+                    {pendingComponents.length} {pendingComponents.length === 1 ? 'componente pendiente' : 'componentes pendientes'}
+                  </Badge>
+                </div>
                 <p className="planning-inspector__explanation">
                   {proposal.status === 'search-limit'
                     ? 'La búsqueda alcanzó su límite. No prueba que no exista solución.'
                     : 'Sin solución completa en el dominio configurado.'}
                 </p>
                 <ul className="planning-inspector__pending-list">
-                  {pendingComponents.map((p) => (
-                    <li key={p.sessionId}>
-                      Componente {p.sessionId} · {formatAcademicDuration(p.durationMinutes)}
-                    </li>
-                  ))}
+                  {pendingComponents.map((p, index) => {
+                    const sessionDef = coursePattern?.weeklySessions[index] ?? course?.weeklySessions[index]
+                    const rawType = sessionDef?.type?.trim() ?? ''
+                    const typeMap: Record<string, string> = {
+                      t: 'Teoría',
+                      teoria: 'Teoría',
+                      teoría: 'Teoría',
+                      p: 'Práctica',
+                      practica: 'Práctica',
+                      práctica: 'Práctica',
+                      l: 'Laboratorio',
+                      lab: 'Laboratorio',
+                      laboratorio: 'Laboratorio',
+                    }
+                    const typeLabel = rawType
+                      ? (typeMap[rawType.toLowerCase()] ?? (rawType.charAt(0).toUpperCase() + rawType.slice(1)))
+                      : `Componente ${index + 1}`
+                    return (
+                      <li key={p.sessionId}>
+                        <strong>{typeLabel}</strong> · {formatAcademicDuration(p.durationMinutes)}
+                      </li>
+                    )
+                  })}
                 </ul>
 
-                <h5 className="planning-inspector__section-title">Restricciones de planificación</h5>
+                <h4 className="planning-inspector__section-title">Restricciones de planificación</h4>
                 <ul className="planning-inspector__constraints-list">
-                  <li>Capacidad mínima {section.capacity}</li>
-                  {requiresLab && <li>Laboratorio requerido</li>}
+                  <li>Capacidad mínima: <strong>{section.capacity}</strong></li>
+                  {requiresLab && <li>Ambiente requerido: <strong>Laboratorio</strong></li>}
                   {eligibleTeachers.length > 0 ? (
-                    <li>Docente habilitado {eligibleTeachers.map((t: AcademicPlanningResources['teachers'][number]) => t.name).join(', ')}</li>
+                    <li>
+                      {eligibleTeachers.length === 1 ? 'Docente habilitado: ' : 'Docentes habilitados: '}
+                      <strong>{eligibleTeachers.map((t: AcademicPlanningResources['teachers'][number]) => t.name).join(', ')}</strong>
+                    </li>
                   ) : (
                     <li>Sin docentes habilitados registrados</li>
                   )}
                 </ul>
 
                 {eligibleTeachers.length > 0 && (
-                  <div className="planning-inspector__availability">
+                  <div className="planning-inspector__availability not-typeset">
                     <h6 className="planning-inspector__avail-title">
                       Disponibilidad ({eligibleTeachers[0].name})
                     </h6>
                     <p className="planning-inspector__avail-summary">
-                      Lun–Vie 08:00–18:00 · Disponible
+                      {formatAvailabilitySummary(eligibleTeachers[0].availability)} · Disponible
                     </p>
                     <p className="planning-inspector__avail-note">
                       No se asignó docente para esta sección pendiente.

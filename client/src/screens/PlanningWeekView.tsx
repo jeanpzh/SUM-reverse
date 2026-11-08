@@ -52,6 +52,7 @@ export function PlanningWeekView({
   isLocked = false,
 }: PlanningWeekViewProps) {
   const [selectedAgendaDay, setSelectedAgendaDay] = useState<'all' | number>('all')
+  const [selectedGridDay, setSelectedGridDay] = useState<'all' | number>('all')
 
   const gridWrapperRef = useRef<HTMLDivElement>(null)
   const agendaRef = useRef<HTMLDivElement>(null)
@@ -223,6 +224,59 @@ export function PlanningWeekView({
     })
   }
 
+  const minLaneWidthPx = 136
+
+  const allDayRenderData = useMemo(() => {
+    return configuredDays.map((day) => {
+      const dayBlocks = filteredBlocks.filter((b) => b.day === day)
+      const isProposedDay = Boolean(editingBlock && activeBlock && editingBlock.day === day)
+
+      // Compute deterministic overlap lanes for all day items including proposed preview (WV-1)
+      const layoutItems = dayBlocks.map((b) => ({
+        id: `${b.sectionId}-${b.day}-${b.startMinute}`,
+        startMinute: b.startMinute,
+        endMinute: b.endMinute,
+      }))
+
+      if (isProposedDay && activeBlock && editingBlock) {
+        layoutItems.push({
+          id: '__proposed_preview__',
+          startMinute: editingBlock.startMinute,
+          endMinute: editingBlock.startMinute + activeBlock.durationMinutes,
+        })
+      }
+
+      const dayLayout = computeWeekDayLayout(layoutItems)
+      let maxLanes = 1
+      for (const layout of dayLayout.values()) {
+        if (layout.totalLanes > maxLanes) maxLanes = layout.totalLanes
+      }
+      const colMinWidthPx = Math.max(168, maxLanes * minLaneWidthPx)
+
+      return {
+        day,
+        dayBlocks,
+        isProposedDay,
+        dayLayout,
+        maxLanes,
+        colMinWidthPx,
+      }
+    })
+  }, [configuredDays, filteredBlocks, editingBlock, activeBlock])
+
+  // If the user is editing a block and moves it to another day while filtered to a single day, keep both visible
+  const dayRenderData = useMemo(() => {
+    if (selectedGridDay === 'all') return allDayRenderData
+    return allDayRenderData.filter(
+      (d) => d.day === selectedGridDay || d.isProposedDay
+    )
+  }, [allDayRenderData, selectedGridDay])
+
+  const totalGridMinWidthPx = useMemo(
+    () => 64 + dayRenderData.reduce((sum, d) => sum + d.colMinWidthPx, 0),
+    [dayRenderData]
+  )
+
   return (
     <div className="planning-sections planning-week">
       {/* Shared Toolbar */}
@@ -268,6 +322,34 @@ export function PlanningWeekView({
         </div>
       </div>
 
+      {/* Desktop Day Filter Bar */}
+      <div className="planning-week__day-filter-bar" role="group" aria-label="Filtrar calendario por día">
+        <span className="planning-week__day-filter-label">Día:</span>
+        <div className="planning-week__day-filter-pills">
+          <Button
+            type="button"
+            size="sm"
+            variant={selectedGridDay === 'all' ? 'secondary' : 'ghost'}
+            aria-pressed={selectedGridDay === 'all'}
+            onClick={() => setSelectedGridDay('all')}
+          >
+            Toda la semana ({filteredBlocks.length})
+          </Button>
+          {allDayRenderData.map(({ day, dayBlocks }) => (
+            <Button
+              key={day}
+              type="button"
+              size="sm"
+              variant={selectedGridDay === day ? 'secondary' : 'ghost'}
+              aria-pressed={selectedGridDay === day}
+              onClick={() => setSelectedGridDay(day)}
+            >
+              {dayNamesFull[day]} ({dayBlocks.length})
+            </Button>
+          ))}
+        </div>
+      </div>
+
       {/* Editing active banner */}
       {editingBlock && activeBlock && (
         <div className="planning-week__editing-banner" role="status">
@@ -296,13 +378,22 @@ export function PlanningWeekView({
         aria-label="Calendario semanal interactivo de programación"
         tabIndex={0}
       >
-        <div className="planning-week__grid" style={{ minWidth: `${configuredDays.length * 140 + 70}px` }}>
+        <div className="planning-week__grid" style={{ minWidth: `${totalGridMinWidthPx}px` }}>
           {/* Day Headers */}
           <div className="planning-week__header-row">
             <div className="planning-week__time-col-header">Hora</div>
-            {configuredDays.map((day) => (
-              <div key={day} className="planning-week__day-col-header">
+            {dayRenderData.map(({ day, colMinWidthPx, dayBlocks }) => (
+              <div
+                key={day}
+                className="planning-week__day-col-header"
+                style={{ minWidth: `${colMinWidthPx}px`, flexGrow: Math.max(1, Math.round(colMinWidthPx / 160)) }}
+              >
                 <span className="planning-week__day-name">{dayNamesFull[day]}</span>
+                {dayBlocks.length > 0 && (
+                  <span className="planning-week__day-count" aria-hidden="true">
+                    · {dayBlocks.length}
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -323,33 +414,17 @@ export function PlanningWeekView({
             </div>
 
             {/* Day columns */}
-            {configuredDays.map((day) => {
-              const dayBlocks = filteredBlocks.filter((b) => b.day === day)
-              const isProposedDay = editingBlock && activeBlock && editingBlock.day === day
-
-              // Compute deterministic overlap lanes for all day items including proposed preview (WV-1)
-              const layoutItems = dayBlocks.map((b) => ({
-                id: `${b.sectionId}-${b.day}-${b.startMinute}`,
-                startMinute: b.startMinute,
-                endMinute: b.endMinute,
-              }))
-
-              if (isProposedDay && activeBlock) {
-                layoutItems.push({
-                  id: '__proposed_preview__',
-                  startMinute: editingBlock.startMinute,
-                  endMinute: editingBlock.startMinute + activeBlock.durationMinutes,
-                })
-              }
-
-              const dayLayout = computeWeekDayLayout(layoutItems)
-
+            {dayRenderData.map(({ day, dayBlocks, isProposedDay, dayLayout, colMinWidthPx }) => {
               return (
                 <div
                   key={day}
                   className="planning-week__day-col"
                   aria-label={`Horarios del ${dayNamesFull[day]}`}
-                  style={{ backgroundSize: `100% ${hourHeight}px` }}
+                  style={{
+                    backgroundSize: `100% ${hourHeight}px`,
+                    minWidth: `${colMinWidthPx}px`,
+                    flexGrow: Math.max(1, Math.round(colMinWidthPx / 160)),
+                  }}
                 >
                   {/* Clickable slot lines for editing */}
                   {editingBlock && !isLocked && (
@@ -408,6 +483,7 @@ export function PlanningWeekView({
                         }}
                         tabIndex={0}
                         role="button"
+                        title={`${block.courseName} · Sección ${sLabel} · ${dayNamesShort[block.day]} ${formatAcademicMinute(block.startMinute)}–${formatAcademicMinute(block.endMinute)} · ${block.teacherName} · ${block.roomNames.join(', ')}`}
                         aria-label={`Bloque ${block.courseName}, Sección ${sLabel}, ${dayNamesShort[block.day]} ${formatAcademicMinute(
                           block.startMinute
                         )} a ${formatAcademicMinute(block.endMinute)}, docente ${block.teacherName}, ambiente ${block.roomNames.join(
@@ -422,7 +498,7 @@ export function PlanningWeekView({
                         }}
                       >
                         <div className="planning-week__block-header">
-                          <strong className="planning-week__block-course">{block.courseName}</strong>
+                          <strong className="planning-week__block-course" title={block.courseName}>{block.courseName}</strong>
                           <span className="planning-week__block-section">Sec. {sLabel}</span>
                         </div>
                         <div className="planning-week__block-time">
@@ -446,7 +522,7 @@ export function PlanningWeekView({
                   })}
 
                   {/* Proposed Placement Preview with deterministic lane */}
-                  {isProposedDay && activeBlock && (() => {
+                  {isProposedDay && editingBlock && activeBlock && (() => {
                     const propLayout = dayLayout.get('__proposed_preview__')
                     const propLeft = propLayout ? `calc(${propLayout.leftPercent}% + 2px)` : '4px'
                     const propWidth = propLayout ? `calc(${propLayout.widthPercent}% - 4px)` : 'calc(100% - 8px)'

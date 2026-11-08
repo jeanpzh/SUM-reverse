@@ -136,8 +136,8 @@ export function PlanningStatusBar({ primaryActionId, proposal, onRegenerate, onR
         <CollapsibleTrigger asChild>
           <Button type="button" variant="ghost" size="sm">Detalles de búsqueda</Button>
         </CollapsibleTrigger>
-        <CollapsibleContent className="planning-status-bar__details-content mt-2 flex min-w-0 flex-col gap-2">
-          <dl className="academic-scheduling__counts">
+        <CollapsibleContent className="planning-status-bar__details-content mt-2 flex min-w-0 flex-col gap-3">
+          <dl className="academic-scheduling__counts not-typeset">
             <div><dt>Secciones</dt><dd>{proposal.counts.sections}</dd></div>
             <div><dt>Completas</dt><dd>{coverage.complete}</dd></div>
             <div><dt>Parciales</dt><dd>{coverage.partial}</dd></div>
@@ -149,22 +149,56 @@ export function PlanningStatusBar({ primaryActionId, proposal, onRegenerate, onR
             Búsqueda local: {proposal.stats.exploredCandidates} candidatos explorados, {proposal.stats.candidateVisits} visitas y {proposal.stats.backtracks} retrocesos.
             {proposal.stats.limitReason && <> Límite: {proposal.stats.limitReason}.</>}
           </p>
-          {proposal.pending.length > 0 && (
-            <div className="academic-scheduling__diagnostics">
-              <h4>Componentes pendientes</h4>
-              <ul>
-                {proposal.pending.map((pending) => (
-                  <li key={pending.sessionId}>
-                    {proposal.sections.find((section) => section.sectionId === pending.sectionId)?.courseName ?? pending.courseId}
-                    {' · '}Sección {academicSectionLabel(proposal, pending.sectionId)}
-                    {' · '}{formatAcademicDuration(pending.durationMinutes)}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {proposal.pending.length > 0 && (() => {
+            const groupedPending: Array<{
+              courseId: string
+              courseName: string
+              sections: Array<{ sectionId: string; sectionLabel: string; durations: string[] }>
+            }> = []
+            const byCourse = new Map<string, typeof groupedPending[number]>()
+            for (const pending of proposal.pending) {
+              const courseName = proposal.sections.find((s) => s.sectionId === pending.sectionId)?.courseName ?? pending.courseId
+              let courseGroup = byCourse.get(pending.courseId)
+              if (!courseGroup) {
+                courseGroup = { courseId: pending.courseId, courseName, sections: [] }
+                byCourse.set(pending.courseId, courseGroup)
+                groupedPending.push(courseGroup)
+              }
+              let sectionEntry = courseGroup.sections.find((s) => s.sectionId === pending.sectionId)
+              if (!sectionEntry) {
+                sectionEntry = {
+                  sectionId: pending.sectionId,
+                  sectionLabel: academicSectionLabel(proposal, pending.sectionId),
+                  durations: [],
+                }
+                courseGroup.sections.push(sectionEntry)
+              }
+              sectionEntry.durations.push(formatAcademicDuration(pending.durationMinutes))
+            }
+            return (
+              <div className="academic-scheduling__diagnostics typeset typeset-planning">
+                <div className="not-typeset flex flex-wrap items-center justify-between gap-2">
+                  <h4 className="m-0 text-sm font-semibold text-foreground">Componentes pendientes</h4>
+                  <Badge variant="outline">
+                    {proposal.pending.length} {proposal.pending.length === 1 ? 'componente' : 'componentes'} en {groupedPending.reduce((acc, g) => acc + g.sections.length, 0)} {groupedPending.reduce((acc, g) => acc + g.sections.length, 0) === 1 ? 'sección' : 'secciones'}
+                  </Badge>
+                </div>
+                <ul className="planning-status-bar__pending-compact">
+                  {groupedPending.map((group) => (
+                    <li key={group.courseId}>
+                      <strong>{group.courseName}</strong>{' '}
+                      <span className="text-muted-foreground">({group.courseId})</span>:{' '}
+                      {group.sections
+                        .map((sec) => `Sección ${sec.sectionLabel} (${sec.durations.join(' + ')})`)
+                        .join(' · ')}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          })()}
           {proposal.preferenceReport && (
-            <div className="academic-scheduling__preference-report">
+            <div className="academic-scheduling__preference-report typeset typeset-planning">
               <h4>Resultado de preferencias · {proposal.preferenceReport.policy}</h4>
               <p>
                 {proposal.preferenceReport.withinPreferenceSections} secciones dentro de preferencia, {proposal.preferenceReport.outsidePreferenceSections} fuera y {proposal.preferenceReport.withoutPreferenceSections} sin preferencia evaluable. La búsqueda no demuestra un óptimo global.
@@ -174,7 +208,7 @@ export function PlanningStatusBar({ primaryActionId, proposal, onRegenerate, onR
         </CollapsibleContent>
       </Collapsible>
       <Dialog open={diagnosticsOpen} onOpenChange={setDiagnosticsOpen}>
-        <DialogContent className="planning-status-bar__dialog min-w-0">
+        <DialogContent className="planning-status-bar__dialog min-w-0 sm:max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Avisos de la generación</DialogTitle>
             <DialogDescription>{proposal.diagnostics.length} avisos agrupados por tipo</DialogDescription>
@@ -182,13 +216,64 @@ export function PlanningStatusBar({ primaryActionId, proposal, onRegenerate, onR
           <div className="planning-status-bar__groups grid min-w-0 gap-3">
             {diagnosticGroups.map((group) => {
               const code = group[0].code
-              return <Collapsible key={code} defaultOpen={code === 'PARTIAL_PROPOSAL'} className="min-w-0 border-0 border-b border-solid border-border pb-3">
-                <CollapsibleTrigger asChild><Button type="button" variant="ghost" className="w-full justify-between text-left">{diagnosticLabels[code] ?? 'Otro aviso'} <Badge variant="secondary">{group.length}</Badge></Button></CollapsibleTrigger>
-                <CollapsibleContent className="text-sm [&_ul]:grid [&_ul]:gap-2 [&_ul]:pl-5 [overflow-wrap:anywhere]">
-                  {code === 'PARTIAL_PROPOSAL' && <p>La propuesta contiene secciones que no pudieron colocarse por completo.</p>}
-                  <ul>{group.map((diagnostic, index) => <li key={`${code}-${index}`}>{diagnostic.message}{diagnostic.sessionIds.length > 0 && <span> Sesiones: {diagnostic.sessionIds.map((id) => academicSessionLabel(proposal, id)).join('; ')}.</span>}</li>)}</ul>
-                </CollapsibleContent>
-              </Collapsible>
+              return (
+                <Collapsible key={code} defaultOpen={code === 'PARTIAL_PROPOSAL'} className="min-w-0 rounded-planning-control border border-solid border-border bg-muted/40 p-3">
+                  <CollapsibleTrigger asChild>
+                    <Button type="button" variant="ghost" className="w-full justify-between px-2 py-1.5 text-left font-semibold">
+                      <span>{diagnosticLabels[code] ?? 'Otro aviso'}</span>
+                      <Badge variant="secondary">{group.length}</Badge>
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="typeset typeset-planning mt-2 border-0 border-t border-solid border-border pt-2.5 text-sm [overflow-wrap:anywhere]">
+                    {code === 'PARTIAL_PROPOSAL' && <p>La propuesta contiene secciones que no pudieron colocarse por completo.</p>}
+                    <ul className="planning-status-bar__diagnostic-list">
+                      {group.map((diagnostic, index) => {
+                        const groupedSessions = new Map<string, { courseName: string; sections: Map<string, number> }>()
+                        for (const id of diagnostic.sessionIds) {
+                          const session = [...proposal.assignments, ...proposal.pending].find((item) => item.sessionId === id)
+                          if (!session) continue
+                          const courseName = proposal.sections.find((item) => item.sectionId === session.sectionId)?.courseName ?? session.courseId
+                          const secLabel = academicSectionLabel(proposal, session.sectionId)
+                          let entry = groupedSessions.get(session.courseId)
+                          if (!entry) {
+                            entry = { courseName, sections: new Map() }
+                            groupedSessions.set(session.courseId, entry)
+                          }
+                          entry.sections.set(secLabel, (entry.sections.get(secLabel) ?? 0) + 1)
+                        }
+                        const courseSummaries = [...groupedSessions.entries()]
+                        return (
+                          <li key={`${code}-${index}`} className="planning-status-bar__diagnostic-item">
+                            <p className="m-0 font-medium text-foreground">{diagnostic.message}</p>
+                            {courseSummaries.length > 0 && (
+                              <details className="planning-status-bar__diagnostic-sessions not-typeset mt-1.5 rounded-planning-control border border-solid border-border bg-background px-3 py-2 text-xs">
+                                <summary className="cursor-pointer font-semibold text-foreground">
+                                  Sesiones afectadas ({diagnostic.sessionIds.length} {diagnostic.sessionIds.length === 1 ? 'componente' : 'componentes'} en {courseSummaries.length} {courseSummaries.length === 1 ? 'curso' : 'cursos'})
+                                </summary>
+                                <ul className="mt-2 grid max-h-48 gap-1.5 overflow-y-auto pl-4 text-muted-foreground">
+                                  {courseSummaries.map(([courseId, info]) => {
+                                    const secText = [...info.sections.entries()]
+                                      .map(([sec, count]) => count > 1 ? `sección ${sec} (×${count})` : `sección ${sec}`)
+                                      .join(', ')
+                                    return (
+                                      <li key={courseId}>
+                                        <strong className="text-foreground">{info.courseName}</strong>: {secText}
+                                      </li>
+                                    )
+                                  })}
+                                </ul>
+                                <span className="sr-only">
+                                  {' '}Sesiones: {diagnostic.sessionIds.map((id) => academicSessionLabel(proposal, id)).join('; ')}.
+                                </span>
+                              </details>
+                            )}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </CollapsibleContent>
+                </Collapsible>
+              )
             })}
           </div>
         </DialogContent>

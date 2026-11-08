@@ -50,23 +50,24 @@
 .academic-scheduling__history-section strong { color: var(--planning-text); }
 .academic-scheduling__history-section ul { display: grid; gap: 0.3rem; margin: 0.45rem 0 0; padding-left: 1.1rem; color: var(--planning-muted); }
 .academic-scheduling__course dl,
-.academic-scheduling__counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0.6rem; margin: 0.85rem 0 0; }
-.academic-scheduling__course dl > div,
-.academic-scheduling__counts > div { display: grid; gap: 0.15rem; }
-.academic-scheduling__course dt,
-.academic-scheduling__counts dt { color: var(--planning-muted); font-size: var(--text-meta); }
-.academic-scheduling__course dd,
-.academic-scheduling__counts dd { margin: 0; color: var(--planning-text); font-size: var(--text-data); font-weight: 650; }
+.academic-scheduling__counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem; margin: 0.5rem 0 0; }
+.planning-root .academic-scheduling__course dl > div,
+.planning-root .academic-scheduling__counts > div { display: grid; align-content: start; gap: 0.25rem; min-height: 0; padding: 0.65rem 0.75rem; border: 1px solid var(--planning-border); border-radius: var(--planning-radius-control); background: var(--planning-canvas); }
+.planning-root .academic-scheduling__course dt,
+.planning-root .academic-scheduling__counts dt { width: auto; color: var(--planning-muted); font-size: var(--text-meta); line-height: 1.3; overflow-wrap: break-word; }
+.planning-root .academic-scheduling__course dd,
+.planning-root .academic-scheduling__counts dd { margin: 0; color: var(--planning-text); font-size: 1rem; font-weight: 650; font-variant-numeric: tabular-nums; }
 .academic-scheduling__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-top: 1rem; }
 .academic-scheduling__actions > span { color: var(--planning-muted); font-size: var(--text-meta); }
 .academic-scheduling__state { margin: 1rem 0 0; color: var(--planning-muted); font-size: var(--text-data); }
 .academic-scheduling__error { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin: 1rem 0 0; padding: 0.8rem; border: 1px solid var(--planning-error); border-radius: var(--planning-radius-control); background: var(--planning-error-surface); color: var(--planning-error); font-size: var(--text-data); }
 .academic-scheduling__result-heading > span { color: var(--planning-primary); font-size: var(--text-data); font-weight: 650; }
 .academic-scheduling__status-code { color: var(--planning-muted); font-weight: 500; }
-.academic-scheduling__stats { margin: 0.8rem 0 0; color: var(--planning-muted); font-size: var(--text-meta); }
+.academic-scheduling__stats { margin: 0.25rem 0 0; color: var(--planning-muted); font-size: var(--text-meta); font-variant-numeric: tabular-nums; }
 .academic-scheduling__result h4 { margin: 1rem 0 0.5rem; color: var(--planning-text); font-size: var(--text-data); }
-.academic-scheduling__diagnostics { margin-top: 0.8rem; padding: 0.75rem; border: 1px solid var(--planning-border); border-radius: var(--planning-radius-control); background: var(--planning-canvas); }
-.academic-scheduling__diagnostics ul { display: grid; gap: 0.45rem; margin: 0; padding-left: 1.25rem; color: var(--planning-text); font-size: var(--text-meta); }
+.academic-scheduling__diagnostics { margin-top: 0.25rem; padding: 0.85rem 1rem; border: 1px solid var(--planning-border); border-radius: var(--planning-radius-control); background: var(--planning-canvas); }
+.academic-scheduling__diagnostics ul { display: grid; gap: 0.4rem; max-height: 15rem; overflow-y: auto; margin: 0.5rem 0 0; padding-left: 1.25rem; color: var(--planning-text); font-size: var(--text-meta); line-height: 1.45; }
+.academic-scheduling__diagnostics ul li { margin: 0; padding: 0; }
 .academic-scheduling__section > .table-card { margin-top: 0.75rem; }
 .academic-scheduling__sections-table { max-width: 100%; padding: 0.75rem; }
 .academic-scheduling__sections-table table { min-width: 760px; table-layout: fixed; }
@@ -204,10 +205,17 @@
 .academic-scheduling__draft-field { display: grid; flex: 1 1 200px; min-width: 0; gap: 4px; }
 .academic-scheduling__saved-list { min-width: 0; margin: 0; padding: 0; list-style: none; }
 .academic-scheduling__saved-row strong { color: var(--planning-text); font-weight: 600; }
-.academic-scheduling__advanced { min-width: 0; margin-top: 16px; }
-.academic-scheduling__policy legend { padding: 0; margin-bottom: 8px; }
-.academic-scheduling__exception { display: flex; min-width: 0; align-items: flex-start; gap: 8px; }
+.academic-scheduling__advanced { display: flex; flex-direction: column; gap: 12px; min-width: 0; margin-top: 4px; padding-top: 12px; border-top: 1px solid var(--planning-border); }
+.academic-scheduling__advanced > [data-slot='collapsible-trigger'] { align-self: flex-start; padding-inline: 10px; border: 1px solid var(--planning-border); background: var(--planning-canvas); }
+.academic-scheduling__advanced > [data-slot='collapsible-content'] { display: grid; gap: 16px; padding: 14px 16px; border: 1px solid var(--planning-border); border-radius: var(--planning-radius-control); background: var(--planning-canvas); }
+.academic-scheduling__policy { min-width: 0; padding: 0; border: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; max-width: 40rem; margin: 0; color: var(--planning-text); font-size: var(--text-meta); font-weight: 600; }
+.academic-scheduling__policy legend { padding: 0; margin-bottom: 6px; color: var(--planning-text); font-size: 0.875rem; font-weight: 600; }
+.academic-scheduling__policy > p { margin: 2px 0 0; color: var(--planning-muted); font-size: var(--text-meta); font-weight: 400; line-height: 1.45; }
+.academic-scheduling__exception { display: flex; min-width: 0; align-items: flex-start; gap: 10px; }
 .academic-scheduling__exception [data-slot='checkbox'] { margin-top: 2px; }
-.academic-scheduling__exception label { min-width: 0; overflow-wrap: anywhere; }
-.academic-scheduling__generate { padding: 16px 0; border: 0; border-top: 1px solid var(--planning-border); border-radius: 0; }
+.academic-scheduling__exception label { min-width: 0; font-weight: 400; line-height: 1.45; overflow-wrap: anywhere; cursor: pointer; }
+.academic-scheduling__generate { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; padding: 20px 24px; border: 1px solid var(--planning-border); border-radius: var(--planning-radius-panel); background: var(--planning-surface); }
+.academic-scheduling__generate > p { margin: 0; line-height: 1.5; }
+.academic-scheduling__generate .academic-scheduling__resource-note { margin: 0; line-height: 1.45; }
+.academic-scheduling__generate .academic-scheduling__actions { margin-top: 4px; padding-top: 12px; border-top: 1px solid var(--planning-border); }
 .planning-stage-panel, .academic-scheduling__draft-heading { min-width: 0; overflow-wrap: anywhere; }

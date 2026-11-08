@@ -219,7 +219,10 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       disabledReason={disabledSaveReason}
     />
 
-    <PlanningStageNav currentStage={currentStage} />
+    <PlanningStageNav
+      currentStage={currentStage}
+      nextActionLabel={(currentStage === 'preparacion' ? preparationAction : currentStage === 'horario' ? scheduleAction : currentStage === 'revision' ? reviewAction : approvalAction)?.label ?? null}
+    />
     {draftError && !draftListOpen && <Alert id="planning-draft-error" variant="destructive" role="alert"><AlertDescription>{draftError}</AlertDescription></Alert>}
     {currentStage === 'preparacion' && <nav id="planning-tour-preparation" className="planning-preparation-views" aria-label="Vistas de preparación">
       {(['resumen', 'cursos', 'recursos'] as const).map((vista) => <Link key={vista}

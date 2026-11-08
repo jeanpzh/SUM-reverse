@@ -62,9 +62,23 @@
 
 .planning-sections__view-toggle {
   display: inline-flex;
+  gap: 2px;
+  padding: 2px;
   border: 1px solid var(--planning-border);
   border-radius: var(--planning-radius-control);
+  background: var(--planning-canvas);
   overflow: hidden;
+}
+
+.planning-sections__view-toggle [data-slot='button'][aria-pressed='true'] {
+  background: var(--planning-selected);
+  color: var(--planning-text);
+  border-color: var(--planning-primary);
+  font-weight: 600;
+}
+
+.planning-sections__view-toggle [data-slot='button'][aria-pressed='false'] {
+  color: var(--planning-muted);
 }
 
 /* Native Semana controls retain their styling until their own migration. */
@@ -241,21 +255,28 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: calc(var(--planning-spacing) * 2);
-  padding-bottom: calc(var(--planning-spacing) * 2);
+  gap: calc(var(--planning-spacing) * 3);
+  padding-bottom: calc(var(--planning-spacing) * 3);
   border-bottom: 1px solid var(--planning-border);
+  flex-wrap: nowrap;
+}
+
+.planning-inspector__close-btn {
+  flex-shrink: 0;
+  margin-top: -4px;
+  margin-right: -6px;
 }
 
 .planning-inspector__title {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: 1.0625rem;
   font-weight: 600;
   color: var(--planning-text);
-  line-height: 1.3;
+  line-height: 1.35;
 }
 
 .planning-inspector__meta {
-  margin: calc(var(--planning-spacing) * 0.5) 0 0;
+  margin: calc(var(--planning-spacing) * 1) 0 0;
   font-size: 0.8125rem;
   color: var(--planning-muted);
   font-variant-numeric: tabular-nums;
@@ -264,13 +285,17 @@
 .planning-inspector__content {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--planning-spacing) * 3);
+  gap: calc(var(--planning-spacing) * 4);
 }
 
 .planning-inspector__section {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--planning-spacing) * 2);
+  gap: calc(var(--planning-spacing) * 3);
+}
+
+.planning-inspector__section--pending.typeset {
+  display: block;
 }
 
 .planning-inspector__section-header {
@@ -296,9 +321,12 @@
 .planning-inspector__block-card {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--planning-spacing) * 1);
-  padding: calc(var(--planning-spacing) * 2.5);
+  gap: calc(var(--planning-spacing) * 1.5);
+  padding: calc(var(--planning-spacing) * 3);
   font-size: 0.8125rem;
+  border: 1px solid var(--planning-border);
+  border-radius: var(--planning-radius-control);
+  background: var(--planning-canvas);
 }
 
 .planning-inspector__block-time {
@@ -332,25 +360,24 @@
   font-size: 0.8125rem;
   color: var(--planning-warning);
   font-weight: 500;
-  line-height: 1.35;
+  line-height: 1.45;
 }
 
 .planning-inspector__pending-list,
 .planning-inspector__constraints-list {
-  margin: 0;
-  padding-left: calc(var(--planning-spacing) * 4);
   font-size: 0.8125rem;
   color: var(--planning-text);
-  display: flex;
-  flex-direction: column;
-  gap: calc(var(--planning-spacing) * 1);
 }
 
 .planning-inspector__availability {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--planning-spacing) * 1);
-  padding: calc(var(--planning-spacing) * 2);
+  gap: calc(var(--planning-spacing) * 1.5);
+  margin-top: calc(var(--planning-spacing) * 3);
+  padding: calc(var(--planning-spacing) * 3);
+  border: 1px solid var(--planning-border);
+  border-radius: var(--planning-radius-control);
+  background: var(--planning-canvas);
 }
 
 .planning-inspector__avail-title {
@@ -426,7 +453,6 @@
 
 .planning-sections__toolbar-left,
 .planning-sections__row-actions,
-.planning-inspector__header,
 .planning-inspector__section-header,
 .planning-inspector__block-time {
   flex-wrap: wrap;

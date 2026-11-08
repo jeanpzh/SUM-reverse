@@ -82,6 +82,10 @@
   text-align: center;
   border-right: 1px solid var(--planning-border);
   box-sizing: border-box;
+  position: sticky;
+  left: 0;
+  z-index: 12;
+  background: var(--planning-canvas);
 }
 
 .planning-week__day-col-header {
@@ -94,6 +98,14 @@
   color: var(--planning-text);
   border-right: 1px solid var(--planning-border);
   box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.planning-week__day-count {
+  margin-left: 4px;
+  color: var(--planning-muted);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 .planning-week__day-col-header:last-child {
@@ -111,7 +123,9 @@
 .planning-week__time-axis {
   width: 64px;
   flex-shrink: 0;
-  position: relative;
+  position: sticky;
+  left: 0;
+  z-index: 6;
   border-right: 1px solid var(--planning-border);
   background: var(--planning-canvas);
 }
@@ -174,7 +188,7 @@
 .planning-week__block {
   position: absolute;
   box-sizing: border-box;
-  padding: calc(var(--planning-spacing) * 2);
+  padding: calc(var(--planning-spacing) * 1.5) calc(var(--planning-spacing) * 2);
   background: var(--planning-surface);
   border: 1px solid var(--planning-border);
   border-radius: var(--planning-radius-control);
@@ -188,6 +202,8 @@
   z-index: 2;
   transition: border-color 100ms ease;
   text-align: left;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .planning-week__block:hover {
@@ -225,6 +241,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 4px;
+  min-width: 0;
 }
 
 .planning-week__block-course {
@@ -234,6 +251,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .planning-week__block-section {
@@ -241,6 +259,7 @@
   color: var(--planning-muted);
   flex-shrink: 0;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .planning-week__block-time {
@@ -248,6 +267,9 @@
   color: var(--planning-muted);
   font-variant-numeric: tabular-nums;
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .planning-week__block-details {
@@ -257,6 +279,7 @@
   font-size: 0.8125rem;
   color: var(--planning-muted);
   overflow: hidden;
+  min-width: 0;
 }
 
 .planning-week__block-teacher,
@@ -405,13 +428,48 @@
 
 /* Breakpoint for narrow screens (at 768px and below) */
 @media (max-width: 768px) {
-  .planning-week__grid-wrapper {
+  .planning-week__grid-wrapper,
+  .planning-week__day-filter-bar {
     display: none;
   }
 
   .planning-week__agenda {
     display: flex;
   }
+}
+
+.planning-week__day-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--planning-spacing) * 2);
+  padding: calc(var(--planning-spacing) * 2) calc(var(--planning-spacing) * 4);
+  border-bottom: 1px solid var(--planning-border);
+  background: var(--planning-canvas);
+}
+
+.planning-week__day-filter-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--planning-muted);
+}
+
+.planning-week__day-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.planning-week__day-filter-pills [data-slot='button'][aria-pressed='true'] {
+  background: var(--planning-selected);
+  color: var(--planning-text);
+  border-color: var(--planning-primary);
+  font-weight: 600;
+}
+
+.planning-week__day-filter-pills [data-slot='button'][aria-pressed='false'] {
+  color: var(--planning-muted);
 }
 
 .planning-week__agenda-nav {
