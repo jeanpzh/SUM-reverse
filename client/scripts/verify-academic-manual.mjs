@@ -6,6 +6,14 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright'
 
+// Resource details open in a modal shadcn Sheet; close it before using controls behind it.
+const closeResourceSheet = async (target) => {
+  const sheet = target.locator('.academic-resource-workbench__inspector-pane')
+  if (!(await sheet.count())) return
+  await target.keyboard.press('Escape')
+  await sheet.waitFor({ state: 'detached' })
+}
+
 if (process.env.SUM_ACADEMIC_COMPOSE_SYNTHETIC !== '1') throw new Error('Se requiere una instancia propia explícitamente sintética')
 const url = new URL(process.env.SUM_ACADEMIC_COMPOSE_BASE || 'http://127.0.0.1:5280')
 if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || url.pathname !== '/' || url.search || url.hash || url.username || url.password) throw new Error('Base local sin rutas ni credenciales requerida')
@@ -37,6 +45,7 @@ try {
   const roomForm = page.locator('.academic-scheduling__resource-card--room')
   const preferenceLabel = 'Preferencias semanales · prioridad blanda'
   const stage = async (name, etapa) => {
+    await closeResourceSheet(page)
     await page.getByRole('navigation', { name: 'Etapas de programación', exact: true }).getByRole('link', { name, exact: true }).click()
     await page.waitForURL(new RegExp(`etapa=${etapa}$`))
   }
@@ -55,6 +64,7 @@ try {
   const generate = async () => {
     await stage('Preparación', 'preparacion')
     const pending = page.waitForResponse((response) => response.url().endsWith('/propuestas') && response.request().method() === 'POST')
+    await closeResourceSheet(page)
     await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
     const response = await pending
     assert.equal(response.status(), 200, await response.text())
@@ -71,9 +81,14 @@ try {
   await page.getByLabel(`Patrón ${course.courseId}`).selectOption(pattern.id)
   assert.equal(await page.getByLabel(`Modalidad de sesiones ${course.courseId}`).inputValue(), 'continuous')
   // Start from zero incorporated resources (same bulk retire flow as verify-academic-scheduling.mjs).
+  await closeResourceSheet(page)
   const resourceTab = (kind) => page.getByRole('tab', { name: kind === 'teachers' ? /^Docentes \(/ : /^Aulas y laboratorios \(/ })
-  const clearIncluded = async (kind) => {
+  const openResourceTab = async (kind) => {
+    await closeResourceSheet(page)
     await resourceTab(kind).click()
+  }
+  const clearIncluded = async (kind) => {
+    await openResourceTab(kind)
     const workbench = page.locator('.academic-resource-workbench')
     const filter = page.getByLabel(kind === 'teachers' ? 'Filtrar docentes por inclusión' : 'Filtrar ambientes por inclusión')
     await filter.selectOption('included')
@@ -87,6 +102,7 @@ try {
   await clearIncluded('rooms')
   await clearIncluded('teachers')
   for (const [index, teacher] of teachers.entries()) {
+    await closeResourceSheet(page)
     await page.getByLabel('Seleccionar o agregar docente').selectOption(teacher.id)
     assert.equal(await teacherForm.count(), 1)
     assert.equal(await page.getByLabel('Nombre docente', { exact: true }).inputValue(), teacher.name)
@@ -97,22 +113,25 @@ try {
     await setIntervals('Disponibilidad docente', [1, 2, 3, 4, 5], '16:00', '22:00')
     await setIntervals(preferenceLabel, index === 0 ? [1, 2] : [3, 4])
   }
+  await closeResourceSheet(page)
   await page.getByLabel('Seleccionar o agregar docente').selectOption(teachers[0].id)
   assert.equal(await page.getByLabel('Carga semanal docente', { exact: true }).inputValue(), '960')
   assert.equal(await page.getByLabel(`Máximo de secciones ${course.courseId}`, { exact: true }).inputValue(), '4')
   assert.equal(await page.getByRole('group', { name: new RegExp(`^${preferenceLabel}`) }).getByRole('combobox').count(), 2)
-  assert.equal(await page.getByRole('table', { name: 'Docentes', exact: true }).locator('.academic-resource-badge--included').count(), 2)
+  assert.equal(await page.locator('table[aria-label="Docentes"] .academic-resource-badge--included').count(), 2)
   await page.getByLabel('Identificación docente', { exact: true }).fill(teachers[1].id)
   assert.equal(await page.getByLabel('Identificación docente', { exact: true }).inputValue(), teachers[0].id)
   await teacherForm.getByRole('alert').waitFor()
   await page.getByLabel('Identificación docente', { exact: true }).fill(teachers[0].id)
-  await resourceTab('rooms').click()
+  await openResourceTab('rooms')
   for (const roomId of [...classroomRoomIds, 'LAB01NP']) {
+    await closeResourceSheet(page)
     await page.getByLabel('Seleccionar o agregar ambiente').selectOption(roomId)
     assert.equal(await roomForm.count(), 1)
     assert.equal(await page.getByLabel('Capacidad ambiente', { exact: true }).inputValue(), '45')
     await setIntervals('Disponibilidad del ambiente', [1, 2, 3, 4, 5], '16:00', '22:00')
   }
+  await closeResourceSheet(page)
   await page.getByLabel('Seleccionar o agregar ambiente').selectOption(classroomRoomIds[0])
   assert.equal(await page.getByLabel('Disponibilidad del ambiente fin 5', { exact: true }).inputValue(), '22:00')
   await page.getByLabel('Identificación ambiente', { exact: true }).fill('LAB01NP')
@@ -291,11 +310,13 @@ try {
   await page.locator('.planning-week__grid-wrapper').screenshot({ path: resolve(output, 'erp-complete-calendar.png') })
   await page.getByRole('group', { name: 'Vista', exact: true }).getByRole('button', { name: 'Tabla', exact: true }).click()
   await stage('Preparación', 'preparacion')
-  await resourceTab('teachers').click()
+  await openResourceTab('teachers')
+  await closeResourceSheet(page)
   await page.getByLabel('Seleccionar o agregar docente').selectOption(teachers[1].id)
   await teacherForm.getByRole('button', { name: /^Quitar docente / }).click()
   assert.equal(await page.locator('.academic-scheduling__result').count(), 0)
   // The resource workbench keeps no card open after removal; reopen the remaining teacher explicitly.
+  await closeResourceSheet(page)
   await page.getByLabel('Seleccionar o agregar docente').selectOption(teachers[0].id)
   await page.getByLabel('Carga semanal docente', { exact: true }).fill('480')
   await page.getByLabel(`Máximo de secciones ${course.courseId}`, { exact: true }).fill('2')
@@ -321,6 +342,8 @@ try {
   await page.locator('.academic-scheduling__result').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(output, 'erp-insufficient.png') })
   await stage('Preparación', 'preparacion')
+  // The teacher sheet closed when the stage changed; reopen it to edit the same teacher.
+  await page.getByLabel('Seleccionar o agregar docente').selectOption(teachers[0].id)
   await page.getByLabel('Carga semanal docente', { exact: true }).fill('960')
   await page.getByLabel(`Máximo de secciones ${course.courseId}`, { exact: true }).fill('4')
   const oneTeacher = await generate()
@@ -330,15 +353,18 @@ try {
   assert.ok(oneTeacher.diagnostics.some((row) => row.code === 'PREFERENCES_NOT_MET'))
   assert.equal(await weekBlocks.count(), 4)
   await stage('Preparación', 'preparacion')
+  await closeResourceSheet(page)
   await page.getByLabel('Seleccionar o agregar docente').selectOption(teachers[0].id)
   // 16:00–18:00 is outside the default policy for cycle ≥ 7 (only 18:00–22:00 weekdays), so the generator could not place these sessions.
   // Each 2-hour session gets one 18:00–20:00 window on a different day.
   await setIntervals('Disponibilidad docente', [1, 2], '18:00', '20:00')
-  await resourceTab('rooms').click()
+  await openResourceTab('rooms')
   for (const roomId of [...classroomRoomIds, 'LAB01NP']) {
+    await closeResourceSheet(page)
     await page.getByLabel('Seleccionar o agregar ambiente').selectOption(roomId)
     await setIntervals('Disponibilidad del ambiente', [1, 2], '18:00', '20:00')
   }
+  await closeResourceSheet(page)
   await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).fill('45')
   await page.getByLabel(`Modalidad de sesiones ${course.courseId}`, { exact: true }).selectOption('split')
   const splitProposal = await generate()

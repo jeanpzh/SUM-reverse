@@ -156,13 +156,21 @@ try {
     'Debe abrirse exactamente un inspector de recurso',
   )
 
-  // Alternar a Aulas y laboratorios: la ficha se cierra automáticamente
-  await page.getByRole('tab', { name: /Aulas y laboratorios/ }).click()
+  // The resource sheet is modal (shadcn Sheet): it owns focus and Escape closes it.
+  const sheet = page.getByRole('dialog', { name: /./ }).and(page.locator('.academic-resource-workbench__inspector-pane'))
+  assert.equal(await sheet.evaluate((el) => el.contains(document.activeElement)), true, 'El foco debe entrar en la ficha')
+  await page.keyboard.press('Escape')
   assert.equal(
     await page.locator('.academic-resource-workbench__inspector-pane').count(),
     0,
-    'Alternar vistas debe cerrar la ficha automáticamente',
+    'Escape debe cerrar la ficha',
   )
+  assert.equal(
+    await firstTeacherRow.getByRole('button', { name: /Abrir ficha/ }).evaluate((el) => document.activeElement === el),
+    true,
+    'Al cerrar la ficha el foco vuelve al botón que la abrió',
+  )
+  await page.getByRole('tab', { name: /Aulas y laboratorios/ }).click()
 
   // Abrir una ficha de ambiente
   const firstRoomRow = page.locator('.academic-resource-table tbody tr').first()
@@ -173,14 +181,15 @@ try {
     'Debe haber como máximo un inspector activo',
   )
 
-  // Alternar de vuelta a Docentes: se cierra
-  await page.getByRole('tab', { name: /Docentes/ }).click()
+  // Cerrar la ficha de ambiente y volver a Docentes
+  await page.locator('.academic-resource-workbench__inspector-pane').getByRole('button', { name: 'Cerrar' }).click()
   assert.equal(
     await page.locator('.academic-resource-workbench__inspector-pane').count(),
     0,
-    'Alternar a docentes debe cerrar la ficha de ambiente',
+    'Cerrar debe cerrar la ficha de ambiente',
   )
-  testResults.RUI1 = 'PASSED: Cero fichas al entrar, máximo una ficha abierta entre docentes/ambientes, sin botones roster'
+  await page.getByRole('tab', { name: /Docentes/ }).click()
+  testResults.RUI1 = 'PASSED: Cero fichas al entrar, una ficha modal con foco atrapado, Escape y retorno de foco, sin botones roster'
 
   // -------------------------------------------------------------
   // RUI2: Buscar y filtrar recursos de referencia/incorporados/locales, contadores

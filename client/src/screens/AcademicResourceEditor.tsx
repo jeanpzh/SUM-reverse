@@ -26,6 +26,7 @@ import {
   formatAvailabilitySummary,
 } from '../data/academicResources.ts'
 import { Dialog, DialogContent, DialogTitle } from '../components/ui/Dialog'
+import { Sheet, SheetContent, SheetTitle } from '../components/ui/Sheet'
 import './AcademicResourceEditor.css'
 
 export type AcademicResourceEditorProps = {
@@ -856,7 +857,7 @@ export function AcademicResourceEditor({
         </div>
       </div>
 
-      {/* Main Split: Searchable Table + At-most-one Inspector */}
+      {/* Searchable table; at most one resource sheet (Sheet overlay) */}
       <div className="academic-resource-workbench__split">
         {/* Table Pane */}
         <div className="academic-resource-workbench__table-pane">
@@ -1071,12 +1072,16 @@ export function AcademicResourceEditor({
 
         {/* Inspector Pane (Only open when a resource is inspected) */}
         {activeTab === 'teachers' && inspectedTeacher && (
-          <aside className="academic-resource-workbench__inspector-pane" aria-label="Ficha de docente">
+          <Sheet open onOpenChange={(open) => { if (!open) closeInspector() }}>
+          <SheetContent className="academic-resource-workbench__inspector-pane" aria-label="Ficha de docente"
+            showCloseButton={false} aria-describedby={undefined}>
             <div className="academic-resource-workbench__inspector-header">
               <div>
-                <h5 className="academic-resource-workbench__inspector-title">
-                  {inspectedTeacher.name || inspectedTeacher.id}
-                </h5>
+                <SheetTitle asChild>
+                  <h5 className="academic-resource-workbench__inspector-title">
+                    {inspectedTeacher.name || inspectedTeacher.id}
+                  </h5>
+                </SheetTitle>
                 <p className="academic-resource-workbench__inspector-subtitle">
                   {inspectedTeacher.isIncluded
                     ? teacherReferenceIds[inspectedTeacher.id]
@@ -1325,16 +1330,21 @@ export function AcademicResourceEditor({
                 })()
               )}
             </div>
-          </aside>
+          </SheetContent>
+          </Sheet>
         )}
 
         {activeTab === 'rooms' && inspectedRoom && (
-          <aside className="academic-resource-workbench__inspector-pane" aria-label="Ficha de ambiente">
+          <Sheet open onOpenChange={(open) => { if (!open) closeInspector() }}>
+          <SheetContent className="academic-resource-workbench__inspector-pane" aria-label="Ficha de ambiente"
+            showCloseButton={false} aria-describedby={undefined}>
             <div className="academic-resource-workbench__inspector-header">
               <div>
-                <h5 className="academic-resource-workbench__inspector-title">
-                  {inspectedRoom.name || inspectedRoom.id}
-                </h5>
+                <SheetTitle asChild>
+                  <h5 className="academic-resource-workbench__inspector-title">
+                    {inspectedRoom.name || inspectedRoom.id}
+                  </h5>
+                </SheetTitle>
                 <p className="academic-resource-workbench__inspector-subtitle">
                   {inspectedRoom.isIncluded
                     ? `${inspectedRoom.kind === 'laboratory' ? 'Laboratorio' : 'Aula'}${roomReferenceIds[inspectedRoom.id] ? ' · referencia sintética' : ' · ambiente local'}`
@@ -1474,7 +1484,8 @@ export function AcademicResourceEditor({
                 })()
               )}
             </div>
-          </aside>
+          </SheetContent>
+          </Sheet>
         )}
       </div>
 
