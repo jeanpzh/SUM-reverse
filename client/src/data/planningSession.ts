@@ -40,6 +40,13 @@ import {
 import type { PlanningPeriod, PlanningPolicy } from './academicScheduling.ts'
 
 export type PlanningStageId = 'preparacion' | 'horario' | 'revision' | 'aprobacion'
+export type PlanningPreparationView = 'resumen' | 'cursos' | 'recursos'
+
+export function parsePlanningView(value: unknown, stage: PlanningStageId = 'preparacion'): PlanningPreparationView | undefined {
+  if (stage !== 'preparacion') return undefined
+  return value === 'cursos' || value === 'recursos' ? value : 'resumen'
+}
+
 export type PlanningBlock = ReturnType<typeof aggregateAcademicBlocks>[number]
 
 // Client seam: the production adapter wraps the existing data functions; tests inject an in-memory one.
