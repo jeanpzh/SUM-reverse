@@ -1,40 +1,3 @@
-.planning-preparation-summary {
-  min-width: 0;
-  color: var(--planning-text);
-}
-
-.planning-preparation-summary h2 {
-  margin: 0 0 calc(var(--planning-spacing) * 4);
-  font-size: 1.125rem;
-}
-
-.planning-preparation-summary__counts {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: calc(var(--planning-spacing) * 4);
-  margin: 0;
-  padding: calc(var(--planning-spacing) * 4);
-  border: 1px solid var(--planning-border);
-  border-radius: var(--planning-radius-panel);
-  background: var(--planning-surface);
-}
-
-.planning-preparation-summary__counts > div {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.planning-preparation-summary__counts dt {
-  color: var(--planning-muted);
-  font-size: 0.8125rem;
-}
-
-.planning-preparation-summary__counts dd {
-  margin: calc(var(--planning-spacing) * 2) 0 0;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
 .planning-preparation-views,
 .planning-stage-actions {
   display: flex;
@@ -78,10 +41,4 @@
 
 .planning-preparation-view {
   min-width: 0;
-}
-
-@media (max-width: 640px) {
-  .planning-preparation-summary__counts {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }

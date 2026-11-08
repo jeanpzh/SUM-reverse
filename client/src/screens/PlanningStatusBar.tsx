@@ -2,7 +2,10 @@ import type { AcademicProposal } from '../data/academicScheduling'
 import { academicSectionCoverage, academicSectionLabel, academicSessionLabel, formatAcademicDuration } from '../data/academicScheduling'
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/Dialog'
-import './PlanningStatusBar.css'
+import { Button } from '../components/ui/Button'
+import { Badge } from '../components/ui/Badge'
+import { Alert, AlertDescription } from '../components/ui/Alert'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../components/ui/Collapsible'
 
 const diagnosticLabels: Record<string, string> = {
   PARTIAL_PROPOSAL: 'Propuesta parcial',
@@ -47,7 +50,8 @@ function countAssignedConflicts(assignments: AcademicProposal['assignments']): n
 export function PlanningStatusBar({ primaryActionId, proposal, onRegenerate, onReviewPending, isLocked = false }: PlanningStatusBarProps) {
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
   const diagnosticGroups = Object.values(proposal.diagnostics.reduce<Record<string, typeof proposal.diagnostics>>((groups, diagnostic) => {
-    ;(groups[diagnostic.code] ??= []).push(diagnostic)
+    const group = groups[diagnostic.code] ??= []
+    group.push(diagnostic)
     return groups
   }, {})).sort((a, b) => Number(b[0]?.code === 'PARTIAL_PROPOSAL') - Number(a[0]?.code === 'PARTIAL_PROPOSAL'))
   const coverage = academicSectionCoverage(proposal)
@@ -85,62 +89,62 @@ export function PlanningStatusBar({ primaryActionId, proposal, onRegenerate, onR
 
   return (
     <section
-      className={`academic-scheduling__result planning-status-bar academic-scheduling__result--${proposal.status}`}
+      className="planning-status-bar box-border flex min-w-0 flex-col gap-3 rounded-planning-panel border border-solid border-border bg-background px-4 py-3 text-foreground [overflow-wrap:anywhere]"
       aria-labelledby="academic-scheduling-result"
       role="status"
     >
-      <div className="planning-status-bar__header">
-        <div className="planning-status-bar__state-row">
-          <span className={`planning-status-bar__badge planning-status-bar__badge--${proposal.status}`}>
+      <div className="planning-status-bar__header flex min-w-0 flex-col gap-2">
+        <div className="planning-status-bar__state-row flex min-w-0 flex-wrap items-center gap-2">
+          <Badge variant={proposal.status === 'complete' ? 'success' : proposal.status === 'invalid-input' ? 'destructive' : 'warning'}>
             {badgeText}
-          </span>
-          <span className="planning-status-bar__status-full">
+          </Badge>
+          <span className="planning-status-bar__status-full text-[13px] text-muted-foreground">
             {statusLabel(proposal.status)}
           </span>
         </div>
-        <h3 id="academic-scheduling-result" className="planning-status-bar__headline">
+        <h3 id="academic-scheduling-result" className="planning-status-bar__headline m-0 text-lg font-semibold leading-6 tabular-nums">
           {headline}
         </h3>
-        <p className="planning-status-bar__subtext">
+        <p className="planning-status-bar__subtext m-0 text-sm text-muted-foreground tabular-nums">
           {proposal.diagnostics.length > 0
             ? `${coverage.complete}/${totalSections} secciones colocadas · ${proposal.diagnostics.length} avisos`
             : subtext}
         </p>
-        {proposal.diagnostics.length > 0 && <button type="button" className="planning-status-bar__notices" aria-haspopup="dialog" onClick={() => setDiagnosticsOpen(true)}>Ver avisos</button>}
+        {proposal.diagnostics.length > 0 && <Button type="button" variant="link" size="sm" className="w-fit justify-start px-0 underline" aria-haspopup="dialog" onClick={() => setDiagnosticsOpen(true)}>Ver avisos</Button>}
         {diagnosisText && (
-          <p className="planning-status-bar__diagnosis">
-            {diagnosisText}
-          </p>
+          <Alert variant={proposal.status === 'invalid-input' ? 'destructive' : 'warning'}>
+            <AlertDescription>{diagnosisText}</AlertDescription>
+          </Alert>
         )}
       </div>
 
-      <div className="planning-status-bar__actions">
+      <div className="planning-status-bar__actions flex min-w-0 flex-wrap items-center gap-2">
         {(coverage.partial + coverage.pending) > 0 && onReviewPending && (
-          <button
+          <Button
             type="button"
-            className={`academic-scheduling__button${primaryActionId === 'resolve-pending' ? '' : ' academic-scheduling__button--secondary'}`}
+            variant={primaryActionId === 'resolve-pending' ? 'default' : 'outline'}
             onClick={onReviewPending}
           >
             Revisar pendientes
-          </button>
+          </Button>
         )}
         {onRegenerate && (
-          <button
+          <Button
             type="button"
-            className="academic-scheduling__button academic-scheduling__button--secondary"
+            variant="outline"
             disabled={isLocked}
             onClick={onRegenerate}
           >
             Volver a generar
-          </button>
+          </Button>
         )}
       </div>
 
-      <details className="planning-status-bar__details">
-        <summary className="planning-status-bar__details-summary">
-          Detalles de búsqueda
-        </summary>
-        <div className="planning-status-bar__details-content">
+      <Collapsible className="min-w-0 border-0 border-t border-solid border-border pt-2">
+        <CollapsibleTrigger asChild>
+          <Button type="button" variant="ghost" size="sm">Detalles de búsqueda</Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="planning-status-bar__details-content mt-2 flex min-w-0 flex-col gap-2">
           <dl className="academic-scheduling__counts">
             <div><dt>Secciones</dt><dd>{proposal.counts.sections}</dd></div>
             <div><dt>Completas</dt><dd>{coverage.complete}</dd></div>
@@ -175,22 +179,24 @@ export function PlanningStatusBar({ primaryActionId, proposal, onRegenerate, onR
               </p>
             </div>
           )}
-        </div>
-      </details>
+        </CollapsibleContent>
+      </Collapsible>
       <Dialog open={diagnosticsOpen} onOpenChange={setDiagnosticsOpen}>
-        <DialogContent className="planning-status-bar__dialog">
+        <DialogContent className="planning-status-bar__dialog min-w-0">
           <DialogHeader>
             <DialogTitle>Avisos de la generación</DialogTitle>
             <DialogDescription>{proposal.diagnostics.length} avisos agrupados por tipo</DialogDescription>
           </DialogHeader>
-          <div className="planning-status-bar__groups">
+          <div className="planning-status-bar__groups grid min-w-0 gap-3">
             {diagnosticGroups.map((group) => {
               const code = group[0].code
-              return <details key={code} open={code === 'PARTIAL_PROPOSAL'}>
-                <summary>{diagnosticLabels[code] ?? 'Otro aviso'} <span>{group.length}</span></summary>
-                {code === 'PARTIAL_PROPOSAL' && <p>La propuesta contiene secciones que no pudieron colocarse por completo.</p>}
-                <ul>{group.map((diagnostic, index) => <li key={`${code}-${index}`}>{diagnostic.message}{diagnostic.sessionIds.length > 0 && <span> Sesiones: {diagnostic.sessionIds.map((id) => academicSessionLabel(proposal, id)).join('; ')}.</span>}</li>)}</ul>
-              </details>
+              return <Collapsible key={code} defaultOpen={code === 'PARTIAL_PROPOSAL'} className="min-w-0 border-0 border-b border-solid border-border pb-3">
+                <CollapsibleTrigger asChild><Button type="button" variant="ghost" className="w-full justify-between text-left">{diagnosticLabels[code] ?? 'Otro aviso'} <Badge variant="secondary">{group.length}</Badge></Button></CollapsibleTrigger>
+                <CollapsibleContent className="text-sm [&_ul]:grid [&_ul]:gap-2 [&_ul]:pl-5 [overflow-wrap:anywhere]">
+                  {code === 'PARTIAL_PROPOSAL' && <p>La propuesta contiene secciones que no pudieron colocarse por completo.</p>}
+                  <ul>{group.map((diagnostic, index) => <li key={`${code}-${index}`}>{diagnostic.message}{diagnostic.sessionIds.length > 0 && <span> Sesiones: {diagnostic.sessionIds.map((id) => academicSessionLabel(proposal, id)).join('; ')}.</span>}</li>)}</ul>
+                </CollapsibleContent>
+              </Collapsible>
             })}
           </div>
         </DialogContent>

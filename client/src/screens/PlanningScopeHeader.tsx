@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react'
 import { PageTitle } from '../components/Common'
+import { Badge } from '../components/ui/Badge'
+import { Button } from '../components/ui/Button'
+import { Separator } from '../components/ui/Separator'
 import type { AcademicDraftState } from '../../../shared/programacion-academica-api.mjs'
 
 export interface PlanningScopeHeaderProps {
@@ -49,37 +52,40 @@ export function PlanningScopeHeader({
   const draftStateText = formatDraftStateLabel(draftVersion, workspaceDirty, savedDraftState, draftId)
 
   return (
-    <header className="planning-scope-header" aria-label="Ámbito y estado de programación">
-      <div className="planning-scope-header__top">
-        <div className="planning-scope-header__context">
-          <span className="planning-scope-header__scope">{school} / {period}</span>
-          <span className="planning-scope-header__badge">Demo · datos sintéticos</span>
+    <header className="planning-scope-header mb-3 box-border flex min-w-0 flex-col gap-2 rounded-planning-panel border border-solid border-border bg-background px-4 py-3 text-foreground [overflow-wrap:anywhere]" aria-label="Ámbito y estado de programación">
+      <div className="planning-scope-header__top flex min-w-0 flex-wrap items-center justify-between gap-3">
+        <div className="planning-scope-header__context flex min-w-0 flex-wrap items-center gap-2">
+          <span className="planning-scope-header__scope text-sm font-semibold tabular-nums">{school} / {period}</span>
+          <Badge variant="secondary">Demo · datos sintéticos</Badge>
         </div>
-        <div className="planning-scope-header__actions">
-          <span
-            className={`planning-scope-header__draft-state academic-scheduling__draft-note ${workspaceDirty ? 'planning-scope-header__draft-state--dirty' : ''}`}
+        <div className="planning-scope-header__actions flex min-w-0 flex-wrap items-center gap-3">
+          <Badge
+            variant={workspaceDirty ? 'warning' : 'outline'}
+            className="planning-scope-header__draft-state"
             role="status"
           >
             {draftStateText}
-          </span>
-          <div className="planning-scope-header__save-wrapper">
-            <button
+          </Badge>
+          <div className="planning-scope-header__save-wrapper flex min-w-0 flex-wrap items-center gap-2">
+            <Button
               type="button"
-              className="academic-scheduling__button academic-scheduling__button--secondary planning-scope-header__save-button"
+              variant="outline"
+              className="planning-scope-header__save-button"
               disabled={!canSave || draftBusy}
               onClick={onSave}
             >
               {draftBusy ? 'Guardando…' : 'Guardar propuesta'}
-            </button>
+            </Button>
             {!canSave && disabledReason && (
-              <span className="planning-scope-header__disabled-reason">{disabledReason}</span>
+              <span className="planning-scope-header__disabled-reason text-[13px] text-muted-foreground">{disabledReason}</span>
             )}
           </div>
         </div>
       </div>
-      <div className="planning-scope-header__title-row">
+      <Separator />
+      <div className="planning-scope-header__title-row flex min-w-0 flex-wrap items-baseline justify-between gap-3 [&_.page-title]:m-0">
         <PageTitle>Programación académica asistida</PageTitle>
-        <p className="academic-scheduling__notice planning-scope-header__disclaimer" role="note">
+        <p className="planning-scope-header__disclaimer m-0 flex min-w-0 flex-wrap gap-1 text-[13px] leading-5 text-muted-foreground [&_strong]:text-foreground" role="note">
           <strong>Prototipo local con datos sintéticos.</strong>
           <span>No es una pantalla oficial SUM y no requiere ni otorga permisos administrativos.</span>
         </p>
