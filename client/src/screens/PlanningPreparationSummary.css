@@ -8,18 +8,30 @@
   min-width: 0;
 }
 
-.planning-preparation-views a {
-  padding: calc(var(--planning-spacing) * 2) calc(var(--planning-spacing) * 3);
-  border: 1px solid var(--planning-border);
+.planning-preparation-views {
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  gap: 4px;
+  padding: 4px;
   border-radius: var(--planning-radius-control);
-  background: var(--planning-surface);
-  color: var(--planning-primary);
+  background: var(--planning-canvas);
+}
+
+.planning-preparation-views a {
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--planning-radius-control);
+  color: var(--planning-muted);
+  font-size: 14px;
   text-decoration: none;
 }
 
 .planning-preparation-views a[aria-current='page'] {
-  background: var(--planning-selected);
-  border-color: var(--planning-primary);
+  background: var(--planning-surface);
+  color: var(--planning-text);
+  border-color: var(--planning-border);
   font-weight: 600;
 }
 
@@ -28,7 +40,7 @@
   outline-offset: 2px;
 }
 
-.planning-stage-actions .academic-scheduling__button {
+.planning-stage-actions [data-slot='button'] {
   max-width: 100%;
   white-space: normal;
   overflow-wrap: anywhere;

@@ -10,9 +10,9 @@ export interface PlanningStageNavProps {
 
 export function PlanningStageNav({ currentStage }: PlanningStageNavProps): ReactNode {
   return (
-    <nav className="planning-stage-nav mb-4 min-w-0 border-0 border-b border-solid border-border" aria-label="Etapas de programación">
+    <nav id="planning-tour-stages" className="planning-stage-nav mb-4 min-w-0 border-0 border-b border-solid border-border" aria-label="Etapas de programación">
       <ol className="planning-stage-nav__list m-0 flex min-w-0 list-none flex-wrap gap-1 p-0">
-        {PLANNING_STAGES.map((stage) => {
+        {PLANNING_STAGES.map((stage, index) => {
           const isActive = stage.id === currentStage
           return (
             <li key={stage.id} className="planning-stage-nav__item min-w-0">
@@ -21,9 +21,12 @@ export function PlanningStageNav({ currentStage }: PlanningStageNavProps): React
                   to="/local/programacion-academica"
                   search={{ etapa: stage.id }}
                   className={`planning-stage-nav__link ${isActive ? 'planning-stage-nav__link--active' : ''}`}
+                  aria-label={stage.label}
                   aria-current={isActive ? 'step' : undefined}
                 >
+                  <span aria-hidden="true" className="tabular-nums">{index + 1}.</span>
                   <span className="planning-stage-nav__label">{stage.label}</span>
+                  {isActive && <span aria-hidden="true" className="text-[13px]">· Actual</span>}
                 </Link>
               </Button>
             </li>
