@@ -63,7 +63,9 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
   const canPublish = canUseRelease && draftState === 'approved'
     && currentPreview?.id === draftId && currentPreview.version === draftVersion && currentPreview.state === 'approved'
     && Boolean(publicationList) && !listLoading && !listError && !selectedPublicationId
-  const publishDisabledReason = !publicationList || listLoading
+  const publishDisabledReason = draftState === 'published' ? 'Esta versión ya está publicada'
+    : draftState !== 'approved' ? 'Primero aprueba la versión'
+    : !publicationList || listLoading
     ? 'Cargando publicaciones…'
     : listError ? 'No se pudieron cargar las publicaciones'
     : selectedPublicationId ? 'Selecciona la versión actual (estás consultando una publicación anterior)'
