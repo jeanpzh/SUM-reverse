@@ -224,8 +224,8 @@
 }
 
 /* Horario section inspector: a non-modal shadcn Sheet (components/ui) fixed to the right edge. */
-.planning-inspector--sheet.planning-inspector--sheet {
-  width: min(100vw, 22.5rem);
+.planning-root .planning-inspector--sheet.planning-inspector--sheet {
+  width: min(100%, 22.5rem);
   padding: calc(var(--planning-spacing) * 4);
   gap: calc(var(--planning-spacing) * 3);
 }
@@ -375,14 +375,14 @@
 
 /* Preparación course panel below 1024px: fixed drawer, unchanged from before the Sheet. */
 @media (max-width: 1023.98px) {
-  .planning-inspector:not(.planning-inspector--sheet) {
+  .planning-root .planning-inspector:not(.planning-inspector--sheet) {
     position: fixed;
     top: 0;
     right: 0;
     bottom: 0;
-    width: min(100vw, 360px);
+    width: min(100%, 360px);
     z-index: 1000;
-    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--planning-shadow);
     border-radius: 0;
     border-top: none;
     border-bottom: none;

@@ -192,7 +192,7 @@ export async function saveAcademicDraft(request: AcademicDraftSaveRequest,
   try {
     validateAcademicDraftSaveRequest(request)
   } catch (error) {
-    throw new Error(academicPlanningErrorMessage(error))
+    throw new Error(academicPlanningErrorMessage(error), { cause: error })
   }
   const body = await readJson(await fetchImpl(`${ACADEMIC_API}/borradores/guardar`, {
     method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' },

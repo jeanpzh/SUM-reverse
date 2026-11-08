@@ -162,8 +162,8 @@
 
 /* Position, focus trap and shadow belong to Sheet/Dialog. */
 .academic-resource-workbench__inspector-pane.academic-resource-workbench__inspector-pane {
-  width: min(36rem, 100vw);
-  max-width: 100vw;
+  width: min(36rem, 100%);
+  max-width: 100%;
   padding: 0;
   gap: 0;
   overflow: hidden;
@@ -340,7 +340,7 @@
 }
 
 .academic-resource-modal.academic-resource-modal {
-  width: min(640px, calc(100vw - 32px));
+  width: min(640px, calc(100% - 32px));
   max-width: 640px;
   display: flex;
   flex-direction: column;

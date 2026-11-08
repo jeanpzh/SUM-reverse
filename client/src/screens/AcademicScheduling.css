@@ -40,8 +40,8 @@
 .academic-scheduling__course label { display: grid; gap: 0.35rem; margin-top: 0.8rem; font-size: var(--text-meta); font-weight: 600; }
 .academic-scheduling__course input:not([type='checkbox']),
 .academic-scheduling__course select { width: 100%; box-sizing: border-box; padding: 0.5rem 0.6rem; border: 1px solid var(--planning-border); border-radius: var(--planning-radius-control); background: var(--planning-surface); color: var(--planning-text); font: inherit; font-variant-numeric: tabular-nums; }
-.academic-scheduling__course input:disabled,
-.academic-scheduling__course select:disabled { opacity: 0.65; }
+.planning-root .academic-scheduling__course input:disabled,
+.planning-root .academic-scheduling__course select:disabled { color: var(--planning-muted); background: var(--planning-canvas); cursor: not-allowed; }
 .academic-scheduling__course input:focus-visible { outline: 2px solid var(--planning-primary); outline-offset: 1px; }
 .academic-scheduling__course select:focus-visible { outline: 2px solid var(--planning-primary); outline-offset: 1px; }
 .academic-scheduling__history { margin-top: 0.85rem; border-top: 1px solid var(--planning-border); padding-top: 0.65rem; }

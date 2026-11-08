@@ -24,15 +24,6 @@ export interface PlanningStatusBarProps {
   isLocked?: boolean
 }
 
-function statusLabel(status: AcademicProposal['status']) {
-  switch (status) {
-    case 'complete': return 'Programación completa'
-    case 'impossible': return 'Sin solución completa en el dominio configurado'
-    case 'search-limit': return 'Búsqueda inconclusa por límite computacional'
-    case 'invalid-input': return 'Demanda fuera de los límites del generador'
-  }
-}
-
 function countAssignedConflicts(assignments: AcademicProposal['assignments']): number {
   let count = 0
   for (let i = 0; i < assignments.length; i++) {
@@ -63,7 +54,7 @@ export function PlanningStatusBar({ primaryActionId, proposal, onRegenerate, onR
   const conflicts = countAssignedConflicts(proposal.assignments)
 
   let badgeText = 'Completa'
-  let headline = `Programación completa · ${scheduled}/${required} componentes`
+  let headline = `${scheduled}/${required} componentes asignados`
   let subtext = `${coverage.complete}/${totalSections} secciones completas · ${conflicts} cruces en lo asignado`
   let diagnosisText: string | null = null
 
@@ -101,15 +92,10 @@ export function PlanningStatusBar({ primaryActionId, proposal, onRegenerate, onR
             {badgeText}
           </Badge>
           {isDraft && <Badge variant="outline">Borrador · sin confirmar</Badge>}
-          {!diagnosisText && (
-            <span className="planning-status-bar__status-full text-[13px] text-muted-foreground">
-              {statusLabel(proposal.status)}
-            </span>
-          )}
+          <h3 id="academic-scheduling-result" className="planning-status-bar__headline m-0 min-w-0 text-lg font-semibold leading-6 tabular-nums">
+            {headline}
+          </h3>
         </div>
-        <h3 id="academic-scheduling-result" className="planning-status-bar__headline m-0 text-lg font-semibold leading-6 tabular-nums">
-          {headline}
-        </h3>
         <p className="planning-status-bar__subtext m-0 text-sm text-muted-foreground tabular-nums">
           {proposal.diagnostics.length > 0
             ? `${coverage.complete}/${totalSections} secciones colocadas · ${proposal.diagnostics.length} avisos`

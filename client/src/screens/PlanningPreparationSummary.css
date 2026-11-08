@@ -47,8 +47,8 @@
   text-decoration: none;
 }
 
-.planning-preparation-view[hidden] {
-  display: none !important;
+.planning-root .planning-preparation-view[hidden] {
+  display: none;
 }
 
 .planning-preparation-view {

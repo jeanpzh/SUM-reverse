@@ -87,6 +87,7 @@
   font-size: 1.5rem;
   line-height: 1.25;
   color: var(--planning-text);
+  text-wrap: balance;
 }
 
 .planning-main {
@@ -116,12 +117,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .planning-root *,
-  .planning-root *::before,
-  .planning-root *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+  :root .planning-root *,
+  :root .planning-root *::before,
+  :root .planning-root *::after {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
   }
 }
 
@@ -146,3 +147,47 @@
 .planning-root { box-sizing: border-box; }
 .planning-root *, .planning-root *::before, .planning-root *::after { box-sizing: inherit; }
 .planning-root select { font: inherit; color: inherit; background: var(--planning-surface); border: 1px solid var(--planning-border); border-radius: var(--planning-radius-control); padding: .25rem; }
+
+/* Keep the migrated controls consistent within the internal workbench. */
+.planning-root [data-slot='input'],
+.planning-root [data-slot='native-select'] {
+  height: 2.5rem;
+  min-height: 2.5rem;
+  padding-block: 0.5rem;
+}
+
+.planning-root [data-slot='native-select'][multiple],
+.planning-root [data-slot='native-select'][size]:not([size='1']) {
+  height: auto;
+}
+
+.planning-root [data-slot='button']:enabled:active {
+  opacity: 0.85;
+}
+
+.planning-root :focus-visible {
+  transition: none;
+}
+
+.planning-root .academic-publication__table th,
+.planning-root .academic-teacher-review__table-wrap th {
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+.planning-root .academic-publication__table td,
+.planning-root .academic-teacher-review__table-wrap td {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.planning-root .academic-teacher-review__field,
+.planning-root .academic-publication__actions > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.planning-root [data-slot='button']:disabled,
+.planning-root :is(input, select, textarea):disabled {
+  cursor: not-allowed;
+}
