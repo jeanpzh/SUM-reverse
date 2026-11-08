@@ -1,3 +1,7 @@
+import { Button } from '../components/ui/Button'
+import { Badge } from '../components/ui/Badge'
+import { Input } from '../components/ui/Input'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AcademicCatalog, AcademicProposal } from '../data/academicScheduling'
 import {
@@ -133,13 +137,13 @@ export function PlanningSectionsTable({
       <div className="planning-sections__toolbar">
         <div className="planning-sections__toolbar-left">
           <h3 className="planning-sections__title">Secciones</h3>
-          <span className="planning-sections__count">
+          <Badge variant="secondary" className="planning-sections__count">
             Mostrando {filteredSectionsCount} de {totalSectionsCount}
-          </span>
+          </Badge>
         </div>
 
         <div className="planning-sections__toolbar-right">
-          <input
+          <Input
             type="search"
             className="planning-sections__search"
             placeholder="Buscar por curso, sección o recurso…"
@@ -155,57 +159,57 @@ export function PlanningSectionsTable({
           />
 
           <div className="planning-sections__view-toggle" role="group" aria-label="Vista">
-            <button
+            <Button variant="outline"
               type="button"
               className={`planning-sections__toggle-btn ${viewMode === 'tabla' ? 'planning-sections__toggle-btn--active' : ''}`}
               aria-pressed={viewMode === 'tabla'}
               onClick={() => onToggleView('tabla')}
             >
               Tabla
-            </button>
-            <button
+            </Button>
+            <Button variant="outline"
               type="button"
               className={`planning-sections__toggle-btn ${viewMode === 'semana' ? 'planning-sections__toggle-btn--active' : ''}`}
               aria-pressed={viewMode === 'semana'}
               onClick={() => onToggleView('semana')}
             >
               Semana
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
       <div className="planning-sections__table-wrapper">
-        <table className="academic-scheduling__sections-table planning-sections__table">
-          <thead>
-            <tr>
-              <th scope="col">Sección</th>
-              <th scope="col">Capacidad</th>
-              <th scope="col">Docente</th>
-              <th scope="col">Ambiente</th>
-              <th scope="col">Horario</th>
-              <th scope="col">Estado</th>
-              <th scope="col">Acciones</th>
-            </tr>
-          </thead>
+        <Table stickyHeader className="academic-scheduling__sections-table planning-sections__table">
+          <TableHeader>
+            <TableRow>
+              <TableHead scope="col">Sección</TableHead>
+              <TableHead scope="col">Capacidad</TableHead>
+              <TableHead scope="col">Docente</TableHead>
+              <TableHead scope="col">Ambiente</TableHead>
+              <TableHead scope="col">Horario</TableHead>
+              <TableHead scope="col">Estado</TableHead>
+              <TableHead scope="col">Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
           {courseGroups.length === 0 ? (
-            <tbody>
-              <tr>
-                <td colSpan={7} className="planning-sections__empty">
+            <TableBody>
+              <TableRow>
+                <TableCell colSpan={7} className="planning-sections__empty">
                   No se encontraron secciones que coincidan con la búsqueda.
-                </td>
-              </tr>
-            </tbody>
+                </TableCell>
+              </TableRow>
+            </TableBody>
           ) : (
             courseGroups.map((group) => {
               const sectionCountText = `${group.sections.length} ${group.sections.length === 1 ? 'sección' : 'secciones'}`
               return (
-                <tbody key={group.courseId} className="planning-sections__group">
-                  <tr className="planning-sections__group-row">
-                    <th colSpan={7} scope="colgroup" className="planning-sections__group-header">
+                <TableBody key={group.courseId} className="planning-sections__group">
+                  <TableRow className="planning-sections__group-row">
+                    <TableHead colSpan={7} scope="colgroup" className="planning-sections__group-header">
                       {group.courseId} · {group.courseName} · Demanda {group.demand} · {sectionCountText}
-                    </th>
-                  </tr>
+                    </TableHead>
+                  </TableRow>
                   {group.sections.map((section) => {
                     const isSelected = selectedSectionId === section.sectionId
                     const sBlocks = blocksBySection.get(section.sectionId) ?? []
@@ -235,7 +239,7 @@ export function PlanningSectionsTable({
                                 .map((b) => `${dayNames[b.day]} ${formatAcademicMinute(b.startMinute)}–${formatAcademicMinute(b.endMinute)}`)
                                 .join(' · ')}
                             </span>
-                            <button
+                            <Button variant="ghost" size="sm"
                               type="button"
                               className="planning-sections__link-button"
                               onClick={(e) => {
@@ -244,39 +248,40 @@ export function PlanningSectionsTable({
                               }}
                             >
                               Ver bloques
-                            </button>
+                            </Button>
                           </div>
                         )
                       }
                     }
 
                     return (
-                      <tr
+                      <TableRow
                         key={section.sectionId}
                         data-section-id={section.sectionId}
                         className={`planning-sections__row ${isPending ? 'planning-sections__row--pending' : ''} ${isSelected ? 'planning-sections__row--selected' : ''}`}
                         onClick={() => onSelectSection(section.sectionId)}
                         aria-selected={isSelected}
+                        data-state={isSelected ? 'selected' : undefined}
                       >
-                        <td className="planning-sections__cell-section">{label}</td>
-                        <td className="planning-sections__cell-capacity">{section.capacity}</td>
-                        <td className="planning-sections__cell-teacher">{teacherText}</td>
-                        <td className="planning-sections__cell-room">{roomText}</td>
-                        <td className="planning-sections__cell-schedule">{scheduleNode}</td>
-                        <td className="planning-sections__cell-status">
+                        <TableCell className="planning-sections__cell-section">{label}</TableCell>
+                        <TableCell className="planning-sections__cell-capacity">{section.capacity}</TableCell>
+                        <TableCell className="planning-sections__cell-teacher">{teacherText}</TableCell>
+                        <TableCell className="planning-sections__cell-room">{roomText}</TableCell>
+                        <TableCell className="planning-sections__cell-schedule">{scheduleNode}</TableCell>
+                        <TableCell className="planning-sections__cell-status">
                           {isPending ? (
-                            <span className="planning-sections__status planning-sections__status--pending">
+                            <Badge variant="warning" className="planning-sections__status planning-sections__status--pending">
                               Pendiente
-                            </span>
+                            </Badge>
                           ) : (
-                            <span className="planning-sections__status planning-sections__status--complete">
+                            <Badge variant="secondary" className="planning-sections__status planning-sections__status--complete">
                               Completa{isAdjusted ? ' · Ajustada' : ''}
-                            </span>
+                            </Badge>
                           )}
-                        </td>
-                        <td className="planning-sections__cell-actions">
+                        </TableCell>
+                        <TableCell className="planning-sections__cell-actions">
                           <div className="planning-sections__row-actions">
-                            <button
+                            <Button variant="outline"
                               type="button"
                               className="planning-sections__action-button"
                               aria-label={`Inspeccionar sección ${label} de ${section.courseName}`}
@@ -286,11 +291,10 @@ export function PlanningSectionsTable({
                               }}
                             >
                               Inspeccionar
-                            </button>
+                            </Button>
                             {sBlocks.length > 0 && (
-                              <button
+                              <Button variant="ghost" size="sm"
                                 type="button"
-                                className="academic-scheduling__text-button"
                                 disabled={isLocked}
                                 aria-expanded={isSelected}
                                 aria-controls="academic-scheduling-manual-editor"
@@ -301,18 +305,18 @@ export function PlanningSectionsTable({
                                 }}
                               >
                                 Editar horario
-                              </button>
+                              </Button>
                             )}
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )
                   })}
-                </tbody>
+                </TableBody>
               )
             })
           )}
-        </table>
+        </Table>
       </div>
     </div>
   )

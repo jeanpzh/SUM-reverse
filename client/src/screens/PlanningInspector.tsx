@@ -1,3 +1,8 @@
+import { Button } from '../components/ui/Button'
+import { Badge } from '../components/ui/Badge'
+import { Input } from '../components/ui/Input'
+import { NativeSelect } from '../components/ui/NativeSelect'
+import { Label } from '../components/ui/Label'
 import { useMemo } from 'react'
 import type {
   AcademicAdjustment,
@@ -107,14 +112,14 @@ export function PlanningInspector({
               {section.courseId} · Capacidad {section.capacity}
             </p>
           </div>
-          <button
+          <Button variant="ghost"
             type="button"
             className="planning-inspector__close-btn"
             onClick={onClose}
             aria-label="Cerrar inspector"
           >
             ✕
-          </button>
+          </Button>
         </div>
 
         {isEditing && activeBlock && (
@@ -133,9 +138,9 @@ export function PlanningInspector({
                 </p>
               </div>
               {sectionBlocks.length > 1 && (
-                <label className="academic-scheduling__block-select">
+                <Label className="academic-scheduling__block-select">
                   Bloque horario
-                  <select
+                  <NativeSelect
                     aria-label={`Bloque horario ${activeBlock.sectionId}`}
                     value={activeBlock.sessionIds.join('|')}
                     disabled={adjusting}
@@ -149,8 +154,8 @@ export function PlanningInspector({
                         {dayNamesFull[b.day]} {formatAcademicMinute(b.startMinute)}–{formatAcademicMinute(b.endMinute)} · {b.componentDetails.map((c) => c.type).join(' + ')}
                       </option>
                     ))}
-                  </select>
-                </label>
+                  </NativeSelect>
+                </Label>
               )}
             </header>
 
@@ -162,17 +167,17 @@ export function PlanningInspector({
               )}
               <div className="planning-inspector__placement-comparison" aria-label="Comparación de ubicación del bloque">
                 <div className="planning-inspector__placement-item">
-                  <span className="planning-inspector__placement-badge planning-inspector__placement-badge--current">
+                  <Badge variant="outline" className="planning-inspector__placement-badge planning-inspector__placement-badge--current">
                     Ubicación actual
-                  </span>
+                  </Badge>
                   <span className="planning-inspector__placement-val">
                     {dayNamesFull[activeBlock.day]} {formatAcademicMinute(activeBlock.startMinute)}–{formatAcademicMinute(activeBlock.endMinute)}
                   </span>
                 </div>
                 <div className="planning-inspector__placement-item">
-                  <span className="planning-inspector__placement-badge planning-inspector__placement-badge--proposed">
+                  <Badge variant="outline" className="planning-inspector__placement-badge planning-inspector__placement-badge--proposed">
                     Ubicación propuesta
-                  </span>
+                  </Badge>
                   <span className="planning-inspector__placement-val">
                     {dayNamesFull[editingBlock.day]} {formatAcademicMinute(editingBlock.startMinute)}–{editingBlock.startMinute + activeBlock.durationMinutes <= 1440 ? formatAcademicMinute(editingBlock.startMinute + activeBlock.durationMinutes) : 'fuera del día'}
                   </span>
@@ -183,20 +188,20 @@ export function PlanningInspector({
                 Vista previa: {dayNamesFull[editingBlock.day]} {formatAcademicMinute(editingBlock.startMinute)}–{editingBlock.startMinute + activeBlock.durationMinutes <= 1440 ? formatAcademicMinute(editingBlock.startMinute + activeBlock.durationMinutes) : 'fuera del día'} · duración conservada {formatAcademicDuration(activeBlock.durationMinutes)}.{section.deliveryMode === 'split' ? ' Cambiar docente modifica la responsabilidad de toda la sección; los demás bloques mantienen sus horarios.' : ' Se conserva el bloque continuo completo.'}
               </p>
 
-              <label>
+              <Label>
                 Duración (solo lectura)
-                <input
+                <Input
                   type="text"
                   readOnly
                   disabled
                   value={formatAcademicDuration(activeBlock.durationMinutes)}
                   aria-label={`Duración ${activeBlock.sectionId}`}
                 />
-              </label>
+              </Label>
 
-              <label>
+              <Label>
                 Docente responsable
-                <select
+                <NativeSelect
                   aria-label={`Docente revisión ${activeBlock.sectionId}`}
                   value={editingBlock.teacherId}
                   disabled={adjusting}
@@ -209,12 +214,12 @@ export function PlanningInspector({
                         {teacher.name}
                       </option>
                     ))}
-                </select>
-              </label>
+                </NativeSelect>
+              </Label>
 
-              <label>
+              <Label>
                 Día
-                <select
+                <NativeSelect
                   aria-label={`Día revisión ${activeBlock.sectionId}`}
                   value={editingBlock.day}
                   disabled={adjusting}
@@ -225,12 +230,12 @@ export function PlanningInspector({
                       {day}
                     </option>
                   ))}
-                </select>
-              </label>
+                </NativeSelect>
+              </Label>
 
-              <label>
+              <Label>
                 Hora de inicio
-                <input
+                <Input
                   aria-label={`Inicio revisión ${activeBlock.sectionId}`}
                   type="time"
                   step={catalog?.startStepMinutes ? catalog.startStepMinutes * 60 : 1800}
@@ -243,7 +248,7 @@ export function PlanningInspector({
                     }
                   }}
                 />
-              </label>
+              </Label>
 
               <div className="academic-scheduling__manual-components">
                 {activeAssignments.map((assignment, index) => {
@@ -254,9 +259,9 @@ export function PlanningInspector({
                       (!originalRoom?.kind || room.kind === originalRoom.kind)
                   )
                   return (
-                    <label key={assignment.sessionId}>
+                    <Label key={assignment.sessionId}>
                       {assignment.sessionType ?? 'Componente'} · {formatAcademicDuration(assignment.endMinute - assignment.startMinute)}
-                      <select
+                      <NativeSelect
                         aria-label={`Ambiente ${assignment.sessionType ?? index + 1} revisión ${activeBlock.sectionId}`}
                         value={editingBlock.roomIds[index] ?? ''}
                         disabled={adjusting}
@@ -272,16 +277,15 @@ export function PlanningInspector({
                             {room.name} · capacidad {room.capacity}
                           </option>
                         ))}
-                      </select>
-                    </label>
+                      </NativeSelect>
+                    </Label>
                   )
                 })}
               </div>
 
               <div className="academic-scheduling__manual-actions">
-                <button
+                <Button variant="outline"
                   type="button"
-                  className="academic-scheduling__button"
                   disabled={
                     adjusting ||
                     !(proposalResources?.teachers ?? []).some((t: AcademicPlanningResources['teachers'][number]) => t.courseIds.includes(activeBlock.courseId))
@@ -289,15 +293,14 @@ export function PlanningInspector({
                   onClick={() => void onSubmitEdit()}
                 >
                   {adjusting ? 'Aplicando…' : 'Aplicar ajuste'}
-                </button>
-                <button
+                </Button>
+                <Button variant="outline"
                   type="button"
-                  className="academic-scheduling__button academic-scheduling__button--secondary"
                   disabled={adjusting}
                   onClick={onCancelEdit}
                 >
                   Cancelar
-                </button>
+                </Button>
               </div>
             </div>
           </section>
@@ -309,14 +312,14 @@ export function PlanningInspector({
               <div className="planning-inspector__section">
                 <div className="planning-inspector__section-header">
                   <h5 className="planning-inspector__section-title">Bloques asignados</h5>
-                  <button
+                  <Button variant="outline"
                     type="button"
-                    className="planning-inspector__edit-trigger academic-scheduling__text-button"
+                    className="planning-inspector__edit-trigger "
                     disabled={isLocked}
                     onClick={() => onStartEdit(sectionBlocks[0])}
                   >
                     Editar horario
-                  </button>
+                  </Button>
                 </div>
                 <div className="planning-inspector__blocks-list">
                   {sectionBlocks.map((b, idx) => (
@@ -333,9 +336,9 @@ export function PlanningInspector({
                       </div>
                       <div className="planning-inspector__block-components">
                         {b.componentDetails.map((c, cIdx) => (
-                          <span key={cIdx} className="planning-inspector__component-tag">
+                          <Badge variant="secondary" key={cIdx} className="planning-inspector__component-tag">
                             {c.type} · {formatAcademicDuration(c.durationMinutes)}
-                          </span>
+                          </Badge>
                         ))}
                       </div>
                     </div>
@@ -346,9 +349,9 @@ export function PlanningInspector({
 
             {pendingComponents.length > 0 && (
               <div className="planning-inspector__section planning-inspector__section--pending">
-                <h5 className="planning-inspector__section-title">
+                <h5 className="planning-inspector__section-title"><Badge variant="warning">
                   {pendingComponents.length} {pendingComponents.length === 1 ? 'componente pendiente' : 'componentes pendientes'}
-                </h5>
+                </Badge></h5>
                 <p className="planning-inspector__explanation">
                   {proposal.status === 'search-limit'
                     ? 'La búsqueda alcanzó su límite. No prueba que no exista solución.'

@@ -22,10 +22,7 @@ fieldset.academic-scheduling__locked-workspace {
   display: flex;
   flex-direction: column;
   gap: calc(var(--planning-spacing) * 3);
-  padding: calc(var(--planning-spacing) * 3) calc(var(--planning-spacing) * 4);
-  background: var(--planning-surface);
-  border: 1px solid var(--planning-border);
-  border-radius: var(--planning-radius-panel);
+  padding: 0;
 }
 
 .academic-preparation__toolbar-row {
@@ -45,22 +42,6 @@ fieldset.academic-scheduling__locked-workspace {
   color: var(--planning-text);
 }
 
-.academic-preparation__search-field input[type="search"] {
-  padding: calc(var(--planning-spacing) * 1.5) calc(var(--planning-spacing) * 2.5);
-  font: inherit;
-  font-size: 0.875rem;
-  color: var(--planning-text);
-  background: var(--planning-canvas);
-  border: 1px solid var(--planning-border);
-  border-radius: var(--planning-radius-control);
-  outline: none;
-}
-
-.academic-preparation__search-field input[type="search"]:focus-visible {
-  border-color: var(--planning-primary);
-  box-shadow: 0 0 0 2px var(--planning-selected);
-}
-
 .academic-preparation__cycle-filter {
   display: flex;
   flex-direction: column;
@@ -70,32 +51,13 @@ fieldset.academic-scheduling__locked-workspace {
   color: var(--planning-text);
 }
 
-.academic-preparation__cycle-filter select {
-  padding: calc(var(--planning-spacing) * 1.5) calc(var(--planning-spacing) * 2.5);
-  font: inherit;
-  font-size: 0.875rem;
-  color: var(--planning-text);
-  background: var(--planning-canvas);
-  border: 1px solid var(--planning-border);
-  border-radius: var(--planning-radius-control);
-  outline: none;
-}
-
-.academic-preparation__cycle-filter select:focus-visible {
-  border-color: var(--planning-primary);
-  box-shadow: 0 0 0 2px var(--planning-selected);
-}
-
 /* Counters bar */
 .academic-preparation__counters {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: calc(var(--planning-spacing) * 3);
-  padding: calc(var(--planning-spacing) * 2) calc(var(--planning-spacing) * 3);
-  background: var(--planning-canvas);
-  border: 1px solid var(--planning-border);
-  border-radius: var(--planning-radius-control);
+  padding: 0;
   font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
   color: var(--planning-text);
@@ -110,18 +72,6 @@ fieldset.academic-scheduling__locked-workspace {
 .academic-preparation__counter-item strong {
   font-weight: 600;
   color: var(--planning-muted);
-}
-
-.academic-preparation__counter-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1px calc(var(--planning-spacing) * 1.5);
-  background: var(--planning-surface);
-  border: 1px solid var(--planning-border);
-  border-radius: var(--planning-radius-control);
-  font-weight: 600;
-  color: var(--planning-primary);
 }
 
 /* Selection and bulk action buttons */
@@ -156,11 +106,6 @@ fieldset.academic-scheduling__locked-workspace {
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  background: var(--planning-surface);
-  border: 1px solid var(--planning-border);
-  border-radius: var(--planning-radius-panel);
 }
 
 .academic-preparation__table-wrapper:focus-visible {
@@ -174,25 +119,6 @@ fieldset.academic-scheduling__locked-workspace {
   font-size: 0.875rem;
   color: var(--planning-text);
   text-align: left;
-}
-
-.academic-preparation__table th {
-  padding: calc(var(--planning-spacing) * 2) calc(var(--planning-spacing) * 2.5);
-  background: var(--planning-canvas);
-  border-bottom: 2px solid var(--planning-border);
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--planning-muted);
-  white-space: nowrap;
-}
-
-.academic-preparation__table td {
-  padding: calc(var(--planning-spacing) * 2) calc(var(--planning-spacing) * 2.5);
-  border-bottom: 1px solid var(--planning-border);
-  vertical-align: middle;
-  font-size: 0.875rem;
 }
 
 .academic-preparation__group-row th {
@@ -248,64 +174,14 @@ fieldset.academic-scheduling__locked-workspace {
 }
 
 .academic-preparation__course-code {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-family: monospace;
   color: var(--planning-muted);
 }
 
 .academic-preparation__num-input {
   width: 5.5rem;
-  padding: calc(var(--planning-spacing) * 1) calc(var(--planning-spacing) * 1.5);
-  font: inherit;
-  font-size: 0.875rem;
-  font-variant-numeric: tabular-nums;
   text-align: right;
-  color: var(--planning-text);
-  background: var(--planning-surface);
-  border: 1px solid var(--planning-border);
-  border-radius: var(--planning-radius-control);
-  outline: none;
-}
-
-.academic-preparation__num-input:focus-visible {
-  border-color: var(--planning-primary);
-  box-shadow: 0 0 0 2px var(--planning-selected);
-}
-
-.academic-preparation__num-input:disabled {
-  background: var(--planning-canvas);
-  color: var(--planning-muted);
-  cursor: not-allowed;
-  opacity: 0.65;
-}
-
-.academic-preparation__inspect-btn {
-  padding: calc(var(--planning-spacing) * 1) calc(var(--planning-spacing) * 2);
-  font: inherit;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--planning-text);
-  background: var(--planning-surface);
-  border: 1px solid var(--planning-border);
-  border-radius: var(--planning-radius-control);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.academic-preparation__inspect-btn:hover {
-  background: var(--planning-canvas);
-  border-color: var(--planning-primary);
-}
-
-.academic-preparation__inspect-btn--active {
-  background: var(--planning-primary);
-  color: var(--planning-primary-foreground);
-  border-color: var(--planning-primary);
-}
-
-.academic-preparation__inspect-btn--active:hover {
-  background: var(--planning-primary);
-  color: var(--planning-primary-foreground);
 }
 
 /* Single Inspector */
@@ -348,22 +224,6 @@ fieldset.academic-scheduling__locked-workspace {
   font-size: 0.8125rem;
   font-weight: 500;
   color: var(--planning-text);
-}
-
-.academic-preparation__inspector-body select {
-  padding: calc(var(--planning-spacing) * 1.5) calc(var(--planning-spacing) * 2);
-  font: inherit;
-  font-size: 0.875rem;
-  color: var(--planning-text);
-  background: var(--planning-canvas);
-  border: 1px solid var(--planning-border);
-  border-radius: var(--planning-radius-control);
-  outline: none;
-}
-
-.academic-preparation__inspector-body select:focus-visible {
-  border-color: var(--planning-primary);
-  box-shadow: 0 0 0 2px var(--planning-selected);
 }
 
 /* Bulk change dialog: position, overlay, shadow and size come from the shadcn Dialog (components/ui). */
@@ -412,9 +272,6 @@ fieldset.academic-scheduling__locked-workspace {
   flex-wrap: wrap;
   gap: calc(var(--planning-spacing) * 4);
   padding: calc(var(--planning-spacing) * 3);
-  background: var(--planning-canvas);
-  border: 1px solid var(--planning-border);
-  border-radius: var(--planning-radius-control);
 }
 
 .academic-preparation__bulk-input-group {
@@ -435,10 +292,9 @@ fieldset.academic-scheduling__locked-workspace {
 }
 
 .academic-preparation__preview-table-wrapper {
-  max-height: 320px;
-  overflow: auto;
-  border: 1px solid var(--planning-border);
-  border-radius: var(--planning-radius-control);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .academic-preparation__preview-table {
@@ -447,31 +303,10 @@ fieldset.academic-scheduling__locked-workspace {
   font-size: 0.8125rem;
 }
 
-.academic-preparation__preview-table th {
-  padding: calc(var(--planning-spacing) * 1.5) calc(var(--planning-spacing) * 2);
-  background: var(--planning-canvas);
-  border-bottom: 2px solid var(--planning-border);
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--planning-muted);
-  text-transform: uppercase;
-}
-
-.academic-preparation__preview-table td {
-  padding: calc(var(--planning-spacing) * 1.5) calc(var(--planning-spacing) * 2);
-  border-bottom: 1px solid var(--planning-border);
-  vertical-align: middle;
-}
-
-.academic-preparation__preview-status--valid {
-  color: var(--planning-primary);
-  font-weight: 600;
-}
-
 .academic-preparation__preview-status--excluded {
   color: var(--planning-error);
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
 }
 
 .academic-preparation__modal-footer {
@@ -496,4 +331,91 @@ fieldset.academic-scheduling__locked-workspace {
     width: 100%;
     position: static;
   }
+}
+
+/* Keep the named, keyboard-focusable region as the scroll owner. Table still
+   supplies the sticky column headers; its inner wrapper must not trap scrolling. */
+.academic-preparation__table-wrapper {
+  box-sizing: border-box;
+  max-height: min(70dvh, 40rem);
+  overflow: auto;
+  border: 1px solid var(--planning-border);
+  border-radius: var(--planning-radius-panel);
+}
+
+.academic-preparation__table-scroll[data-slot='table-container'] {
+  overflow: visible;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+}
+
+.planning-root .academic-preparation__table [data-slot='table-cell'],
+.planning-root .academic-preparation__preview-table [data-slot='table-cell'] {
+  padding: 8px 12px;
+}
+
+.planning-root .academic-preparation__table [data-slot='table-body'] [data-slot='table-row'] [data-slot='table-head'] {
+  position: static;
+  z-index: auto;
+  padding: 8px 12px;
+}
+
+.academic-preparation__search-field,
+.academic-preparation__cycle-filter,
+.academic-preparation__bulk-input-group {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.academic-preparation__modal-footer {
+  flex-wrap: wrap;
+}
+
+/* The demand dialog uses separators within one working surface. */
+.planning-root .academic-demand,
+.planning-root .academic-demand__source,
+.planning-root .academic-demand__course {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--planning-surface);
+}
+
+.planning-root .academic-demand__course {
+  padding: 16px 0;
+  border-top: 1px solid var(--planning-border);
+}
+
+.planning-root .academic-demand__courses {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+.planning-root .academic-demand__heading h4 {
+  font-size: 18px;
+}
+
+.planning-root .academic-demand__course-heading {
+  flex-wrap: wrap;
+}
+
+.planning-root .academic-demand dl {
+  font-variant-numeric: tabular-nums;
+}
+
+.planning-root .academic-demand__error {
+  color: var(--planning-error);
+}
+
+.planning-root .academic-preparation .academic-scheduling__history-section {
+  padding: 12px 0;
+  border: 0;
+  border-bottom: 1px solid var(--planning-border);
+  border-radius: 0;
+}
+
+.planning-root .academic-preparation .academic-scheduling__revision {
+  color: var(--planning-muted);
+  background: transparent;
 }
