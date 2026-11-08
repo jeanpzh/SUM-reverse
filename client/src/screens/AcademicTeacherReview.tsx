@@ -5,6 +5,7 @@ import { academicSectionLabel, aggregateAcademicBlocks, formatAcademicDuration, 
 import './AcademicTeacherReview.css'
 
 type Props = {
+  primaryActionId?: string
   review: AcademicTeacherReview | undefined
   proposal: AcademicProposal | null
   draftId: string | null
@@ -19,7 +20,7 @@ type Props = {
 
 const statusLabels = { pending: 'Pendiente', conformity: 'Conforme', 'changes-requested': 'Observó cambios', outdated: 'Desactualizado' } as const
 
-export function AcademicTeacherReview({ review, proposal, draftId, draftVersion, derivedState, dirty, busy, error, onSubmit, onRespond }: Props) {
+export function AcademicTeacherReview({ primaryActionId, review, proposal, draftId, draftVersion, derivedState, dirty, busy, error, onSubmit, onRespond }: Props) {
   const [role, setRole] = useState<'school' | 'teacher'>('school')
   const [teacherId, setTeacherId] = useState('')
   const [observation, setObservation] = useState('')
@@ -84,7 +85,7 @@ export function AcademicTeacherReview({ review, proposal, draftId, draftVersion,
       {role === 'teacher' && <div className="academic-teacher-review__actions">
         <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary" disabled={!enabled || !review || !selectedTeacher || selectedTeacher.status === 'outdated' || !currentObservation.trim()}
           onClick={() => onRespond(selectedTeacher.teacherId, 'changes-requested', currentObservation.trim())}>Solicitar cambios</button>
-        <button type="button" className="academic-scheduling__button" disabled={!enabled || !review || !selectedTeacher || selectedTeacher.status === 'outdated'}
+        <button type="button" className={`academic-scheduling__button${primaryActionId === 'record-response' ? '' : ' academic-scheduling__button--secondary'}`} disabled={!enabled || !review || !selectedTeacher || selectedTeacher.status === 'outdated'}
           onClick={() => onRespond(selectedTeacher.teacherId, 'conformity', currentObservation.trim())}>Dar conformidad</button>
       </div>}
     </> : null}

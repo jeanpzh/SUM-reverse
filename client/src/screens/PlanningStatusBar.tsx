@@ -12,6 +12,7 @@ const diagnosticLabels: Record<string, string> = {
 }
 
 export interface PlanningStatusBarProps {
+  primaryActionId?: string
   proposal: AcademicProposal
   onRegenerate?: () => void
   onReviewPending?: () => void
@@ -43,7 +44,7 @@ function countAssignedConflicts(assignments: AcademicProposal['assignments']): n
   return count
 }
 
-export function PlanningStatusBar({ proposal, onRegenerate, onReviewPending, isLocked = false }: PlanningStatusBarProps) {
+export function PlanningStatusBar({ primaryActionId, proposal, onRegenerate, onReviewPending, isLocked = false }: PlanningStatusBarProps) {
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
   const diagnosticGroups = Object.values(proposal.diagnostics.reduce<Record<string, typeof proposal.diagnostics>>((groups, diagnostic) => {
     ;(groups[diagnostic.code] ??= []).push(diagnostic)
@@ -114,10 +115,10 @@ export function PlanningStatusBar({ proposal, onRegenerate, onReviewPending, isL
       </div>
 
       <div className="planning-status-bar__actions">
-        {proposal.status === 'search-limit' && coverage.pending > 0 && onReviewPending && (
+        {(coverage.partial + coverage.pending) > 0 && onReviewPending && (
           <button
             type="button"
-            className="academic-scheduling__button"
+            className={`academic-scheduling__button${primaryActionId === 'resolve-pending' ? '' : ' academic-scheduling__button--secondary'}`}
             onClick={onReviewPending}
           >
             Revisar pendientes

@@ -10,6 +10,7 @@ import './AcademicPublicationPanel.css'
 type PreviewSource = { id: string; version: number; schedule: AcademicScheduleSnapshot; title: string; label: string; source: 'draft' | 'publication'; state: AcademicDraftState }
 
 type Props = {
+  primaryActionId?: string
   draftId: string | null
   draftVersion: number | null
   draftTitle: string
@@ -33,7 +34,7 @@ function dateLabel(value: string) {
   return new Date(value).toLocaleString('es-PE')
 }
 
-export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, draftState, dirty, busy,
+export function AcademicPublicationPanel({ primaryActionId, draftId, draftVersion, draftTitle, draftState, dirty, busy,
   onApprove, onPublish, onFork, onError, onMessage }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [publicationList, setPublicationList] = useState<AcademicPublicationList | null>(null)
@@ -254,10 +255,10 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
         disabled={working || busy || (selectedSummary ? !selectedSummary : !draftId)} onClick={() => void refreshPreview()}>
         {working ? 'Consultando…' : 'Actualizar vista previa'}
       </button>
-      <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary"
+      <button type="button" className={`academic-scheduling__button${primaryActionId === 'approve' ? '' : ' academic-scheduling__button--secondary'}`}
         disabled={!canApprove} aria-describedby={!canApprove ? 'academic-approve-reason' : undefined} onClick={approve}>Aprobar (simulada)</button>
       {!canApprove && <span id="academic-approve-reason" className="academic-publication__status">{approveDisabledReason}</span>}
-      <button type="button" className="academic-scheduling__button" disabled={!canPublish}
+      <button type="button" className={`academic-scheduling__button${primaryActionId === 'publish' ? '' : ' academic-scheduling__button--secondary'}`} disabled={!canPublish}
         aria-describedby={!canPublish ? 'academic-publish-reason' : undefined} onClick={publish}>Publicar (simulada)</button>
       {!canPublish && <span id="academic-publish-reason" className="academic-publication__status">{publishDisabledReason}</span>}
     </div>
@@ -303,7 +304,7 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
       <div className="academic-publication__actions">
         <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary"
           disabled={activating || busy} onClick={() => void refreshOffers()}>{activating ? 'Procesando…' : 'Actualizar ofertas operativas'}</button>
-        <button type="button" className="academic-scheduling__button" disabled={!canActivate}
+        <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary" disabled={!canActivate}
           onClick={() => void activatePublication()}>{activating ? 'Activando…' : 'Activar publicación seleccionada'}</button>
       </div>
       {!selectedSummary && <p className="academic-publication__status">Selecciona una publicación y actualiza su vista previa para habilitar la activación.</p>}
