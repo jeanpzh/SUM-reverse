@@ -12,18 +12,13 @@
 }
 .academic-scheduling__notice { display: flex; flex-wrap: wrap; gap: 0.35rem 0.5rem; color: var(--planning-muted); font-size: var(--text-data); }
 .academic-scheduling__notice strong { color: var(--planning-warning); }
-.academic-scheduling__draft-bar { margin: 0.8rem 0 1rem; padding: 0.75rem 0.85rem; border: 1px solid var(--planning-border); border-radius: var(--planning-radius-panel); background: var(--planning-surface); }
-.academic-scheduling__draft-heading { display: flex; flex-wrap: wrap; align-items: end; gap: 0.6rem 0.8rem; }
-.academic-scheduling__draft-heading > label { display: grid; min-width: min(100%, 185px); gap: 0.25rem; color: var(--planning-muted); font-size: var(--text-meta); font-weight: 600; }
-.academic-scheduling__draft-heading input,
-.academic-scheduling__draft-heading select { min-height: 2.25rem; box-sizing: border-box; padding: 0.4rem 0.55rem; border: 1px solid var(--planning-border); border-radius: var(--planning-radius-control); background: var(--planning-surface); color: var(--planning-text); font: inherit; }
-.academic-scheduling__draft-heading input { width: min(100%, 22rem); }
+.academic-scheduling__draft-bar { margin: 16px 0; padding: 16px; border: 1px solid var(--planning-border); border-radius: var(--planning-radius-panel); background: var(--planning-surface); }
+.academic-scheduling__draft-heading { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 16px; }
 .academic-scheduling__draft-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .academic-scheduling__draft-note { margin: 0.45rem 0 0; color: var(--planning-muted); font-size: var(--text-meta); }
 .academic-scheduling__saved-proposals { display: grid; gap: 0.45rem; margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px solid var(--planning-border); }
 .academic-scheduling__saved-proposals > p { margin: 0; color: var(--planning-muted); font-size: var(--text-meta); }
-.academic-scheduling__saved-row { padding: 0.55rem 0.65rem; border: 1px solid var(--planning-border); border-radius: var(--planning-radius-control); background: var(--planning-canvas); font-size: var(--text-meta); }
-.academic-scheduling__saved-row summary { color: var(--planning-text); font-weight: 650; cursor: pointer; }
+.academic-scheduling__saved-row { min-width: 0; padding: 12px 0; border-bottom: 1px solid var(--planning-border); font-size: 13px; overflow-wrap: anywhere; }
 .academic-scheduling__saved-row > div { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: 0.5rem; color: var(--planning-muted); }
 .academic-scheduling__provenance { flex-basis: 100%; color: var(--planning-muted); }
 .academic-scheduling__panel-heading,
@@ -71,8 +66,6 @@
 .academic-scheduling__button:focus-visible { outline: 2px solid var(--planning-text); outline-offset: 2px; }
 .academic-scheduling__state { margin: 1rem 0 0; color: var(--planning-muted); font-size: var(--text-data); }
 .academic-scheduling__error { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin: 1rem 0 0; padding: 0.8rem; border: 1px solid var(--planning-error); border-radius: var(--planning-radius-control); background: var(--planning-error-surface); color: var(--planning-error); font-size: var(--text-data); }
-.academic-scheduling__result { border-left: 4px solid var(--planning-warning); }
-.academic-scheduling__result--complete { border-left-color: var(--planning-primary); }
 .academic-scheduling__result-heading > span { color: var(--planning-primary); font-size: var(--text-data); font-weight: 650; }
 .academic-scheduling__status-code { color: var(--planning-muted); font-weight: 500; }
 .academic-scheduling__stats { margin: 0.8rem 0 0; color: var(--planning-muted); font-size: var(--text-meta); }
@@ -152,7 +145,7 @@
 .academic-scheduling__course-limits { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 0.6rem; margin: 0; padding: 0.65rem; border: 1px solid var(--planning-border); border-radius: var(--planning-radius-control); }
 .academic-scheduling__course-limits legend { padding: 0 0.25rem; color: var(--planning-text); font-size: var(--text-meta); font-weight: 650; }
 .academic-scheduling__course-limits label { display: grid; gap: 0.3rem; color: var(--planning-muted); font-size: var(--text-meta); font-weight: 600; }
-.academic-scheduling__course-limits input, .academic-scheduling__policy select { min-height: 2.25rem; box-sizing: border-box; padding: 0.4rem 0.55rem; border: 1px solid var(--planning-border); border-radius: var(--planning-radius-control); background: var(--planning-surface); color: var(--planning-text); font: inherit; }
+.academic-scheduling__course-limits input { min-height: 2.25rem; box-sizing: border-box; padding: 0.4rem 0.55rem; border: 1px solid var(--planning-border); border-radius: var(--planning-radius-control); background: var(--planning-surface); color: var(--planning-text); font: inherit; }
 .academic-scheduling__course-eligibility label { display: flex; align-items: center; gap: 0.35rem; color: var(--planning-text); font-size: var(--text-meta); }
 .academic-scheduling__course-eligibility input { margin: 0; accent-color: var(--planning-primary); }
 .academic-scheduling__course-eligibility > span { color: var(--planning-muted); font-size: var(--text-meta); }
@@ -161,8 +154,7 @@
 .academic-scheduling__availability-row label { min-width: 105px; }
 .academic-scheduling__availability-row input,
 .academic-scheduling__availability-row select { width: 100%; }
-.academic-scheduling__general-windows { display: grid; gap: 0.3rem; margin-top: 1rem; padding: 0.75rem; border: 1px solid var(--planning-border); border-radius: var(--planning-radius-control); background: var(--planning-canvas); color: var(--planning-muted); font-size: var(--text-meta); }
-.academic-scheduling__general-windows strong { color: var(--planning-text); }
+.academic-scheduling__general-windows { min-width: 0; margin-top: 16px; padding-top: 8px; border-top: 1px solid var(--planning-border); color: var(--planning-muted); font-size: 13px; }
 .academic-scheduling__reference-rooms { padding: 0.75rem; border: 1px solid var(--planning-border); border-radius: var(--planning-radius-control); background: var(--planning-canvas); color: var(--planning-muted); font-size: var(--text-meta); }
 .academic-scheduling__reference-rooms summary { color: var(--planning-primary); font-weight: 650; cursor: pointer; }
 .academic-scheduling__reference-rooms p { margin: 0.5rem 0; }
@@ -202,7 +194,7 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
-.academic-scheduling__policy { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.35rem; max-width: 34rem; margin-top: 0.8rem; color: var(--planning-text); font-size: var(--text-meta); font-weight: 650; }
+.academic-scheduling__policy { min-width: 0; padding: 0; border: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.35rem; max-width: 34rem; margin-top: 0.8rem; color: var(--planning-text); font-size: var(--text-meta); font-weight: 650; }
 .academic-scheduling__preference-report { margin-top: 0.8rem; padding: 0.75rem; border: 1px solid var(--planning-border); border-radius: var(--planning-radius-control); background: var(--planning-canvas); }
 .academic-scheduling__preference-report h4 { margin: 0 0 0.35rem; color: var(--planning-text); font-size: var(--text-data); }
 .academic-scheduling__preference-report p { margin: 0; color: var(--planning-muted); font-size: var(--text-meta); }
@@ -214,4 +206,13 @@
   .academic-scheduling__editor-actions { width: 100%; }
 }
 
-.academic-scheduling__policy select { width: 100%; min-width: 0; max-width: 100%; }
+.academic-scheduling__draft-field { display: grid; flex: 1 1 200px; min-width: 0; gap: 4px; }
+.academic-scheduling__saved-list { min-width: 0; margin: 0; padding: 0; list-style: none; }
+.academic-scheduling__saved-row strong { color: var(--planning-text); font-weight: 600; }
+.academic-scheduling__advanced { min-width: 0; margin-top: 16px; }
+.academic-scheduling__policy legend { padding: 0; margin-bottom: 8px; }
+.academic-scheduling__exception { display: flex; min-width: 0; align-items: flex-start; gap: 8px; }
+.academic-scheduling__exception [data-slot='checkbox'] { margin-top: 2px; }
+.academic-scheduling__exception label { min-width: 0; overflow-wrap: anywhere; }
+.academic-scheduling__generate { padding: 16px 0; border: 0; border-top: 1px solid var(--planning-border); border-radius: 0; }
+.planning-stage-panel, .academic-scheduling__draft-heading { min-width: 0; overflow-wrap: anywhere; }

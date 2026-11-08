@@ -14,6 +14,7 @@ export interface PlanningScopeHeaderProps {
   workspaceDirty: boolean
   canSave: boolean
   draftBusy: boolean
+  onGuide: () => void
   onSave: () => void
   disabledReason?: string | null
 }
@@ -46,6 +47,7 @@ export function PlanningScopeHeader({
   workspaceDirty,
   canSave,
   draftBusy,
+  onGuide,
   onSave,
   disabledReason,
 }: PlanningScopeHeaderProps): ReactNode {
@@ -59,7 +61,10 @@ export function PlanningScopeHeader({
           <span className="planning-scope-header__scope text-sm font-semibold tabular-nums text-muted-foreground">{school} / {period}</span>
           <Badge variant="secondary" title="No es una pantalla oficial SUM y no requiere ni otorga permisos administrativos.">Prototipo local · datos sintéticos</Badge>
         </div>
-        <PlanningShellControls />
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <Button id="planning-tour-guide" type="button" variant="ghost" onClick={onGuide}>Guía</Button>
+          <PlanningShellControls />
+        </div>
       </div>
       <div className="planning-scope-header__actions flex min-w-0 flex-wrap items-center gap-3 rounded-planning-panel border border-solid border-border bg-background px-4 py-2">
         <Badge
@@ -76,6 +81,7 @@ export function PlanningScopeHeader({
           <Button
             type="button"
             variant="outline"
+            id="planning-tour-save"
             className="planning-scope-header__save-button"
             disabled={!canSave || draftBusy}
             onClick={onSave}

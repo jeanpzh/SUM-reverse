@@ -20,6 +20,7 @@ export interface PlanningStatusBarProps {
   proposal: AcademicProposal
   onRegenerate?: () => void
   onReviewPending?: () => void
+  isDraft?: boolean
   isLocked?: boolean
 }
 
@@ -48,7 +49,7 @@ function countAssignedConflicts(assignments: AcademicProposal['assignments']): n
   return count
 }
 
-export function PlanningStatusBar({ primaryActionId, proposal, onRegenerate, onReviewPending, isLocked = false }: PlanningStatusBarProps) {
+export function PlanningStatusBar({ primaryActionId, proposal, onRegenerate, onReviewPending, isDraft = true, isLocked = false }: PlanningStatusBarProps) {
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
   const diagnosticGroups = Object.values(proposal.diagnostics.reduce<Record<string, typeof proposal.diagnostics>>((groups, diagnostic) => {
     const group = groups[diagnostic.code] ??= []
@@ -99,6 +100,7 @@ export function PlanningStatusBar({ primaryActionId, proposal, onRegenerate, onR
           <Badge variant={proposal.status === 'complete' ? 'success' : proposal.status === 'invalid-input' ? 'destructive' : 'warning'}>
             {badgeText}
           </Badge>
+          {isDraft && <Badge variant="outline">Borrador · sin confirmar</Badge>}
           <span className="planning-status-bar__status-full text-[13px] text-muted-foreground">
             {statusLabel(proposal.status)}
           </span>
@@ -111,7 +113,7 @@ export function PlanningStatusBar({ primaryActionId, proposal, onRegenerate, onR
             ? `${coverage.complete}/${totalSections} secciones colocadas · ${proposal.diagnostics.length} avisos`
             : subtext}
         </p>
-        {proposal.diagnostics.length > 0 && <Button type="button" variant="link" size="sm" className="w-fit justify-start px-0 underline" aria-haspopup="dialog" onClick={() => setDiagnosticsOpen(true)}>Ver avisos</Button>}
+        {proposal.diagnostics.length > 0 && <Button type="button" variant="ghost" size="sm" className="w-fit justify-start px-0 underline" aria-haspopup="dialog" onClick={() => setDiagnosticsOpen(true)}>Ver avisos</Button>}
         {diagnosisText && (
           <Alert variant={proposal.status === 'invalid-input' ? 'destructive' : 'warning'}>
             <AlertDescription>{diagnosisText}</AlertDescription>
