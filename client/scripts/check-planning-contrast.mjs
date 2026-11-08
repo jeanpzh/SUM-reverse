@@ -36,7 +36,6 @@ const pairs = [
   ['planning-error-foreground', 'planning-error', 4.5],
   ['planning-error', 'planning-error-surface', 4.5],
   ['planning-warning', 'planning-warning-surface', 4.5],
-  ['planning-rail-text', 'planning-rail', 4.5],
   ['planning-border', 'planning-surface', 1.3],
 ]
 

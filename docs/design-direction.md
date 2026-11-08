@@ -25,6 +25,7 @@ Use the tokens from report §7 as the starting values, scoped as `--planning-*` 
 - **Type:** a readable sans-serif. IBM Plex Sans is the candidate, pending a check of local availability and licensing. Tables and body text 14px, labels 13px, section titles 18px, page titles 24px. Use tabular numerals, and never set essential text below 12px.
 - **Color:** a charcoal rail, white working surfaces and a forest-green primary for the next valid transition. Amber means unresolved work, red means an error. Status is never shown by color alone.
 - **Layout:** 4px spacing scale, thin row separators, no nested cards and no decorative shadows. Use shadow only on overlays.
+- **No navigation rail (user decision, 2026-11-08):** the rail held a single destination, so it was removed. The theme selector and the link back to the local modules live in the scope header. Color follows a 60-30-10 split: neutral surfaces, then muted text, borders and secondary controls, and the forest-green primary only on the next valid transition.
 - **Text:** no secondary descriptions or captions that restate the layout. A disabled gate shows its reason next to the control.
 
 ## Interaction rules

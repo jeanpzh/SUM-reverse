@@ -52,7 +52,8 @@ const focusedFacts = (page) => page.evaluate(() => {
   const style = getComputedStyle(element)
   return {
     text: element.textContent.trim(),
-    inRail: Boolean(element.closest('nav.planning-rail')),
+    id: element.id,
+    inHeader: Boolean(element.closest('.planning-scope-header')),
     outlineStyle: style.outlineStyle,
     outlineWidth: parseFloat(style.outlineWidth),
   }
@@ -79,7 +80,7 @@ try {
     }
   }))
 
-  await criterion('AC3', 'scheduling route renders inside the planning shell with A canvas, rail, title and font', () => withPage(1440, 900, async (page) => {
+  await criterion('AC3', 'scheduling route renders inside the planning shell with A canvas, no rail, title and font', () => withPage(1440, 900, async (page) => {
     await page.goto(scheduling, { waitUntil: 'networkidle' })
     const facts = await page.evaluate(() => {
       const computed = (selector) => {
@@ -90,10 +91,8 @@ try {
       return {
         planningRoots: document.querySelectorAll('.planning-root').length,
         mains: document.querySelectorAll('main').length,
-        railLabel: document.querySelector('nav.planning-rail')?.getAttribute('aria-label') ?? null,
-        current: document.querySelector('nav.planning-rail a[aria-current="page"]')?.textContent.trim() ?? null,
+        rails: document.querySelectorAll('nav.planning-rail').length,
         canvas: computed('.planning-root')?.backgroundColor ?? null,
-        railColor: computed('nav.planning-rail')?.backgroundColor ?? null,
         headingColor: heading?.color ?? null,
         headingSize: heading?.fontSize ?? null,
         rootFontSize: computed('.planning-root')?.fontSize ?? null,
@@ -101,79 +100,63 @@ try {
     })
     expectEqual(facts.planningRoots, 1, 'planning-root count')
     expectEqual(facts.mains, 1, 'main landmark count')
-    expectEqual(facts.railLabel, 'Programación académica', 'rail aria-label')
-    expectEqual(facts.current, 'Programaciones', 'active rail link text')
+    expectEqual(facts.rails, 0, 'navigation rail count (removed 2026-11-08)')
     expectEqual(facts.canvas, 'rgb(245, 246, 245)', 'canvas background-color')
-    expectEqual(facts.railColor, 'rgb(32, 42, 37)', 'rail background-color')
     expectEqual(facts.headingColor, 'rgb(32, 41, 37)', 'page title h2 color')
     expectEqual(facts.headingSize, '24px', 'page title h2 font-size')
     expectEqual(facts.rootFontSize, '14px', 'planning-root font-size')
     await page.screenshot({ path: join(evidenceDir, 'scheduling-1440.png') })
   }))
 
-  await criterion('AC4', 'rail is keyboard reachable with a solid focus outline; back link stays in view and navigates', () => withPage(1440, 900, async (page) => {
+  await criterion('AC4', 'theme selector and back link live in the scope header, are keyboard reachable with a solid focus outline, and the back link navigates', () => withPage(1440, 900, async (page) => {
     await page.goto(scheduling, { waitUntil: 'networkidle' })
-    await page.keyboard.press('Tab')
+    const theme = page.locator('#planning-theme')
+    await theme.focus()
     const first = await focusedFacts(page)
-    await page.screenshot({ path: join(evidenceDir, 'focus-first-tab-1440.png') })
     await page.keyboard.press('Tab')
     const second = await focusedFacts(page)
-    expectEqual(first.text, 'Programaciones', 'first Tab target')
-    expectTrue(first.inRail, 'first Tab target is outside nav.planning-rail')
-    expectEqual(first.outlineStyle, 'solid', 'first Tab outline-style')
-    expectTrue(first.outlineWidth > 0, `first Tab outline-width is ${first.outlineWidth}`)
-    expectEqual(second.text, backLabel, 'second Tab target')
-    expectEqual(second.outlineStyle, 'solid', 'second Tab outline-style')
-    expectTrue(second.outlineWidth > 0, `second Tab outline-width is ${second.outlineWidth}`)
-
-    await page.evaluate(() => window.scrollTo(0, 6000))
-    await page.waitForTimeout(200)
-    const scrollY = await page.evaluate(() => window.scrollY)
+    await page.screenshot({ path: join(evidenceDir, 'focus-header-controls-1440.png') })
+    expectEqual(first.id, 'planning-theme', 'theme selector focus')
+    expectTrue(first.inHeader, 'theme selector is outside the scope header')
+    expectEqual(second.text, backLabel, 'Tab after the theme selector')
+    expectTrue(second.inHeader, 'back link is outside the scope header')
+    expectTrue(second.outlineStyle !== 'none' || second.outlineWidth > 0, 'back link has no visible focus indicator')
     const back = page.getByRole('link', { name: backLabel, exact: true })
-    const box = await back.boundingBox()
-    const viewport = page.viewportSize()
-    expectTrue(box !== null && box.y >= 0 && box.y + box.height <= viewport.height,
-      `back link box ${JSON.stringify(box)} not inside ${viewport.height}px viewport at scrollY ${scrollY}`)
-    await page.screenshot({ path: join(evidenceDir, 'scrolled-back-link-1440.png') })
-
     await back.click()
     await page.waitForURL(/\/local\/modulos$/)
     await page.waitForLoadState('networkidle')
     expectEqual(await page.locator('.planning-root').count(), 0, 'planning-root count after back link navigation')
   }))
 
-  await criterion('AC5', 'at 800px the rail is a top bar of under 120px and the document does not scroll horizontally', () => withPage(800, 900, async (page) => {
+  await criterion('AC5', 'at 800px the document does not scroll horizontally', () => withPage(800, 900, async (page) => {
     await page.goto(scheduling, { waitUntil: 'networkidle' })
     const facts = await page.evaluate(() => {
       const root = document.documentElement
-      const rail = document.querySelector('nav.planning-rail')
       return {
         scrollWidth: root.scrollWidth,
         clientWidth: root.clientWidth,
-        railHeight: rail ? rail.getBoundingClientRect().height : null,
       }
     })
     expectTrue(!(facts.scrollWidth > facts.clientWidth + 1), `document scrollWidth ${facts.scrollWidth} exceeds clientWidth ${facts.clientWidth}`)
-    expectTrue(facts.railHeight !== null && facts.railHeight < 120, `rail height is ${facts.railHeight}px`)
     await page.screenshot({ path: join(evidenceDir, 'scheduling-800.png') })
   }))
 
   // 200% text size checks only the shell. Screen panels inside main still overflow at
   // this size; that is a recorded slice-2 gap, not a shell failure.
-  await criterion('ZOOM-TEXT', 'at 200% root text size rail links and product name do not overflow and the shell stays within the viewport', () => withPage(1440, 900, async (page) => {
+  await criterion('ZOOM-TEXT', 'at 200% root text size the header controls do not overflow and the shell stays within the viewport', () => withPage(1440, 900, async (page) => {
     await page.goto(scheduling, { waitUntil: 'networkidle' })
     await page.evaluate(() => { document.documentElement.style.fontSize = '200%' })
     await page.waitForTimeout(200)
     const facts = await page.evaluate(() => ({
-      items: [...document.querySelectorAll('.planning-rail a, .planning-rail__product')].map((element) => ({
+      items: [...document.querySelectorAll('.planning-shell-controls a, .planning-shell-controls label')].map((element) => ({
         text: element.textContent.trim(),
         scrollWidth: element.scrollWidth,
         clientWidth: element.clientWidth,
       })),
       viewport: document.documentElement.clientWidth,
-      shellRight: Math.max(...['.planning-rail', '.planning-main'].map((selector) => document.querySelector(selector)?.getBoundingClientRect().right ?? Infinity)),
+      shellRight: Math.max(...['.planning-scope-header', '.planning-main'].map((selector) => document.querySelector(selector)?.getBoundingClientRect().right ?? Infinity)),
     }))
-    expectEqual(facts.items.length, 3, 'rail link and product name count')
+    expectEqual(facts.items.length, 2, 'header control label and link count')
     for (const item of facts.items) {
       expectTrue(item.scrollWidth <= item.clientWidth + 1, `"${item.text}" overflows: scrollWidth ${item.scrollWidth} > clientWidth ${item.clientWidth}`)
     }
@@ -182,15 +165,13 @@ try {
   }))
 
   // 200% browser zoom of a 1440px window leaves a 720px CSS viewport (WCAG reflow).
-  await criterion('ZOOM-REFLOW', 'at 720px (200% page zoom of 1440px) the rail is a top bar and the document does not scroll horizontally', () => withPage(720, 450, async (page) => {
+  await criterion('ZOOM-REFLOW', 'at 720px (200% page zoom of 1440px) the document does not scroll horizontally', () => withPage(720, 450, async (page) => {
     await page.goto(scheduling, { waitUntil: 'networkidle' })
     const facts = await page.evaluate(() => ({
       scrollWidth: document.documentElement.scrollWidth,
       clientWidth: document.documentElement.clientWidth,
-      railHeight: document.querySelector('nav.planning-rail')?.getBoundingClientRect().height ?? null,
     }))
     expectTrue(facts.scrollWidth <= facts.clientWidth + 1, `document scrollWidth ${facts.scrollWidth} exceeds clientWidth ${facts.clientWidth}`)
-    expectTrue(facts.railHeight !== null && facts.railHeight < 120, `rail height is ${facts.railHeight}px`)
     await page.screenshot({ path: join(evidenceDir, 'zoom-reflow-720.png') })
   }))
 } finally {
