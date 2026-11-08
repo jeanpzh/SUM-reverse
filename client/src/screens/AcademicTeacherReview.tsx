@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import { Button, buttonVariants } from '../components/ui/Button'
 import { NativeSelect } from '../components/ui/NativeSelect'
 import { Label } from '../components/ui/Label'
@@ -81,7 +82,7 @@ export function AcademicTeacherReview({ primaryActionId, review, proposal, draft
         {role === 'school' && <div className="academic-teacher-review__actions">
           <Button variant="outline" type="button"
             disabled={!enabled || !hasSchedule} onClick={onSubmit}>Enviar a revisión</Button>
-          <Button variant="ghost" type="button" onClick={() => document.querySelector('.academic-scheduling__result')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>Editar horario</Button>
+          <Button variant="ghost" asChild><Link to="/local/programacion-academica" search={{ etapa: 'horario' }}>Editar horario</Link></Button>
         </div>}
         {selectedTeacher ? <>
           <p className="academic-teacher-review__state">{selectedTeacher.teacherName} · {statusLabels[selectedTeacher.status]}

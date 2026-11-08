@@ -310,7 +310,7 @@ test('primary action follows every D7 row', () => {
 
   assert.equal(derivePlanningPrimaryAction(withDraft({ savedState: 'ready-for-approval' }), 'aprobacion')?.id, 'approve')
   assert.equal(derivePlanningPrimaryAction(withDraft({ savedState: 'ready-for-approval' }, { dirty: true }), 'aprobacion')?.id, 'back-review')
-  assert.equal(derivePlanningPrimaryAction(withDraft({ savedState: 'approved' }), 'aprobacion'), null, 'publication stays secondary')
+  assert.equal(derivePlanningPrimaryAction(withDraft({ savedState: 'approved' }), 'aprobacion')?.id, 'publish', 'after approval, publishing is the next valid transition (D7)')
   assert.equal(derivePlanningPrimaryAction(withDraft({ savedState: 'published' }), 'aprobacion'), null)
 })
 

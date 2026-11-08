@@ -272,7 +272,7 @@ export function AcademicPublicationPanel({ primaryActionId, draftId, draftVersio
           <Button type="button" variant={primaryActionId === 'approve' && canApprove ? 'default' : 'outline'}
             disabled={!canApprove} aria-describedby={!canApprove ? 'academic-approve-reason' : undefined} onClick={approve}>Aprobar (simulada)</Button>
           {!canApprove && <span id="academic-approve-reason" className="academic-publication__status">{approveDisabledReason}</span>}
-          <Button variant="outline" type="button" disabled={!canPublish}
+          <Button variant={primaryActionId === 'publish' && canPublish ? 'default' : 'outline'} type="button" disabled={!canPublish}
             aria-describedby={!canPublish ? 'academic-publish-reason' : undefined} onClick={publish}>Publicar (simulada)</Button>
           {!canPublish && <span id="academic-publish-reason" className="academic-publication__status">{publishDisabledReason}</span>}
         </div>

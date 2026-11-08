@@ -71,7 +71,7 @@ try {
     assert.equal(response.status(), 200, await response.text())
     const value = await response.json()
     await stage('Horario', 'horario')
-    await page.locator(`.academic-scheduling__result--${value.status}`).waitFor()
+    await page.locator(`.planning-status-bar[data-status="${value.status}"]`).waitFor()
     return value
   }
   await page.goto(`${base}/local/programacion-academica`)
@@ -315,7 +315,7 @@ try {
   await closeResourceSheet(page)
   await page.getByLabel('Seleccionar o agregar docente').selectOption(teachers[1].id)
   await teacherForm.getByRole('button', { name: /^Quitar docente / }).click()
-  assert.equal(await page.locator('.academic-scheduling__result').count(), 0)
+  assert.equal(await page.locator('.planning-status-bar').count(), 0)
   // The resource workbench keeps no card open after removal; reopen the remaining teacher explicitly.
   await closeResourceSheet(page)
   await page.getByLabel('Seleccionar o agregar docente').selectOption(teachers[0].id)
@@ -334,13 +334,13 @@ try {
   if (insufficient.status === 'search-limit') {
     assert.ok(insufficient.diagnostics.some((row) => row.code === 'SEARCH_LIMIT'))
     assert.ok(insufficient.stats.limitReason)
-    assert.match(await page.locator('.academic-scheduling__result').innerText(), /Búsqueda inconclusa por límite computacional/)
+    assert.match(await page.locator('.planning-status-bar').innerText(), /Búsqueda inconclusa/)
   } else {
     assert.ok(insufficient.diagnostics.every((row) => row.code !== 'SEARCH_LIMIT'))
-    assert.match(await page.locator('.academic-scheduling__result').innerText(), /Sin solución completa en el dominio configurado/)
+    assert.match(await page.locator('.planning-status-bar').innerText(), /Sin solución completa/)
   }
   assert.equal(await weekBlocks.count(), insufficient.counts.scheduledSessions / 2)
-  await page.locator('.academic-scheduling__result').scrollIntoViewIfNeeded()
+  await page.locator('.planning-status-bar').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(output, 'erp-insufficient.png') })
   await stage('Preparación', 'preparacion')
   // The teacher sheet closed when the stage changed; reopen it to edit the same teacher.

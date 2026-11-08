@@ -157,8 +157,8 @@ try {
     for (let index = 1; index < sessions.length; index += 1) assert.equal(sessions[index - 1].endMinute, sessions[index].startMinute, 'componentes consecutivos')
     assert.equal(section.deliveryMode, 'continuous')
   }
-  await page.locator('.academic-scheduling__result--complete').waitFor()
-  await page.locator('.academic-scheduling__result').scrollIntoViewIfNeeded()
+  await page.locator('.planning-status-bar[data-status="complete"]').waitFor()
+  await page.locator('.planning-status-bar').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(evidence, 'escuela.png') })
   const calendar = page.getByRole('region', { name: 'Calendario semanal con horas; desplázate horizontalmente para ver todos los días' })
   await calendar.scrollIntoViewIfNeeded()
@@ -167,7 +167,7 @@ try {
   await page.screenshot({ path: resolve(evidence, 'escuela-calendario.png') })
   const priorProposal = proposal
   await page.getByLabel('Carga semanal docente').fill('1799')
-  assert.equal(await page.locator('.academic-scheduling__result').count(), 0, 'cambiar recursos invalida el resultado visible')
+  assert.equal(await page.locator('.planning-status-bar').count(), 0, 'cambiar recursos invalida el resultado visible')
   const resourceChangedResponse = page.waitForResponse((response) => response.url().endsWith('/propuestas') && response.request().method() === 'POST')
   await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
   const resourceChanged = await resourceChangedResponse
@@ -175,7 +175,7 @@ try {
   assert.equal((await resourceChanged.json()).status, 'complete')
   assert.deepEqual(await read(`/local/programacion-academica/v1/propuestas/${priorProposal.proposalId}`), priorProposal)
   await page.getByLabel(`Capacidad ${chosen[0].courseId}`, { exact: true }).fill('31')
-  await page.locator('.academic-scheduling__result--complete').waitFor({ state: 'detached' })
+  await page.locator('.planning-status-bar[data-status="complete"]').waitFor({ state: 'detached' })
   const regeneratedResponse = page.waitForResponse((response) => response.url().endsWith('/propuestas') && response.request().method() === 'POST')
   await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
   const regenerated = await regeneratedResponse
@@ -189,13 +189,13 @@ try {
   if (variableCourse) {
     await page.getByLabel(`Inspeccionar ${variableCourse.courseId}`).click()
     await page.getByLabel(`Patrón ${variableCourse.courseId}`).selectOption(variableCourse.planningPatterns[1].id)
-    assert.equal(await page.locator('.academic-scheduling__result').count(), 0, 'cambiar patrón invalida resultado anterior')
+    assert.equal(await page.locator('.planning-status-bar').count(), 0, 'cambiar patrón invalida resultado anterior')
   }
   assert.deepEqual((await read('/local/matricula-regular/v1/contextos/SYN-SIS-A')).data.offer, beforeOffer)
   assert.deepEqual(await read(`/local/programacion-academica/v1/propuestas/${proposal.proposalId}`), proposal)
   await page.getByLabel(`Inspeccionar ${chosen[1].courseId}`).click()
   await page.getByLabel(`Modalidad de sesiones ${chosen[1].courseId}`).selectOption('split')
-  assert.equal(await page.locator('.academic-scheduling__result').count(), 0, 'cambiar modalidad invalida la propuesta visible')
+  assert.equal(await page.locator('.planning-status-bar').count(), 0, 'cambiar modalidad invalida la propuesta visible')
   const splitResponse = page.waitForResponse((response) => response.url().endsWith('/propuestas') && response.request().method() === 'POST')
   await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
   const splitProposal = await (await splitResponse).json()
@@ -207,7 +207,7 @@ try {
     assert.ok(sessions.every((session) => session.teacherId === sessions[0].teacherId), 'split conserva docente único por sección')
   }
   await page.getByLabel(`Modalidad de sesiones ${chosen[1].courseId}`).selectOption('continuous')
-  assert.equal(await page.locator('.academic-scheduling__result').count(), 0)
+  assert.equal(await page.locator('.planning-status-bar').count(), 0)
 
   // Exercise existing enrollment on this acceptance project's synthetic student only.
   const session = await post('/local/matricula-regular/v1/sesiones', { runId: studentContext.runId, actorId: 'SYN-SIS-A' })

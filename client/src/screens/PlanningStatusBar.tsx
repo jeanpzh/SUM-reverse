@@ -84,6 +84,7 @@ export function PlanningStatusBar({ primaryActionId, proposal, onRegenerate, onR
     <section
       className="planning-status-bar box-border flex min-w-0 flex-col gap-3 rounded-planning-panel border border-solid border-border bg-background px-4 py-3 text-foreground [overflow-wrap:anywhere]"
       aria-labelledby="academic-scheduling-result"
+      data-status={proposal.status}
       role="status"
     >
       <div className="planning-status-bar__header flex min-w-0 flex-col gap-2">

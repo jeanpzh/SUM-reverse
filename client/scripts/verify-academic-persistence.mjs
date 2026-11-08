@@ -116,7 +116,7 @@ try {
     assert.equal(await page.getByLabel('Nombre de la propuesta', { exact: true }).inputValue(), 'Edición local desactualizada')
     await page.locator('.planning-scope-header__draft-state').filter({ hasText: 'Cambios sin guardar' }).waitFor()
     await page.locator('.academic-scheduling__draft-bar').screenshot({ path: outputPath })
-    await page.locator('.academic-scheduling__result').screenshot({ path: resolve(evidenceDir, 'phase-save-result.png') })
+    await page.locator('.planning-status-bar').screenshot({ path: resolve(evidenceDir, 'phase-save-result.png') })
     const runtimeProposalId = saved.proposal.proposalId
     await writeFile(statePath, `${JSON.stringify({ id: advanced.id, version: advanced.version, title: advanced.title,
       courseId: course.courseId, finalDemand, baseDemand, proposalStatus: advanced.proposal.status,
@@ -149,13 +149,13 @@ try {
     assert.equal(await page.getByLabel(`Demanda ${saved.courseId}`, { exact: true }).inputValue(), String(saved.finalDemand))
     assert.deepEqual(resumed.draft.proposal.manuallyAdjustedSectionIds, saved.manuallyAdjustedSectionIds)
     assert.equal(await page.getByLabel('Estado de la propuesta', { exact: true }).inputValue(), 'ready-for-review')
-    await page.locator('.academic-scheduling__result').getByText('Componentes asignados', { exact: true }).waitFor()
+    await page.locator('.planning-status-bar').getByText('Componentes asignados', { exact: true }).waitFor()
     await page.locator('.academic-scheduling__draft-bar').screenshot({ path: outputPath })
 
     // A demand edit invalidates the recovered result and downgrades its state before saving config only.
     const changedDemand = saved.finalDemand + 1
     await page.getByLabel(`Demanda ${saved.courseId}`, { exact: true }).fill(String(changedDemand))
-    assert.equal(await page.locator('.academic-scheduling__result').count(), 0)
+    assert.equal(await page.locator('.planning-status-bar').count(), 0)
     assert.equal(await page.getByLabel('Estado de la propuesta', { exact: true }).inputValue(), 'draft')
     const configSavePending = page.waitForResponse((response) => response.url().endsWith('/borradores/guardar') && response.request().method() === 'POST')
     await page.getByRole('button', { name: 'Guardar propuesta', exact: true }).click()
@@ -186,7 +186,7 @@ try {
     assert.equal(freshDraft.version, configSaved.version)
     assert.equal(freshDraft.proposal, null)
     assert.equal(await freshPage.getByLabel(`Demanda ${saved.courseId}`, { exact: true }).inputValue(), String(changedDemand))
-    assert.equal(await freshPage.locator('.academic-scheduling__result').count(), 0)
+    assert.equal(await freshPage.locator('.planning-status-bar').count(), 0)
     await freshContext.close()
   }
 

@@ -184,7 +184,7 @@ try {
   const proposalData = await genResponse.json()
 
   await goToStage('Horario', 'horario')
-  await page.locator(`.academic-scheduling__result--${proposalData.status}`).waitFor()
+  await page.locator(`.planning-status-bar[data-status="${proposalData.status}"]`).waitFor()
 
   console.log('✓ Stage 1: Proposal generated successfully')
 

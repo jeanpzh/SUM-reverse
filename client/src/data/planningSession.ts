@@ -493,7 +493,7 @@ function proposalComplete(proposal: AcademicProposal | null): boolean {
 }
 
 export type PlanningPrimaryActionId = 'review-offer' | 'generate' | 'back-preparation' | 'resolve-pending' | 'save'
-  | 'submit-review' | 'record-response' | 'to-approval' | 'back-schedule' | 'back-review' | 'approve'
+  | 'submit-review' | 'record-response' | 'to-approval' | 'back-schedule' | 'back-review' | 'approve' | 'publish'
 export type PlanningPrimaryAction = { id: PlanningPrimaryActionId; label: string; count?: number }
 
 // D7 (local-only). Decisions beyond the plan table, recorded here:
@@ -528,7 +528,8 @@ export function derivePlanningPrimaryAction(state: PlanningSessionState, stage: 
     }
     case 'aprobacion': {
       const saved = state.draft.savedState
-      if (saved === 'published' || saved === 'approved') return null
+      if (saved === 'published') return null
+      if (saved === 'approved') return state.draft.id && !state.dirty ? { id: 'publish', label: 'Publicar versión' } : null
       if (saved === 'ready-for-approval' && state.draft.id && !state.dirty) return { id: 'approve', label: 'Aprobar versión' }
       return { id: 'back-review', label: 'Volver a Revisión docente' }
     }

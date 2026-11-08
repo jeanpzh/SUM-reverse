@@ -53,7 +53,7 @@ try {
     const response = await pending
     assert.equal(response.status(), 200, await response.text())
     const value = await response.json()
-    await page.locator(`.academic-scheduling__result--${value.status}`).waitFor()
+    await page.locator(`.planning-status-bar[data-status="${value.status}"]`).waitFor()
     return value
   }
   await page.goto(`${base}/local/programacion-academica`)
@@ -113,7 +113,7 @@ try {
   await page.screenshot({ path: resolve(output, 'erp-complete-calendar.png') })
   await page.getByLabel('Seleccionar o agregar docente').selectOption(teachers[1].id)
   await teacherForm.getByRole('button', { name: /^Quitar docente / }).click()
-  assert.equal(await page.locator('.academic-scheduling__result').count(), 0)
+  assert.equal(await page.locator('.planning-status-bar').count(), 0)
   const insufficient = await generate()
   assert.equal(insufficient.status, 'impossible')
   assert.equal(insufficient.coverageComplete, false)
@@ -121,7 +121,7 @@ try {
   assert.ok(insufficient.counts.scheduledSessions < 8)
   assert.ok(insufficient.diagnostics.every((row) => row.code !== 'SEARCH_LIMIT'))
   assert.equal(await calendar.locator('.weekly-schedule__event').count(), insufficient.counts.scheduledSessions / 2)
-  await page.locator('.academic-scheduling__result').scrollIntoViewIfNeeded()
+  await page.locator('.planning-status-bar').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(output, 'erp-insufficient.png') })
   await page.getByLabel('Carga semanal docente', { exact: true }).fill('960')
   await page.getByLabel(`Máximo de secciones ${course.courseId}`, { exact: true }).fill('4')
