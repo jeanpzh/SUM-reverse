@@ -1,5 +1,15 @@
 import type { AcademicProposal } from '../data/academicScheduling'
 import { academicSectionCoverage, academicSectionLabel, academicSessionLabel, formatAcademicDuration } from '../data/academicScheduling'
+import { useState } from 'react'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/Dialog'
+import './PlanningStatusBar.css'
+
+const diagnosticLabels: Record<string, string> = {
+  PARTIAL_PROPOSAL: 'Propuesta parcial',
+  TEACHER_CAPACITY_SHORTFALL: 'Capacidad docente insuficiente',
+  NO_SCHEDULING_WINDOW: 'Sin horario disponible',
+  INSUFFICIENT_COURSE_TEACHER_LOAD: 'Carga docente insuficiente para el curso',
+}
 
 export interface PlanningStatusBarProps {
   proposal: AcademicProposal
@@ -34,6 +44,11 @@ function countAssignedConflicts(assignments: AcademicProposal['assignments']): n
 }
 
 export function PlanningStatusBar({ proposal, onRegenerate, onReviewPending, isLocked = false }: PlanningStatusBarProps) {
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
+  const diagnosticGroups = Object.values(proposal.diagnostics.reduce<Record<string, typeof proposal.diagnostics>>((groups, diagnostic) => {
+    ;(groups[diagnostic.code] ??= []).push(diagnostic)
+    return groups
+  }, {})).sort((a, b) => Number(b[0]?.code === 'PARTIAL_PROPOSAL') - Number(a[0]?.code === 'PARTIAL_PROPOSAL'))
   const coverage = academicSectionCoverage(proposal)
   const scheduled = proposal.counts.scheduledSessions
   const required = proposal.counts.requiredSessions
@@ -54,8 +69,8 @@ export function PlanningStatusBar({ proposal, onRegenerate, onReviewPending, isL
     badgeText = 'Sin solución completa'
     headline = `Sin solución completa · ${scheduled}/${required} componentes`
     subtext = `${coverage.complete}/${totalSections} secciones completas · ${conflicts} cruces en lo asignado`
-    diagnosisText = proposal.diagnostics.length > 0
-      ? proposal.diagnostics.map((d) => d.message).join('. ')
+    diagnosisText = proposal.diagnostics.length === 1
+      ? proposal.diagnostics[0].message
       : 'Sin solución completa en el dominio configurado.'
   } else if (proposal.status === 'invalid-input') {
     badgeText = 'Entrada inválida'
@@ -82,8 +97,11 @@ export function PlanningStatusBar({ proposal, onRegenerate, onReviewPending, isL
           {headline}
         </h3>
         <p className="planning-status-bar__subtext">
-          {subtext}
+          {proposal.diagnostics.length > 0
+            ? `${coverage.complete}/${totalSections} secciones colocadas · ${proposal.diagnostics.length} avisos`
+            : subtext}
         </p>
+        {proposal.diagnostics.length > 0 && <button type="button" className="planning-status-bar__notices" aria-haspopup="dialog" onClick={() => setDiagnosticsOpen(true)}>Ver avisos</button>}
         {diagnosisText && (
           <p className="planning-status-bar__diagnosis">
             {diagnosisText}
@@ -144,21 +162,6 @@ export function PlanningStatusBar({ proposal, onRegenerate, onReviewPending, isL
               </ul>
             </div>
           )}
-          {proposal.diagnostics.length > 0 && (
-            <div className="academic-scheduling__diagnostics">
-              <h4>Diagnósticos</h4>
-              <ul>
-                {proposal.diagnostics.map((diagnostic, index) => (
-                  <li key={`${diagnostic.code}-${index}`}>
-                    <strong>{diagnostic.code}</strong> — {diagnostic.message}
-                    {diagnostic.sessionIds.length > 0 && (
-                      <span> Sesiones: {diagnostic.sessionIds.map((id) => academicSessionLabel(proposal, id)).join('; ')}.</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
           {proposal.preferenceReport && (
             <div className="academic-scheduling__preference-report">
               <h4>Resultado de preferencias · {proposal.preferenceReport.policy}</h4>
@@ -169,6 +172,24 @@ export function PlanningStatusBar({ proposal, onRegenerate, onReviewPending, isL
           )}
         </div>
       </details>
+      <Dialog open={diagnosticsOpen} onOpenChange={setDiagnosticsOpen}>
+        <DialogContent className="planning-status-bar__dialog">
+          <DialogHeader>
+            <DialogTitle>Avisos de la generación</DialogTitle>
+            <DialogDescription>{proposal.diagnostics.length} avisos agrupados por tipo</DialogDescription>
+          </DialogHeader>
+          <div className="planning-status-bar__groups">
+            {diagnosticGroups.map((group) => {
+              const code = group[0].code
+              return <details key={code} open={code === 'PARTIAL_PROPOSAL'}>
+                <summary>{diagnosticLabels[code] ?? 'Otro aviso'} <span>{group.length}</span></summary>
+                {code === 'PARTIAL_PROPOSAL' && <p>La propuesta contiene secciones que no pudieron colocarse por completo.</p>}
+                <ul>{group.map((diagnostic, index) => <li key={`${code}-${index}`}>{diagnostic.message}{diagnostic.sessionIds.length > 0 && <span> Sesiones: {diagnostic.sessionIds.map((id) => academicSessionLabel(proposal, id)).join('; ')}.</span>}</li>)}</ul>
+              </details>
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }
