@@ -42,3 +42,26 @@
 .planning-preparation-view {
   min-width: 0;
 }
+
+/* The global student dl rules are unlayered; keep this summary independent. */
+.planning-preparation-summary__counts {
+  margin: 0;
+}
+
+.planning-preparation-summary__counts > div {
+  display: block;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+}
+
+.planning-preparation-summary__counts dt {
+  width: auto;
+  color: var(--planning-muted);
+  font-size: 0.8125rem;
+}
+
+.planning-preparation-summary__counts dd {
+  margin: 0.5rem 0 0;
+  color: var(--planning-text);
+}
