@@ -66,3 +66,12 @@ T1 y T2 corren en paralelo (archivos disjuntos). Integración ticket a ticket po
 | A8 Alumno intacto | `--sum-*` sin cambios en diff; sin preflight; `pnpm --dir client verify` de escenarios del alumno aplicables | Sin regresión |
 
 Solo datos sintéticos. No se accede a `datos-reales/` ni a servidores con snapshots privados.
+
+## Avance (2026-11-08)
+
+- T2 integrado (`df0519b`), con correcciones del orquestador: el script de contraste ahora comprueba ambos temas (`6ced04d`) y el contexto del portal sale del shell para cumplir lint (`0b1cb8c`).
+- T1: dos intentos delegados quedaron incompletos (`3436e57`, `a5a3d66`, no integrados); el orquestador lo implementó (`f11df89`). Desviaciones registradas:
+  - D1: se mantiene el reductor puro; un store mínimo (`createPlanningSession`) envuelve el reductor para que las órdenes asíncronas lean el estado actual, y React lo consume con `useSyncExternalStore`. Sin dependencias nuevas.
+  - D7: pendientes en Horario = secciones parciales + pendientes; Revisión docente sin revisión, con cambios pedidos o desactualizada → «Volver a Horario»; Aprobación exige estado guardado `ready-for-approval` (regla existente del servidor) y antes de eso → «Volver a Revisión docente»; publicada → sin acción.
+  - La invalidación de demanda no aborta la solicitud en curso; su resultado se descarta por token.
+- T3 se divide: T3a migra el estado de `AcademicScheduling` a la Sesión sin cambio visual; T3b aplica las superposiciones de D6 y los colores fijos.
