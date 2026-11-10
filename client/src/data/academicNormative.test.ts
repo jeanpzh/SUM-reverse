@@ -10,6 +10,16 @@ const { question, ...context } = request
 const response: AcademicNormativeResponse = { revision: 'PA-NORMATIVE-1', question, context, status: 'not-determined', answer: 'No determinado en este escenario sintético.', retrievalMode: 'lexical-only', citations: [], gaps: ['Falta evidencia sintética'] }
 const fakeFetch = (body: unknown): typeof fetch => async () => new Response(JSON.stringify(body))
 
+test('bounded antecedent reaches transport without becoming a response filter', async () => {
+  const contextual = { ...request, previousQuestion: 'Pregunta anterior sintética' }
+  const result = await fetchAcademicNormativeAdvice(contextual, async (_url, init) => {
+    assert.equal(JSON.parse(String(init?.body)).previousQuestion, contextual.previousQuestion)
+    return new Response(JSON.stringify({ ...response, nextStep: 'Revisar el acuerdo sintético.' }))
+  })
+  assert.equal(result.nextStep, 'Revisar el acuerdo sintético.')
+  assert.ok(!('previousQuestion' in result.context))
+})
+
 test('normative query posts explicit filters without identity and validates before returning', async () => {
   assert.deepEqual(await fetchAcademicNormativeAdvice(request, async (url, init) => {
     assert.equal(url, `${ACADEMIC_API}/normativa/consultas`)

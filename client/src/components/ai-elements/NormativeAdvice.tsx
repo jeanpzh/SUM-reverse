@@ -37,11 +37,13 @@ export function NormativeAdvice({ advice }: { advice: AcademicNormativeResponse 
     : hasSources
       ? evidenceReason
       : 'No se recuperaron fuentes aplicables a esta consulta y sus filtros.'
-  const nextStep = conflict ? 'Contrasta las disposiciones y sus fechas con la autoridad correspondiente.'
+  const nextStep = advice.nextStep ?? (conflict ? 'Contrasta las disposiciones y sus fechas con la autoridad correspondiente.'
     : unavailable ? 'Revisa la disponibilidad del corpus o vuelve a intentar la consulta más tarde.'
     : advice.context.teacherType === 'unknown'
       ? 'Comprueba el régimen docente en el contexto de la consulta y revisa las disposiciones del periodo.'
-      : 'Revisa la vigencia y el alcance de las disposiciones para el periodo consultado.'
+      : advice.context.teacherType === 'contratado' && !hasSources
+        ? 'Solicita la norma aplicable al régimen contratado; no traslades los límites del régimen ordinario.'
+        : 'Revisa la vigencia y el alcance de las disposiciones para el periodo consultado.')
 
   return <section aria-label="Respuesta normativa" data-normative-status={advice.status}
     className="normative-advice [overflow-wrap:anywhere]">
@@ -50,13 +52,15 @@ export function NormativeAdvice({ advice }: { advice: AcademicNormativeResponse 
         <Icon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
         <div className="min-w-0">
           <p className="normative-advice__conclusion-title">{title}</p>
-          {!supported && <p className="normative-advice__summary">{explanation}</p>}
+          {!supported && (hasSources || unavailable) && <p className="normative-advice__summary">{explanation}</p>}
         </div>
       </div>
       <span className="normative-advice__meta">{advice.context.facultyId} · {advice.context.academicPeriod}</span>
     </div>
-    {supported ? <div className="normative-advice__body"><NormativeMarkdown>{advice.answer}</NormativeMarkdown></div>
-      : <p className="normative-advice__next-step"><strong>Siguiente paso:</strong> {nextStep}</p>}
+    {!unavailable && <div className="normative-advice__body" data-documentary-answer>
+      <NormativeMarkdown>{advice.answer}</NormativeMarkdown>
+    </div>}
+    {!supported && <p className="normative-advice__next-step"><strong>Siguiente paso:</strong> {nextStep}</p>}
     <div className="normative-advice__disclosures">
       <NormativeEvidence citations={advice.citations} />
       <NormativeDetails advice={advice} />

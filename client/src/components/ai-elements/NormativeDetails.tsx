@@ -1,6 +1,5 @@
 import type { AcademicNormativeResponse } from '../../../../shared/programacion-academica-api.mjs'
 import { AdviceDisclosure } from './AdviceDisclosure'
-import { NormativeMarkdown } from './NormativeMarkdown'
 
 const modeLabels = { hybrid: 'Híbrida (léxica + semántica)', 'lexical-only': 'Solo léxica', unavailable: 'No disponible' }
 const generationReasons = {
@@ -14,9 +13,6 @@ export function NormativeDetails({ advice }: { advice: AcademicNormativeResponse
   return <>
     {gaps.length > 0 && <AdviceDisclosure label={`Alcance y verificaciones pendientes (${gaps.length})`}>
       <ul className="normative-advice__list">{gaps.map((gap) => <li key={gap}>{gap}</li>)}</ul>
-    </AdviceDisclosure>}
-    {advice.status !== 'supported' && <AdviceDisclosure label="Ver respuesta completa">
-      <div className="normative-advice__body"><NormativeMarkdown>{advice.answer}</NormativeMarkdown></div>
     </AdviceDisclosure>}
     <AdviceDisclosure label="Detalles técnicos de la consulta">
       <dl className="normative-advice__metadata-list">

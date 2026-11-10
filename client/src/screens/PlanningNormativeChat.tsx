@@ -46,7 +46,7 @@ export function PlanningNormativeChat({ academicPeriod, chat }: { academicPeriod
   const selectSuggestion = (item: ExampleQuestion) => {
     chat.changeTeacherType(item.teacherType)
     chat.setQuestion(item.question)
-    void chat.submit(item.question, item.teacherType)
+    void chat.submit(item.question, item.teacherType, undefined, true)
   }
 
   return (
@@ -65,6 +65,7 @@ export function PlanningNormativeChat({ academicPeriod, chat }: { academicPeriod
           </span>
         </summary>
         <div className="planning-chat__filters">
+          <p className="m-0 text-xs text-muted-foreground">Las preguntas de seguimiento usan tu última consulta respondida. Cambiar los filtros inicia otra conversación.</p>
           <Label className="text-xs font-medium">
             Fecha de consulta
             <Input

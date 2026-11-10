@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { AcademicNormativeRequest, AcademicNormativeResponse } from '../../../shared/programacion-academica-api.mjs'
 import { fetchAcademicNormativeAdvice, type PlanningPeriod } from '../data/academicScheduling'
 
-type Turn = { id: string; question: string; answer?: AcademicNormativeResponse; error?: string; cancelled?: boolean }
+type Turn = { id: string; question: string; previousQuestion?: string; answer?: AcademicNormativeResponse; error?: string; cancelled?: boolean }
 
 export function useNormativeChat(academicPeriod: PlanningPeriod) {
   const [question, setQuestion] = useState('')
@@ -27,21 +27,27 @@ export function useNormativeChat(academicPeriod: PlanningPeriod) {
     setTurns((items) => items.map((turn) => (!turn.answer && !turn.error ? { ...turn, cancelled: true } : turn)))
   }
 
-  const submit = async (customQuestion?: string, customTeacherType?: AcademicNormativeRequest['teacherType'], retryId?: string) => {
+  const submit = async (customQuestion?: string, customTeacherType?: AcademicNormativeRequest['teacherType'], retryId?: string, independent = false) => {
     const text = (customQuestion ?? question).trim()
     const targetType = customTeacherType ?? teacherType
     if (loading || !text) return
     const id = retryId ?? String(++sequence.current)
+    // Only the previous successful user question is sent, never model prose or a
+    // growing transcript. Retry preserves the failed request's original antecedent.
+    const previousQuestion = independent || targetType !== teacherType ? undefined : retryId
+      ? turns.find((turn) => turn.id === retryId)?.previousQuestion
+      : [...turns].reverse().find((turn) => turn.answer)?.question
     const controller = new AbortController()
     pending.current = controller
     setTurns((items) => retryId
-      ? items.map((turn) => turn.id === retryId ? { id, question: text } : turn)
-      : [...items, { id, question: text }])
+      ? items.map((turn) => turn.id === retryId ? { id, question: text, previousQuestion } : turn)
+      : [...items, { id, question: text, previousQuestion }])
     if (!retryId) setQuestion('')
     setLoading(true)
     try {
       const answer = await fetchAcademicNormativeAdvice(
-        { question: text, facultyId: 'FISI', academicPeriod, asOf, teacherType: targetType },
+        { question: text, facultyId: 'FISI', academicPeriod, asOf, teacherType: targetType,
+          ...(previousQuestion ? { previousQuestion } : {}) },
         globalThis.fetch,
         controller.signal
       )
@@ -72,10 +78,14 @@ export function useNormativeChat(academicPeriod: PlanningPeriod) {
   }
 
   const changeAsOf = (value: string) => {
+    pending.current?.abort()
+    setLoading(false)
     setAsOf(value)
     setTurns([])
   }
   const changeTeacherType = (value: AcademicNormativeRequest['teacherType']) => {
+    pending.current?.abort()
+    setLoading(false)
     setTeacherType(value)
     setTurns([])
   }

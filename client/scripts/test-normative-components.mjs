@@ -18,10 +18,12 @@ const render = (component, props) => renderToStaticMarkup(React.createElement(co
 const advice = { revision: 'PA-NORMATIVE-1', question: 'Pregunta sintética', context: { facultyId: 'FISI', academicPeriod: '2027-I', asOf: '2027-01-01', teacherType: 'unknown' },
   status: 'not-determined', retrievalMode: 'lexical-only', answer: 'Evidencia sintética insuficiente.', gaps: ['Acuerdo FISI pendiente'], citations: [{ id: 'syn-1', documentId: 'syn-doc', title: 'Documento sintético', article: 'Artículo sintético 7', page: 3, url: 'https://medicina.unmsm.edu.pe/wp-content/uploads/2026/03/RESOLUCION-RECTORAL-001380-2026-R-ANEXO.pdf', excerpt: 'Extracto construido para esta prueba.', sourceClass: 'normative', scope: 'UNMSM', reviewedAt: '2026-11-08', effectiveFrom: null, effectiveTo: null }] }
 
-test('partial evidence has one compact conclusion and discloses sources, gaps and original answer', () => {
+test('partial evidence explains documentary content visibly and keeps sources and gaps collapsed', () => {
   const html = render(NormativeAdvice, { advice })
-  for (const text of ['Aplicación sin confirmar', 'La entrada en vigencia de los extractos localizados no está confirmada.', 'Fuentes localizadas (1)', 'Alcance y verificaciones pendientes (1)', 'Ver respuesta completa', 'Detalles técnicos de la consulta']) assert.ok(html.includes(text), text)
-  for (const text of [advice.answer, advice.gaps[0], advice.citations[0].excerpt, advice.citations[0].url]) assert.ok(!html.includes(text), text)
+  for (const text of ['Aplicación sin confirmar', 'La entrada en vigencia de los extractos localizados no está confirmada.', 'Fuentes localizadas (1)', 'Alcance y verificaciones pendientes (1)', 'Detalles técnicos de la consulta']) assert.ok(html.includes(text), text)
+  assert.ok(html.includes(advice.answer))
+  assert.ok(html.includes('data-documentary-answer'))
+  for (const text of [advice.gaps[0], advice.citations[0].excerpt, advice.citations[0].url]) assert.ok(!html.includes(text), text)
   assert.equal((html.match(/Aplicación sin confirmar/g) ?? []).length, 1)
   assert.ok(html.includes('data-normative-status="not-determined"'))
   assert.ok(html.includes('aria-expanded="false"'))
@@ -31,10 +33,18 @@ test('empty evidence shows one useful fallback without repeated no-source paragr
   const html = render(NormativeAdvice, { advice: { ...advice, citations: [] } })
   assert.equal((html.match(/Sin evidencia suficiente/g) ?? []).length, 1)
   assert.ok(html.includes('Comprueba el régimen docente'))
-  assert.doesNotMatch(html, /Fuentes localizadas|Sin fuentes normativas|No determinado|Evidencia sintética insuficiente/)
+  assert.doesNotMatch(html, /Fuentes localizadas|Sin fuentes normativas|No determinado/)
+  assert.ok(html.includes(advice.answer))
   const specified = render(NormativeAdvice, { advice: { ...advice, context: { ...advice.context, teacherType: 'contratado' }, citations: [] } })
-  assert.ok(specified.includes('Revisa la vigencia y el alcance'))
+  assert.ok(specified.includes('Solicita la norma aplicable al régimen contratado'))
   assert.doesNotMatch(specified, /Comprueba el régimen docente/)
+})
+
+test('query-specific next step is visible without opening sources or technical details', () => {
+  const html = render(NormativeAdvice, { advice: { ...advice,
+    nextStep: 'Solicita el acuerdo de Facultad que define la duración para este periodo.' } })
+  assert.ok(html.includes('Solicita el acuerdo de Facultad'))
+  assert.doesNotMatch(html, /Comprueba el régimen docente|Ver respuesta completa/)
 })
 
 test('unavailable retrieval describes a corpus problem instead of suggesting a different regime', () => {
