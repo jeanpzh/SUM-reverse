@@ -74,8 +74,9 @@
 }
 .planning-chat__context-info {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 8px;
+  gap: 4px 8px;
   min-width: 0;
   flex: 1;
 }
@@ -89,9 +90,8 @@
   font-size: var(--planning-text-xs);
   font-weight: 400;
   color: var(--planning-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .planning-chat__context-toggle {
   display: inline-flex;
@@ -116,7 +116,7 @@
   padding-top: 10px;
   border-top: 1px solid var(--planning-border);
   margin-top: 8px;
-  max-height: 32dvh;
+  max-height: min(60dvh, 28rem);
   overflow-y: auto;
 }
 
