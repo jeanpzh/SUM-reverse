@@ -64,13 +64,16 @@ de cada nivel, no las asignaciones.
 | --- | --- | --- | --- | --- |
 | T1 | Perfil normativo, campos reglamentarios del docente en el contrato y registro en el dossier | — | Claude Sonnet 5.5 | verificado 2026-11-10 en la rama `t3/academic-normative-profile` (`9267ac0`), sin integrar |
 | T2 | Motor: certificado de capacidad, tramos de carga, decisiones mínimas, prelación lexicográfica, prueba de cobertura | — | Codex GPT-6.1 Sol | verificado 2026-11-10 (`333a50f`); integrado con T1 en la rama `feat/planning-normative-engine` (`79b3da3`) |
-| T3 | Backend: perfil → entrada del motor, resultado en la Propuesta, datos sintéticos con régimen y procedencia, retiro del tope de demo de 10 h, bloqueo de publicación | T1, T2 | por asignar | pendiente |
+| T3 | Backend: perfil → entrada del motor, resultado en la Propuesta, datos sintéticos con régimen y procedencia, retiro del tope de demo de 10 h, bloqueo de publicación, unificación con los perfiles sintéticos del chat normativo | T1, T2 | Codex GPT-6.1 Sol | despachado 2026-11-10 |
 | T4 | Búsqueda en segundo plano con progreso y tope de candidatos adaptativo | T3 | por asignar | pendiente |
 | T5 | Interfaz: cola de decisiones, registro de evidencias, etiquetas de procedencia de cada regla | T3 | por asignar | pendiente |
-| T6 | Concesiones de franja, modalidad y recursos de referencia dentro del mismo cálculo de decisiones | T2 | por asignar | pendiente |
+| T6a | Motor: decisiones de franja y de modalidad para las secciones sin franja (`planning-window`, `delivery-mode-split`, base `window-precheck`) | T2 | Codex GPT-6.1 Sol | despachado 2026-11-10 |
+| T6b | El consejero consume las decisiones del motor en lugar de proponer y simular; recursos de referencia | T3, T6a | por asignar | pendiente |
 | T7 | Auditoría del resultado integrado | T3–T6 | por asignar | pendiente |
 
-T1 y T2 no comparten archivos: el contrato del motor está fijado arriba.
+T1 y T2 no comparten archivos: el contrato del motor está fijado arriba. T3 y T6a tampoco:
+T3 trabaja en `shared/`, `backend/` y `client/src/data/`; T6a solo en `planning-engine/`.
+Desde el 2026-11-10 el usuario pide delegar solo a agentes de Codex.
 
 ### Resultado de T1 y arrastre para T3
 
