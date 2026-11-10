@@ -19,6 +19,9 @@ These shadcn default-style APIs use existing light/dark `--planning-*` tokens.
 | Notices | `Alert`, `AlertTitle`, `AlertDescription` |
 | `window.confirm(...)` | `const [confirmElement, confirm] = useConfirm()`, render `confirmElement`, `if (!(await confirm({ title, description, confirmLabel, destructive }))) return` |
 | Transient "done"/"failed" messages | `toast.success(text)` / `toast.error(text)` from `ui/Sonner` |
+| Tooltip | shadcn registry, adapted: relative imports, planning portal, no-preflight resets, localStorage instead of a cookie (Sidebar only) |
+| Sidebar | shadcn registry, adapted: relative imports, planning portal, no-preflight resets, localStorage instead of a cookie |
+| Resizable | shadcn registry, adapted: relative imports, border-solid, installed v4 Group / Panel / Separator API |
 | Dividers / tabs | `Separator` / `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent` |
 
 **Feedback.** Toasts only report a completed action (saved, generated, request
@@ -26,8 +29,7 @@ failed). Keep inline: loading and blocking states, field validation, disabled-ga
 reasons, and anything the user must read before acting. Never toast and render the
 same message inline. `ConfirmDialog` (AlertDialog) is for explicit confirmation only.
 
-**Shell.** There is no rail: `PlanningShellControls` (theme, back link) render in the
-scope header. `Toaster` and the portal container are mounted by `PlanningShell`.
+**Shell.** `PlanningShell` uses the collapsible shadcn Sidebar with one Preparación group and three ungrouped stage destinations, trailing completion checks, one shared planning session, mobile Sheet navigation, a plain provenance footer, theme controls, `Toaster` and a scoped portal container. Light is the default; stored theme choices take precedence.
 
 **Tour.** `Tour` (Dice UI) with `TourPortal`, `TourSpotlight`, `TourSpotlightRing`,
 `TourStep target="#id"`, `TourHeader/Title/Description`, `TourFooter`, `TourPrev`,

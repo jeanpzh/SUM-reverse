@@ -4,13 +4,13 @@
 }
 
 .planning-root [data-sonner-toast][data-styled='true'] {
-  font-size: 0.875rem;
+  font-size: var(--planning-text-sm);
   box-shadow: var(--planning-shadow);
 }
 
 .planning-root [data-sonner-toast][data-styled='true'] [data-description] {
   color: var(--planning-muted);
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-sm);
 }
 
 .planning-root [data-sonner-toast][data-type='success'] [data-icon] {

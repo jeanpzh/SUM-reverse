@@ -1,0 +1,124 @@
+.planning-fetch-loading {
+  min-width: 0;
+  width: 100%;
+  padding-block: 8px;
+  box-sizing: border-box;
+}
+
+.planning-fetch-loading__bar {
+  display: inline-block;
+  background: var(--planning-border, rgba(255, 255, 255, 0.12));
+  border-radius: 4px;
+  vertical-align: middle;
+}
+
+.planning-fetch-loading__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Match courses table workbench geometry exactly to eliminate CLS (page jump) */
+.planning-fetch-loading__courses-workbench {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.planning-fetch-loading__filter-skeleton {
+  margin-bottom: 16px;
+}
+
+.planning-fetch-loading__toolbar-skeleton {
+  margin-bottom: 16px;
+}
+
+.planning-fetch-loading__table-scroll-container {
+  min-height: min(70dvh, 40rem);
+  max-height: min(70dvh, 40rem);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.planning-fetch-loading__publication-table {
+  min-height: 380px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.planning-fetch-loading__intention-table {
+  min-height: 280px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.planning-fetch-loading__page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  padding-inline: 4px;
+}
+
+.planning-fetch-loading__page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--planning-border, rgba(255, 255, 255, 0.08));
+}
+
+.planning-fetch-loading__page-nav {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.planning-fetch-loading__table {
+  overflow: hidden;
+  min-height: 480px;
+  width: 100%;
+}
+
+.planning-fetch-loading__answer {
+  display: grid;
+  gap: 12px;
+  min-height: 160px;
+}
+
+.planning-fetch-loading__answer h4,
+.planning-fetch-loading__answer p {
+  margin: 0;
+  width: fit-content;
+  max-width: 100%;
+  line-height: 1.6;
+}
+
+.planning-fetch-loading__answer p:last-child {
+  width: 65%;
+}
+
+.planning-fetch-loading__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 16px;
+}
+
+.planning-fetch-loading__cards article {
+  padding: 16px;
+  border: 1px solid var(--planning-border, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+}
+
+.planning-fetch-loading__cards h4,
+.planning-fetch-loading__cards p {
+  margin: 0 0 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planning-fetch-loading * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

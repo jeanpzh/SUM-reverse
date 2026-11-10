@@ -1,0 +1,200 @@
+/* Normative Advice - Semantic Hierarchy & Typography Scale */
+.normative-advice {
+  display: grid;
+  gap: 14px;
+  font-size: var(--planning-text-sm);
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--planning-text);
+}
+
+/* 1. Conclusión (14px / 500) */
+.normative-advice__conclusion {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--planning-border);
+  background: var(--planning-canvas);
+}
+
+.normative-advice__status-badge {
+  align-self: flex-start;
+  font-size: var(--planning-text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.normative-advice__conclusion-title {
+  margin: 0;
+  font-size: var(--planning-text-sm);
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--planning-text);
+}
+
+/* 2. Cuerpo / Markdown (14px / 400, line-height 1.6) */
+.normative-advice__body {
+  font-size: var(--planning-text-sm);
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--planning-text);
+}
+
+.normative-advice__body p {
+  margin: 0 0 10px 0;
+  font-size: var(--planning-text-sm);
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.normative-advice__body p:last-child {
+  margin-bottom: 0;
+}
+
+.normative-advice__body h3 {
+  margin: 14px 0 6px 0;
+  font-size: var(--planning-text-sm);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--planning-text);
+}
+
+.normative-advice__body ul,
+.normative-advice__body ol {
+  margin: 8px 0 12px 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+}
+
+.normative-advice__body li {
+  font-size: var(--planning-text-sm);
+  line-height: 1.55;
+  color: var(--planning-text);
+}
+
+.normative-advice__body blockquote {
+  margin: 8px 0 12px 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--planning-border);
+  background: var(--planning-canvas);
+  border-radius: 0 6px 6px 0;
+  color: var(--planning-muted);
+  font-size: var(--planning-text-sm);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.normative-advice__body strong {
+  font-weight: 600;
+  color: var(--planning-text);
+}
+
+/* 3. Secciones secundarias & Subtítulos (13px / 600) */
+.normative-advice__section {
+  display: grid;
+  gap: 6px;
+}
+
+.normative-advice__subtitle {
+  margin: 0;
+  font-size: var(--planning-text-sm);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--planning-text);
+}
+
+/* Listas de limitaciones (14px / 400) */
+.normative-advice__list {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+  font-size: var(--planning-text-sm);
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--planning-text);
+}
+
+.normative-advice__list li {
+  font-size: var(--planning-text-sm);
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+/* Citas y fuentes */
+.normative-advice__citations-list {
+  display: grid;
+  gap: 8px;
+}
+
+.normative-advice__citation-card {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--planning-border);
+  background: var(--planning-canvas);
+}
+
+.normative-advice__citation-link {
+  font-size: var(--planning-text-sm);
+  font-weight: 500;
+  color: var(--planning-text);
+  text-decoration: none;
+}
+
+.normative-advice__citation-link:hover {
+  text-decoration: underline;
+}
+
+.normative-advice__citation-excerpt {
+  font-size: var(--planning-text-sm);
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--planning-text);
+  opacity: 0.9;
+}
+
+/* Metadatos (12px / 400) */
+.normative-advice__meta {
+  font-size: var(--planning-text-xs);
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--planning-muted);
+}
+
+/* 5. Detalles técnicos colapsables */
+.normative-advice__details {
+  border-top: 1px solid var(--planning-border);
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.normative-advice__details-trigger {
+  font-size: var(--planning-text-xs);
+  font-weight: 500;
+  color: var(--planning-muted);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+  transition: color 0.15s ease;
+}
+
+.normative-advice__details-trigger:hover {
+  color: var(--planning-text);
+}
+
+.normative-advice__details-content {
+  display: grid;
+  gap: 8px;
+  padding-top: 6px;
+  font-size: var(--planning-text-xs);
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--planning-muted);
+}
