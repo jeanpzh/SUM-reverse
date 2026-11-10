@@ -21,3 +21,14 @@ _Evitar_: generador IA, solver IA, copiloto de horarios
 
 **Recomendación**: ajuste candidato y verificable sobre el workspace (carga docente, habilitación de curso, excepción horaria o modalidad de entrega) que el planificador confirma para que el motor determinista regenere la **Propuesta**.
 _Evitar_: auto-corrección, asignación automática IA
+
+**Perfil normativo**: módulo `shared/academic-normative-profile.mjs`, único lugar que conoce el reglamento de carga docente (R.R. 001380-2026-R modificada por la R.R. 005348-2026-R). Devuelve límites resueltos, orden de prelación y brechas explícitas, cada uno con sus fuentes; versionado por vigencia y facultad, sin retroceso a otro periodo. Una norma no prueba que SUM la aplique.
+_Evitar_: reglas de carga, constantes de horas en el código llamador
+
+**Excepción reglada**: paso que el Perfil normativo prevé para superar el máximo lectivo ordinario de un docente: declaración jurada voluntaria (hasta 20 horas) y después autorización de la VRAP. La aprobación en la interfaz nunca sustituye la autorización formal registrada.
+_Evitar_: sobrecarga aprobada, excepción de planificador
+
+**Prelación docente**: orden en que se asigna la carga lectiva: nombramiento (nombrado de la facultad, interfacultativo, contrato; interpretación `inferred`), categoría y régimen (tabla de la R.R. 005348-2026-R), y evaluación del desempeño (inactiva, sin datos). Es una preferencia de asignación, no una restricción dura.
+
+**Hora lectiva**: unidad de carga docente de 45, 50 o 60 minutos cronológicos que define cada Consejo de Facultad (art. 8). La duración de FISI no está verificada: el Perfil normativo no la asume y exige indicarla.
+_Evitar_: hora académica, hora de reloj

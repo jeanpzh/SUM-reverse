@@ -1,10 +1,11 @@
 import type { PlanningPeriod, PlanningPolicy } from './academic-planning-policy.mjs'
+import type { LoadAuthorization, TeacherAppointment, TeacherLoadCondition, TeacherRegime } from './academic-normative-profile.mjs'
 export const ACADEMIC_REVISION: 'PA-DEMO-1'
 export const ACADEMIC_ROUTE: '/local/programacion-academica'
 export const ACADEMIC_API: '/api/local/programacion-academica/v1'
 export type AcademicInterval = { day: number; startMinute: number; endMinute: number }
 export type AcademicAllocationPolicy = 'preferences' | 'balanced' | 'first-feasible'
-export type AcademicTeacherResource = { id: string; name: string; courseIds: string[]; maxWeeklyMinutes: number; availability: AcademicInterval[]; preferences?: AcademicInterval[]; sectionLimits?: Array<{ courseId: string; maxSections: number }>; facultyId?: string; category?: 'principal' | 'asociado' | 'auxiliar'; qualificationSource?: 'synthetic' }
+export type AcademicTeacherResource = { id: string; name: string; courseIds: string[]; maxWeeklyMinutes: number; availability: AcademicInterval[]; preferences?: AcademicInterval[]; sectionLimits?: Array<{ courseId: string; maxSections: number }>; facultyId?: string; category?: 'principal' | 'asociado' | 'auxiliar'; qualificationSource?: 'synthetic'; regime?: TeacherRegime; appointment?: TeacherAppointment; weeklyServiceHours?: number; loadConditions?: TeacherLoadCondition[]; loadAuthorizations?: LoadAuthorization[] }
 export type AcademicRoomResource = { id: string; name: string; capacity: number; availability: AcademicInterval[]; kind?: 'classroom' | 'laboratory' }
 export type AcademicPlanningResources = { teachers: AcademicTeacherResource[]; rooms: AcademicRoomResource[] }
 export type AcademicRequest = { revision: string; demands: Array<{ courseId: string; estimatedDemand: number; targetCapacity?: number; patternId?: string; deliveryMode?: 'continuous' | 'split'; sectionCapacities?: Array<{ ordinal: number; capacity: number }> }>; resources?: AcademicPlanningResources; allocationPolicy?: AcademicAllocationPolicy; planningPolicy?: PlanningPolicy }

@@ -119,3 +119,32 @@ test('catalog can expose 56 courses independently of the bounded planning reques
   invalid.courses[0].history.sections[0].sessions[0].endMinute = 480
   assert.throws(() => validateAcademicCatalog(invalid))
 })
+
+test('teacher teaching-load fields are optional and validated one by one', () => {
+  const base = planningResources()
+  assert.doesNotThrow(() => validateAcademicResources(base))
+  const full = planningResources()
+  Object.assign(full.teachers[0], {
+    regime: 'tiempo-parcial', appointment: 'faculty-ordinary', weeklyServiceHours: 20, category: 'auxiliar',
+    loadConditions: ['renacyt-researcher', 'postgraduate-study', 'on-leave'],
+    loadAuthorizations: [{ kind: 'voluntary-declaration', reference: 'DJ-001' }, { kind: 'vrap-authorization', reference: 'VRAP-001', maxLectiveHours: 24 }],
+  })
+  assert.doesNotThrow(() => validateAcademicResources(full))
+  for (const [field, value] of [
+    ['regime', 'medio-tiempo'], ['regime', null], ['appointment', 'nombrado'], ['weeklyServiceHours', 0], ['weeklyServiceHours', 40], ['weeklyServiceHours', 12.5],
+    ['weeklyServiceHours', '20'], ['loadConditions', ['unknown']], ['loadConditions', ['on-leave', 'on-leave']], ['loadConditions', 'on-leave'],
+    ['loadAuthorizations', [{ kind: 'voluntary-declaration' }]],
+    ['loadAuthorizations', [{ kind: 'voluntary-declaration', reference: '' }]],
+    ['loadAuthorizations', [{ kind: 'voluntary-declaration', reference: '  ' }]],
+    ['loadAuthorizations', [{ kind: 'voluntary-declaration', reference: 'DJ-001', maxLectiveHours: 20 }]],
+    ['loadAuthorizations', [{ kind: 'vrap-authorization', reference: 'VRAP-001' }]],
+    ['loadAuthorizations', [{ kind: 'vrap-authorization', reference: 'VRAP-001', maxLectiveHours: 0 }]],
+    ['loadAuthorizations', [{ kind: 'vrap-authorization', reference: 'VRAP-001', maxLectiveHours: 1.5 }]],
+    ['loadAuthorizations', [{ kind: 'dean-authorization', reference: 'X' }]],
+    ['loadAuthorizations', [{ kind: 'voluntary-declaration', reference: 'DJ-001', extra: true }]],
+  ]) {
+    const resources = planningResources()
+    resources.teachers[0][field] = value
+    assert.throws(() => validateAcademicResources(resources), TypeError, `${field}: ${JSON.stringify(value)}`)
+  }
+})

@@ -1,4 +1,5 @@
 import { PLANNING_LIMITS, isPlanningPeriod, validatePlanningPolicy } from './academic-planning-policy.mjs'
+import { LOAD_AUTHORIZATION_KINDS, TEACHER_APPOINTMENTS, TEACHER_LOAD_CONDITIONS, TEACHER_REGIMES } from './academic-normative-profile.mjs'
 /** PA-DEMO-1: independent local synthetic planning wire contract. */
 export const ACADEMIC_REVISION = 'PA-DEMO-1'
 export const ACADEMIC_ROUTE = '/local/programacion-academica'
@@ -317,12 +318,33 @@ function resourceId(value) {
   string(value, 'resource.id')
   if (value.length > 80 || value.trim() !== value) throw new TypeError('Identificación de recurso inválida')
 }
+// Optional teaching-load fields read by the Perfil normativo (academic-normative-profile.mjs). The regulation itself lives there.
+function teacherLoadFields(row) {
+  if (Object.hasOwn(row, 'regime') && !TEACHER_REGIMES.includes(row.regime)) throw new TypeError('Régimen docente inválido')
+  if (Object.hasOwn(row, 'appointment') && !TEACHER_APPOINTMENTS.includes(row.appointment)) throw new TypeError('Nombramiento docente inválido')
+  if (Object.hasOwn(row, 'weeklyServiceHours')) number(row.weeklyServiceHours, 'weeklyServiceHours', 1, 39)
+  if (Object.hasOwn(row, 'loadConditions')) {
+    array(row.loadConditions, 'loadConditions', TEACHER_LOAD_CONDITIONS.length)
+    if (row.loadConditions.some((item) => !TEACHER_LOAD_CONDITIONS.includes(item)) || new Set(row.loadConditions).size !== row.loadConditions.length) throw new TypeError('Condición de carga docente inválida')
+  }
+  if (Object.hasOwn(row, 'loadAuthorizations')) {
+    array(row.loadAuthorizations, 'loadAuthorizations', 16).forEach((item) => {
+      object(item, ['kind', 'reference'], 'loadAuthorization', ['maxLectiveHours'])
+      if (!LOAD_AUTHORIZATION_KINDS.includes(item.kind)) throw new TypeError('Tipo de autorización de carga inválido')
+      string(item.reference, 'loadAuthorization.reference')
+      if (!item.reference.trim()) throw new TypeError('Referencia de autorización requerida')
+      if (item.kind === 'vrap-authorization') number(item.maxLectiveHours, 'loadAuthorization.maxLectiveHours', 1, 168)
+      else if (Object.hasOwn(item, 'maxLectiveHours')) throw new TypeError('Solo la autorización de la VRAP indica horas máximas')
+    })
+  }
+}
 function teacherResource(row) {
-  object(row, ['id', 'name', 'courseIds', 'maxWeeklyMinutes', 'availability'], 'teacher', ['preferences', 'sectionLimits', 'facultyId', 'category', 'qualificationSource'])
+  object(row, ['id', 'name', 'courseIds', 'maxWeeklyMinutes', 'availability'], 'teacher', ['preferences', 'sectionLimits', 'facultyId', 'category', 'qualificationSource', 'regime', 'appointment', 'weeklyServiceHours', 'loadConditions', 'loadAuthorizations'])
   resourceId(row.id)
   if (Object.hasOwn(row, 'facultyId')) resourceId(row.facultyId)
   if (Object.hasOwn(row, 'category') && !['principal', 'asociado', 'auxiliar'].includes(row.category)) throw new TypeError('Categoría docente inválida')
   if (Object.hasOwn(row, 'qualificationSource') && row.qualificationSource !== 'synthetic') throw new TypeError('Procedencia docente inválida')
+  teacherLoadFields(row)
   string(row.name, 'teacher.name')
   if (!row.name.trim()) throw new TypeError('Nombre de docente requerido')
   strings(row.courseIds, 'courseIds')
