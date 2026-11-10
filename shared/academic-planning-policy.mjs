@@ -1,3 +1,5 @@
+import { syntheticPlanningProfileFor, SYNTHETIC_PLANNING_TEACHER_PROFILES } from './prototype-teacher-profiles.mjs'
+import { resolveNormativeProfile, teacherLoadLimits, NormativeProfileGapError } from './academic-normative-profile.mjs'
 // Explicit local demo parameters supplied by the project operator, not official statistics.
 export const PLANNING_LIMITS = Object.freeze({ courses: 96, teachers: 128, rooms: 128, sessions: 1024 })
 export const THESIS_COURSE_IDS = Object.freeze(['20118081', '20118091', '20118101'])
@@ -18,6 +20,18 @@ export function planningDefaults(cycle, period) {
   }
   return { estimatedDemand: cycle % 2 === (period.endsWith('-II') ? 0 : 1) ? 180 : 90, targetCapacity: 45 }
 }
-export function syntheticTeachingMetadata(index = 0) {
-  return { facultyId: 'FISI', category: ['principal', 'asociado', 'auxiliar'][index % 3], qualificationSource: 'synthetic' }
+export function syntheticTeachingMetadata(index = 0, teacherId) {
+  const profile = teacherId ? syntheticPlanningProfileFor(teacherId) : SYNTHETIC_PLANNING_TEACHER_PROFILES[index % SYNTHETIC_PLANNING_TEACHER_PROFILES.length]
+  return { ...(profile ? { regime: profile.regime, appointment: profile.appointment } : {}), facultyId: 'FISI', category: ['principal', 'asociado', 'auxiliar'][index % 3], qualificationSource: 'synthetic' }
+}
+
+// Local demo fallback for contract/unknown resources, never a regulated limit.
+export function syntheticTeacherMaxMinutes(teacher, { period, lectiveHourMinutes }) {
+  try {
+    const profile = resolveNormativeProfile({ facultyId: 'FISI', period })
+    return teacherLoadLimits(profile, teacher, { lectiveHourMinutes }).ordinaryMaxMinutes ?? 600
+  } catch (error) {
+    if (!(error instanceof NormativeProfileGapError)) throw error
+    return 600 // Explicit synthetic demo cap when no applicable profile exists.
+  }
 }

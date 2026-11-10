@@ -7,7 +7,7 @@ import type {
 } from '../../../shared/programacion-academica-api.mjs'
 import { PLANNING_LIMITS } from './academicScheduling.ts'
 
-export type UnifiedTeacherResource = {
+export type UnifiedTeacherResource = Pick<AcademicTeacherResource, 'regime' | 'appointment' | 'weeklyServiceHours' | 'loadConditions' | 'loadAuthorizations'> & {
   id: string
   name: string
   isIncluded: boolean
@@ -165,6 +165,11 @@ export function buildUnifiedTeachers(
         facultyId: included.facultyId,
         category: included.category,
         qualificationSource: included.qualificationSource,
+        regime: included.regime,
+        appointment: included.appointment,
+        weeklyServiceHours: included.weeklyServiceHours,
+        loadConditions: included.loadConditions ? [...included.loadConditions] : undefined,
+        loadAuthorizations: included.loadAuthorizations?.map((authorization) => ({ ...authorization })),
       })
     } else {
       result.push({
@@ -182,6 +187,11 @@ export function buildUnifiedTeachers(
         facultyId: included.facultyId,
         category: included.category,
         qualificationSource: included.qualificationSource,
+        regime: included.regime,
+        appointment: included.appointment,
+        weeklyServiceHours: included.weeklyServiceHours,
+        loadConditions: included.loadConditions ? [...included.loadConditions] : undefined,
+        loadAuthorizations: included.loadAuthorizations?.map((authorization) => ({ ...authorization })),
       })
     }
   }
