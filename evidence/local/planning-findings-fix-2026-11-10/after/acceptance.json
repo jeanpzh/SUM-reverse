@@ -1,0 +1,317 @@
+{
+  "source": "Fresh owned isolated synthetic React/Nest/Python stack, no cloud calls; explicit network delay/failure injections only",
+  "results": [
+    {
+      "name": "empty-workspace-six-destinations",
+      "passed": false,
+      "durationMs": 25108,
+      "error": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator('#planning-page-title') to be visible\n",
+      "stack": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator('#planning-page-title') to be visible\n\n    at /home/ubuntu/projects/SUM-reverse/client/scripts/verify-planning-comprehensive.mjs:30:47",
+      "errors": [],
+      "external": [],
+      "details": [],
+      "http": [],
+      "url": "http://127.0.0.1:6646/local/programacion-academica?etapa=preparacion&vista=resumen"
+    },
+    {
+      "name": "generation-failure-can-be-retried-without-fake-proposal",
+      "passed": true,
+      "durationMs": 25796,
+      "details": [],
+      "http": [
+        {
+          "path": "/api/local/programacion-academica/v1/propuestas",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "name": "resource-modal-edit-survives-navigation",
+      "passed": true,
+      "durationMs": 8203,
+      "details": [],
+      "http": []
+    },
+    {
+      "name": "invalid-adjustment-does-not-change-schedule",
+      "passed": true,
+      "durationMs": 10196,
+      "details": [],
+      "http": [
+        {
+          "path": "/api/local/programacion-academica/v1/propuestas",
+          "status": 200
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/propuestas/5fe3e150-02ad-467d-9d75-52ea55bcac06/ajustes",
+          "status": 422
+        }
+      ]
+    },
+    {
+      "name": "save-network-error-preserves-work-and-retries",
+      "passed": true,
+      "durationMs": 11015,
+      "details": [],
+      "http": [
+        {
+          "path": "/api/local/programacion-academica/v1/propuestas",
+          "status": 200
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/borradores/guardar",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "name": "advisor-saving-state-explains-global-block",
+      "passed": true,
+      "durationMs": 19191,
+      "details": [
+        {
+          "disabledDuringSave": true,
+          "globalSaveLabel": "Guardando…",
+          "nearbyReason": "_r_1j_"
+        }
+      ],
+      "http": [
+        {
+          "path": "/api/local/programacion-academica/v1/propuestas",
+          "status": 200
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/borradores/guardar",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "name": "responsive-open-rail-does-not-silently-block-workspace",
+      "passed": true,
+      "durationMs": 16433,
+      "details": [
+        {
+          "resizeMatrix": [
+            {
+              "width": 1280,
+              "modalAfterResize": false,
+              "bodyPointerEvents": "",
+              "advisorAccessibleCount": 1
+            },
+            {
+              "width": 1100,
+              "modalAfterResize": false,
+              "bodyPointerEvents": "",
+              "advisorAccessibleCount": 1
+            },
+            {
+              "width": 1024,
+              "modalAfterResize": false,
+              "bodyPointerEvents": "",
+              "advisorAccessibleCount": 1
+            },
+            {
+              "width": 900,
+              "modalAfterResize": false,
+              "bodyPointerEvents": "",
+              "advisorAccessibleCount": 1
+            },
+            {
+              "width": 720,
+              "modalAfterResize": false,
+              "bodyPointerEvents": "",
+              "advisorAccessibleCount": 1
+            },
+            {
+              "width": 390,
+              "modalAfterResize": false,
+              "bodyPointerEvents": "",
+              "advisorAccessibleCount": 1
+            },
+            {
+              "width": 1440,
+              "modalAfterResize": false,
+              "bodyPointerEvents": "",
+              "advisorAccessibleCount": 1
+            }
+          ]
+        }
+      ],
+      "http": [
+        {
+          "path": "/api/local/programacion-academica/v1/propuestas",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "name": "mobile-menu-assistant-close-and-focus",
+      "passed": true,
+      "durationMs": 5971,
+      "details": [],
+      "http": []
+    },
+    {
+      "name": "complete-draft-review-approval-publication-and-fork",
+      "passed": true,
+      "durationMs": 26696,
+      "details": [
+        {
+          "proposalStatus": "complete",
+          "states": [
+            "draft",
+            "in-review",
+            "ready-for-approval",
+            "approved",
+            "published"
+          ],
+          "forked": true
+        }
+      ],
+      "http": [
+        {
+          "path": "/api/local/programacion-academica/v1/propuestas",
+          "status": 200
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/borradores/guardar",
+          "status": 200
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/borradores/f5697b52-eb45-4d6a-b905-1c0b1ebd5456/continuar",
+          "status": 200
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/borradores/f5697b52-eb45-4d6a-b905-1c0b1ebd5456/revision/enviar",
+          "status": 200
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/borradores/f5697b52-eb45-4d6a-b905-1c0b1ebd5456/revision/responder",
+          "status": 200
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/borradores/f5697b52-eb45-4d6a-b905-1c0b1ebd5456/aprobar",
+          "status": 200
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/borradores/f5697b52-eb45-4d6a-b905-1c0b1ebd5456/publicar",
+          "status": 200
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/borradores/f5697b52-eb45-4d6a-b905-1c0b1ebd5456/nuevo-borrador",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "name": "teacher-observation-blocks-approval",
+      "passed": true,
+      "durationMs": 14293,
+      "details": [],
+      "http": [
+        {
+          "path": "/api/local/programacion-academica/v1/propuestas",
+          "status": 200
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/borradores/guardar",
+          "status": 200
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/borradores/8a7aac1f-9788-4b46-bf9c-f33fdc2051f0/revision/enviar",
+          "status": 200
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/borradores/8a7aac1f-9788-4b46-bf9c-f33fdc2051f0/revision/responder",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "name": "stale-save-does-not-overwrite-newer-version",
+      "passed": true,
+      "durationMs": 6854,
+      "details": [],
+      "http": [
+        {
+          "path": "/api/local/programacion-academica/v1/propuestas",
+          "status": 200
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/borradores/guardar",
+          "status": 200
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/borradores/guardar",
+          "status": 409
+        }
+      ]
+    },
+    {
+      "name": "demand-two-sources-preserve-manual-demand",
+      "passed": true,
+      "durationMs": 7625,
+      "details": [
+        {
+          "source": "existing-regular-v1",
+          "population": 2
+        },
+        {
+          "source": "independent-120-v1",
+          "population": 120
+        }
+      ],
+      "http": [
+        {
+          "path": "/api/local/programacion-academica/v1/demanda/estimar",
+          "status": 200
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/demanda/estimar",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "name": "manual-valid-slot-updates-version-and-preserves-duration",
+      "passed": true,
+      "durationMs": 8886,
+      "details": [],
+      "http": [
+        {
+          "path": "/api/local/programacion-academica/v1/propuestas",
+          "status": 200
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/propuestas/7bbfa263-ff79-4a22-8856-aca2b2af3580/ajustes",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "name": "changing-demand-invalidates-saved-schedule-and-resumes-config-only",
+      "passed": true,
+      "durationMs": 24102,
+      "details": [],
+      "http": [
+        {
+          "path": "/api/local/programacion-academica/v1/propuestas",
+          "status": 200
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/borradores/guardar",
+          "status": 200
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/borradores/guardar",
+          "status": 200
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/borradores/95e30282-655a-434f-b4e5-b131ebf8044b/continuar",
+          "status": 200
+        }
+      ]
+    }
+  ]
+}
