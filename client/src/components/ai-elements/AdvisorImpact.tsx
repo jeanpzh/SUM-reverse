@@ -3,7 +3,7 @@ import { AdviceDisclosure } from './AdviceDisclosure'
 
 export function AdvisorImpact({ impact }: { impact: AcademicAdvisorResponse['verifiedImpact'] }) {
   if (!impact) return <div role="status" className="border border-solid border-border p-3 text-sm" data-advisor-impact="pending">
-    <p className="m-0">Sin vista previa vigente. Simula la selección actual antes de aplicar.</p>
+    <p className="m-0">Sin vista previa vigente para esta selección.</p>
   </div>
   return <section role="status" aria-live="polite" aria-label="Impacto de la selección" className="min-w-0 border border-solid border-border p-3 text-sm" data-advisor-impact="verified">
     <h4 className="m-0 mb-3 text-sm font-semibold">Simulación verificada en CP-SAT</h4>

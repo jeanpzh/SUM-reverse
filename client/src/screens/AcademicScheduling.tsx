@@ -1,3 +1,4 @@
+import { AdvisorOutcome } from '../components/ai-elements/AdvisorOutcome'
 import { usePlanningAssistantDisplay } from './usePlanningAssistantDisplay'
 import { PlanningFetchLoading } from '../components/PlanningFetchLoading'
 import { Link, useNavigate } from '@tanstack/react-router'
@@ -544,6 +545,10 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
             isLocked={lockedDraft || draftBusy}
             advisorDisabledReason={draftBusy ? 'Esperando a que termine la operación con la propuesta.' : undefined}
           />
+
+          {state.advisorOutcome?.proposalId === proposal.proposalId
+            && state.advisorOutcome.editVersion === (proposal.editVersion ?? 0)
+            && <AdvisorOutcome outcome={state.advisorOutcome} />}
 
           <PlanningScheduleToolbar proposal={proposal} searchQuery={searchQuery} onSearchChange={setSearchQuery}
             teacherFilter={teacherFilter} onTeacherFilterChange={setTeacherFilter} viewMode={viewMode} onToggleView={handleToggleView} />

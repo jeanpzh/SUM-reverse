@@ -84,6 +84,7 @@ function resultWording(proposal: AcademicProposal) {
 
 export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatches, teacherNames = {}, courseNames = {}, roomNames = {}, isLocked = false, advisorDisabledReason }: PlanningStatusBarProps) {
   const advisorDisabledReasonId = useId()
+  const applyDisabledReasonId = useId()
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
   const [advisorOpen, setAdvisorOpen] = useState(false)
   const [advisorLoading, setAdvisorLoading] = useState(false)
@@ -100,6 +101,11 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
     ? advisorData : null
   const previewCurrent = hasCurrentAdvisorImpact(currentAdvice, proposal.proposalId, editVersion, selectedRecIds)
   const impact = previewCurrent ? currentAdvice?.verifiedImpact : undefined
+  const applyDisabledReason = !onApplyAdvisorPatches || currentAdvice?.recommendations.length === 0 ? null
+    : isLocked ? advisorDisabledReason ?? 'La propuesta está bloqueada para cambios.'
+    : selectedRecIds.length === 0 ? 'Marca al menos una recomendación para continuar.'
+    : !previewCurrent ? 'La selección cambió o no tiene una simulación vigente. Pulsa «Simular selección actual» antes de aplicar.'
+    : null
 
   const requestAdvice = async (ids?: string[]) => {
     requestedSelection.current = ids === undefined ? undefined : [...ids]
@@ -290,6 +296,7 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
               {currentAdvice.recommendations.length > 0 ? (
                 <div className="grid min-w-0 gap-2.5">
                   <h4 className="m-0 text-sm font-semibold text-foreground">Recomendaciones aplicables</h4>
+                  <p className="m-0 text-sm text-muted-foreground">Los alcances individuales pueden solaparse. Simula la combinación para conocer su cobertura; no sumes las cifras de cada recomendación.</p>
                   {currentAdvice.recommendations.map((rec) => <SuggestionCard key={rec.id}
                     recommendation={rec} checked={selectedRecIds.includes(rec.id)} disabled={applying || isLocked}
                     onCheckedChange={(checked) => toggleRecommendation(rec.id, checked)}
@@ -305,6 +312,8 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
                 ? <NormativeAdvice advice={currentAdvice.normativeContext} />
                 : <Alert variant="warning"><AlertDescription>El contexto normativo no corresponde al periodo actual. Consulta las fuentes con los filtros de esta propuesta.</AlertDescription></Alert>)}
               <Reasoning steps={currentAdvice.reasoningSteps} />
+              {applyDisabledReason && <p id={applyDisabledReasonId} role="status"
+                className="m-0 text-sm text-muted-foreground">{applyDisabledReason}</p>}
               <div className="flex flex-wrap items-center justify-end gap-2 border-0 border-t border-solid border-border pt-3">
                 <Button type="button" variant="outline" disabled={applying} onClick={() => setAdvisorOpen(false)}>
                   Volver al horario
@@ -316,6 +325,7 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
                     type="button"
                     variant="default"
                     disabled={selectedRecIds.length === 0 || isLocked || applying || !previewCurrent}
+                    aria-describedby={applyDisabledReason ? applyDisabledReasonId : undefined}
                     onClick={() => void applySelectedRecommendations()}
                   >
                     {applying ? 'Aplicando y regenerando…' : 'Aplicar seleccionadas y regenerar'}

@@ -29,7 +29,7 @@ export function SuggestionCard({ recommendation, checked, disabled, onCheckedCha
       <Checkbox id={id} checked={checked} disabled={disabled} onCheckedChange={(value) => onCheckedChange(value === true)} />
       <div className="min-w-0 flex-1">
         <label htmlFor={id} className="cursor-pointer font-semibold">{recommendation.title}</label>
-        <div className="my-2"><Badge variant="outline" className="whitespace-normal [overflow-wrap:anywhere]">Estimación: {recommendation.impactSummary}</Badge></div>
+        <div className="my-2"><Badge variant="outline" className="whitespace-normal [overflow-wrap:anywhere]">Alcance estimado: {recommendation.impactSummary}</Badge></div>
         {patch.kind === 'increase_teacher_load' && <p className="my-2 font-medium">Escenario de simulación: requiere autorización externa para aumentar la carga docente. La consulta normativa no concede esa autorización.</p>}
         <AdviceDisclosure label="Por qué se recomienda"><MessageResponse>{recommendation.rationale}</MessageResponse></AdviceDisclosure>
         <details className="mt-2">
