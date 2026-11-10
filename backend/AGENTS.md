@@ -4,7 +4,7 @@ Estas instrucciones aplican a `backend/` y complementan el `AGENTS.md` raíz, qu
 
 ## Skills propias
 
-Para trabajo en esta carpeta, cargar las skills locales pertinentes. La raíz coordina el handoff, contrato compartido e integración; la ejecución backend usa estas instrucciones:
+Seleccionar skills según «Skill selection by task» del `AGENTS.md` raíz. Para desarrollo del producto, usar skills de backend y pruebas pertinentes de esta tabla u otras instaladas, después `mattpocock-skills:*`; si falta orientación, usar `npx autoskills`. Las entradas `sum-*` de esta tabla se reservan para ingeniería inversa de SUM. La raíz coordina el handoff, contrato compartido e integración:
 
 | Tarea / condición | Skill local | Uso |
 | --- | --- | --- |
@@ -19,7 +19,7 @@ Para trabajo en esta carpeta, cargar las skills locales pertinentes. La raíz co
 
 ### Cómo seleccionar y combinar
 
-1. Leer el encargo y contrato; elegir `sum-nestjs-implement` o `sum-nestjs-verify` como entrada para tareas SUM.
+1. Leer el encargo y contrato; seleccionar una skill pertinente para el trabajo. Elegir `sum-nestjs-implement` o `sum-nestjs-verify` únicamente para tareas de ingeniería inversa de SUM.
 2. Cargar las skills de apoyo de la tabla según los archivos y problemas reales. Para código NestJS cargar `nestjs-best-practices`; para lint cargar `oxlint`. Leer las referencias internas que la skill indique para el caso concreto.
 3. Skills Node y TypeScript complementan al framework. No cambian el alcance, no sustituyen NestJS por Express/Fastify ni agregan auth/ORM/infraestructura sin requisito explícito.
 4. Instrucciones del usuario, AGENTS raíz, AGENTS backend y contrato local delimitan el trabajo. Las recomendaciones genéricas de producción se adaptan al backend sintético solicitado; no convierten un fixture readonly en un sistema de producción.

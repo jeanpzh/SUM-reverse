@@ -1,0 +1,53 @@
+@reference '../../styles/theme.css';
+
+/* No preflight: scope the shadcn table utilities above legacy global th/td rules.
+   Keep student tables and the transitional planning tables unchanged. */
+.planning-root [data-slot='table-head'] {
+  @apply box-border h-10 whitespace-normal border-0 border-b border-solid border-border bg-muted px-4 text-left align-middle font-[inherit] text-[13px] font-medium text-muted-foreground;
+}
+
+.planning-root [data-slot='table-cell'] {
+  @apply box-border h-auto border-0 border-b border-solid border-border bg-transparent p-4 text-left align-middle font-[inherit] text-sm;
+}
+
+.planning-root [data-slot='table-body'] > [data-slot='table-row'] {
+  @apply bg-background hover:bg-muted data-[state=selected]:bg-accent;
+}
+
+/* stickyHeader: collapsed borders scroll away with the body, so the separator is an inset shadow. */
+.planning-root [data-slot='table-container'][data-sticky-header] [data-slot='table-head'] {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: var(--planning-canvas);
+  box-shadow: inset 0 -1px 0 var(--planning-border);
+}
+
+.planning-root [data-slot='table-container'][data-sticky-header] [data-slot='table-body'] > [data-slot='table-row']:last-child > [data-slot='table-cell'] {
+  border-bottom: 0;
+}
+
+/* Without preflight, `border-solid border-b` leaves the other sides at the default `medium`
+   width (3px). Set every side explicitly. */
+.planning-root [data-slot='table-header'],
+.planning-root [data-slot='table-body'],
+.planning-root [data-slot='table-footer'] {
+  border: 0;
+}
+
+.planning-root [data-slot='table-row'] {
+  border-width: 0 0 1px;
+  border-style: solid;
+  border-color: var(--planning-border);
+}
+
+.planning-root [data-slot='table-body'] > [data-slot='table-row']:last-child {
+  border-bottom-width: 0;
+}
+
+/* Screens set `overflow-wrap: anywhere` on their roots; inside tables it splits words
+   (e.g. «Incorpo-rado»). Wrap at spaces; the table container scrolls horizontally. */
+.planning-root [data-slot='table-head'],
+.planning-root [data-slot='table-cell'] {
+  overflow-wrap: normal;
+}

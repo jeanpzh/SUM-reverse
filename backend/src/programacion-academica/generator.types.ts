@@ -1,5 +1,5 @@
 import type { CourseDemand } from './programacion-academica.types.js'
-import type { AcademicSchedule, AcademicTeacher, AcademicRoom, CompatibleCourseGroup, ScheduleIssueCode, TimeInterval } from './schedule.types.js'
+import type { AcademicAssignment, AcademicSchedule, AcademicTeacher, AcademicRoom, CompatibleCourseGroup, ScheduleIssueCode, TimeInterval } from './schedule.types.js'
 import type { PlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
 
 export type WeeklySession = {
@@ -9,7 +9,8 @@ export type WeeklySession = {
 }
 export type DeliveryMode = 'continuous' | 'split'
 export type AllocationPolicy = 'preferences' | 'balanced' | 'first-feasible'
-export type GeneratorCourse = CourseDemand & { weeklySessions: WeeklySession[], deliveryMode?: DeliveryMode, cycle?: number }
+export type SectionCapacityOverride = { ordinal: number, capacity: number }
+export type GeneratorCourse = CourseDemand & { weeklySessions: WeeklySession[], deliveryMode?: DeliveryMode, cycle?: number, sectionCapacities?: SectionCapacityOverride[] }
 export type GeneratorInput = {
   courses: GeneratorCourse[]
   teachers: AcademicTeacher[]
@@ -64,4 +65,11 @@ export type GeneratorExecutionOptions = {
   maxCandidateVisits?: number
   
   now?: () => number
+}
+
+/** F-0: fixed placements and exclusions for partial regeneration. Never part of GeneratorInput or retention. */
+export type GeneratorSeed = {
+  fixedAssignments: AcademicAssignment[]
+  excludedTeacherIds: string[]
+  sectionRoomExclusions: Array<{ sectionId: string, roomIds: string[] }>
 }

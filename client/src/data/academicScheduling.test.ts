@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { ACADEMIC_API, ACADEMIC_REVISION } from '../../../shared/programacion-academica-api.mjs'
-import { adjustAcademicProposal, calculatePresentedSections, createAcademicProposal, estimateAcademicDemand, fetchAcademicCatalog, fetchAcademicDrafts, saveAcademicDraft, resumeAcademicDraft, submitAcademicTeacherReview, respondAcademicTeacherReview, formatAcademicInterval, isAcademicSchedulingEnabled, isAcademicSchedulingRoute, isLocalAcademicArea, academicSectionLabel, toAcademicScheduleEvents, aggregateAcademicBlocks, academicSectionCoverage, fetchAcademicReleasePreview, approveAcademicDraft, publishAcademicDraft, forkAcademicDraft, fetchAcademicPublications, fetchAcademicPublication, fetchCurrentAcademicPublication, createAcademicPlanningDefaults, filterAcademicResources, buildAcademicPlanningRequest } from './academicScheduling.ts'
+import { academicPlanningErrorMessage, adjustAcademicProposal, calculatePresentedSections, createAcademicProposal, estimateAcademicDemand, fetchAcademicCatalog, fetchAcademicDrafts, saveAcademicDraft, resumeAcademicDraft, submitAcademicTeacherReview, respondAcademicTeacherReview, formatAcademicInterval, isAcademicSchedulingEnabled, isAcademicSchedulingRoute, isLocalAcademicArea, academicSectionLabel, toAcademicScheduleEvents, aggregateAcademicBlocks, academicSectionCoverage, fetchAcademicReleasePreview, approveAcademicDraft, publishAcademicDraft, forkAcademicDraft, fetchAcademicPublications, fetchAcademicPublication, fetchCurrentAcademicPublication, createAcademicPlanningDefaults, filterAcademicResources, buildAcademicPlanningRequest } from './academicScheduling.ts'
 
 const catalog = {
   revision: ACADEMIC_REVISION,
@@ -48,6 +48,16 @@ test('academic planning defaults cover both parity patterns and build a syntheti
   assert.equal(first.resources.teachers[0].qualificationSource, 'synthetic')
   assert.equal(first.resources.rooms.length, 1)
   assert.deepEqual(first.planningPolicy, { revision: 'FISI-PLANNING-1', period: '2027-I', allowAfternoon: false, allowSaturday: false })
+})
+
+test('academic API distinguishes a non-JSON gateway failure from malformed success and validates error envelopes', async () => {
+  const fetchWith = (response: Response): typeof fetch => async () => response
+  await assert.rejects(fetchAcademicCatalog(fetchWith(new Response('bad gateway', { status: 502 }))),
+    /El servicio local no está disponible \(HTTP 502\)/)
+  await assert.rejects(fetchAcademicCatalog(fetchWith(new Response('not json', { status: 200 }))),
+    /La API local devolvió una respuesta que no es JSON válido/)
+  await assert.rejects(fetchAcademicCatalog(fetchWith(new Response(JSON.stringify({ error: { code: 'DOWN', message: 'Servicio detenido' } }), { status: 502 }))),
+    /^Error: Servicio detenido$/)
 })
 
 test('academic resource search ignores accents and case while preserving the source list', () => {
@@ -449,4 +459,26 @@ test('incomplete and invalid-input proposal states cross the data boundary witho
   }
   const fetchMock: typeof fetch = async () => new Response(JSON.stringify(invalid), { status: 200 })
   assert.equal((await createAcademicProposal(request, fetchMock)).status, 'invalid-input')
+})
+
+
+test('planning errors translate validation paths, API errors and connection failures', async () => {
+  assert.equal(academicPlanningErrorMessage(new TypeError('title: texto inválido')), 'Escribe un nombre para la propuesta.')
+  assert.match(academicPlanningErrorMessage(new TypeError('Nombre de propuesta: 1–100 caracteres sin espacios en extremos')), /nombre de la propuesta.*1 y 100/)
+  assert.equal(academicPlanningErrorMessage(new Error('demands[0].targetCapacity: entero inválido')), 'Revisa la capacidad por sección; el valor no es válido.')
+  assert.equal(academicPlanningErrorMessage(new Error('teacherId: texto inválido')), 'Revisa el docente; el valor no es válido.')
+  assert.equal(academicPlanningErrorMessage(new TypeError('workspace: campos inválidos')), 'Revisa los datos de la propuesta; hay un valor no válido.')
+  assert.match(academicPlanningErrorMessage(new TypeError('Failed to fetch')), /conectar con el servicio local/)
+  const conflict = 'La propuesta cambió en otra sesión; recárgala antes de continuar'
+  assert.equal(academicPlanningErrorMessage(new Error(conflict)), conflict)
+  assert.equal(academicPlanningErrorMessage(null), 'No se pudo completar la acción. Inténtalo de nuevo.')
+  let requested = false
+  await assert.rejects(saveAcademicDraft({ id: null, expectedVersion: null, title: '', state: 'draft',
+    configuration: savedDraft.configuration, proposalId: null, proposalEditVersion: null }, async () => {
+    requested = true
+    throw new Error('must not send invalid data')
+  }), /Escribe un nombre para la propuesta/)
+  assert.equal(requested, false)
+  const apiError: typeof fetch = async () => new Response(JSON.stringify({ error: { code: 'INVALID_INPUT', message: 'title: texto inválido' } }), { status: 400 })
+  await assert.rejects(fetchAcademicDrafts(apiError), /Escribe un nombre para la propuesta/)
 })

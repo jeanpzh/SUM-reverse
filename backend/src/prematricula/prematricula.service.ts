@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { join } from 'node:path'
-import { HttpException, Injectable } from '@nestjs/common'
+import { HttpException, Inject, Injectable } from '@nestjs/common'
 import { E2_REVISION, validateE2Context, validateE2ContextRequest, validateE2Draft, validateE2PublicationRequest, validateE2PublicationResponse, validateE2SaveRequest, validateE2SaveResponse, validateE2ValidateRequest, validateE2Validation } from '../../../shared/prematricula-api.mjs'
 import type { E2Choice, E2Context, E2Draft, E2Identity, E2Issue, E2PublicationResponse, E2SaveRequest, E2SaveResponse, E2Validation } from '../../../shared/prematricula-api.mjs'
 import { validateE2Demand, validateE2DemandRequest, validateE2Intention, validateE2IntentionContext, validateE2RegisterIntentionRequest } from '../../../shared/prematricula-intention.mjs'
@@ -12,9 +12,10 @@ import { ContextService } from '../matricula-regular/context.service.js'
 import { evaluateSelectionAdmission } from '../matricula-regular/selection.rules.js'
 import { LocalProfileSessionService } from '../local-profile-dashboard/local-profile-session.service.js'
 import { LocalScenariosService } from '../local-profile-dashboard/local-scenarios.service.js'
+import { ACADEMIC_PUBLICATION_READER } from '../common/academic-publication-reader.js'
+import type { AcademicPublicationReader } from '../common/academic-publication-reader.js'
 import { classify } from '../programacion-academica/demand-estimator.js'
 import { projectActor } from '../programacion-academica/demand-fixtures.js'
-import { SavedDraftService } from '../programacion-academica/saved-draft.service.js'
 import { SavedDraftStore, SavedDraftStoreError } from '../programacion-academica/saved-draft-store.js'
 import { intervalsOverlap } from '../programacion-academica/schedule-validator.js'
 import type { AcademicPublication } from '../../../shared/programacion-academica-api.d.mts'
@@ -78,7 +79,7 @@ export class PrematriculaService {
     private readonly context: ContextService,
     private readonly sessions: LocalProfileSessionService,
     private readonly scenarios: LocalScenariosService,
-    private readonly publications: SavedDraftService,
+    @Inject(ACADEMIC_PUBLICATION_READER) private readonly publications: AcademicPublicationReader,
   ) {
     const directory = process.env.SUM_ACADEMIC_DRAFT_DIR?.trim()
     this.store = new SavedDraftStore<E2Payload>(directory ? join(directory, 'e2-prematricula') : undefined)

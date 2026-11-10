@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { chromium } from 'playwright'
@@ -72,7 +73,7 @@ async function publish() {
 async function planningControls() {
   const catalog = await json(`${e1}/catalogo`)
   await page.goto(`${base}/local/programacion-academica`)
-  await page.getByRole('heading', { name: 'Programación académica asistida', exact: true }).waitFor()
+  await page.locator('#planning-page-title').waitFor()
   for (const course of catalog.courses) {
     assert.equal(await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).inputValue(), String(course.cycle % 2 ? 180 : 90))
     assert.equal(await page.getByLabel(`Capacidad ${course.courseId}`, { exact: true }).inputValue(), '45')
@@ -92,7 +93,7 @@ async function planningControls() {
   for (const course of catalog.courses) assert.equal(await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).inputValue(), String(course.cycle % 2 ? 90 : 180))
   await page.getByLabel('Periodo de planificación', { exact: true }).selectOption('2027-I')
   const course = catalog.courses[0]
-  await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).check()
+  await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }))
   await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).fill('123')
   await page.getByLabel('Buscar docentes por nombre o código', { exact: true }).fill(teacher.id)
   assert.equal(await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).inputValue(), '123')
@@ -142,12 +143,15 @@ try {
     const legacy = await readContext('SYN-SIS-A')
     const catalog = await json(`${e3}/ofertas`)
     await page.goto(`${base}/local/programacion-academica`)
-    await page.locator('.academic-publication > summary').click()
+    await page.locator('.academic-publication').waitFor()
     await page.getByRole('button', { name: 'Actualizar publicaciones', exact: true }).click()
     await page.getByLabel('Consultar publicación', { exact: true }).selectOption(publication.id)
     await page.getByRole('button', { name: 'Actualizar vista previa', exact: true }).click()
     const activated = responseFor(`${e3}/ofertas/activar`)
     await page.getByRole('button', { name: 'Activar publicación seleccionada', exact: true }).click()
+    const confirmDialog = page.getByRole('alertdialog')
+    await Promise.race([activated, confirmDialog.waitFor().then(() =>
+      confirmDialog.getByRole('button', { name: 'Activar publicación seleccionada', exact: true }).click()).catch(() => {})])
     const activationResponse = await activated
     assert.equal(activationResponse.status(), 200, await activationResponse.text())
     assert.deepEqual(activationResponse.request().postDataJSON(), { publicationId: publication.id,

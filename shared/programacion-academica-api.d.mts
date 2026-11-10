@@ -7,7 +7,7 @@ export type AcademicAllocationPolicy = 'preferences' | 'balanced' | 'first-feasi
 export type AcademicTeacherResource = { id: string; name: string; courseIds: string[]; maxWeeklyMinutes: number; availability: AcademicInterval[]; preferences?: AcademicInterval[]; sectionLimits?: Array<{ courseId: string; maxSections: number }>; facultyId?: string; category?: 'principal' | 'asociado' | 'auxiliar'; qualificationSource?: 'synthetic' }
 export type AcademicRoomResource = { id: string; name: string; capacity: number; availability: AcademicInterval[]; kind?: 'classroom' | 'laboratory' }
 export type AcademicPlanningResources = { teachers: AcademicTeacherResource[]; rooms: AcademicRoomResource[] }
-export type AcademicRequest = { revision: string; demands: Array<{ courseId: string; estimatedDemand: number; targetCapacity?: number; patternId?: string; deliveryMode?: 'continuous' | 'split' }>; resources?: AcademicPlanningResources; allocationPolicy?: AcademicAllocationPolicy; planningPolicy?: PlanningPolicy }
+export type AcademicRequest = { revision: string; demands: Array<{ courseId: string; estimatedDemand: number; targetCapacity?: number; patternId?: string; deliveryMode?: 'continuous' | 'split'; sectionCapacities?: Array<{ ordinal: number; capacity: number }> }>; resources?: AcademicPlanningResources; allocationPolicy?: AcademicAllocationPolicy; planningPolicy?: PlanningPolicy }
 export type AcademicWeeklySession = { id: string; durationMinutes: number; type?: string }
 export type AcademicHistory = { sections: Array<{ sectionId: string; capacity: number; sessions: Array<AcademicInterval & { room: string; teacherId: string; teacherName?: string; type: string }> }> }
 export type AcademicCatalog = {
@@ -82,3 +82,58 @@ export function validateAcademicDraftSaveRequest(value: unknown): asserts value 
 export function validateAcademicSavedDraft(value: unknown): asserts value is AcademicSavedDraft
 export function validateAcademicDraftList(value: unknown): asserts value is AcademicDraftList
 export function validateAcademicDraftResume(value: unknown): asserts value is AcademicDraftResume
+export type AcademicAdvisorPatch =
+  | { kind: 'increase_teacher_load'; adjustments: Array<{ teacherId: string; previousMaxWeeklyMinutes: number; nextMaxWeeklyMinutes: number }> }
+  | { kind: 'enable_planning_window'; allowAfternoon?: true; allowSaturday?: true }
+  | { kind: 'change_delivery_mode'; courseIds: string[]; deliveryMode: 'split' }
+  | { kind: 'incorporate_reference_resource'; teacherIds: string[]; roomIds: string[] }
+export type AcademicAdvisorRequest = { expectedEditVersion: number; selectedRecommendationIds?: string[] }
+export type AcademicAdvisorBottleneck = {
+  category: 'teacher_load' | 'planning_window' | 'missing_resource' | 'delivery_mode' | 'other'
+  title: string
+  detail: string
+  affectedSessionCount: number
+}
+export type AcademicAdvisorRecommendation = {
+  id: string
+  title: string
+  rationale: string
+  impactSummary: string
+  recommendedByDefault: boolean
+  patch: AcademicAdvisorPatch
+}
+export type AcademicAdvisorVerifiedImpact = {
+  currentScheduledSessions: number
+  projectedScheduledSessions: number
+  requiredSessions: number
+  currentCompleteSections: number
+  projectedCompleteSections: number
+  totalSections: number
+  recommendationIds: string[]
+  solverStatus: 'complete' | 'impossible' | 'search-limit'
+}
+export type AcademicAdvisorReasoningStep = { toolName: string; inputSummary: string; outputSummary: string }
+export type AcademicAdvisorResponse = {
+  normativeContext?: AcademicNormativeResponse
+  verifiedImpact?: AcademicAdvisorVerifiedImpact
+  reasoningSteps?: AcademicAdvisorReasoningStep[]
+  proposalId: string
+  editVersion: number
+  source: {
+    mode: 'llm-assisted' | 'deterministic-fallback'
+    providerLabel: string | null
+    fallbackReason?: 'not_configured' | 'timeout' | 'rate_limited' | 'upstream_error' | 'invalid_llm_output'
+  }
+  summary: string
+  bottlenecks: AcademicAdvisorBottleneck[]
+  recommendations: AcademicAdvisorRecommendation[]
+}
+export function validateAcademicAdvisorRequest(value: unknown): asserts value is AcademicAdvisorRequest
+export function validateAcademicAdvisorPatch(value: unknown): asserts value is AcademicAdvisorPatch
+export function validateAcademicAdvisorResponse(value: unknown): asserts value is AcademicAdvisorResponse
+
+export type AcademicNormativeRequest = { question: string; facultyId: 'FISI'; academicPeriod: PlanningPeriod; asOf: string; teacherType: 'ordinario' | 'contratado' | 'unknown' }
+export type AcademicNormativeCitation = { id: string; documentId: string; title: string; article: string; page: number; url: string; excerpt: string; sourceClass: 'normative'; scope: 'UNMSM' | 'FISI'; reviewedAt: string; effectiveFrom: string | null; effectiveTo: string | null }
+export type AcademicNormativeResponse = { revision: 'PA-NORMATIVE-1'; question: string; context: Omit<AcademicNormativeRequest, 'question'>; status: 'supported' | 'not-determined' | 'conflict'; answer: string; retrievalMode: 'hybrid' | 'lexical-only' | 'unavailable'; citations: AcademicNormativeCitation[]; gaps: string[]; generation?: { mode: 'llm-assisted' | 'extractive'; providerLabel: string | null; fallbackReason?: 'not_configured' | 'timeout' | 'upstream_error' | 'invalid_llm_output' | 'insufficient_evidence' | 'disabled' } }
+export function validateAcademicNormativeRequest(value: unknown): asserts value is AcademicNormativeRequest
+export function validateAcademicNormativeResponse(value: unknown, request?: AcademicNormativeRequest): asserts value is AcademicNormativeResponse

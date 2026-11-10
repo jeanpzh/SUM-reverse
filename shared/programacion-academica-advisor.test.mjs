@@ -1,0 +1,32 @@
+// Independently constructed synthetic contract envelopes.
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { validateAcademicAdvisorRequest, validateAcademicAdvisorResponse } from './programacion-academica-api.mjs'
+const response = () => ({
+  proposalId: 'synthetic', editVersion: 2,
+  source: { mode: 'deterministic-fallback', providerLabel: null, fallbackReason: 'not_configured' },
+  summary: 'Diagnóstico sintético', bottlenecks: [], recommendations: [],
+})
+const impact = () => ({ currentScheduledSessions: 0, projectedScheduledSessions: 0, requiredSessions: 2,
+  currentCompleteSections: 0, projectedCompleteSections: 0, totalSections: 1,
+  recommendationIds: [], solverStatus: 'impossible' })
+test('old and optional selection envelopes, empty selection, reject extra and duplicate inputs', () => {
+  validateAcademicAdvisorRequest({ expectedEditVersion: 2 })
+  validateAcademicAdvisorRequest({ expectedEditVersion: 2, selectedRecommendationIds: [] })
+  for (const input of [{ expectedEditVersion: 2, selectedRecommendationIds: ['x', 'x'] }, { expectedEditVersion: 2, selectedRecommendationIds: null }, { expectedEditVersion: -1 }, { expectedEditVersion: 2, patches: [] }]) {
+    assert.throws(() => validateAcademicAdvisorRequest(input))
+  }
+})
+test('old responses and verified empty selection remain compatible', () => {
+  validateAcademicAdvisorResponse(response())
+  validateAcademicAdvisorResponse({ ...response(), verifiedImpact: impact(), reasoningSteps: [{ toolName: 'simulate_patches_cpsat', inputSummary: '[]', outputSummary: '0/1' }] })
+})
+test('reject incomplete, fabricated, out of range and unknown impact or trace fields', () => {
+  for (const patch of [{ projectedScheduledSessions: 3 }, { projectedScheduledSessions: 0.5 }, { solverStatus: 'complete' }, { solverStatus: 'optimal' }, { recommendationIds: ['unknown'] }, { totalSections: -1 }, { hidden: 'thoughts' }]) {
+    assert.throws(() => validateAcademicAdvisorResponse({ ...response(), verifiedImpact: { ...impact(), ...patch } }))
+  }
+  const incomplete = impact()
+  delete incomplete.totalSections
+  assert.throws(() => validateAcademicAdvisorResponse({ ...response(), verifiedImpact: incomplete }))
+  assert.throws(() => validateAcademicAdvisorResponse({ ...response(), reasoningSteps: [{ toolName: 'fabricated', inputSummary: '{}', outputSummary: 'ok' }] }))
+})

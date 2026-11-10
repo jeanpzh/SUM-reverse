@@ -1,0 +1,39 @@
+@reference '../../styles/theme.css';
+
+/* index.css sets an unlayered `font: inherit` on input/select, which beats utilities and
+   makes controls inside a Label inherit its 13px semibold text. Restore shadcn typography. */
+.planning-root [data-slot='input'],
+.planning-root [data-slot='textarea'],
+.planning-root [data-slot='native-select'] {
+  font-family: inherit;
+  font-size: var(--planning-text-sm);
+  font-weight: 400;
+  line-height: 1.25rem;
+}
+
+/* App.css styles every table (serif font, fixed colors, cell borders). */
+.planning-root [data-slot='table'] {
+  @apply w-full border-collapse text-sm text-foreground;
+  font-family: inherit;
+}
+
+/* Global unlayered `a { color: inherit }` and `button:focus-visible { outline }`
+   (index.css) beat Tailwind utilities; hand those properties back to the
+   Button variant utilities. */
+.planning-root [data-slot='button'] {
+  color: revert-layer;
+}
+.planning-root [data-slot='button']:focus-visible {
+  outline: revert-layer;
+  outline-offset: revert-layer;
+}
+
+/* The unlayered shell rule sets box-sizing: inherit and wins over box-border
+   utilities. Size fields directly, independent of intermediate containers. */
+.planning-root [data-slot='input'],
+.planning-root [data-slot='textarea'],
+.planning-root [data-slot='native-select'] {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}

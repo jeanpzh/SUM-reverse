@@ -1,9 +1,11 @@
-import { ACADEMIC_API, ACADEMIC_REVISION, ACADEMIC_ROUTE, validateAcademicAdjustment, validateAcademicCatalog, validateAcademicDemandEstimate, validateAcademicDemandRequest, validateAcademicProposal, validateAcademicRequest, validateAcademicDraftList, validateAcademicDraftResume, validateAcademicDraftSaveRequest, validateAcademicSavedDraft, validateAcademicReviewSubmission, validateAcademicReviewDecision, validateAcademicPublicationRequest, validateAcademicReleasePreview, validateAcademicPublication, validateAcademicPublicationList } from '../../../shared/programacion-academica-api.mjs'
-import type { AcademicAdjustment, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest, AcademicProposal, AcademicRequest, AcademicInterval, AcademicDraftList, AcademicDraftResume, AcademicDraftSaveRequest, AcademicSavedDraft, AcademicReviewSubmission, AcademicReviewDecision, AcademicReleasePreview, AcademicPublication, AcademicPublicationList, AcademicPublicationRequest } from '../../../shared/programacion-academica-api.mjs'
+import { validateAcademicNormativeRequest, validateAcademicNormativeResponse } from '../../../shared/programacion-academica-api.mjs'
+import type { AcademicNormativeRequest, AcademicNormativeResponse } from '../../../shared/programacion-academica-api.mjs'
+import { ACADEMIC_API, ACADEMIC_REVISION, ACADEMIC_ROUTE, validateAcademicAdjustment, validateAcademicAdvisorRequest, validateAcademicAdvisorResponse, validateAcademicCatalog, validateAcademicDemandEstimate, validateAcademicDemandRequest, validateAcademicProposal, validateAcademicRequest, validateAcademicDraftList, validateAcademicDraftResume, validateAcademicDraftSaveRequest, validateAcademicSavedDraft, validateAcademicReviewSubmission, validateAcademicReviewDecision, validateAcademicPublicationRequest, validateAcademicReleasePreview, validateAcademicPublication, validateAcademicPublicationList } from '../../../shared/programacion-academica-api.mjs'
+import type { AcademicAdjustment, AcademicAdvisorRequest, AcademicAdvisorResponse, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest, AcademicProposal, AcademicRequest, AcademicInterval, AcademicDraftList, AcademicDraftResume, AcademicDraftSaveRequest, AcademicSavedDraft, AcademicReviewSubmission, AcademicReviewDecision, AcademicReleasePreview, AcademicPublication, AcademicPublicationList, AcademicPublicationRequest } from '../../../shared/programacion-academica-api.mjs'
 import { planningDefaults as getPlanningDefaults, PLANNING_LIMITS, syntheticTeachingMetadata, validatePlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
 import type { PlanningPeriod, PlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
 
-export type { AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest, AcademicProposal, AcademicRequest } from '../../../shared/programacion-academica-api.mjs'
+export type { AcademicAdvisorBottleneck, AcademicAdvisorPatch, AcademicAdvisorRecommendation, AcademicAdvisorResponse, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest, AcademicProposal, AcademicRequest } from '../../../shared/programacion-academica-api.mjs'
 export { PLANNING_LIMITS, syntheticTeachingMetadata }
 export type { PlanningPeriod, PlanningPolicy }
 
@@ -63,11 +65,40 @@ export function isLocalAcademicArea(pathname: string,
     || pathname === `${ACADEMIC_ROUTE}/`
 }
 
+// Human messages at the planning data seam; wire field names never become UI labels.
+export function academicPlanningErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) return 'No se pudo completar la acción. Inténtalo de nuevo.'
+  const message = error.message
+  if (/^title:/.test(message)) return 'Escribe un nombre para la propuesta.'
+  if (/^Nombre de propuesta:/.test(message)) return 'El nombre de la propuesta debe tener entre 1 y 100 caracteres, sin espacios al inicio ni al final.'
+  const field = message.match(/^([\w.[\]-]+):/u)?.[1]
+  if (field) {
+    const labels: Record<string, string> = {
+      estimatedDemand: 'la demanda estimada', targetCapacity: 'la capacidad por sección',
+      courseId: 'el curso', teacherId: 'el docente', roomId: 'el ambiente',
+      day: 'el día', startMinute: 'la hora de inicio', endMinute: 'la hora de fin',
+      durationMinutes: 'la duración', observation: 'la observación docente',
+      expectedVersion: 'la versión de la propuesta', title: 'el nombre de la propuesta',
+      demands: 'la demanda de los cursos', resources: 'los recursos disponibles',
+      teachers: 'los docentes', rooms: 'los ambientes', windows: 'la disponibilidad',
+      academicPeriod: 'el periodo académico', patternId: 'el patrón de sesiones',
+    }
+    const name = field.split(/[.[\]]/u).filter(Boolean).reverse().find((part) => labels[part])
+    return name ? `Revisa ${labels[name]}; el valor no es válido.`
+      : 'Revisa los datos de la propuesta; hay un valor no válido.'
+  }
+  if (/^(Failed to fetch|fetch failed|NetworkError|Load failed)/i.test(message)) {
+    return 'No se pudo conectar con el servicio local. Revisa la conexión e inténtalo de nuevo.'
+  }
+  return message
+}
+
 async function readJson(response: Response) {
   let body: unknown
   try {
     body = await response.json()
   } catch {
+    if (!response.ok) throw new Error(`El servicio local no está disponible (HTTP ${response.status}). Reintenta en unos segundos.`)
     throw new Error('La API local devolvió una respuesta que no es JSON válido.')
   }
   if (!response.ok) {
@@ -79,7 +110,7 @@ async function readJson(response: Response) {
       || typeof error.code !== 'string' || !error.code || typeof error.message !== 'string' || !error.message) {
       throw new Error('La API local devolvió un error con formato inválido.')
     }
-    throw new Error(error.message)
+    throw new Error(academicPlanningErrorMessage(new Error(error.message)))
   }
   return body
 }
@@ -150,6 +181,34 @@ export async function adjustAcademicProposal(proposalId: string, adjustment: Aca
   return body
 }
 
+export async function fetchAcademicProposalAdvice(proposalId: string, expectedEditVersion: number,
+  fetchImpl: typeof fetch = globalThis.fetch, signal?: AbortSignal,
+  selectedRecommendationIds?: string[]): Promise<AcademicAdvisorResponse> {
+  if (typeof proposalId !== 'string' || !proposalId || proposalId.trim() !== proposalId) throw new TypeError('Identificación de propuesta inválida.')
+  const request: AcademicAdvisorRequest = { expectedEditVersion,
+    ...(selectedRecommendationIds === undefined ? {} : { selectedRecommendationIds }) }
+  validateAcademicAdvisorRequest(request)
+  const body = await readJson(await fetchImpl(`${ACADEMIC_API}/propuestas/${encodeURIComponent(proposalId)}/consejero`, {
+    method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    credentials: 'omit', signal, body: JSON.stringify(request),
+  }))
+  validateAcademicAdvisorResponse(body)
+  if (body.proposalId !== proposalId || body.editVersion !== expectedEditVersion) {
+    throw new TypeError('El análisis corresponde a otra versión de la propuesta. Vuelve a consultar al consejero.')
+  }
+  return body
+}
+
+// A preview belongs to exactly one proposal version and one set of recommendation IDs.
+export function hasCurrentAdvisorImpact(advice: AcademicAdvisorResponse | null, proposalId: string,
+  editVersion: number, selectedIds: readonly string[]): boolean {
+  const impact = advice?.verifiedImpact
+  return Boolean(advice && impact && advice.proposalId === proposalId && advice.editVersion === editVersion
+    && impact.recommendationIds.length === selectedIds.length
+    && new Set(selectedIds).size === selectedIds.length
+    && selectedIds.every((id) => impact.recommendationIds.includes(id)))
+}
+
 export async function fetchAcademicDrafts(fetchImpl: typeof fetch = globalThis.fetch, signal?: AbortSignal): Promise<AcademicDraftList> {
   const body = await readJson(await fetchImpl(`${ACADEMIC_API}/borradores`, {
     headers: { Accept: 'application/json' }, credentials: 'omit', signal,
@@ -160,7 +219,11 @@ export async function fetchAcademicDrafts(fetchImpl: typeof fetch = globalThis.f
 
 export async function saveAcademicDraft(request: AcademicDraftSaveRequest,
   fetchImpl: typeof fetch = globalThis.fetch, signal?: AbortSignal): Promise<AcademicSavedDraft> {
-  validateAcademicDraftSaveRequest(request)
+  try {
+    validateAcademicDraftSaveRequest(request)
+  } catch (error) {
+    throw new Error(academicPlanningErrorMessage(error), { cause: error })
+  }
   const body = await readJson(await fetchImpl(`${ACADEMIC_API}/borradores/guardar`, {
     method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
     credentials: 'omit', signal, body: JSON.stringify(request),
@@ -423,3 +486,24 @@ export function academicSectionCoverage(proposal: AcademicProposal) {
   }, { complete: 0, partial: 0, pending: 0 })
 }
 
+
+// Keep validation and request/response identity at the HTTP seam for all callers.
+export async function fetchAcademicNormativeAdvice(request: AcademicNormativeRequest,
+  fetchImpl: typeof fetch = globalThis.fetch, signal?: AbortSignal): Promise<AcademicNormativeResponse> {
+  validateAcademicNormativeRequest(request)
+  const sent = { ...request, question: request.question.trim() }
+  signal?.throwIfAborted()
+  const body = await readJson(await fetchImpl(`${ACADEMIC_API}/normativa/consultas`, {
+    method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    credentials: 'omit', signal, body: JSON.stringify(sent),
+  }))
+  signal?.throwIfAborted()
+  validateAcademicNormativeResponse(body, sent)
+  return body
+}
+
+// A documented explanation cannot make a load increase a default selection.
+export function defaultAcademicAdvisorSelection(advice: AcademicAdvisorResponse): string[] {
+  return advice.recommendations.filter((item) => item.recommendedByDefault
+    && item.patch.kind !== 'increase_teacher_load').map((item) => item.id)
+}

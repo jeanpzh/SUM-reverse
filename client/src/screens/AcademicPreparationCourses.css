@@ -1,0 +1,465 @@
+/* AcademicPreparationCourses.css
+   Operational Workbench (Design A) for Academic Preparation Course Table and Inspector */
+
+fieldset.academic-scheduling__locked-workspace {
+  min-width: 0;
+  max-width: 100%;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.academic-preparation {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 4);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.academic-preparation__toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 3);
+  padding: 0;
+}
+
+.academic-preparation__toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--planning-spacing) * 3);
+}
+
+.academic-preparation__search-field {
+  flex: 1 1 240px;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 1);
+  font-size: var(--planning-text-sm);
+  font-weight: 500;
+  color: var(--planning-text);
+}
+
+.academic-preparation__cycle-filter {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 1);
+  font-size: var(--planning-text-sm);
+  font-weight: 500;
+  color: var(--planning-text);
+}
+
+/* Counters bar */
+.academic-preparation__counters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--planning-spacing) * 3);
+  padding: 0;
+  font-size: var(--planning-text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--planning-text);
+}
+
+.academic-preparation__counter-item {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--planning-spacing) * 1);
+}
+
+.academic-preparation__counter-item strong {
+  font-weight: 700;
+  color: var(--planning-muted);
+}
+
+/* Selection and bulk action buttons */
+.academic-preparation__actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--planning-spacing) * 2);
+}
+
+/* Workbench container with main table and inspector side-by-side */
+.academic-preparation__workbench {
+  display: flex;
+  gap: calc(var(--planning-spacing) * 4);
+  align-items: flex-start;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.academic-preparation__table-pane {
+  flex: 1 1 0%;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 3);
+}
+
+/* Accessible scrollable region for compact table */
+.academic-preparation__table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.academic-preparation__table-wrapper:focus-visible {
+  outline: 2px solid var(--planning-primary);
+  outline-offset: -2px;
+}
+
+.academic-preparation__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--planning-text-sm);
+  color: var(--planning-text);
+  text-align: left;
+}
+
+.academic-preparation__group-row th {
+  background: var(--planning-canvas);
+  color: var(--planning-text);
+  font-size: var(--planning-text-sm);
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: normal;
+  border-top: 1px solid var(--planning-border);
+  border-bottom: 1px solid var(--planning-border);
+  padding: calc(var(--planning-spacing) * 1.5) calc(var(--planning-spacing) * 2.5);
+}
+
+.academic-preparation__row {
+  transition: background-color 0.1s ease;
+}
+
+.academic-preparation__row:hover {
+  background: var(--planning-canvas);
+}
+
+.academic-preparation__row--selected {
+  background: var(--planning-selected);
+}
+
+.academic-preparation__row--selected:hover {
+  background: var(--planning-selected);
+}
+
+.academic-preparation__row--inspected {
+  outline: 2px solid var(--planning-primary);
+  outline-offset: -2px;
+}
+
+.academic-preparation__td-select {
+  width: 3rem;
+  text-align: center;
+}
+
+.academic-preparation__course-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+.academic-preparation__course-cell strong {
+  font-size: var(--planning-text-sm);
+  font-weight: 700;
+  color: var(--planning-text);
+  line-height: 1.3;
+}
+
+.academic-preparation__course-code {
+  font-size: var(--planning-text-xs);
+  white-space: nowrap;
+  font-family: monospace;
+  color: var(--planning-muted);
+}
+
+.academic-preparation__num-input {
+  width: 100%; min-width: 0; box-sizing: border-box;
+  text-align: right;
+}
+
+/* Single Inspector */
+.academic-preparation__inspector {
+  width: 340px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  padding: calc(var(--planning-spacing) * 4);
+  background: var(--planning-surface);
+  border: 1px solid var(--planning-border);
+  border-radius: var(--planning-radius-panel);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 3);
+  position: sticky;
+  top: calc(var(--planning-spacing) * 4);
+}
+
+.academic-preparation__inspector-warning {
+  margin: 0;
+  padding: calc(var(--planning-spacing) * 2);
+  background: var(--planning-warning-surface);
+  border: 1px solid var(--planning-warning);
+  border-radius: var(--planning-radius-control);
+  font-size: var(--planning-text-sm);
+  color: var(--planning-warning);
+  line-height: 1.35;
+}
+
+.academic-preparation__inspector-body {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 3);
+}
+
+.academic-preparation__inspector-body label {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 1);
+  font-size: var(--planning-text-sm);
+  font-weight: 500;
+  color: var(--planning-text);
+}
+
+/* Bulk change dialog: position, overlay, shadow and size come from the shadcn Dialog (components/ui). */
+.academic-preparation__modal.academic-preparation__modal {
+  max-width: 680px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.academic-preparation__modal-header {
+  padding: calc(var(--planning-spacing) * 4);
+  border-bottom: 1px solid var(--planning-border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: calc(var(--planning-spacing) * 2);
+}
+
+.academic-preparation__modal-title {
+  margin: 0;
+  font-size: var(--planning-text-lg);
+  font-weight: 700;
+  color: var(--planning-text);
+}
+
+.academic-preparation__modal-subtitle {
+  margin: calc(var(--planning-spacing) * 1) 0 0;
+  font-size: var(--planning-text-sm);
+  color: var(--planning-muted);
+}
+
+.academic-preparation__modal-body {
+  min-height: 0;
+  padding: calc(var(--planning-spacing) * 4);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 4);
+}
+
+.academic-preparation__bulk-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--planning-spacing) * 4);
+  padding: calc(var(--planning-spacing) * 3);
+}
+
+.academic-preparation__bulk-input-group {
+  flex: 1 1 200px;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--planning-spacing) * 1.5);
+}
+
+.academic-preparation__bulk-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--planning-spacing) * 1.5);
+  font-size: var(--planning-text-sm);
+  font-weight: 500;
+  color: var(--planning-text);
+  cursor: pointer;
+}
+
+.academic-preparation__preview-table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.academic-preparation__preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--planning-text-sm);
+}
+
+.academic-preparation__preview-status--excluded {
+  color: var(--planning-error);
+  font-weight: 700;
+  font-size: var(--planning-text-sm);
+}
+
+.academic-preparation__modal-footer {
+  padding: calc(var(--planning-spacing) * 3) calc(var(--planning-spacing) * 4);
+  border-top: 1px solid var(--planning-border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: calc(var(--planning-spacing) * 2);
+  background: var(--planning-canvas);
+  border-bottom-left-radius: var(--planning-radius-panel);
+  border-bottom-right-radius: var(--planning-radius-panel);
+}
+
+/* Responsive below 1024px: stack table and inspector, modal drawer */
+@media (max-width: 1023.98px) {
+  .academic-preparation__workbench {
+    flex-direction: column;
+  }
+
+  .academic-preparation__inspector {
+    width: 100%;
+    position: static;
+  }
+}
+
+/* Keep the named, keyboard-focusable region as the scroll owner. Table still
+   supplies the sticky column headers; its inner wrapper must not trap scrolling. */
+.academic-preparation__table-wrapper {
+  box-sizing: border-box;
+  max-height: min(70dvh, 40rem);
+  overflow: auto;
+  border: 1px solid var(--planning-border);
+  border-radius: var(--planning-radius-panel);
+}
+
+.academic-preparation__table-scroll[data-slot='table-container'] {
+  overflow: visible;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+}
+
+.planning-root .academic-preparation__table [data-slot='table-cell'],
+.planning-root .academic-preparation__preview-table [data-slot='table-cell'] {
+  padding: 8px 12px;
+}
+
+.planning-root .academic-preparation__table [data-slot='table-body'] [data-slot='table-row'] [data-slot='table-head'] {
+  position: static;
+  z-index: auto;
+  padding: 8px 12px;
+}
+
+.academic-preparation__search-field,
+.academic-preparation__cycle-filter,
+.academic-preparation__bulk-input-group {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.academic-preparation__modal-footer {
+  flex-wrap: wrap;
+}
+
+/* The demand dialog uses separators within one working surface. */
+.planning-root .academic-demand,
+.planning-root .academic-demand__source,
+.planning-root .academic-demand__course {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--planning-surface);
+}
+
+.planning-root .academic-demand__course {
+  padding: 16px 0;
+  border-top: 1px solid var(--planning-border);
+}
+
+.planning-root .academic-demand__courses {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+.planning-root .academic-demand__heading h4 {
+  font-size: var(--planning-text-lg);
+}
+
+.planning-root .academic-demand__course-heading {
+  flex-wrap: wrap;
+}
+
+.planning-root .academic-demand dl {
+  font-variant-numeric: tabular-nums;
+}
+
+.planning-root .academic-demand__error {
+  color: var(--planning-error);
+}
+
+.planning-root .academic-preparation .academic-scheduling__history-section {
+  padding: 12px 0;
+  border: 0;
+  border-bottom: 1px solid var(--planning-border);
+  border-radius: 0;
+}
+
+.planning-root .academic-preparation .academic-scheduling__revision {
+  color: var(--planning-muted);
+  background: transparent;
+}
+
+/* Preparation uses the workspace surface; the table and lower detail scroll independently. */
+.academic-preparation-view { min-width: 0; max-width: 100%; }
+.academic-preparation__toolbar { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; }
+.academic-preparation__period { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
+.academic-preparation__period > label { min-width: 0; }
+.academic-preparation__search-field { flex: 1 1 12rem; min-width: min(100%, 12rem); }
+.academic-preparation__cycle-filter { flex: 0 1 12rem; }
+.academic-preparation__actions-row { margin-left: auto; gap: 8px; }
+.academic-preparation__counters { margin: -8px 0 0; font-size: var(--planning-text-xs); line-height: 16px; color: var(--planning-muted); }
+.academic-preparation__split { flex: 1; min-height: 0; }
+.academic-preparation__table-panel { min-width: 0; }
+.academic-preparation__table-panel .academic-preparation__table-pane { height: 100%; }
+.academic-preparation__table-panel .academic-preparation__table-wrapper { max-height: none; height: 100%; }
+.academic-preparation__table { table-layout: fixed; min-width: 0; }
+.planning-root .academic-preparation__table [data-slot='table-cell'] { height: 40px; padding: 4px 8px; }
+.planning-root .academic-preparation__table [data-slot='table-head'] { padding: 8px; font-size: var(--planning-text-sm); }
+.planning-root .academic-preparation__table .academic-preparation__num-input { height: 32px; padding: 4px 8px; text-align: right; }
+.academic-preparation__th-select, .academic-preparation__td-select { width: 48px; }
+.planning-root .academic-preparation__table .academic-scheduling__selection { margin: 0; justify-content: center; }
+.planning-root .academic-preparation__inspector.planning-inspector--docked { position: static; width: 100%; height: 100%; max-height: none; padding: 16px; box-sizing: border-box; box-shadow: none; z-index: auto; }
+.academic-preparation__detail-pane { min-height: 0; overflow: auto; }
+.planning-root .academic-preparation__course-sheet { width: min(100%, 36rem); padding: 0; overflow-y: auto; }
+.academic-preparation__inspector-body .academic-scheduling__history-section { margin: 0; }
+@media (max-width: 1023px) {
+  .academic-preparation__split { min-height: 24rem; }
+}
+
+.academic-preparation__workbench { flex: 1; min-height: 0; align-items: stretch; }
+.academic-preparation__table-pane { min-height: 0; }
+.academic-preparation__table :is(th, td) { overflow-wrap: normal; white-space: normal; }
+.academic-preparation__table :is(th, td):nth-child(1) { width: 48px; }
+.academic-preparation__table :is(th, td):nth-child(2) { width: 40px; }
+.academic-preparation__table :is(th, td):nth-child(n+4) { width: 88px; }
+.academic-preparation__course-code { white-space: normal; overflow-wrap: anywhere; }
+.academic-demand__summary-trigger { flex-shrink: 0; align-self: flex-start; }
+
+.planning-root .academic-preparation__table thead [data-slot='table-head'] { padding: 8px 4px; }
+.academic-preparation__num-input { appearance: textfield; }
+.academic-preparation__num-input::-webkit-inner-spin-button,
+.academic-preparation__num-input::-webkit-outer-spin-button { appearance: none; margin: 0; }
+
+.academic-preparation__table :is(th, td):nth-child(7) { width: 88px; }

@@ -281,6 +281,19 @@ export function validateAcademicDemandEstimate(value) {
     if (counts['non-eligible'] !== row.nonEligible || counts.insufficient !== row.insufficient) throw new TypeError('Motivos inconsistentes')
   })
 }
+/** F-0: per-section capacity override. The ordinal is bounded by the computed section count when the demand carries its own targetCapacity; otherwise the service checks it against the catalog default. */
+function sectionCapacities(row) {
+  const entries = array(row.sectionCapacities, 'sectionCapacities', 32)
+  const ordinals = new Set()
+  const count = Object.hasOwn(row, 'targetCapacity') ? Math.ceil(row.estimatedDemand / row.targetCapacity) : Number.MAX_SAFE_INTEGER
+  entries.forEach((entry) => {
+    object(entry, ['ordinal', 'capacity'], 'sectionCapacity')
+    number(entry.ordinal, 'sectionCapacity.ordinal', 1, count)
+    number(entry.capacity, 'sectionCapacity.capacity', 1, 1000)
+    if (ordinals.has(entry.ordinal)) throw new TypeError('sectionCapacity.ordinal: repetido')
+    ordinals.add(entry.ordinal)
+  })
+}
 export function validateAcademicRequest(value) {
   object(value, ['revision', 'demands'], 'request', ['resources', 'allocationPolicy', 'planningPolicy'])
   if (Object.hasOwn(value, 'planningPolicy')) validatePlanningPolicy(value.planningPolicy)
@@ -289,12 +302,13 @@ export function validateAcademicRequest(value) {
   string(value.revision, 'revision')
   const seen = new Set()
   array(value.demands, 'demands', PLANNING_LIMITS.courses).forEach((row) => {
-    object(row, ['courseId', 'estimatedDemand'], 'demand', ['targetCapacity', 'patternId', 'deliveryMode'])
+    object(row, ['courseId', 'estimatedDemand'], 'demand', ['targetCapacity', 'patternId', 'deliveryMode', 'sectionCapacities'])
     if (Object.hasOwn(row, 'deliveryMode') && !['continuous', 'split'].includes(row.deliveryMode)) throw new TypeError('Modalidad de sección inválida')
     string(row.courseId, 'courseId')
     number(row.estimatedDemand, 'estimatedDemand')
     if (Object.hasOwn(row, 'targetCapacity')) number(row.targetCapacity, 'targetCapacity', 1)
     if (Object.hasOwn(row, 'patternId')) string(row.patternId, 'patternId')
+    if (Object.hasOwn(row, 'sectionCapacities')) sectionCapacities(row)
     if (seen.has(row.courseId)) throw new TypeError('courseId: repetido')
     seen.add(row.courseId)
   })
@@ -517,4 +531,155 @@ export function validateAcademicAdjustment(value) {
   strings(value.roomIds, 'roomIds')
   if (!value.sessionIds.length || value.sessionIds.length !== value.roomIds.length
     || new Set(value.sessionIds).size !== value.sessionIds.length) throw new TypeError('Componentes o ambientes del ajuste inválidos')
+}
+
+export function validateAcademicAdvisorRequest(value) {
+  object(value, ['expectedEditVersion'], 'advisorRequest', ['selectedRecommendationIds'])
+  if (value.selectedRecommendationIds !== undefined) {
+    strings(value.selectedRecommendationIds, 'selectedRecommendationIds')
+    if (new Set(value.selectedRecommendationIds).size !== value.selectedRecommendationIds.length) throw new TypeError('IDs duplicados')
+  }
+  number(value.expectedEditVersion, 'expectedEditVersion', 0)
+}
+
+export function validateAcademicAdvisorPatch(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError('patch: objeto requerido')
+  if (value.kind === 'increase_teacher_load') {
+    object(value, ['kind', 'adjustments'], 'patch')
+    const adjustments = array(value.adjustments, 'adjustments')
+    if (!adjustments.length) throw new TypeError('adjustments: al menos un docente requerido')
+    adjustments.forEach((row) => {
+      object(row, ['teacherId', 'previousMaxWeeklyMinutes', 'nextMaxWeeklyMinutes'], 'adjustment')
+      resourceId(row.teacherId)
+      number(row.previousMaxWeeklyMinutes, 'previousMaxWeeklyMinutes', 0, 2400)
+      number(row.nextMaxWeeklyMinutes, 'nextMaxWeeklyMinutes', 1, 2400)
+      if (row.nextMaxWeeklyMinutes <= row.previousMaxWeeklyMinutes) throw new TypeError('nextMaxWeeklyMinutes debe superar a previousMaxWeeklyMinutes')
+    })
+    return
+  }
+  if (value.kind === 'enable_planning_window') {
+    object(value, ['kind'], 'patch', ['allowAfternoon', 'allowSaturday'])
+    if (value.allowAfternoon !== undefined && value.allowAfternoon !== true) throw new TypeError('allowAfternoon inválido')
+    if (value.allowSaturday !== undefined && value.allowSaturday !== true) throw new TypeError('allowSaturday inválido')
+    if (!value.allowAfternoon && !value.allowSaturday) throw new TypeError('enable_planning_window requiere al menos una ventana')
+    return
+  }
+  if (value.kind === 'change_delivery_mode') {
+    object(value, ['kind', 'courseIds', 'deliveryMode'], 'patch')
+    if (value.deliveryMode !== 'split') throw new TypeError('deliveryMode debe ser split')
+    strings(value.courseIds, 'courseIds')
+    if (!value.courseIds.length) throw new TypeError('courseIds vacío')
+    return
+  }
+  if (value.kind === 'incorporate_reference_resource') {
+    object(value, ['kind', 'teacherIds', 'roomIds'], 'patch')
+    if (!Array.isArray(value.teacherIds) || !Array.isArray(value.roomIds)) throw new TypeError('teacherIds/roomIds deben ser listas')
+    value.teacherIds.forEach(resourceId)
+    value.roomIds.forEach(resourceId)
+    if (!value.teacherIds.length && !value.roomIds.length) throw new TypeError('incorporate_reference_resource requiere al menos un recurso')
+    return
+  }
+  throw new TypeError('kind de recomendación desconocido')
+}
+
+export function validateAcademicAdvisorResponse(value) {
+  object(value, ['proposalId', 'editVersion', 'source', 'summary', 'bottlenecks', 'recommendations'], 'advisorResponse', ['verifiedImpact', 'reasoningSteps', 'normativeContext'])
+  if (value.normativeContext !== undefined) validateAcademicNormativeResponse(value.normativeContext)
+  string(value.proposalId, 'proposalId')
+  number(value.editVersion, 'editVersion', 0)
+  object(value.source, ['mode', 'providerLabel'], 'source', ['fallbackReason'])
+  if (!['llm-assisted', 'deterministic-fallback'].includes(value.source.mode)) throw new TypeError('source.mode inválido')
+  if (value.source.providerLabel !== null) string(value.source.providerLabel, 'providerLabel')
+  if (value.source.fallbackReason !== undefined
+    && !['not_configured', 'timeout', 'rate_limited', 'upstream_error', 'invalid_llm_output'].includes(value.source.fallbackReason)) {
+    throw new TypeError('source.fallbackReason inválido')
+  }
+  if (value.reasoningSteps !== undefined) array(value.reasoningSteps, 'reasoningSteps').forEach((step) => {
+    object(step, ['toolName', 'inputSummary', 'outputSummary'], 'reasoningStep')
+    if (!['inspect_bottlenecks', 'simulate_patches_cpsat'].includes(step.toolName)) throw new TypeError('Herramienta desconocida')
+    string(step.inputSummary, 'inputSummary')
+    string(step.outputSummary, 'outputSummary')
+  })
+  if (value.verifiedImpact !== undefined) {
+    const impact = value.verifiedImpact
+    const counters = ['currentScheduledSessions', 'projectedScheduledSessions', 'requiredSessions', 'currentCompleteSections', 'projectedCompleteSections', 'totalSections']
+    object(impact, [...counters, 'recommendationIds', 'solverStatus'], 'verifiedImpact')
+    counters.forEach((key) => number(impact[key], key, 0))
+    strings(impact.recommendationIds, 'recommendationIds')
+    if (new Set(impact.recommendationIds).size !== impact.recommendationIds.length
+      || impact.recommendationIds.some((id) => !value.recommendations.some((r) => r.id === id))) throw new TypeError('Recomendación desconocida o duplicada')
+    if (!['complete', 'impossible', 'search-limit'].includes(impact.solverStatus)) throw new TypeError('solverStatus inválido')
+    if (impact.currentScheduledSessions > impact.requiredSessions || impact.projectedScheduledSessions > impact.requiredSessions
+      || impact.currentCompleteSections > impact.totalSections || impact.projectedCompleteSections > impact.totalSections) throw new TypeError('Contadores fuera de rango')
+    if (impact.solverStatus === 'complete' && (impact.projectedScheduledSessions !== impact.requiredSessions
+      || impact.projectedCompleteSections !== impact.totalSections)) throw new TypeError('Cobertura completa inconsistente')
+  }
+  string(value.summary, 'summary')
+  array(value.bottlenecks, 'bottlenecks').forEach((row) => {
+    object(row, ['category', 'title', 'detail', 'affectedSessionCount'], 'bottleneck')
+    if (!['teacher_load', 'planning_window', 'missing_resource', 'delivery_mode', 'other'].includes(row.category)) {
+      throw new TypeError('bottleneck.category inválido')
+    }
+    string(row.title, 'title')
+    string(row.detail, 'detail')
+    number(row.affectedSessionCount, 'affectedSessionCount', 0)
+  })
+  array(value.recommendations, 'recommendations').forEach((row) => {
+    object(row, ['id', 'title', 'rationale', 'impactSummary', 'recommendedByDefault', 'patch'], 'recommendation')
+    string(row.id, 'id')
+    string(row.title, 'title')
+    string(row.rationale, 'rationale')
+    string(row.impactSummary, 'impactSummary')
+    if (typeof row.recommendedByDefault !== 'boolean') throw new TypeError('recommendedByDefault debe ser booleano')
+    validateAcademicAdvisorPatch(row.patch)
+  })
+}
+
+const normativeSourceBase = 'https://medicina.unmsm.edu.pe/wp-content/uploads/2026/03/RESOLUCION-RECTORAL-001380-2026-R'
+const normativeSources = [`${normativeSourceBase}.pdf`, `${normativeSourceBase}-ANEXO.pdf`]
+function normativeDate(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(Date.parse(value))
+    || value.startsWith('0000-') || new Date(value).toISOString().slice(0, 10) !== value) throw new TypeError('Fecha normativa inválida')
+}
+export function validateAcademicNormativeRequest(value) {
+  object(value, ['question', 'facultyId', 'academicPeriod', 'asOf', 'teacherType'], 'normativeRequest')
+  if (typeof value.question !== 'string' || !value.question.trim() || value.question.trim().length > 1000) throw new TypeError('Pregunta normativa inválida')
+  if (value.facultyId !== 'FISI' || !isPlanningPeriod(value.academicPeriod)
+    || !['ordinario', 'contratado', 'unknown'].includes(value.teacherType)) throw new TypeError('Ámbito normativo inválido')
+  normativeDate(value.asOf)
+}
+export function validateAcademicNormativeResponse(value, request) {
+  object(value, ['revision', 'question', 'context', 'status', 'answer', 'retrievalMode', 'citations', 'gaps'], 'normativeResponse', ['generation'])
+  validateAcademicNormativeRequest({ question: value.question, ...value.context })
+  object(value.context, ['facultyId', 'academicPeriod', 'asOf', 'teacherType'], 'normativeContext')
+  if (value.question.trim() !== value.question || value.revision !== 'PA-NORMATIVE-1'
+    || !['supported', 'not-determined', 'conflict'].includes(value.status)
+    || !['hybrid', 'lexical-only', 'unavailable'].includes(value.retrievalMode)) throw new TypeError('Respuesta normativa inválida')
+  if (typeof value.answer !== 'string' || !value.answer.trim() || value.answer.length > 6000) throw new TypeError('Respuesta normativa sin texto válido')
+  array(value.citations, 'citations', 8).forEach((c) => {
+    object(c, ['id', 'documentId', 'title', 'article', 'page', 'url', 'excerpt', 'sourceClass', 'scope', 'reviewedAt', 'effectiveFrom', 'effectiveTo'], 'citation')
+    for (const key of ['id', 'documentId', 'title', 'article', 'excerpt']) string(c[key], key)
+    number(c.page, 'page', 1)
+    if (!normativeSources.includes(c.url) || c.sourceClass !== 'normative' || !['UNMSM', 'FISI'].includes(c.scope)) throw new TypeError('Fuente normativa inválida')
+    normativeDate(c.reviewedAt)
+    for (const key of ['effectiveFrom', 'effectiveTo']) if (c[key] !== null) normativeDate(c[key])
+    if (c.effectiveFrom && c.effectiveTo && c.effectiveFrom > c.effectiveTo) throw new TypeError('Vigencia invertida')
+    if ((c.effectiveFrom && c.effectiveFrom > value.context.asOf) || (c.effectiveTo && c.effectiveTo < value.context.asOf)) throw new TypeError('Cita fuera de fecha')
+  })
+  if (new Set(value.citations.map((c) => c.id)).size !== value.citations.length || (value.status !== 'not-determined' && !value.citations.length)) throw new TypeError('Citas inconsistentes')
+  strings(value.gaps, 'gaps')
+  if (value.generation !== undefined) {
+    const g = value.generation
+    object(g, ['mode', 'providerLabel'], 'normativeGeneration', ['fallbackReason'])
+    if (!['llm-assisted', 'extractive'].includes(g.mode)
+      || (g.providerLabel !== null && (typeof g.providerLabel !== 'string' || !g.providerLabel.trim()))
+      || (g.mode === 'llm-assisted' && (g.providerLabel === null || g.fallbackReason !== undefined))
+      || (g.mode === 'extractive' && g.providerLabel !== null)
+      || (g.fallbackReason !== undefined && !['not_configured', 'timeout', 'upstream_error', 'invalid_llm_output', 'insufficient_evidence', 'disabled'].includes(g.fallbackReason))) throw new TypeError('Generación normativa inválida')
+  }
+
+  if (request) {
+    validateAcademicNormativeRequest(request)
+    if (value.question !== request.question.trim() || ['facultyId', 'academicPeriod', 'asOf', 'teacherType'].some((key) => value.context[key] !== request[key])) throw new TypeError('Respuesta normativa de otra consulta')
+  }
 }

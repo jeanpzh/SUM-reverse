@@ -1,5 +1,2 @@
 .academic-local-layout { width: min(1360px, 100%); margin: 0 auto; padding: 1.5rem; box-sizing: border-box; }
-.academic-local-layout__back { display: inline-flex; align-items: center; gap: 0.4rem; margin: 0 0 0.75rem; color: var(--color-sum-link); font-size: var(--text-data); text-decoration: none; }
-.academic-local-layout__back:hover { text-decoration: underline; }
-.academic-local-layout__back:focus-visible { outline-color: var(--color-sum-accent); }
 @media (max-width: 640px) { .academic-local-layout { padding: 0.75rem; } }

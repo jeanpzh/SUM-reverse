@@ -1,0 +1,28 @@
+flowchart TB
+  subgraph HOY["IMPLEMENTADO EN EL PROTOTIPO"]
+    UI["Interfaz interna React<br/>Preparación · Horario · Revisión · Aprobación"]
+    API["API propia NestJS<br/>Valida solicitudes y controla versiones"]
+    CAT["Datos sintéticos<br/>Cursos · demanda · docentes · aulas"]
+    MOTOR["Motor de planificación<br/>Calcula secciones y busca horarios válidos"]
+    ARCH[("Archivos locales<br/>Borradores · revisiones · publicaciones")]
+    PUB["Versión aprobada y publicada"]
+    SUM["API y pantallas del alumno<br/>Prematrícula E2 · Matrícula E3"]
+    UI --> API
+    CAT --> API
+    API <--> MOTOR
+    API <--> ARCH
+    API --> PUB
+    PUB -->|"Contrato JSON actual"| SUM
+  end
+  subgraph PEND["PENDIENTE"]
+    SQL[("Intercambio mediante SQL<br/>Decisión elegida; aún sin integrar")]
+    CICLO["Rondas completas y reajuste S-5<br/>Aceptar → corregir → volver a publicar"]
+  end
+  PUB -.-> SQL
+  SQL -.-> SUM
+  API -.-> CICLO
+  CICLO -.-> PUB
+  classDef actual fill:#edf4ef,stroke:#245c3d,color:#172a20
+  classDef pendiente fill:#fff5df,stroke:#916117,color:#513a12,stroke-dasharray:5 4
+  class UI,API,CAT,MOTOR,ARCH,PUB,SUM actual
+  class SQL,CICLO pendiente

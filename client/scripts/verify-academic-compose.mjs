@@ -1,5 +1,6 @@
 // Run only against a freshly created, explicitly synthetic Compose acceptance project.
 import assert from 'node:assert/strict'
+import { setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
@@ -73,19 +74,20 @@ try {
   assert.equal(chosen.length, 2, 'el catálogo sintético debe exponer al menos dos cursos')
   if (chosen[0].cycle !== undefined && chosen[1].cycle !== undefined) assert.notEqual(chosen[0].cycle, chosen[1].cycle)
   if (chosen[0].cycle !== undefined) await page.getByLabel('Filtrar cursos por ciclo').selectOption(String(chosen[0].cycle))
-  await page.getByLabel(`Seleccionar ${chosen[0].courseId}`, { exact: true }).check()
+  await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${chosen[0].courseId}`, exact: true }))
   if (chosen[1].cycle !== undefined) await page.getByLabel('Filtrar cursos por ciclo').selectOption(String(chosen[1].cycle))
-  assert.equal(await page.locator('.academic-scheduling__selection input:checked').count(), 0, 'el curso seleccionado de otro ciclo está oculto')
-  await page.getByLabel(`Seleccionar ${chosen[1].courseId}`, { exact: true }).check()
+  assert.equal(await page.locator('.academic-scheduling__selection [role=checkbox][aria-checked=true]').count(), 0, 'el curso seleccionado de otro ciclo está oculto')
+  await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${chosen[1].courseId}`, exact: true }))
   await page.getByLabel('Filtrar cursos por ciclo').selectOption('all')
-  assert.equal(await page.locator('.academic-scheduling__selection input:checked').count(), 2)
+  assert.equal(await page.locator('.academic-scheduling__selection [role=checkbox][aria-checked=true]').count(), 2)
   for (const course of chosen) {
     await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).fill(course === chosen[0] ? '31' : '20')
     await page.getByLabel(`Capacidad ${course.courseId}`, { exact: true }).fill('30')
+    await page.getByLabel(`Inspeccionar ${course.courseId}`).click()
     if (course.planningPatterns?.length) assert.equal(await page.getByLabel(`Patrón ${course.courseId}`).inputValue(), course.planningPatterns[0].id)
     assert.equal(await page.getByLabel(`Modalidad de sesiones ${course.courseId}`).inputValue(), 'continuous')
     if (course.history?.sections.length) {
-      const details = page.locator('.academic-scheduling__course').filter({ hasText: course.courseId }).locator('details')
+      const details = page.locator('.academic-preparation__inspector .academic-scheduling__history')
       await details.locator('summary').click()
       assert.equal(await details.locator('ul li').count(), course.history.sections.reduce((sum, section) => sum + section.sessions.length, 0))
     }
@@ -99,8 +101,8 @@ try {
   await page.getByLabel('Carga semanal docente').fill('1800')
   await page.getByLabel('Disponibilidad docente fin 1', { exact: true }).fill('18:00')
   for (const course of chosen) {
-    const eligibility = page.getByLabel(`${referenceTeacher.name} habilitado para ${course.courseId}`, { exact: true })
-    if (!(await eligibility.isChecked())) await eligibility.check()
+    const eligibility = page.getByRole('checkbox', { name: `${referenceTeacher.name} habilitado para ${course.courseId}`, exact: true })
+    await setPlanningCheckbox(eligibility)
   }
   await page.getByLabel('Máximo de secciones ' + chosen[0].courseId).fill('3')
   await page.getByLabel('Seleccionar o agregar docente').selectOption(referenceTeacher.id)
@@ -113,6 +115,7 @@ try {
   await page.getByLabel('Seleccionar o agregar docente').selectOption(referenceTeacher.id)
   assert.equal(await page.getByLabel('Identificación docente').inputValue(), 'DOC-LOCAL-COMPARTIDO', 'al volver al docente se conserva su configuración')
   assert.equal(await page.locator('[aria-label="Docentes incorporados"] .academic-scheduling__roster-item').count(), 2)
+  await page.getByRole('button', { name: 'Opciones avanzadas', exact: true }).click()
   await page.getByLabel('Criterio de asignación').selectOption('balanced')
   for (const room of academicCatalog.rooms) await page.getByLabel(`Quitar ambiente ${room.name}`, { exact: true }).click()
   const referenceClassroom = academicCatalog.referenceRooms.find((room) => room.kind === 'classroom')
@@ -129,7 +132,7 @@ try {
   assert.equal(await page.locator('[aria-label="Ambientes incorporados"] .academic-scheduling__roster-item').count(), 2)
   await page.screenshot({ path: resolve(evidence, 'escuela-cursos.png') })
   const generatedResponse = page.waitForResponse((response) => response.url().endsWith('/propuestas') && response.request().method() === 'POST')
-  await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
+  await page.locator('#planning-tour-primary').click()
   const response = await generatedResponse
   assert.equal(response.status(), 200)
   const proposal = await response.json()
@@ -154,8 +157,8 @@ try {
     for (let index = 1; index < sessions.length; index += 1) assert.equal(sessions[index - 1].endMinute, sessions[index].startMinute, 'componentes consecutivos')
     assert.equal(section.deliveryMode, 'continuous')
   }
-  await page.getByRole('status').filter({ hasText: 'complete' }).waitFor()
-  await page.locator('.academic-scheduling__result').scrollIntoViewIfNeeded()
+  await page.locator('.planning-status-bar[data-status="complete"]').waitFor()
+  await page.locator('.planning-status-bar').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(evidence, 'escuela.png') })
   const calendar = page.getByRole('region', { name: 'Calendario semanal con horas; desplázate horizontalmente para ver todos los días' })
   await calendar.scrollIntoViewIfNeeded()
@@ -164,17 +167,17 @@ try {
   await page.screenshot({ path: resolve(evidence, 'escuela-calendario.png') })
   const priorProposal = proposal
   await page.getByLabel('Carga semanal docente').fill('1799')
-  assert.equal(await page.locator('.academic-scheduling__result').count(), 0, 'cambiar recursos invalida el resultado visible')
+  assert.equal(await page.locator('.planning-status-bar').count(), 0, 'cambiar recursos invalida el resultado visible')
   const resourceChangedResponse = page.waitForResponse((response) => response.url().endsWith('/propuestas') && response.request().method() === 'POST')
-  await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
+  await page.locator('#planning-tour-primary').click()
   const resourceChanged = await resourceChangedResponse
   assert.equal(resourceChanged.status(), 200)
   assert.equal((await resourceChanged.json()).status, 'complete')
   assert.deepEqual(await read(`/local/programacion-academica/v1/propuestas/${priorProposal.proposalId}`), priorProposal)
   await page.getByLabel(`Capacidad ${chosen[0].courseId}`, { exact: true }).fill('31')
-  await page.getByRole('status').filter({ hasText: 'complete' }).waitFor({ state: 'detached' })
+  await page.locator('.planning-status-bar[data-status="complete"]').waitFor({ state: 'detached' })
   const regeneratedResponse = page.waitForResponse((response) => response.url().endsWith('/propuestas') && response.request().method() === 'POST')
-  await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
+  await page.locator('#planning-tour-primary').click()
   const regenerated = await regeneratedResponse
   assert.equal(regenerated.status(), 200)
   const updatedProposal = await regenerated.json()
@@ -184,15 +187,17 @@ try {
   assert.deepEqual(await read(`/local/programacion-academica/v1/propuestas/${priorProposal.proposalId}`), priorProposal)
   const variableCourse = chosen.find((course) => course.planningPatterns?.length > 1)
   if (variableCourse) {
+    await page.getByLabel(`Inspeccionar ${variableCourse.courseId}`).click()
     await page.getByLabel(`Patrón ${variableCourse.courseId}`).selectOption(variableCourse.planningPatterns[1].id)
-    assert.equal(await page.locator('.academic-scheduling__result').count(), 0, 'cambiar patrón invalida resultado anterior')
+    assert.equal(await page.locator('.planning-status-bar').count(), 0, 'cambiar patrón invalida resultado anterior')
   }
   assert.deepEqual((await read('/local/matricula-regular/v1/contextos/SYN-SIS-A')).data.offer, beforeOffer)
   assert.deepEqual(await read(`/local/programacion-academica/v1/propuestas/${proposal.proposalId}`), proposal)
+  await page.getByLabel(`Inspeccionar ${chosen[1].courseId}`).click()
   await page.getByLabel(`Modalidad de sesiones ${chosen[1].courseId}`).selectOption('split')
-  assert.equal(await page.locator('.academic-scheduling__result').count(), 0, 'cambiar modalidad invalida la propuesta visible')
+  assert.equal(await page.locator('.planning-status-bar').count(), 0, 'cambiar modalidad invalida la propuesta visible')
   const splitResponse = page.waitForResponse((response) => response.url().endsWith('/propuestas') && response.request().method() === 'POST')
-  await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
+  await page.locator('#planning-tour-primary').click()
   const splitProposal = await (await splitResponse).json()
   assert.equal(splitProposal.status, 'complete')
   assert.equal((await read(`/local/programacion-academica/v1/propuestas/${proposal.proposalId}`)).proposalId, proposal.proposalId)
@@ -202,7 +207,7 @@ try {
     assert.ok(sessions.every((session) => session.teacherId === sessions[0].teacherId), 'split conserva docente único por sección')
   }
   await page.getByLabel(`Modalidad de sesiones ${chosen[1].courseId}`).selectOption('continuous')
-  assert.equal(await page.locator('.academic-scheduling__result').count(), 0)
+  assert.equal(await page.locator('.planning-status-bar').count(), 0)
 
   // Exercise existing enrollment on this acceptance project's synthetic student only.
   const session = await post('/local/matricula-regular/v1/sesiones', { runId: studentContext.runId, actorId: 'SYN-SIS-A' })

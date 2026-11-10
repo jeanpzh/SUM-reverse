@@ -1,10 +1,10 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { HttpException, Injectable } from '@nestjs/common'
-import { validateAcademicAdjustment, validateAcademicCatalog, validateAcademicProposal, validateAcademicRequest, validateAcademicDemandRequest } from '../../../shared/programacion-academica-api.mjs'
-import type { AcademicAdjustment, AcademicCatalog, AcademicProposal, AcademicRequest, AcademicInterval, AcademicPlanningResources, AcademicWorkspace, AcademicDemandEstimate } from '../../../shared/programacion-academica-api.mjs'
+import { validateAcademicAdjustment, validateAcademicAdvisorRequest, validateAcademicCatalog, validateAcademicProposal, validateAcademicRequest, validateAcademicDemandRequest } from '../../../shared/programacion-academica-api.mjs'
+import type { AcademicAdjustment, AcademicAdvisorResponse, AcademicCatalog, AcademicProposal, AcademicRequest, AcademicInterval, AcademicPlanningResources, AcademicWorkspace, AcademicDemandEstimate } from '../../../shared/programacion-academica-api.mjs'
 import { createCoverageAuthority } from './session-coverage.js'
 import { generateAcademicSchedule } from './schedule-generator.js'
-import type { GeneratorInput, RequiredSession } from './generator.types.js'
+import type { GeneratorInput, GeneratorDiagnostic, GeneratorResult, GeneratorSeed, RequiredSession } from './generator.types.js'
 import type { AcademicSchedule, TimeInterval } from './schedule.types.js'
 import { validateAcademicSchedule } from './schedule-validator.js'
 import { validateSectionDelivery } from './section-delivery.js'
@@ -13,6 +13,7 @@ import { assessTeacherPreferences } from './teacher-preferences.js'
 import { createDemandSources } from './demand-fixtures.js'
 import { estimateAcademicDemand } from './demand-estimator.js'
 import { prepareGeneratorInput } from './generator-input.js'
+import { buildLocalDeterministicAdvisor, analyzeProposalAdvisor, trySolveWithPythonEngine } from './planning-engine.client.js'
 import { THESIS_COURSE_IDS } from '../../../shared/academic-planning-policy.mjs'
 
 type RetainedProposal = {
@@ -60,7 +61,12 @@ export class DemoProposalService {
     }
   }
 
-  createProposal(value: unknown): AcademicProposal {
+  private validateAndPrepareProposalRequest(value: unknown): {
+    request: AcademicRequest
+    resources: AcademicPlanningResources
+    input: GeneratorInput
+    authority: ReturnType<typeof createCoverageAuthority>
+  } {
     let request: AcademicRequest
     try {
       validateAcademicRequest(value)
@@ -78,6 +84,10 @@ export class DemoProposalService {
       if (demand.patternId && !course.planningPatterns?.some((pattern) => pattern.id === demand.patternId)) {
         throw this.httpError(400, 'INVALID_DEMANDS', `El patrón solicitado no existe para ${demand.courseId}`)
       }
+      const sectionCount = Math.ceil(demand.estimatedDemand / (demand.targetCapacity ?? course.targetCapacity))
+      if (demand.sectionCapacities?.some((override) => override.ordinal > sectionCount)) {
+        throw this.httpError(400, 'INVALID_REQUEST', `sectionCapacities: el ordinal supera las ${sectionCount} secciones calculadas de ${demand.courseId}`)
+      }
     }
 
     this.cleanExpired()
@@ -86,69 +96,64 @@ export class DemoProposalService {
     const resources = this.resolveResources(request)
     const input = this.toGeneratorInput(request, resources)
     const authority = createCoverageAuthority(input)
-    const result = generateAcademicSchedule(input)
-    const createdAt = new Date().toISOString()
-    const expiresAt = new Date(Date.now() + retentionMs).toISOString()
-    const assignments = result.schedule?.assignments ?? []
-    const assignedIds = new Set(assignments.map((assignment) => assignment.id))
-    const sections = (result.schedule?.sections ?? []).map((section) => ({
-      sectionId: section.id,
-      courseId: section.courseId,
-      courseName: this.catalog.courses.find((course) => course.courseId === section.courseId)!.name,
-      capacity: section.capacity,
-      deliveryMode: input.courses.find((course) => course.courseId === section.courseId)!.deliveryMode ?? 'continuous',
-    }))
-    const view: AcademicProposal = {
-      proposalId: randomUUID(),
-      createdAt,
-      expiresAt,
-      status: result.status,
-      sections,
-      assignments: assignments.map((assignment) => ({
-        sessionId: assignment.id,
-        sectionId: assignment.sectionId,
-        courseId: sections.find((section) => section.sectionId === assignment.sectionId)!.courseId,
-        courseName: sections.find((section) => section.sectionId === assignment.sectionId)!.courseName,
-        teacherId: assignment.teacherId,
-        teacherName: resources.teachers.find((teacher) => teacher.id === assignment.teacherId)!.name,
-        roomId: assignment.roomId,
-        roomName: resources.rooms.find((room) => room.id === assignment.roomId)!.name,
-        ...(result.requirements.find((required) => required.id === assignment.id)?.type
-          ? { sessionType: result.requirements.find((required) => required.id === assignment.id)!.type } : {}),
-        ...assignment.interval,
-      })),
-      pending: result.requirements.filter((required) => !assignedIds.has(required.id)).map((required) => ({
-        sessionId: required.id,
-        sectionId: required.sectionId,
-        courseId: required.courseId,
-        durationMinutes: required.durationMinutes,
-      })),
-      diagnostics: result.diagnostics.map((diagnostic) => ({ ...diagnostic, sessionIds: [...diagnostic.sessionIds] })),
-      coverageComplete: result.status === 'complete' && (result.schedule ? authority.check(result.schedule).complete : false),
-      counts: { sections: sections.length, requiredSessions: result.requirements.length, scheduledSessions: assignments.length },
-      stats: { exploredCandidates: result.exploredCandidates, candidateVisits: result.candidateVisits, backtracks: result.backtracks, limitReason: result.limitReason },
-      editVersion: 0,
-      manuallyAdjustedSectionIds: [],
-      ...(result.schedule ? { preferenceReport: assessTeacherPreferences(input, result.schedule, result.requirements) } : {}),
-    }
-    if (view.preferenceReport && view.preferenceReport.outsidePreferenceSections > 0) {
-      view.diagnostics.push({ code: 'PREFERENCES_NOT_MET', message: 'Hay secciones programadas fuera de sus preferencias. Las preferencias son orientativas; no se ha demostrado optimalidad global.', sessionIds: [] })
-    }
-    if (request.planningPolicy) {
-      const exceptions = view.assignments.filter((assignment) => {
-        const cycle = this.catalog.courses.find((course) => course.courseId === assignment.courseId)?.cycle ?? 0
-        return assignment.day === 6 || (cycle >= 7 && assignment.startMinute < 18 * 60)
-      })
-      if (exceptions.length) view.diagnostics.push({ code: 'PLANNING_EXCEPTION',
-        message: `La propuesta incluye ${exceptions.length} sesión(es) fuera del horario preferido; requiere aceptación explícita. No se afirma optimalidad ni necesidad de la excepción.`,
-        sessionIds: exceptions.map((item) => item.sessionId) })
-    }
-    validateAcademicProposal(view)
+    return { request, resources, input, authority }
+  }
+
+  private storeProposalResult(
+    request: AcademicRequest,
+    input: GeneratorInput,
+    resources: AcademicPlanningResources,
+    authority: ReturnType<typeof createCoverageAuthority>,
+    result: GeneratorResult,
+  ): AcademicProposal {
+    const view = this.buildProposalView(request, input, resources, result, authority)
     const retainedInput = structuredClone(input)
     const retainedView = structuredClone(view)
-    this.proposals.set(view.proposalId, { request: structuredClone(request), input: retainedInput, resources: structuredClone(resources), requirements: structuredClone(result.requirements),
-      authority, automaticView: structuredClone(retainedView), view: retainedView })
+    this.proposals.set(view.proposalId, {
+      request: structuredClone(request),
+      input: retainedInput,
+      resources: structuredClone(resources),
+      requirements: structuredClone(result.requirements),
+      authority,
+      automaticView: structuredClone(retainedView),
+      view: retainedView,
+    })
     return structuredClone(view)
+  }
+
+  createProposal(value: unknown): AcademicProposal {
+    const { request, resources, input, authority } = this.validateAndPrepareProposalRequest(value)
+    const result = generateAcademicSchedule(input)
+    return this.storeProposalResult(request, input, resources, authority, result)
+  }
+
+  async createProposalAsync(value: unknown): Promise<AcademicProposal> {
+    const { request, resources, input, authority } = this.validateAndPrepareProposalRequest(value)
+    const pythonResult = await trySolveWithPythonEngine(input, this.catalog, resources)
+    const result = pythonResult ?? generateAcademicSchedule(input)
+    return this.storeProposalResult(request, input, resources, authority, result)
+  }
+
+  async adviseProposal(proposalId: string, value: unknown): Promise<AcademicAdvisorResponse> {
+    try {
+      validateAcademicAdvisorRequest(value)
+    } catch (error) {
+      throw this.httpError(400, 'INVALID_REQUEST', error instanceof Error ? error.message : 'Solicitud de consejero inválida')
+    }
+    this.cleanExpired()
+    const retained = this.proposals.get(proposalId)
+    if (!retained) throw this.httpError(404, 'PROPOSAL_NOT_FOUND', 'No se encontró la propuesta o ya expiró')
+    const currentVersion = retained.view.editVersion ?? 0
+    if (value.expectedEditVersion !== currentVersion) {
+      throw this.httpError(409, 'VERSION_MISMATCH', `Versión vigente ${currentVersion}; se recibió ${value.expectedEditVersion}`)
+    }
+    const candidates = buildLocalDeterministicAdvisor(retained.view, retained.input, retained.resources, this.catalog).recommendations
+    if (value.selectedRecommendationIds?.some((id) => !candidates.some((r) => r.id === id))) {
+      throw this.httpError(400, 'INVALID_REQUEST', 'Recomendación desconocida')
+    }
+    const result = await analyzeProposalAdvisor(retained.view, retained.input, retained.resources, retained.requirements, this.catalog, globalThis.fetch, value.selectedRecommendationIds)
+    if ((retained.view.editVersion ?? 0) !== currentVersion) throw this.httpError(409, 'VERSION_MISMATCH', 'La propuesta cambió durante la simulación')
+    return result
   }
 
   adjustProposal(proposalId: string, value: unknown): AcademicProposal {
@@ -341,6 +346,20 @@ export class DemoProposalService {
     return structuredClone({ request: retained.request, input: retainedInput, resources: retained.resources, automaticView: retained.automaticView, view: retained.view })
   }
 
+  /** F-0: regenerate under a seed of fixed placements. Does not touch the proposal map; persistence belongs to the caller. */
+  regenerateRetention(workspace: AcademicWorkspace, seed: GeneratorSeed): { status: GeneratorResult['status'], retention: TrustedDraftRetention | null,
+    view: AcademicProposal, diagnostics: GeneratorDiagnostic[] } {
+    const trusted = this.validateDraftWorkspace(workspace)
+    const authority = createCoverageAuthority(trusted.input)
+    const result = generateAcademicSchedule(trusted.input, {}, seed)
+    const view = this.buildProposalView(workspace.request, trusted.input, trusted.resources, result, authority)
+    const diagnostics = result.diagnostics.map((diagnostic) => ({ ...diagnostic, sessionIds: [...diagnostic.sessionIds] }))
+    const retention = result.status === 'complete' && view.coverageComplete
+      ? { request: structuredClone(workspace.request), input: structuredClone(trusted.input), resources: structuredClone(trusted.resources),
+        automaticView: structuredClone(view), view: structuredClone(view) } : null
+    return { status: result.status, retention, view: structuredClone(view), diagnostics }
+  }
+
   restoreDraftRetention(snapshot: TrustedDraftRetention, workspace: AcademicWorkspace): AcademicProposal {
     this.cleanExpired()
     if (this.proposals.size >= proposalLimit) throw this.httpError(429, 'PROPOSAL_CAPACITY', 'Se alcanzó el máximo de propuestas retenidas')
@@ -390,10 +409,73 @@ export class DemoProposalService {
     return createHash('sha256').update(canonicalize(this.catalog)).digest('hex')
   }
 
+  private buildProposalView(request: AcademicRequest, input: GeneratorInput, resources: AcademicPlanningResources, result: GeneratorResult,
+    authority: ReturnType<typeof createCoverageAuthority>): AcademicProposal {
+    const createdAt = new Date().toISOString()
+    const expiresAt = new Date(Date.now() + retentionMs).toISOString()
+    const assignments = result.schedule?.assignments ?? []
+    const assignedIds = new Set(assignments.map((assignment) => assignment.id))
+    const sections = (result.schedule?.sections ?? []).map((section) => ({
+      sectionId: section.id,
+      courseId: section.courseId,
+      courseName: this.catalog.courses.find((course) => course.courseId === section.courseId)!.name,
+      capacity: section.capacity,
+      deliveryMode: input.courses.find((course) => course.courseId === section.courseId)!.deliveryMode ?? 'continuous',
+    }))
+    const view: AcademicProposal = {
+      proposalId: randomUUID(),
+      createdAt,
+      expiresAt,
+      status: result.status,
+      sections,
+      assignments: assignments.map((assignment) => ({
+        sessionId: assignment.id,
+        sectionId: assignment.sectionId,
+        courseId: sections.find((section) => section.sectionId === assignment.sectionId)!.courseId,
+        courseName: sections.find((section) => section.sectionId === assignment.sectionId)!.courseName,
+        teacherId: assignment.teacherId,
+        teacherName: resources.teachers.find((teacher) => teacher.id === assignment.teacherId)!.name,
+        roomId: assignment.roomId,
+        roomName: resources.rooms.find((room) => room.id === assignment.roomId)!.name,
+        ...(result.requirements.find((required) => required.id === assignment.id)?.type
+          ? { sessionType: result.requirements.find((required) => required.id === assignment.id)!.type } : {}),
+        ...assignment.interval,
+      })),
+      pending: result.requirements.filter((required) => !assignedIds.has(required.id)).map((required) => ({
+        sessionId: required.id,
+        sectionId: required.sectionId,
+        courseId: required.courseId,
+        durationMinutes: required.durationMinutes,
+      })),
+      diagnostics: result.diagnostics.map((diagnostic) => ({ ...diagnostic, sessionIds: [...diagnostic.sessionIds] })),
+      coverageComplete: result.status === 'complete' && (result.schedule ? authority.check(result.schedule).complete : false),
+      counts: { sections: sections.length, requiredSessions: result.requirements.length, scheduledSessions: assignments.length },
+      stats: { exploredCandidates: result.exploredCandidates, candidateVisits: result.candidateVisits, backtracks: result.backtracks, limitReason: result.limitReason },
+      editVersion: 0,
+      manuallyAdjustedSectionIds: [],
+      ...(result.schedule ? { preferenceReport: assessTeacherPreferences(input, result.schedule, result.requirements) } : {}),
+    }
+    if (view.preferenceReport && view.preferenceReport.outsidePreferenceSections > 0) {
+      view.diagnostics.push({ code: 'PREFERENCES_NOT_MET', message: 'Hay secciones programadas fuera de sus preferencias. Las preferencias son orientativas; no se ha demostrado optimalidad global.', sessionIds: [] })
+    }
+    if (request.planningPolicy) {
+      const exceptions = view.assignments.filter((assignment) => {
+        const cycle = this.catalog.courses.find((course) => course.courseId === assignment.courseId)?.cycle ?? 0
+        return assignment.day === 6 || (cycle >= 7 && assignment.startMinute < 18 * 60)
+      })
+      if (exceptions.length) view.diagnostics.push({ code: 'PLANNING_EXCEPTION',
+        message: `La propuesta incluye ${exceptions.length} sesión(es) fuera del horario preferido; requiere aceptación explícita. No se afirma optimalidad ni necesidad de la excepción.`,
+        sessionIds: exceptions.map((item) => item.sessionId) })
+    }
+    validateAcademicProposal(view)
+    return view
+  }
+
   private matchesProposalConfiguration(proposal: AcademicProposal, input: GeneratorInput, resources: AcademicPlanningResources, requirements: RequiredSession[]): boolean {
     const expectedSections = new Map(proposal.sections.map((section) => [section.sectionId, section]))
+    const effectiveCapacities = new Map(prepareGeneratorInput(input).schedule.sections.map((section) => [section.id, section.capacity]))
     if (proposal.sections.some((section) => !input.courses.some((course) => course.courseId === section.courseId
-      && course.targetCapacity === section.capacity && course.deliveryMode === section.deliveryMode))) return false
+      && (effectiveCapacities.get(section.sectionId) ?? course.targetCapacity) === section.capacity && course.deliveryMode === section.deliveryMode))) return false
     return proposal.assignments.every((assignment) => {
       const section = expectedSections.get(assignment.sectionId)
       const resourceTeacher = resources.teachers.find((teacher) => teacher.id === assignment.teacherId)
@@ -494,6 +576,7 @@ export class DemoProposalService {
           ...(course.cycle !== undefined ? { cycle: course.cycle } : {}),
           weeklySessions: structuredClone(pattern?.weeklySessions ?? course.weeklySessions),
           deliveryMode: demand.deliveryMode ?? 'continuous',
+          ...(demand.sectionCapacities !== undefined ? { sectionCapacities: demand.sectionCapacities.map((override) => ({ ...override })) } : {}),
         }
       }),
       teachers: resources.teachers.filter((teacher) => teacher.courseIds.length > 0)

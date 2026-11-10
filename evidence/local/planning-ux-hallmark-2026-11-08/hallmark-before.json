@@ -1,0 +1,386 @@
+{
+  "summary": {
+    "fails": 35,
+    "reflex": 4,
+    "warns": 2,
+    "waived": 0,
+    "rejected": 0,
+    "answered": 0,
+    "dismissed": 0,
+    "notes": 0,
+    "files": 31,
+    "render": "not run: no puppeteer-core found locally, globally or via HALLMARK_PUPPETEER",
+    "before": "before: recorded 2 links, 0 fields, 66 handlers, 0 test hooks, 0 script hooks in .hallmark/before.json; --kept checks a redesign against it"
+  },
+  "findings": [
+    {
+      "gate": "33",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/ui/Tour.tsx",
+      "line": 1344,
+      "evidence": "<svg> without aria-hidden or aria-label",
+      "fix": "Add aria-hidden or an aria-label"
+    },
+    {
+      "gate": "39a",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/screens/AcademicScheduling.css",
+      "line": 44,
+      "evidence": "disabled via opacity alone on .academic-scheduling__course input:disabled, .academic-scheduling__course select:disabled",
+      "fix": "Three disabled channels: fill, ink and cursor, plus the disabled attribute"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 2,
+      "evidence": "colour literal #f5f6f5 outside tokens (--planning-canvas on .planning-root)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 3,
+      "evidence": "colour literal #ffffff outside tokens (--planning-surface on .planning-root)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 4,
+      "evidence": "colour literal #202925 outside tokens (--planning-text on .planning-root)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 5,
+      "evidence": "colour literal #52625a outside tokens (--planning-muted on .planning-root)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 6,
+      "evidence": "colour literal #175c3b outside tokens (--planning-primary on .planning-root)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 7,
+      "evidence": "colour literal #eaf2ed outside tokens (--planning-selected on .planning-root)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 8,
+      "evidence": "colour literal #d7ded9 outside tokens (--planning-border on .planning-root)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 9,
+      "evidence": "colour literal #805300 outside tokens (--planning-warning on .planning-root)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 10,
+      "evidence": "colour literal #fff4dc outside tokens (--planning-warning-surface on .planning-root)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 11,
+      "evidence": "colour literal #a12622 outside tokens (--planning-error on .planning-root)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 12,
+      "evidence": "colour literal #fdeceb outside tokens (--planning-error-surface on .planning-root)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 13,
+      "evidence": "colour literal #ffffff outside tokens (--planning-primary-foreground on .planning-root)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 14,
+      "evidence": "colour literal rgba(101, 88, 223, 0.4) outside tokens (--planning-focus-ring on .planning-root)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 15,
+      "evidence": "colour literal #ffffff outside tokens (--planning-error-foreground on .planning-root)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 16,
+      "evidence": "colour literal rgb(0 0 0 / 45%) outside tokens (--planning-overlay on .planning-root)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 17,
+      "evidence": "colour literal rgb(0 0 0 / 20%) outside tokens (--planning-shadow on .planning-root)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 129,
+      "evidence": "colour literal #171c19 outside tokens (--planning-canvas on .planning-root[data-theme='da…)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 130,
+      "evidence": "colour literal #222a25 outside tokens (--planning-surface on .planning-root[data-theme='da…)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 131,
+      "evidence": "colour literal #f1f5f2 outside tokens (--planning-text on .planning-root[data-theme='da…)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 132,
+      "evidence": "colour literal #bac8bf outside tokens (--planning-muted on .planning-root[data-theme='da…)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 133,
+      "evidence": "colour literal #67c995 outside tokens (--planning-primary on .planning-root[data-theme='da…)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 134,
+      "evidence": "colour literal #102419 outside tokens (--planning-primary-foreground on .planning-root[data-theme='da…)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 135,
+      "evidence": "colour literal rgb(169 156 255 / 65%) outside tokens (--planning-focus-ring on .planning-root[data-theme='da…)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 136,
+      "evidence": "colour literal #304b3b outside tokens (--planning-selected on .planning-root[data-theme='da…)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 137,
+      "evidence": "colour literal #526158 outside tokens (--planning-border on .planning-root[data-theme='da…)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 138,
+      "evidence": "colour literal #ffd27a outside tokens (--planning-warning on .planning-root[data-theme='da…)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 139,
+      "evidence": "colour literal #483719 outside tokens (--planning-warning-surface on .planning-root[data-theme='da…)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 140,
+      "evidence": "colour literal #ffaaa5 outside tokens (--planning-error on .planning-root[data-theme='da…)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 141,
+      "evidence": "colour literal #3a0c0a outside tokens (--planning-error-foreground on .planning-root[data-theme='da…)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 142,
+      "evidence": "colour literal #4c2421 outside tokens (--planning-error-surface on .planning-root[data-theme='da…)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 143,
+      "evidence": "colour literal rgb(0 0 0 / 60%) outside tokens (--planning-overlay on .planning-root[data-theme='da…)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "48",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 144,
+      "evidence": "colour literal rgb(0 0 0 / 48%) outside tokens (--planning-shadow on .planning-root[data-theme='da…)",
+      "fix": "Lift the value into the token block"
+    },
+    {
+      "gate": "63",
+      "grade": "FAIL",
+      "tier": "floor",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/screens/AcademicScheduling.tsx",
+      "line": 252,
+      "evidence": "middle-dot meta string \"· · · · v\"",
+      "fix": "Line breaks, columns or hairlines; one dot in a byline at most"
+    },
+    {
+      "gate": "26b",
+      "grade": "REFLEX",
+      "tier": "reflex",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 1,
+      "evidence": "no :active styling anywhere",
+      "fix": "All eight states; guard: not a form control, no aria-disabled anywhere"
+    },
+    {
+      "gate": "26b",
+      "grade": "REFLEX",
+      "tier": "reflex",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 1,
+      "evidence": "no :disabled styling anywhere",
+      "fix": "All eight states; guard: not a form control, no aria-disabled anywhere"
+    },
+    {
+      "gate": "26b",
+      "grade": "REFLEX",
+      "tier": "reflex",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/ui/NativeSelect.css",
+      "line": 1,
+      "evidence": "no :active styling anywhere",
+      "fix": "All eight states; guard: not a form control, no aria-disabled anywhere"
+    },
+    {
+      "gate": "26b",
+      "grade": "REFLEX",
+      "tier": "reflex",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/screens/AcademicScheduling.css",
+      "line": 1,
+      "evidence": "no :active styling anywhere",
+      "fix": "All eight states; guard: not a form control, no aria-disabled anywhere"
+    },
+    {
+      "gate": "F3",
+      "grade": "WARN",
+      "tier": "finish",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/components/PlanningShell.css",
+      "line": 86,
+      "evidence": "no text-wrap: balance on any display head (1 head rule(s), e.g. .planning-root .page-title h2)",
+      "fix": "Add text-wrap: balance to h1/h2-level heads"
+    },
+    {
+      "gate": "F7",
+      "grade": "WARN",
+      "tier": "finish",
+      "file": "/home/ubuntu/.t3/worktrees/SUM-reverse/t3-bc957a66/client/src/screens/AcademicScheduling.css",
+      "line": 42,
+      "evidence": "same container recipe on 18 selectors (.academic-scheduling__course input, .academic-s…...)",
+      "fix": "Vary weight, radius, or fill by role; not every box is the same box"
+    }
+  ]
+}

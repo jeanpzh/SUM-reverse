@@ -1,5 +1,7 @@
 # E2-LOCAL-1 — borrador de prematrícula
 
+> 2026-11-07: [prematricula-rules.md](prematricula-rules.md) (ENR-RULES-1, pendiente de implementación) reemplaza la exclusión de «mínimo12/máximo26» de este contrato solo para los ámbitos con perfil de reglas. `E2_REVISION` no cambia.
+
 Contrato/decisión local sintética2026-11-04. Shared prematricula-api.mjs y .d.mts
 definen campos/runtime exactos. Plan ../../plans/prematricula-e2-draft.md. Prefijo
 /api/local/prematricula/v1. Solo dos estudiantes Sistemas, escenario regular local.

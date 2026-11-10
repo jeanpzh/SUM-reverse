@@ -1,6 +1,9 @@
 // Synthetic local integration only. Starts dedicated processes, never attaches to existing servers.
 import assert from 'node:assert/strict'
+import { setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { spawn } from 'node:child_process'
+import { createServer } from 'node:net'
+import { PLANNING_LIMITS } from '../../shared/academic-planning-policy.mjs'
 import { existsSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
@@ -8,8 +11,24 @@ import { resolve } from 'node:path'
 import { chromium } from 'playwright'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
-const apiPort = 3210
-const webPort = 5176
+
+function parsePort(value, fallback) {
+  if (value === undefined) return fallback
+  const port = Number(value)
+  if (!Number.isInteger(port) || port <= 1024 || port >= 65535 || [3210, 5176].includes(port)) {
+    throw new Error('Puerto de prueba inválido o reservado para la demo del usuario')
+  }
+  return port
+}
+async function assertPortFree(port) {
+  await new Promise((accept, reject) => {
+    const server = createServer()
+    server.once('error', reject)
+    server.listen(port, '127.0.0.1', () => server.close(accept))
+  })
+}
+const apiPort = parsePort(process.env.SUM_TEST_API_PORT, 3411)
+const webPort = parsePort(process.env.SUM_TEST_WEB_PORT, 5411)
 const api = `http://127.0.0.1:${apiPort}`
 const web = `http://127.0.0.1:${webPort}`
 const route = '/local/programacion-academica'
@@ -39,14 +58,6 @@ function start(args, cwd, env) {
   children.push(child)
   return child
 }
-async function assertPortFree(port) {
-  const { createServer } = await import('node:net')
-  await new Promise((accept, reject) => {
-    const server = createServer()
-    server.once('error', () => reject(new Error(`Puerto ${port} ocupado: no se inspeccionará el servicio existente`)))
-    server.listen(port, '127.0.0.1', () => server.close(accept))
-  })
-}
 
 try {
   await assertPortFree(apiPort)
@@ -73,15 +84,18 @@ try {
     if (request.url().includes('/api/')) apiRequests.push(new URL(request.url()).pathname)
   })
   await page.goto(`${web}${route}`)
-  await page.getByRole('heading', { name: 'Programación académica asistida', exact: true }).waitFor()
+  await page.locator('#planning-page-title').waitFor()
   const catalogResponse = await fetch(`${api}/local/programacion-academica/v1/catalogo`)
   assert.equal(catalogResponse.status, 200)
   const catalog = await catalogResponse.json()
-  assert.ok(catalog.courses.length > 32, 'el catálogo debe permitir comprobar el límite de selección')
-  for (const course of catalog.courses.slice(0, 32)) await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).check()
-  assert.equal(await page.locator('.academic-scheduling__selection input:checked').count(), 32)
-  assert.equal(await page.getByLabel(`Seleccionar ${catalog.courses[32].courseId}`).isDisabled(), true)
-  for (const course of catalog.courses.slice(0, 32)) await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).uncheck()
+  // The selection limit comes from the shared planning policy (96 since #36). The synthetic catalog may be smaller than
+  // the limit; then every course must stay selectable, otherwise the first course past the limit must be disabled.
+  const limit = PLANNING_LIMITS.courses
+  const selectable = catalog.courses.slice(0, limit)
+  for (const course of selectable) await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }))
+  assert.equal(await page.locator('.academic-scheduling__selection [role=checkbox][aria-checked=true]').count(), selectable.length)
+  if (catalog.courses.length > limit) assert.equal(await page.getByLabel(`Seleccionar ${catalog.courses[limit].courseId}`).isDisabled(), true)
+  for (const course of selectable) await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }), false)
   const firstCycleCourse = catalog.courses.find((course) => course.cycle !== undefined) ?? catalog.courses[0]
   const chosen = [firstCycleCourse, catalog.courses.find((course) => course.cycle !== undefined && course.cycle !== firstCycleCourse.cycle)
     ?? catalog.courses.find((course) => course.courseId !== firstCycleCourse.courseId)]
@@ -89,16 +103,17 @@ try {
   if (chosen[0].cycle !== undefined && chosen[1].cycle !== undefined) assert.notEqual(chosen[0].cycle, chosen[1].cycle)
   if (chosen[0].cycle !== undefined) await page.getByLabel('Filtrar cursos por ciclo').selectOption(String(chosen[0].cycle))
   for (const course of chosen.slice(0, 1)) {
-    await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).check()
+    await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }))
   }
   if (chosen[1].cycle !== undefined) await page.getByLabel('Filtrar cursos por ciclo').selectOption(String(chosen[1].cycle))
-  assert.equal(await page.locator('.academic-scheduling__selection input:checked').count(), 0, 'el curso seleccionado de otro ciclo está oculto')
-  for (const course of chosen.slice(1)) await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).check()
+  assert.equal(await page.locator('.academic-scheduling__selection [role=checkbox][aria-checked=true]').count(), 0, 'el curso seleccionado de otro ciclo está oculto')
+  for (const course of chosen.slice(1)) await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }))
   await page.getByLabel('Filtrar cursos por ciclo').selectOption('all')
-  assert.equal(await page.locator('.academic-scheduling__selection input:checked').count(), 2)
+  assert.equal(await page.locator('.academic-scheduling__selection [role=checkbox][aria-checked=true]').count(), 2)
   for (const course of chosen) {
     await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).fill(course === chosen[0] ? '31' : '20')
     await page.getByLabel(`Capacidad ${course.courseId}`, { exact: true }).fill('30')
+    await page.getByLabel(`Inspeccionar ${course.courseId}`).click()
     if (course.planningPatterns?.length) {
       const pattern = page.getByLabel(`Patrón ${course.courseId}`)
       assert.equal(await pattern.inputValue(), course.planningPatterns[0].id)
@@ -109,13 +124,24 @@ try {
       }
     }
     if (course.history?.sections.length) {
-      const details = page.locator('.academic-scheduling__course').filter({ hasText: course.courseId }).locator('details')
+      const details = page.locator('.academic-preparation__inspector .academic-scheduling__history')
       await details.locator('summary').click()
       assert.equal(await details.locator('ul li').count(), course.history.sections.reduce((sum, section) => sum + section.sessions.length, 0))
     }
   }
   // Keep one named reference teacher qualified for selected courses and preserve the authorized synthetic name.
-  for (const teacher of catalog.teachers) await page.getByLabel(`Quitar docente ${teacher.name}`, { exact: true }).click()
+  const clearIncluded = async (kind) => {
+    const workbench = page.locator('.academic-resource-workbench')
+    const filter = page.getByLabel(kind === 'teachers' ? 'Filtrar docentes por inclusión' : 'Filtrar ambientes por inclusión')
+    await filter.selectOption('included')
+    if (await workbench.locator('tbody tr input[type="checkbox"]').count()) {
+      await workbench.getByRole('button', { name: 'Seleccionar visibles', exact: true }).click()
+      await workbench.getByRole('button', { name: /Retirar seleccionados/ }).click()
+      await page.getByRole('dialog').getByRole('button', { name: /^Confirmar retiro/ }).click()
+    }
+    await filter.selectOption('all')
+  }
+  await clearIncluded('teachers')
   const reference = catalog.referenceTeachers?.[0]
   assert.ok(reference, 'el catálogo incluye docentes de referencia sintéticos con nombre')
   await page.getByLabel('Seleccionar o agregar docente').selectOption(reference.id)
@@ -124,19 +150,21 @@ try {
   await page.getByLabel('Carga semanal docente').fill('1800')
   await page.getByLabel('Disponibilidad docente fin 1', { exact: true }).fill('18:00')
   for (const course of catalog.courses) {
-    const eligibility = page.getByLabel(`${reference.name} habilitado para ${course.courseId}`, { exact: true })
-    if (!(await eligibility.isChecked())) await eligibility.check()
+    const eligibility = page.getByRole('checkbox', { name: `${reference.name} habilitado para ${course.courseId}`, exact: true })
+    await setPlanningCheckbox(eligibility)
   }
   await page.getByLabel('Buscar asignatura habilitada').fill(catalog.courses[0].courseId)
   assert.equal(await page.locator('.academic-scheduling__course-options label').count(), 1, 'la búsqueda filtra por código')
   await page.getByLabel('Buscar asignatura habilitada').fill('')
   await page.getByLabel(`Máximo de secciones ${catalog.courses[0].courseId}`).fill('4')
-  const preferences = page.locator('fieldset').filter({ has: page.locator('legend', { hasText: 'Preferencias semanales' }) })
+  const preferences = page.getByRole('group', { name: /^Preferencias semanales/ })
   await preferences.getByRole('button', { name: 'Agregar intervalo' }).click()
   await page.getByLabel('Preferencias semanales · prioridad blanda inicio 1', { exact: true }).fill('08:00')
   await page.getByLabel('Preferencias semanales · prioridad blanda fin 1', { exact: true }).fill('12:00')
+  await page.getByRole('button', { name: 'Opciones avanzadas', exact: true }).click()
   await page.getByLabel('Criterio de asignación').selectOption('balanced')
-  for (const room of catalog.rooms) await page.getByLabel(`Quitar ambiente ${room.name}`, { exact: true }).click()
+  await page.getByRole('tab', { name: /Aulas y laboratorios/ }).click()
+  await clearIncluded('rooms')
   await page.getByRole('button', { name: 'Agregar laboratorio', exact: true }).click()
   await page.getByLabel('Identificación ambiente').fill('LAB-DEMO-1')
   await page.getByLabel('Nombre ambiente').fill('Laboratorio sintético')
@@ -149,18 +177,24 @@ try {
   const plannedCourses = patternCourse && !chosen.some((course) => course.courseId === patternCourse.courseId)
     ? [...chosen, patternCourse] : chosen
   if (patternCourse && !chosen.some((course) => course.courseId === patternCourse.courseId)) {
-    await page.getByLabel(`Seleccionar ${patternCourse.courseId}`, { exact: true }).check()
+    await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${patternCourse.courseId}`, exact: true }))
     await page.getByLabel(`Demanda ${patternCourse.courseId}`, { exact: true }).fill('1')
     await page.getByLabel(`Capacidad ${patternCourse.courseId}`, { exact: true }).fill('30')
   }
   assert.equal(new URL(page.url()).pathname, route)
+  const stage = async (name, etapa) => {
+    await page.locator('.planning-root').getByRole('link', { name: name === 'Preparación' ? 'Resumen' : name, exact: true }).click()
+    await page.waitForURL(new RegExp(`etapa=${etapa}(?:&|$)`))
+  }
   let lastRequest
   const generate = async () => {
+    await stage('Preparación', 'preparacion')
     const response = page.waitForResponse((res) => res.url().endsWith('/propuestas') && res.request().method() === 'POST')
-    await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
+    await page.locator('#planning-tour-primary').click()
     const received = await response
     assert.equal(received.status(), 200)
     lastRequest = received.request().postDataJSON()
+    await stage('Horario', 'horario')
     return received.json()
   }
   const first = await generate()
@@ -179,20 +213,22 @@ try {
     if (left.day === right.day) assert.ok(left.endMinute <= right.startMinute || right.endMinute <= left.startMinute, 'el docente compartido no tiene cruces')
   }
   assert.ok(sharedTeacherAssignments.length > 0, 'la propuesta asigna al docente compartido por nombre')
-  await page.getByRole('status').filter({ hasText: 'complete' }).waitFor()
+  await page.locator('.planning-status-bar[data-status="complete"]').waitFor()
   const calendar = page.getByRole('region', { name: 'Calendario semanal con horas; desplázate horizontalmente para ver todos los días' })
   await calendar.waitFor()
   assert.ok((await page.getByRole('table').allTextContents()).join(' ').includes(reference.name))
   assert.ok((await calendar.innerText()).includes(reference.name))
   await mkdir(evidence, { recursive: true })
-  await page.locator('.academic-scheduling__result').scrollIntoViewIfNeeded()
+  await page.locator('.planning-status-bar').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(evidence, 'complete.png') })
   const variableCourse = chosen.find((course) => course.planningPatterns?.length > 1)
   const changeablePatternCourse = variableCourse ?? patternCourse
   if (changeablePatternCourse) {
+    await stage('Preparación', 'preparacion')
+    await page.getByLabel(`Inspeccionar ${changeablePatternCourse.courseId}`).click()
     const pattern = page.getByLabel(`Patrón ${changeablePatternCourse.courseId}`)
     await pattern.selectOption(changeablePatternCourse.planningPatterns[1].id)
-    assert.equal(await page.locator('.academic-scheduling__result').count(), 0, 'cambiar patrón invalida la propuesta visible')
+    assert.equal(await page.locator('.planning-status-bar').count(), 0, 'cambiar patrón invalida la propuesta visible')
     const patterned = await generate()
     assert.equal(patterned.status, 'complete')
     assert.notEqual(patterned.proposalId, first.proposalId)
@@ -200,32 +236,37 @@ try {
   const retained = await (await fetch(`${api}/local/programacion-academica/v1/propuestas/${first.proposalId}`)).json()
   assert.deepEqual(retained, first)
 
-  for (const course of plannedCourses) await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).uncheck()
+  await stage('Preparación', 'preparacion')
+  for (const course of plannedCourses) await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }), false)
   const empty = await generate()
   assert.equal(empty.status, 'complete')
   assert.equal(empty.counts.requiredSessions, 0)
   assert.equal(empty.assignments.length, 0)
 
-  for (const course of plannedCourses) await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).check()
+  await stage('Preparación', 'preparacion')
+  for (const course of plannedCourses) await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }))
   await page.getByLabel(`Demanda ${chosen[0].courseId}`, { exact: true }).fill('1')
   await page.getByLabel(`Capacidad ${chosen[0].courseId}`, { exact: true }).fill('41')
   await page.getByLabel(`Demanda ${chosen[1].courseId}`, { exact: true }).fill('20')
   const impossible = await generate()
   assert.equal(impossible.status, 'impossible')
   assert.ok(impossible.pending.length > 0)
-  await page.getByRole('status').filter({ hasText: 'impossible' }).waitFor()
+  await page.locator('.planning-status-bar[data-status="impossible"]').waitFor()
+  await page.getByRole('button', { name: 'Detalles de búsqueda', exact: true }).click()
   await page.getByRole('heading', { name: 'Componentes pendientes', exact: true }).waitFor()
-  await page.locator('.academic-scheduling__result').scrollIntoViewIfNeeded()
+  await page.locator('.planning-status-bar').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(evidence, 'impossible.png') })
 
+  await stage('Preparación', 'preparacion')
   await page.getByLabel(`Demanda ${chosen[0].courseId}`, { exact: true }).fill('100000')
   const invalid = await generate()
   assert.equal(invalid.status, 'invalid-input')
-  await page.getByRole('status').filter({ hasText: 'invalid-input' }).waitFor()
+  await page.locator('.planning-status-bar[data-status="invalid-input"]').waitFor()
   assert.ok(invalid.diagnostics.length)
-  await page.locator('.academic-scheduling__result').scrollIntoViewIfNeeded()
+  await page.locator('.planning-status-bar').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(evidence, 'invalid-input.png') })
 
+  await stage('Preparación', 'preparacion')
   await page.getByLabel(`Demanda ${chosen[0].courseId}`, { exact: true }).fill('31')
   await page.getByLabel(`Demanda ${chosen[1].courseId}`, { exact: true }).fill('20')
   await page.getByLabel(`Capacidad ${chosen[0].courseId}`, { exact: true }).fill('31')
@@ -235,8 +276,9 @@ try {
   assert.deepEqual(await (await fetch(`${api}/local/programacion-academica/v1/propuestas/${first.proposalId}`)).json(), first)
 
   // API error and UI recovery, without mocking generator responses.
+  await stage('Preparación', 'preparacion')
   await page.route('**/api/local/programacion-academica/v1/propuestas', (request) => request.abort())
-  await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
+  await page.locator('#planning-tour-primary').click()
   await page.getByRole('alert').waitFor()
   await page.unroute('**/api/local/programacion-academica/v1/propuestas')
   assert.equal((await generate()).status, 'complete')

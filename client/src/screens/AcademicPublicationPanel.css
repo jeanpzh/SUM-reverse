@@ -4,97 +4,78 @@
   padding: 0;
   border: 0;
 }
-
 .academic-publication {
-  margin-top: 0.7rem;
-  padding-top: 0.65rem;
-  border-top: 1px solid var(--color-sum-border);
-  color: var(--color-sum-text);
+  min-width: 0;
+  max-width: 100%;
+  color: var(--planning-text);
+  font-size: var(--planning-text-sm);
+  line-height: 20px;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
 }
-
-.academic-publication > summary {
-  width: fit-content;
-  color: var(--color-sum-heading);
-  font-size: var(--text-data);
-  font-weight: 650;
-  cursor: pointer;
-}
-
-.academic-publication__note,
-.academic-publication__status,
-.academic-publication__error {
-  margin: 0.45rem 0;
-  color: var(--color-sum-muted);
-  font-size: var(--text-meta);
-}
-
-.academic-publication__actions,
-.academic-publication__metadata {
+.academic-publication__strip {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.45rem 0.65rem;
-  margin-top: 0.6rem;
+  gap: 8px 16px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: var(--planning-surface-subtle);
 }
-
+.academic-publication__state { display: inline-flex; align-items: center; gap: 8px; }
+.academic-publication__state svg { flex-shrink: 0; }
+.academic-publication__strip > span { padding-left: 16px; border-left: 1px solid var(--planning-border); }
+.academic-publication__strip > button { margin-left: auto; }
+.academic-publication__section {
+  min-width: 0;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--planning-border);
+}
+.planning-root .academic-publication__section > h3 {
+  margin: 0 0 12px;
+  color: var(--planning-text);
+  font-size: var(--planning-text-xl);
+  line-height: 22px;
+  font-weight: 700;
+}
+.academic-publication__status,
+.academic-publication__preview > p,
+.academic-publication__metadata,
+.academic-publication__evidence p {
+  margin: 8px 0;
+  color: var(--planning-muted);
+  font-size: var(--planning-text-xs);
+  line-height: 16px;
+}
+.academic-publication__actions,
+.academic-publication__metadata,
+.academic-publication__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.academic-publication__toolbar { align-items: end; }
 .academic-publication__history {
   display: grid;
-  max-width: 44rem;
-  gap: 0.3rem;
-  margin-top: 0.65rem;
-  color: var(--color-sum-muted);
-  font-size: var(--text-meta);
-  font-weight: 600;
-}
-
-.academic-publication__history select {
-  min-height: 2.25rem;
-  box-sizing: border-box;
-  padding: 0.4rem 0.55rem;
-  border: 1px solid var(--color-sum-border);
-  border-radius: 0.35rem;
-  background: var(--color-sum-surface);
-  color: var(--color-sum-text);
-  font: inherit;
-}
-
-.academic-publication__metadata {
-  color: var(--color-sum-muted);
-  font-size: var(--text-meta);
-}
-
-.academic-publication__error {
-  color: var(--color-sum-danger);
-}
-
-.academic-publication__preview {
-  margin-top: 0.75rem;
-  padding-top: 0.65rem;
-  border-top: 1px solid var(--color-sum-border);
-}
-
-.academic-publication__preview > p {
-  margin: 0 0 0.55rem;
-  color: var(--color-sum-muted);
-  font-size: var(--text-meta);
-}
-
-.academic-publication__table {
+  flex: 1 1 16rem;
+  min-width: 0;
   max-width: 100%;
-  padding: 0.65rem;
+  gap: 4px;
 }
-
-.academic-publication__table table {
-  min-width: 1120px;
+.academic-publication__preview { min-width: 0; margin-top: 16px; }
+.academic-publication__table { min-width: 0; max-width: 100%; }
+.academic-publication__table table { min-width: 1120px; }
+.academic-publication__table :is(th, td) {
+  height: 40px;
+  padding: 8px 12px;
+  font-size: var(--planning-text-sm);
+  line-height: 20px;
 }
-
-.academic-publication__table th,
-.academic-publication__table td {
-  overflow-wrap: anywhere;
-}
-
-@media (max-width: 640px) {
-  .academic-publication__actions > button {
-    max-width: 100%;
-  }
+.academic-publication__table th { font-weight: 700; }
+.academic-publication__evidence { margin-top: 16px; }
+@media (max-width: 639px) {
+  .academic-publication__strip { padding: 8px; gap: 8px; }
+  .academic-publication__strip > span { padding-left: 8px; }
 }

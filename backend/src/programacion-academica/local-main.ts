@@ -12,6 +12,9 @@ export function assertAcademicSchedulingStartup(env: NodeJS.ProcessEnv): void {
 
 export async function bootstrapAcademicScheduling(env: NodeJS.ProcessEnv = process.env) {
   assertAcademicSchedulingStartup(env)
+  if (!process.env.SUM_ACADEMIC_DRAFT_DIR?.trim()) {
+    process.env.SUM_ACADEMIC_DRAFT_DIR = resolve('/tmp/sum-academic-drafts')
+  }
   const port = env.PORT === undefined ? 3210 : Number(env.PORT)
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT debe ser un puerto TCP válido')
   const app = await NestFactory.create(AcademicSchedulingModule)

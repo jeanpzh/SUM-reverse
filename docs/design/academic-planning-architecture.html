@@ -1,0 +1,62 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+:root{font-family:var(--font-sans,system-ui,sans-serif);color:var(--foreground)}
+body{margin:0}.mermaid{margin:0;min-height:500px;overflow:auto}.mermaid svg{display:block;max-width:100%;height:auto;margin:auto}
+p{font-size:14px;line-height:1.5;margin:12px 0}details{border-top:1px solid var(--border);padding-top:12px}summary{cursor:pointer;font-size:14px}pre{font-family:var(--font-mono,monospace);font-size:12px;white-space:pre;overflow:auto;line-height:1.5}
+.legend{display:flex;flex-wrap:wrap;gap:20px;font-size:13px;color:var(--muted-foreground);margin-bottom:12px}
+</style></head><body><div class="legend"><span>Trazo continuo: implementado</span><span>Trazo discontinuo: pendiente</span></div><pre class="mermaid">flowchart TB
+  subgraph HOY["IMPLEMENTADO EN EL PROTOTIPO"]
+    UI["Interfaz interna React&lt;br/&gt;Preparación · Horario · Revisión · Aprobación"]
+    API["API propia NestJS&lt;br/&gt;Valida solicitudes y controla versiones"]
+    CAT["Datos sintéticos&lt;br/&gt;Cursos · demanda · docentes · aulas"]
+    MOTOR["Motor de planificación&lt;br/&gt;Calcula secciones y busca horarios válidos"]
+    ARCH[("Archivos locales&lt;br/&gt;Borradores · revisiones · publicaciones")]
+    PUB["Versión aprobada y publicada"]
+    SUM["API y pantallas del alumno&lt;br/&gt;Prematrícula E2 · Matrícula E3"]
+    UI --&gt; API
+    CAT --&gt; API
+    API &lt;--&gt; MOTOR
+    API &lt;--&gt; ARCH
+    API --&gt; PUB
+    PUB --&gt;|"Contrato JSON actual"| SUM
+  end
+  subgraph PEND["PENDIENTE"]
+    SQL[("Intercambio mediante SQL&lt;br/&gt;Decisión elegida; aún sin integrar")]
+    CICLO["Rondas completas y reajuste S-5&lt;br/&gt;Aceptar → corregir → volver a publicar"]
+  end
+  PUB -.-&gt; SQL
+  SQL -.-&gt; SUM
+  API -.-&gt; CICLO
+  CICLO -.-&gt; PUB
+  classDef actual fill:#edf4ef,stroke:#245c3d,color:#172a20
+  classDef pendiente fill:#fff5df,stroke:#916117,color:#513a12,stroke-dasharray:5 4
+  class UI,API,CAT,MOTOR,ARCH,PUB,SUM actual
+  class SQL,CICLO pendiente
+</pre><p>Arquitectura lógica del prototipo. La demo que estás viendo inicia solo el módulo interno. La publicación SQL elegida aún no está integrada.</p><details><summary>Ver código Mermaid</summary><pre>flowchart TB
+  subgraph HOY["IMPLEMENTADO EN EL PROTOTIPO"]
+    UI["Interfaz interna React&lt;br/&gt;Preparación · Horario · Revisión · Aprobación"]
+    API["API propia NestJS&lt;br/&gt;Valida solicitudes y controla versiones"]
+    CAT["Datos sintéticos&lt;br/&gt;Cursos · demanda · docentes · aulas"]
+    MOTOR["Motor de planificación&lt;br/&gt;Calcula secciones y busca horarios válidos"]
+    ARCH[("Archivos locales&lt;br/&gt;Borradores · revisiones · publicaciones")]
+    PUB["Versión aprobada y publicada"]
+    SUM["API y pantallas del alumno&lt;br/&gt;Prematrícula E2 · Matrícula E3"]
+    UI --&gt; API
+    CAT --&gt; API
+    API &lt;--&gt; MOTOR
+    API &lt;--&gt; ARCH
+    API --&gt; PUB
+    PUB --&gt;|"Contrato JSON actual"| SUM
+  end
+  subgraph PEND["PENDIENTE"]
+    SQL[("Intercambio mediante SQL&lt;br/&gt;Decisión elegida; aún sin integrar")]
+    CICLO["Rondas completas y reajuste S-5&lt;br/&gt;Aceptar → corregir → volver a publicar"]
+  end
+  PUB -.-&gt; SQL
+  SQL -.-&gt; SUM
+  API -.-&gt; CICLO
+  CICLO -.-&gt; PUB
+  classDef actual fill:#edf4ef,stroke:#245c3d,color:#172a20
+  classDef pendiente fill:#fff5df,stroke:#916117,color:#513a12,stroke-dasharray:5 4
+  class UI,API,CAT,MOTOR,ARCH,PUB,SUM actual
+  class SQL,CICLO pendiente
+</pre></details><script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';mermaid.initialize({startOnLoad:false,securityLevel:'strict',theme:'neutral',flowchart:{htmlLabels:true,useMaxWidth:true},themeVariables:{fontFamily:'system-ui',fontSize:'15px'}});await mermaid.run({querySelector:'.mermaid'});</script></body></html>

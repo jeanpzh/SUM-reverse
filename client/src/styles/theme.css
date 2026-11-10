@@ -1,6 +1,19 @@
 @layer theme, base, components, utilities;
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities);
+@import './typeset.css';
+
+@layer components {
+  .planning-root .typeset-planning {
+    --typeset-font-body: inherit;
+    --typeset-font-heading: inherit;
+    --typeset-font-mono: var(--font-mono);
+    --typeset-size: 0.875rem;
+    --typeset-leading: 1.5;
+    --typeset-flow: 0.75rem;
+    font-size: var(--typeset-size);
+  }
+}
 
 /* Central local design tokens. See client/DESIGN_SYSTEM.md for usage. */
 @theme static {
@@ -24,6 +37,51 @@
   --color-sum-danger: #dc4444;
   --color-sum-success: #087f5b;
   --color-sum-warning: #8a5b08;
+
+  /* User requested palette: black, ink_black, prussian_blue, charcoal_blue */
+  --color-black: #000000;
+  --color-black-100: #000000;
+  --color-black-200: #000000;
+  --color-black-300: #000000;
+  --color-black-400: #000000;
+  --color-black-500: #000000;
+  --color-black-600: #333333;
+  --color-black-700: #666666;
+  --color-black-800: #999999;
+  --color-black-900: #cccccc;
+
+  --color-ink-black: #0c1821;
+  --color-ink-black-100: #020507;
+  --color-ink-black-200: #050a0d;
+  --color-ink-black-300: #070f14;
+  --color-ink-black-400: #0a141b;
+  --color-ink-black-500: #0c1821;
+  --color-ink-black-600: #254a66;
+  --color-ink-black-700: #3d7baa;
+  --color-ink-black-800: #77a8ce;
+  --color-ink-black-900: #bbd3e6;
+
+  --color-prussian-blue: #1b2a41;
+  --color-prussian-blue-100: #05080d;
+  --color-prussian-blue-200: #0b111a;
+  --color-prussian-blue-300: #101927;
+  --color-prussian-blue-400: #162234;
+  --color-prussian-blue-500: #1b2a41;
+  --color-prussian-blue-600: #34517c;
+  --color-prussian-blue-700: #4e77b5;
+  --color-prussian-blue-800: #89a5ce;
+  --color-prussian-blue-900: #c4d2e6;
+
+  --color-charcoal-blue: #324a5f;
+  --color-charcoal-blue-100: #0a0f13;
+  --color-charcoal-blue-200: #141d25;
+  --color-charcoal-blue-300: #1e2c38;
+  --color-charcoal-blue-400: #273a4b;
+  --color-charcoal-blue-500: #324a5f;
+  --color-charcoal-blue-600: #4b6e8e;
+  --color-charcoal-blue-700: #6f93b3;
+  --color-charcoal-blue-800: #9fb7cc;
+  --color-charcoal-blue-900: #cfdbe6;
   --text-meta: 0.6875rem;
   --text-meta--line-height: 1.4;
   --text-data: 0.75rem;
@@ -38,6 +96,44 @@
   --radius-control: 0.5rem;
   --shadow-floating: 0 4px 12px rgb(32 43 64 / 12%);
   --spacing: 0.25rem;
+}
+
+/* shadcn/ui semantic colors for the internal planning kit (components/ui). They resolve only
+   inside .planning-root, where the --planning-* tokens and the dark theme are defined. */
+@theme inline {
+  --color-sidebar: var(--planning-surface);
+  --color-sidebar-foreground: var(--planning-text);
+  --color-sidebar-primary: var(--planning-primary);
+  --color-sidebar-primary-foreground: var(--planning-primary-foreground);
+  --color-sidebar-accent: var(--planning-selected);
+  --color-sidebar-accent-foreground: var(--planning-text);
+  --color-sidebar-border: var(--planning-border);
+  --color-sidebar-ring: var(--planning-primary);
+  --color-background: var(--planning-surface);
+  --color-foreground: var(--planning-text);
+  --color-muted-foreground: var(--planning-muted);
+  --color-border: var(--planning-border);
+  --color-primary: var(--planning-primary);
+  --color-primary-foreground: var(--planning-primary-foreground);
+  --color-secondary: var(--planning-surface-subtle);
+  --color-secondary-foreground: var(--planning-text);
+  --color-accent: var(--planning-selected);
+  --color-accent-foreground: var(--planning-text);
+  --color-muted: var(--planning-surface-subtle);
+  --color-destructive: var(--planning-error);
+  --color-destructive-foreground: var(--planning-error-foreground);
+  --color-destructive-surface: var(--planning-error-surface);
+  --color-warning: var(--planning-warning);
+  --color-warning-surface: var(--planning-warning-surface);
+  --color-success: var(--planning-success);
+  --color-success-surface: var(--planning-success-surface);
+  --color-input: var(--planning-border-control);
+  --radius-planning-panel: var(--planning-radius-panel);
+  --color-ring: var(--planning-primary);
+  --color-overlay: var(--planning-overlay);
+  --shadow-planning: var(--planning-shadow);
+  --radius-planning-control: var(--planning-radius-control);
+  --radius-planning-floating: var(--planning-radius-floating);
 }
 
 :root {

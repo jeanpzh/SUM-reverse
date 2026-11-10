@@ -1,0 +1,478 @@
+{
+  "checkedAt": "2026-11-08T01:53:14.617Z",
+  "source": "owned synthetic standalone NestJS + Vite; Playwright MCP; no interceptors",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "evidence": {
+    "errors": [],
+    "failed": [
+      {
+        "path": "/api/local/programacion-academica/v1/catalogo",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/local/programacion-academica/v1/publicaciones",
+        "error": "net::ERR_ABORTED"
+      }
+    ],
+    "responses": [
+      {
+        "method": "POST",
+        "path": "/api/local/programacion-academica/v1/propuestas",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "path": "/api/local/programacion-academica/v1/borradores/guardar",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/local/programacion-academica/v1/borradores",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "path": "/api/local/programacion-academica/v1/propuestas/bf2ca94b-88df-445e-90c8-953d94a3ea00/ajustes",
+        "status": 422
+      },
+      {
+        "method": "POST",
+        "path": "/api/local/programacion-academica/v1/propuestas/bf2ca94b-88df-445e-90c8-953d94a3ea00/ajustes",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "path": "/api/local/programacion-academica/v1/borradores/guardar",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/local/programacion-academica/v1/borradores",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "path": "/api/local/programacion-academica/v1/borradores/b16ec9d2-e1a2-45c9-96d9-ce259d6089c5/revision/enviar",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/local/programacion-academica/v1/borradores",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "path": "/api/local/programacion-academica/v1/borradores/b16ec9d2-e1a2-45c9-96d9-ce259d6089c5/revision/responder",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/local/programacion-academica/v1/borradores",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/local/programacion-academica/v1/borradores/b16ec9d2-e1a2-45c9-96d9-ce259d6089c5/vista-previa",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "path": "/api/local/programacion-academica/v1/borradores/b16ec9d2-e1a2-45c9-96d9-ce259d6089c5/aprobar",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/local/programacion-academica/v1/borradores",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/local/programacion-academica/v1/borradores/b16ec9d2-e1a2-45c9-96d9-ce259d6089c5/vista-previa",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/local/programacion-academica/v1/publicaciones",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "path": "/api/local/programacion-academica/v1/borradores/b16ec9d2-e1a2-45c9-96d9-ce259d6089c5/publicar",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/local/programacion-academica/v1/borradores",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/local/programacion-academica/v1/publicaciones",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/local/programacion-academica/v1/catalogo",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/local/programacion-academica/v1/publicaciones",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/local/programacion-academica/v1/borradores",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "path": "/api/local/programacion-academica/v1/borradores/b16ec9d2-e1a2-45c9-96d9-ce259d6089c5/continuar",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/local/programacion-academica/v1/publicaciones",
+        "status": 502
+      },
+      {
+        "method": "GET",
+        "path": "/api/local/programacion-academica/v1/publicaciones",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "path": "/api/local/programacion-academica/v1/borradores/b16ec9d2-e1a2-45c9-96d9-ce259d6089c5/nuevo-borrador",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "path": "/api/local/programacion-academica/v1/borradores/guardar",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/local/programacion-academica/v1/borradores",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "path": "/api/local/programacion-academica/v1/propuestas",
+        "status": 200
+      }
+    ],
+    "checks": [
+      {
+        "name": "negative demand",
+        "generateDisabled": true,
+        "saveDisabled": true,
+        "alerts": []
+      },
+      {
+        "name": "generate",
+        "http": 200,
+        "status": "complete",
+        "assignments": 2
+      },
+      {
+        "name": "save draft",
+        "http": 200,
+        "version": 1
+      },
+      {
+        "name": "reject invalid Sunday",
+        "http": 422,
+        "preserved": true,
+        "visibleError": [
+          "No se aplicó el ajuste; la propuesta anterior se conserva. window:session:[\"section:[\\\"INE002\\\",1]\",\"weekly-1\"]: PLANNING_POLICY_WINDOW: la franja requiere una excepción habilitada y dentro de sus límites"
+        ],
+        "focus": {
+          "inside": false,
+          "active": null,
+          "name": "Inspector de sección 1",
+          "labelledby": "radix-_r_f_"
+        }
+      },
+      {
+        "name": "valid adjustment",
+        "http": 200,
+        "days": [
+          3
+        ]
+      },
+      {
+        "name": "inspector keyboard",
+        "focus": {
+          "inside": false,
+          "tag": "BUTTON",
+          "cls": "academic-scheduling__text-button",
+          "label": null
+        },
+        "closedOnEscape": true,
+        "focusReturned": true
+      },
+      {
+        "name": "inspector autofocus within 2 seconds",
+        "passed": false,
+        "active": {
+          "tag": "BUTTON",
+          "text": "Editar horario"
+        }
+      },
+      {
+        "name": "save adjusted proposal",
+        "version": 2
+      },
+      {
+        "name": "submit teacher review",
+        "http": 200,
+        "state": "in-review"
+      },
+      {
+        "name": "teacher conformity",
+        "http": 200,
+        "state": "ready-for-approval",
+        "emptyObservationBlocked": true
+      },
+      {
+        "name": "approval preview",
+        "http": 200,
+        "state": "ready-for-approval",
+        "version": 4
+      },
+      {
+        "name": "approval cancellation",
+        "passed": true
+      },
+      {
+        "name": "approval dialog mobile",
+        "width": 390,
+        "scroll": 1143,
+        "dialog": {
+          "x": 16,
+          "right": 374,
+          "width": 358
+        }
+      },
+      {
+        "name": "approve",
+        "http": 200,
+        "state": "approved",
+        "version": 5
+      },
+      {
+        "name": "approval mobile without dialog",
+        "width": 390,
+        "scroll": 394,
+        "bodyWidth": 390,
+        "offenders": [
+          {
+            "tag": "SELECT",
+            "cls": "",
+            "right": 394,
+            "width": 382
+          }
+        ]
+      },
+      {
+        "name": "publication prerequisite",
+        "listHttp": 200,
+        "enabledAfterListRefresh": true
+      },
+      {
+        "name": "publish dialog mobile settled",
+        "width": 390,
+        "scroll": 1143,
+        "body": 390,
+        "dialog": 358
+      },
+      {
+        "name": "publish",
+        "http": 200,
+        "state": "published",
+        "version": 6
+      },
+      {
+        "name": "reload/resume published",
+        "http": 200,
+        "state": "published",
+        "version": 6,
+        "disabled": {
+          "demand": true,
+          "generate": true
+        }
+      },
+      {
+        "name": "preparation mobile published",
+        "width": 390,
+        "scroll": 470,
+        "height": 14479,
+        "offenders": [
+          {
+            "tag": "TABLE",
+            "cls": "academic-preparation__table",
+            "label": null,
+            "right": 957
+          },
+          {
+            "tag": "THEAD",
+            "cls": "",
+            "label": null,
+            "right": 956
+          },
+          {
+            "tag": "TR",
+            "cls": "",
+            "label": null,
+            "right": 956
+          },
+          {
+            "tag": "TH",
+            "cls": "",
+            "label": null,
+            "right": 413
+          },
+          {
+            "tag": "TH",
+            "cls": "",
+            "label": null,
+            "right": 572
+          },
+          {
+            "tag": "TH",
+            "cls": "",
+            "label": null,
+            "right": 729
+          },
+          {
+            "tag": "TH",
+            "cls": "",
+            "label": null,
+            "right": 841
+          },
+          {
+            "tag": "TH",
+            "cls": "",
+            "label": null,
+            "right": 956
+          }
+        ]
+      },
+      {
+        "name": "controlled backend outage",
+        "http": 502,
+        "alerts": [
+          "No se pudo actualizar el historial: La API local devolvió una respuesta que no es JSON válido."
+        ]
+      },
+      {
+        "name": "backend restart and recovery",
+        "http": 200,
+        "publicationHttp": 200,
+        "publicationVersion": 1,
+        "assignmentsPreserved": true,
+        "alerts": []
+      },
+      {
+        "name": "fork and source immutability",
+        "forkHttp": 200,
+        "saveHttp": 200,
+        "differentId": true,
+        "editable": true,
+        "sourceUnchanged": true
+      },
+      {
+        "name": "nonmodal inspector next Tab",
+        "before": {
+          "inside": false,
+          "active": "Editar horario"
+        },
+        "after": {
+          "inside": true,
+          "tag": "BUTTON",
+          "label": "Cerrar inspector"
+        }
+      },
+      {
+        "name": "preparation mobile true overflow excluding internal scroll regions",
+        "width": 390,
+        "scroll": 470,
+        "offenders": [
+          {
+            "tag": "DIV",
+            "cls": "academic-demand__heading",
+            "label": null,
+            "right": 470,
+            "text": "Demanda potencial sintética · 2027-IBase académica de una muestra declarada; no es intenci"
+          },
+          {
+            "tag": "DIV",
+            "cls": "",
+            "label": null,
+            "right": 470,
+            "text": "Demanda potencial sintética · 2027-IBase académica de una muestra declarada; no es intenci"
+          },
+          {
+            "tag": "H4",
+            "cls": "",
+            "label": null,
+            "right": 470,
+            "text": "Demanda potencial sintética · 2027-I"
+          },
+          {
+            "tag": "P",
+            "cls": "",
+            "label": null,
+            "right": 470,
+            "text": "Base académica de una muestra declarada; no es intención de matrícula ni un pronóstico."
+          },
+          {
+            "tag": "LABEL",
+            "cls": "",
+            "label": null,
+            "right": 470,
+            "text": "Fuente sintéticaEscenario regular integrado · 2 perfilesPoblación independiente · 120 iden"
+          },
+          {
+            "tag": "SELECT",
+            "cls": "",
+            "label": "Fuente de demanda potencial",
+            "right": 470,
+            "text": "Escenario regular integrado · 2 perfilesPoblación independiente · 120 identidades sintétic"
+          },
+          {
+            "tag": "DIV",
+            "cls": "academic-demand__actions",
+            "label": null,
+            "right": 470,
+            "text": "Estimar demanda potencialSe enviarán solo los cursos seleccionados, su capacidad objetivo "
+          },
+          {
+            "tag": "SPAN",
+            "cls": "",
+            "label": null,
+            "right": 470,
+            "text": "Se enviarán solo los cursos seleccionados, su capacidad objetivo y el identificador de fue"
+          },
+          {
+            "tag": "P",
+            "cls": "academic-demand__empty",
+            "label": null,
+            "right": 470,
+            "text": "Estima una base para ver elegibilidad y causas agregadas. La demanda final manual se conse"
+          },
+          {
+            "tag": "DIV",
+            "cls": "academic-demand__courses",
+            "label": null,
+            "right": 470,
+            "text": "PROGRAMACIÓN Y COMPUTACIÓN · INE002Capacidad 45Base elegible—Elegibles—Repitentes incluido"
+          }
+        ]
+      }
+    ]
+  }
+}

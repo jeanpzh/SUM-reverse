@@ -1,0 +1,430 @@
+/* Internal resource workbench: layout only; controls use planning UI primitives. */
+.academic-resource-workbench {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  color: var(--planning-text);
+  font-size: var(--planning-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.academic-resource-workbench > *,
+.academic-resource-workbench__inspector-pane *,
+.academic-resource-modal * {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.academic-resource-workbench__tabs,
+.academic-resource-workbench__counters,
+.academic-resource-workbench__toolbar-row,
+.academic-resource-workbench__toolbar-actions,
+.academic-resource-modal__summary,
+.academic-resource-modal__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.academic-resource-workbench__tabs {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--planning-border);
+}
+
+.academic-resource-workbench__tab--active {
+  background: var(--planning-selected);
+  color: var(--planning-text);
+}
+
+.academic-resource-workbench__header,
+.academic-resource-workbench__toolbar,
+.academic-resource-workbench__search-field,
+.academic-resource-workbench__filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.academic-resource-workbench__title,
+.academic-resource-workbench__inspector-title,
+.academic-resource-modal__title {
+  margin: 0;
+  font-size: var(--planning-text-lg);
+  line-height: 1.4;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.academic-resource-workbench__subtitle,
+.academic-resource-workbench__inspector-subtitle,
+.academic-resource-workbench__resource-note,
+.academic-resource-modal__subtitle,
+.academic-resource-modal__item-details {
+  margin: 0;
+  color: var(--planning-muted);
+  font-size: var(--planning-text-sm);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.academic-resource-workbench__inspector-subtitle,
+.academic-resource-modal__subtitle {
+  margin-top: 4px;
+}
+
+.academic-resource-workbench__counters {
+  gap: 8px 16px;
+  font-size: var(--planning-text-sm);
+  color: var(--planning-muted);
+}
+
+.academic-resource-workbench__counter-item {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.academic-resource-workbench__counter-value {
+  color: var(--planning-text);
+  font-weight: 700;
+}
+
+.academic-resource-workbench__toolbar-row {
+  align-items: end;
+}
+
+.academic-resource-workbench__search-field {
+  flex: 1 1 240px;
+}
+
+.academic-resource-workbench__filter-field {
+  flex: 1 1 200px;
+}
+
+.academic-resource-workbench__toolbar-row > [data-slot='native-select-wrapper'] {
+  flex: 1 1 240px;
+}
+
+.academic-resource-workbench__split,
+.academic-resource-workbench__table-pane,
+.academic-resource-workbench__scroll-region {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* Table owns the only scroll container, in both axes; focus stays keyboard accessible. */
+.academic-resource-table {
+  min-width: 48rem;
+}
+
+.academic-resource-table:focus-visible {
+  outline: 2px solid var(--planning-primary);
+  outline-offset: -2px;
+}
+
+.academic-resource-table [data-slot].academic-resource-table__td-checkbox {
+  width: 48px;
+  text-align: center;
+}
+
+.academic-resource-table [data-slot].academic-resource-table__td-actions {
+  width: 112px;
+  text-align: right;
+}
+
+.academic-resource-table .academic-resource-workbench__native-checkbox {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  margin: 0;
+  vertical-align: middle;
+  accent-color: var(--planning-primary);
+}
+
+.academic-resource-workbench__row--inspected {
+  outline: 2px solid var(--planning-primary);
+  outline-offset: -2px;
+}
+
+.academic-resource-table [data-slot='table-cell'].academic-resource-workbench__empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--planning-muted);
+}
+
+/* Position, focus trap and shadow belong to Sheet/Dialog. */
+.academic-resource-workbench__inspector-pane.academic-resource-workbench__inspector-pane {
+  width: min(36rem, 100%);
+  max-width: 100%;
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  font-size: var(--planning-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.academic-resource-workbench__inspector-header,
+.academic-resource-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 16px;
+  border-bottom: 1px solid var(--planning-border);
+}
+
+.academic-resource-workbench__inspector-body,
+.academic-resource-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  padding: 16px;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+
+.academic-resource-workbench__inspector-body {
+  flex: 1 1 auto;
+}
+
+/* Keep legacy form hooks for verification, with a flat white surface inside the sheet. */
+.academic-resource-workbench__form.academic-scheduling__resource-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--planning-surface);
+}
+
+.academic-resource-workbench__resource-card-heading {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.academic-resource-workbench__resource-fields,
+.academic-resource-workbench__course-eligibility,
+.academic-resource-workbench__course-limits,
+.academic-resource-workbench__availability {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 12px 0 0;
+  border: 0;
+  border-top: 1px solid var(--planning-border);
+}
+
+.academic-resource-workbench__form legend,
+.academic-resource-workbench__availability legend {
+  max-width: 100%;
+  padding: 0 8px 0 0;
+  font-size: var(--planning-text-sm);
+  font-weight: 700;
+}
+
+.academic-resource-workbench__resource-fields,
+.academic-resource-workbench__course-limits {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+}
+
+.academic-resource-workbench__resource-fields > label,
+.academic-resource-workbench__course-limits > label,
+.academic-resource-workbench__availability-row > label {
+  display: grid;
+  gap: 4px;
+}
+
+.academic-resource-workbench__inspector-pane .academic-scheduling__course-options {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  max-height: 240px;
+  overflow: auto;
+  padding: 4px;
+}
+
+.academic-resource-workbench__course-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.academic-resource-workbench__inspector-pane .academic-scheduling__course-chips {
+  gap: 8px;
+}
+
+.academic-resource-workbench__chip {
+  gap: 4px;
+}
+
+.academic-resource-workbench__chip > button {
+  padding: 4px 8px;
+  min-height: 32px;
+}
+
+.academic-resource-workbench__availability-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 8px;
+}
+
+.academic-resource-workbench__inline-error {
+  color: var(--planning-error);
+  font-size: var(--planning-text-sm);
+}
+
+.academic-resource-workbench__draft-note {
+  padding: 12px;
+  border: 1px solid var(--planning-border);
+  font-size: var(--planning-text-sm);
+}
+
+.academic-resource-workbench__ref-view,
+.academic-resource-workbench__ref-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.academic-resource-workbench__ref-grid {
+  margin: 0;
+}
+
+.academic-resource-workbench__ref-grid dt {
+  color: var(--planning-muted);
+  font-size: var(--planning-text-sm);
+}
+
+.academic-resource-workbench__ref-grid dd {
+  margin: -8px 0 0;
+  font-size: var(--planning-text-sm);
+  overflow-wrap: anywhere;
+}
+
+.academic-resource-workbench__reference-rooms {
+  color: var(--planning-muted);
+  font-size: var(--planning-text-sm);
+}
+
+.academic-resource-workbench__disclosure-trigger {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.academic-resource-workbench__reference-rooms ul {
+  max-height: 240px;
+  overflow: auto;
+  padding-left: 24px;
+}
+
+.academic-resource-modal.academic-resource-modal {
+  width: min(640px, calc(100% - 32px));
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  font-size: var(--planning-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.academic-resource-modal__summary {
+  gap: 8px 16px;
+  font-size: var(--planning-text-sm);
+}
+
+.academic-resource-modal__item-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.academic-resource-modal__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--planning-border);
+}
+
+.academic-resource-modal__item-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.academic-resource-modal__footer {
+  justify-content: flex-end;
+  padding: 16px;
+  border-top: 1px solid var(--planning-border);
+}
+
+@media (max-width: 480px) {
+  .academic-resource-workbench__availability-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--planning-border);
+  }
+
+  .academic-resource-workbench__availability-row > label:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .academic-resource-workbench__availability-row > button {
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
+}
+
+/* A single surface: toolbar, metadata, then the table's own scrolling region. */
+.academic-resource-workbench__tab-content { display: flex; flex-direction: column; gap: 12px; margin: 0; }
+.academic-resource-workbench__tabs { align-self: flex-start; padding: 4px; border: 1px solid var(--planning-border); border-radius: 8px; background: var(--planning-surface-subtle); }
+.academic-resource-workbench__toolbar-row { align-items: center; gap: 12px; }
+.academic-resource-workbench__search-field { flex: 1 1 12rem; min-width: min(100%, 12rem); }
+.academic-resource-workbench__filter-field { flex: 0 1 12rem; }
+.academic-resource-workbench__toolbar-row > [data-slot='native-select-wrapper'] { flex: 0 1 16rem; max-width: 100%; }
+.academic-resource-workbench__toolbar-actions { margin-left: auto; gap: 8px; }
+.academic-resource-workbench__subtitle, .academic-resource-workbench__counters { margin: 0; color: var(--planning-muted); font-size: var(--planning-text-xs); line-height: 16px; }
+.academic-resource-workbench__scroll-region { overflow: auto; }
+.academic-resource-workbench__scroll-region > [data-slot='table-container'] { max-width: 100%; overflow: auto; }
+.planning-root .academic-resource-table [data-slot='table-head'] { padding: 8px; font-size: var(--planning-text-sm); }
+.planning-root .academic-resource-table [data-slot='table-cell'] { height: 40px; padding: 4px 8px; font-size: var(--planning-text-sm); }
+.academic-resource-table code { white-space: nowrap; font-family: monospace; font-size: var(--planning-text-xs); }
+.academic-resource-table :is(th, td):nth-child(3) { width: auto; min-width: 10rem; }
+.academic-resource-table :is(th, td):is(:nth-child(5), :nth-child(6), :nth-child(7)) { white-space: nowrap; }
+.academic-resource-table__availability { display: block; max-width: 5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.academic-resource-table__status { display: inline-flex; align-items: center; gap: 4px; font-size: var(--planning-text-xs); }
+.academic-resource-table__status > svg { flex-shrink: 0; color: var(--planning-muted); }
+.academic-resource-table__status.academic-resource-badge--included > svg { color: var(--planning-success); }
+.planning-root .academic-resource-table .academic-resource-workbench__row--selected { background: var(--planning-selected); }
+.academic-resource-workbench__inspector-title, .academic-resource-modal__title { font-size: var(--planning-text-xl); line-height: 22px; font-weight: 700; }
+
+/* The code sits under the name; below 620px the table scrolls inside its own container. */
+.academic-resource-table { width: 100%; min-width: 620px; table-layout: fixed; }
+.planning-root .academic-resource-table :is(th, td) { overflow-wrap: normal; white-space: normal; }
+.planning-root .academic-resource-table [data-slot='table-cell'],
+.planning-root .academic-resource-table [data-slot='table-head'] { padding: 4px 8px; }
+.academic-resource-table :is(th, td):first-child { width: 40px; }
+.academic-resource-table :is(th, td):nth-child(2) { width: auto; }
+.academic-resource-table :is(th, td):nth-child(3) { width: 128px; min-width: 0; }
+.academic-resource-table :is(th, td):is(:nth-child(4), :nth-child(5), :nth-child(6)) { width: 80px; white-space: nowrap; }
+.academic-resource-table :is(th, td):nth-child(7) { width: 168px; white-space: normal; }
+.academic-resource-table code { display: block; color: var(--planning-muted); }
+.academic-resource-table__availability { max-width: none; }
+.academic-resource-table__status { flex-wrap: nowrap; }

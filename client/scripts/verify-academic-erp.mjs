@@ -1,5 +1,6 @@
 // Run only against our freshly built, independently synthetic Compose acceptance project.
 import assert from 'node:assert/strict'
+import { setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -48,16 +49,16 @@ try {
   }
   const generate = async () => {
     const pending = page.waitForResponse((response) => response.url().endsWith('/propuestas') && response.request().method() === 'POST')
-    await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
+    await page.locator('#planning-tour-primary').click()
     const response = await pending
     assert.equal(response.status(), 200, await response.text())
     const value = await response.json()
-    await page.getByRole('status').filter({ hasText: value.status }).waitFor()
+    await page.locator(`.planning-status-bar[data-status="${value.status}"]`).waitFor()
     return value
   }
   await page.goto(`${base}/local/programacion-academica`)
   await page.getByLabel('Filtrar cursos por ciclo').selectOption('10')
-  await page.getByLabel(`Seleccionar ${course.courseId}`, { exact: true }).check()
+  await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }))
   await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).fill('180')
   await page.getByLabel(`Capacidad ${course.courseId}`, { exact: true }).fill('45')
   await page.getByLabel(`Patrón ${course.courseId}`).selectOption(pattern.id)
@@ -70,7 +71,7 @@ try {
     assert.equal(await page.getByLabel('Nombre docente', { exact: true }).inputValue(), teacher.name)
     await page.getByLabel('Carga semanal docente', { exact: true }).fill('480')
     await page.getByLabel('Buscar asignatura habilitada').fill(course.courseId)
-    await page.getByLabel(`${teacher.name} habilitado para ${course.courseId}`, { exact: true }).check()
+    await setPlanningCheckbox(page.getByRole('checkbox', { name: `${teacher.name} habilitado para ${course.courseId}`, exact: true }))
     await page.getByLabel(`Máximo de secciones ${course.courseId}`, { exact: true }).fill('2')
     await setIntervals('Disponibilidad docente', [1, 2, 3, 4])
     await setIntervals(preferenceLabel, index === 0 ? [1, 2] : [3, 4])
@@ -112,7 +113,7 @@ try {
   await page.screenshot({ path: resolve(output, 'erp-complete-calendar.png') })
   await page.getByLabel('Seleccionar o agregar docente').selectOption(teachers[1].id)
   await teacherForm.getByRole('button', { name: /^Quitar docente / }).click()
-  assert.equal(await page.locator('.academic-scheduling__result').count(), 0)
+  assert.equal(await page.locator('.planning-status-bar').count(), 0)
   const insufficient = await generate()
   assert.equal(insufficient.status, 'impossible')
   assert.equal(insufficient.coverageComplete, false)
@@ -120,7 +121,7 @@ try {
   assert.ok(insufficient.counts.scheduledSessions < 8)
   assert.ok(insufficient.diagnostics.every((row) => row.code !== 'SEARCH_LIMIT'))
   assert.equal(await calendar.locator('.weekly-schedule__event').count(), insufficient.counts.scheduledSessions / 2)
-  await page.locator('.academic-scheduling__result').scrollIntoViewIfNeeded()
+  await page.locator('.planning-status-bar').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(output, 'erp-insufficient.png') })
   await page.getByLabel('Carga semanal docente', { exact: true }).fill('960')
   await page.getByLabel(`Máximo de secciones ${course.courseId}`, { exact: true }).fill('4')

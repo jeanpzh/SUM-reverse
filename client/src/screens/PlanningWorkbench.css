@@ -1,0 +1,17 @@
+.planning-root .planning-stage-panel[hidden] {
+  display: none;
+}
+
+.planning-stage-panel {
+  display: block;
+}
+
+.academic-scheduling__empty-stage {
+  padding: calc(var(--planning-spacing) * 6);
+  background: var(--planning-surface);
+  border: 1px solid var(--planning-border);
+  border-radius: var(--planning-radius-panel);
+  text-align: center;
+  color: var(--planning-muted);
+  font-size: var(--planning-text-base);
+}

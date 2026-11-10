@@ -1,0 +1,58 @@
+{
+  "source": "Root-owned fresh synthetic stacks; core functional checks and viewport checks run separately. See referenced reports for the earlier long-session timeout.",
+  "reports": [
+    "acceptance-core-sol.json",
+    "acceptance.json"
+  ],
+  "results": [
+    {
+      "id": "geist-loaded-and-fallback-readable",
+      "passed": true
+    },
+    {
+      "id": "cold-start-dark-no-ai-requests",
+      "passed": true
+    },
+    {
+      "id": "light-theme-and-explicit-system-choice-persist",
+      "passed": true
+    },
+    {
+      "id": "courses-edit-and-real-generation",
+      "passed": true
+    },
+    {
+      "id": "table-week-share-filters-and-edit-real-block",
+      "passed": true
+    },
+    {
+      "id": "explicit-save-and-stage-navigation-preserve-proposal",
+      "passed": true
+    },
+    {
+      "id": "normative-real-abstention-close-and-error",
+      "passed": true
+    },
+    {
+      "id": "mobile-agenda-keyboard-and-navigation-sheet",
+      "passed": true
+    },
+    {
+      "id": "partial-proposal-advisor-sheet-and-preview-invalidation",
+      "passed": true
+    },
+    {
+      "id": "responsive-stages-and-200-percent-reflow",
+      "passed": true
+    },
+    {
+      "id": "student-and-module-chooser-stay-outside-planning-shell",
+      "passed": true
+    },
+    {
+      "id": "no-browser-exceptions-or-external-requests",
+      "passed": true
+    }
+  ],
+  "errors": []
+}

@@ -1,14 +1,25 @@
-import { useMemo, useRef, useState } from 'react'
+import { PlanningFetchLoading } from '../components/PlanningFetchLoading'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { CircleAlert, CircleCheck } from 'lucide-react'
+import { Button } from '../components/ui/Button'
+import { NativeSelect } from '../components/ui/NativeSelect'
+import { Label } from '../components/ui/Label'
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../components/ui/Collapsible'
+import { Alert } from '../components/ui/Alert'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table'
+import { toast } from '../components/ui/Sonner'
 import type { AcademicDraftState, AcademicPublication, AcademicPublicationList, AcademicReleasePreview, AcademicScheduleSnapshot } from '../../../shared/programacion-academica-api.mjs'
 import { aggregateAcademicBlocks, academicSectionLabel, formatAcademicDuration, formatAcademicMinute } from '../data/academicScheduling'
 import { fetchAcademicPublication, fetchAcademicPublications, fetchAcademicReleasePreview, fetchCurrentAcademicPublication } from '../data/academicScheduling'
 import { activateEnrollmentOffer, fetchOperationalOffers } from '../data/enrollmentOffer'
 import type { OperationalOffer, OperationalOfferCatalog } from '../data/enrollmentOffer'
+import { ConfirmDialog, useConfirm, type ConfirmRequest } from '../components/ui/ConfirmDialog'
 import './AcademicPublicationPanel.css'
 
 type PreviewSource = { id: string; version: number; schedule: AcademicScheduleSnapshot; title: string; label: string; source: 'draft' | 'publication'; state: AcademicDraftState }
 
 type Props = {
+  primaryActionId?: string
   draftId: string | null
   draftVersion: number | null
   draftTitle: string
@@ -18,7 +29,6 @@ type Props = {
   onApprove: () => Promise<void>
   onPublish: (expectedCurrentId: string | null) => Promise<void>
   onFork: (id: string, version: number) => Promise<void>
-  onBusyChange: (busy: boolean) => void
   onError: (message: string | null) => void
   onMessage: (message: string | null) => void
 }
@@ -33,9 +43,9 @@ function dateLabel(value: string) {
   return new Date(value).toLocaleString('es-PE')
 }
 
-export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, draftState, dirty, busy,
-  onApprove, onPublish, onFork, onBusyChange, onError, onMessage }: Props) {
-  const [expanded, setExpanded] = useState(false)
+export function AcademicPublicationPanel({ primaryActionId, draftId, draftVersion, draftTitle, draftState, dirty, busy,
+  onApprove, onPublish, onFork, onError, onMessage }: Props) {
+  const [confirmElement, confirm] = useConfirm()
   const [publicationList, setPublicationList] = useState<AcademicPublicationList | null>(null)
   const [listError, setListError] = useState<string | null>(null)
   const [listLoading, setListLoading] = useState(false)
@@ -47,6 +57,7 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
   const [offerError, setOfferError] = useState<string | null>(null)
   const [activation, setActivation] = useState<{ offer: OperationalOffer; reused: boolean } | null>(null)
   const [activating, setActivating] = useState(false)
+  const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null)
   const requestIntent = useRef(0)
   const listIntent = useRef(0)
   const scopeKey = `${draftId ?? ''}|${draftVersion ?? ''}|${dirty}|${selectedPublicationId}`
@@ -62,6 +73,21 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
   const canPublish = canUseRelease && draftState === 'approved'
     && currentPreview?.id === draftId && currentPreview.version === draftVersion && currentPreview.state === 'approved'
     && Boolean(publicationList) && !listLoading && !listError && !selectedPublicationId
+  const publishDisabledReason = draftState === 'published' ? 'Esta versión ya está publicada'
+    : draftState !== 'approved' ? 'Primero aprueba la versión'
+    : !publicationList || listLoading
+    ? 'Cargando publicaciones…'
+    : listError ? 'No se pudieron cargar las publicaciones'
+    : selectedPublicationId ? 'Selecciona la versión actual (estás consultando una publicación anterior)'
+    : dirty ? 'Hay cambios sin guardar'
+    : previewError ? 'No se pudo cargar la vista previa. Usa Actualizar vista previa para reintentar.'
+    : !currentPreview || currentPreview.state !== 'approved' ? 'Espera a que cargue la vista previa de la versión aprobada'
+    : !canPublish ? 'La publicación no está disponible en este estado' : ''
+  const approveDisabledReason = dirty ? 'Hay cambios sin guardar'
+    : draftState !== 'ready-for-approval' ? 'La versión debe estar lista para aprobación'
+    : previewError ? 'No se pudo cargar la vista previa. Usa Actualizar vista previa para reintentar.'
+    : !currentPreview ? 'Espera a que cargue la vista previa de la versión actual'
+    : 'La versión debe estar lista para aprobación'
 
   const blocks = useMemo(() => preview ? aggregateAcademicBlocks(preview.schedule) : [], [preview])
   const cycleByCourse = useMemo(() => new Map(preview?.schedule.courses.map((course) => [course.courseId, course.cycle]) ?? []), [preview])
@@ -84,6 +110,13 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
       if (intent === listIntent.current) setListLoading(false)
     }
   }
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void refreshPublications() }, 0)
+    return () => window.clearTimeout(timer)
+    // Load once on mount; refreshes after writes are explicit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const refreshPreview = async () => {
     const selected = selectedSummary
@@ -118,41 +151,69 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
     }
   }
 
-  const approve = async () => {
+  useEffect(() => {
+    let timer: number | undefined
+    if (selectedSummary || (draftId && draftVersion && !dirty)) {
+      timer = window.setTimeout(() => { void refreshPreview() }, 0)
+    }
+    return () => {
+      if (timer !== undefined) window.clearTimeout(timer)
+      requestIntent.current += 1
+    }
+    // Reload on source/version changes; cleanup invalidates late responses from the previous source.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftId, draftVersion, draftState, dirty, selectedPublicationId, selectedSummary?.id, selectedSummary?.publicationVersion])
+
+  const approve = () => {
     if (!canApprove || !draftId || !draftVersion) return
-    if (!window.confirm(`¿Aprobar (simulada) la propuesta «${draftTitle}», versión ${draftVersion}?`)) return
-    onError(null)
-    onMessage(null)
-    await onApprove()
+    setConfirmRequest({
+      title: 'Aprobar (simulada)',
+      description: `¿Aprobar (simulada) la propuesta «${draftTitle}», versión ${draftVersion}?`,
+      confirmLabel: 'Aprobar',
+      onConfirm: async () => {
+        onError(null)
+        onMessage(null)
+        await onApprove()
+        await refreshPublications()
+      },
+    })
   }
 
-  const publish = async () => {
+  const publish = () => {
     if (!canPublish) return
     const currentId = publicationList!.currentId
     const replacing = currentLabel ? ` La publicación vigente será la versión ${currentLabel.publicationVersion} (${currentLabel.title}).` : ' No hay una publicación vigente.'
-    if (!window.confirm(`¿Publicar (simulada) «${draftTitle}»?${replacing}`)) return
-    onError(null)
-    onMessage(null)
-    await onPublish(currentId)
-    await refreshPublications()
+    setConfirmRequest({
+      title: 'Publicar (simulada)',
+      description: `¿Publicar (simulada) «${draftTitle}»?${replacing}`,
+      confirmLabel: 'Publicar',
+      onConfirm: async () => {
+        onError(null)
+        onMessage(null)
+        await onPublish(currentId)
+        await refreshPublications()
+      },
+    })
   }
 
-  const fork = async () => {
+  const fork = () => {
     const sourceId = selectedSummary?.id ?? (frozen ? draftId : null)
     const sourceVersion = selectedSummary ? selectedSummary.approvedVersion + 1 : draftVersion
     const sourceTitle = selectedSummary?.title ?? draftTitle
     if (!sourceId || !sourceVersion || (!selectedSummary && !frozen) || dirty || busy || working) return
-    if (!window.confirm(`¿Crear un nuevo borrador desde «${sourceTitle}»? El documento de origen permanecerá sin cambios.`)) return
-    onError(null)
-    onMessage(null)
-    onBusyChange(true)
-    try {
-      await onFork(sourceId, sourceVersion)
-      setSelectedPublicationId('')
-      setPreview(null)
-    } finally {
-      onBusyChange(false)
-    }
+    setConfirmRequest({
+      title: 'Crear nuevo borrador',
+      description: `¿Crear un nuevo borrador desde «${sourceTitle}»? El documento de origen permanecerá sin cambios.`,
+      confirmLabel: 'Crear borrador',
+      onConfirm: async () => {
+        onError(null)
+        onMessage(null)
+        // The planning session tracks its own busy state for the new draft.
+        await onFork(sourceId, sourceVersion)
+        setSelectedPublicationId('')
+        setPreview(null)
+      },
+    })
   }
 
   const displayPreview = selectedSummary ? preview?.source === 'publication' && preview.id === selectedSummary.id ? preview : null : currentPreview
@@ -186,12 +247,18 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
       setOfferCatalog(current)
       const existing = current.items.find((item) => item.publicationId === publication.id
         && item.publicationVersion === publication.publicationVersion)
-      if (current.activeRunId && !existing && !window.confirm(
-        `Ya existe una oferta operativa activa (${current.activeRunId}). ¿Crear un contexto nuevo para publicación ${publication.publicationVersion}? Las ofertas anteriores conservarán sus matrículas.`)) return
+      if (current.activeRunId && !existing) setActivating(false)
+      if (current.activeRunId && !existing && !(await confirm({
+        title: 'Activar publicación seleccionada',
+        description: `Ya existe una oferta operativa activa (${current.activeRunId}). ¿Crear un contexto nuevo para publicación ${publication.publicationVersion}? Las ofertas anteriores conservarán sus matrículas.`,
+        confirmLabel: 'Activar publicación seleccionada',
+      }))) return
+      setActivating(true)
       const result = await activateEnrollmentOffer({ publicationId: publication.id,
         publicationVersion: publication.publicationVersion, expectedActiveRunId: current.activeRunId })
       setActivation(result)
       setOfferCatalog(await fetchOperationalOffers())
+      toast.success(result.reused ? 'La publicación ya tenía una oferta operativa.' : 'Oferta operativa creada.')
     } catch (error) {
       setOfferError(error instanceof Error ? error.message : 'No se pudo activar la publicación local.')
     } finally {
@@ -199,84 +266,117 @@ export function AcademicPublicationPanel({ draftId, draftVersion, draftTitle, dr
     }
   }
 
-  return <details className="academic-publication" open={expanded} onToggle={(event) => setExpanded(event.currentTarget.open)}>
-    <summary>Aprobación y publicación simuladas</summary>
-    <p className="academic-publication__note">Prototipo local sin autenticación ni efecto oficial. La aprobación congela el documento; las consultas locales muestran una sola tabla en modo lectura.</p>
-    <div className="academic-publication__actions">
-      <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary"
-        disabled={working || busy || listLoading} onClick={() => void refreshPublications()}>{listLoading ? 'Actualizando…' : 'Actualizar publicaciones'}</button>
-      <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary"
-        disabled={working || busy || (selectedSummary ? !selectedSummary : !draftId)} onClick={() => void refreshPreview()}>
-        {working ? 'Consultando…' : 'Actualizar vista previa'}
-      </button>
-      <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary"
-        disabled={!canApprove} onClick={() => void approve()}>Aprobar (simulada)</button>
-      <button type="button" className="academic-scheduling__button" disabled={!canPublish}
-        onClick={() => void publish()}>Publicar (simulada)</button>
-    </div>
-    <label className="academic-publication__history">Consultar publicación
-      <select aria-label="Consultar publicación" value={selectedPublicationId} disabled={working || busy}
-        onChange={(event) => { requestIntent.current += 1; setWorkingScope(null); setSelectedPublicationId(event.currentTarget.value); setPreview(null); setPreviewError(null) }}>
-        <option value="">Propuesta actual · {draftTitle}</option>
-        {publicationList?.items.map((item) => <option key={item.id} value={item.id}>
-          {item.id === publicationList.currentId ? 'Vigente' : 'Anterior'} · Publicación {item.publicationVersion} · {item.title} · {dateLabel(item.publishedAt)}
-        </option>)}
-      </select>
-    </label>
-    {publicationList && <p className="academic-publication__status" role="status">{publicationList.currentId
-      ? `Vigente: publicación ${currentLabel?.publicationVersion ?? '—'} · ${currentLabel?.title ?? publicationList.currentId}.`
-      : 'No hay una publicación vigente.'}</p>}
-    {listError && <p className="academic-publication__error" role="alert">No se pudo actualizar el historial: {listError}</p>}
-    {(selectedSummary || frozen) && <div className="academic-publication__metadata">
-      {selectedSummary ? <>
-        <span>{selectedSummary.id === publicationList?.currentId ? 'Vigente' : 'Anterior'} · publicación {selectedSummary.publicationVersion}</span>
-        <span>Publicada {dateLabel(selectedSummary.publishedAt)}</span>
-        <span>Versión aprobada {selectedSummary.approvedVersion}</span>
-      </> : <span>{draftState === 'approved' ? 'Aprobada (simulada)' : 'Publicada (simulada)'} · {draftTitle} · versión {draftVersion}</span>}
-      <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary"
-        disabled={busy || working || dirty} onClick={() => void fork()}>Crear nuevo borrador</button>
-    </div>}
-    {previewError && <p className="academic-publication__error" role="alert">No se pudo consultar la vista previa: {previewError}</p>}
-    {displayPreview && <section className="academic-publication__preview" aria-label="Horario de la propuesta consultada">
-      <p>{displayPreview.title} · {displayPreview.schedule.schoolId} · {displayPreview.schedule.academicPeriod} · {displayPreview.label}
-        {selectedSummary ? ' · solo lectura' : ` · ${stateLabels[displayPreview.state]}`}
-      </p>
-      <div className="table-card academic-publication__table"><table><thead><tr>
-        <th>Código</th><th>Asignatura</th><th>Ciclo</th><th>Sección</th><th>Capacidad</th><th>Docente</th><th>Ambiente</th><th>Día</th><th>Horario</th><th>Componentes</th>
-      </tr></thead><tbody>{blocks.map((block) => <tr key={`${block.sectionId}-${block.day}-${block.startMinute}`}>
-        <td>{block.courseId}</td><td>{block.courseName}</td><td>{cycleByCourse.get(block.courseId) ?? '—'}</td>
-        <td>{academicSectionLabel(preview!.schedule, block.sectionId)}</td><td>{block.capacity ?? '—'}</td><td>{block.teacherName}</td><td>{block.roomNames.join(', ')}</td>
-        <td>{days[block.day]}</td><td>{formatAcademicMinute(block.startMinute)}–{formatAcademicMinute(block.endMinute)} · {formatAcademicDuration(block.durationMinutes)}</td>
-        <td>{block.componentDetails.map((component) => `${component.type} · ${formatAcademicDuration(component.durationMinutes)}`).join(' + ')}</td>
-      </tr>)}</tbody></table></div>
-    </section>}
-    <section className="academic-publication__metadata" aria-labelledby="academic-publication-activation">
-      <h3 id="academic-publication-activation">Matrícula local 2027-I</h3>
-      <p>La activación crea un contexto sintético para una publicación de Sistemas 2027-I. No modifica la publicación ni las matrículas de otras ofertas.</p>
-      <div className="academic-publication__actions">
-        <button type="button" className="academic-scheduling__button academic-scheduling__button--secondary"
-          disabled={activating || busy} onClick={() => void refreshOffers()}>{activating ? 'Procesando…' : 'Actualizar ofertas operativas'}</button>
-        <button type="button" className="academic-scheduling__button" disabled={!canActivate}
-          onClick={() => void activatePublication()}>{activating ? 'Activando…' : 'Activar publicación seleccionada'}</button>
+  const blockingReason = dirty ? 'Hay cambios sin guardar'
+    : draftState === 'approved' ? canPublish ? '' : publishDisabledReason
+    : frozen ? '' : canApprove ? 'Primero aprueba la versión'
+    : draftState !== 'ready-for-approval' ? `${approveDisabledReason}. Vuelve a Revisión docente para completar la revisión.` : approveDisabledReason
+
+  return <section className="academic-publication" aria-label="Aprobación y publicación simuladas">
+      <div className="academic-publication__strip">
+        <strong className="academic-publication__state" role="status">
+          {frozen || canApprove ? <CircleCheck size={16} aria-hidden="true" /> : <CircleAlert size={16} aria-hidden="true" />}
+          {stateLabels[draftState]}
+        </strong>
+        <span>{draftVersion ? `Versión ${draftVersion}` : 'Sin versión guardada'}</span>
+        <span>{dirty ? 'Cambios sin guardar' : draftId ? 'Guardada' : 'Sin guardar'}</span>
+        {primaryActionId === 'approve' && canApprove && <Button id="academic-approve-action" type="button" size="sm" onClick={approve}>Aprobar (simulada)</Button>}
       </div>
-      {!selectedSummary && <p className="academic-publication__status">Selecciona una publicación y actualiza su vista previa para habilitar la activación.</p>}
-      {selectedSummary && publicationPreview && !canActivate && <p className="academic-publication__status">La activación requiere una publicación de Sistemas 2027-I con vista previa vigente.</p>}
-      {offerError && <p className="academic-publication__error" role="alert">{offerError}</p>}
-      {activation && <p className="academic-publication__status" role="status">
-        {activation.reused ? 'La publicación ya tenía una oferta operativa.' : 'Oferta operativa creada.'} Origen: {activation.offer.publicationId} · publicación {activation.offer.publicationVersion} · oferta {activation.offer.offerVersion} · ejecución {activation.offer.runId}.
-        {' '}<a href={`/local/login?runId=${encodeURIComponent(activation.offer.runId)}`}>Abrir matrícula 2027-I</a>
-      </p>}
-      {offerCatalog && <div className="academic-publication__status" aria-label="Ofertas operativas disponibles">
-        <p>{offerCatalog.activeRunId ? `Ejecución activa: ${offerCatalog.activeRunId}.` : 'No hay oferta operativa activa.'}</p>
-        {offerCatalog.items.map((offer) => <p key={offer.runId}>
-          <a href={`/local/login?runId=${encodeURIComponent(offer.runId)}`}>Abrir matrícula 2027-I · oferta {offer.offerVersion}</a>
-          {' '}<span>Origen {offer.publicationId} · publicación {offer.publicationVersion} · {offer.courseCount} cursos · {offer.sectionCount} secciones</span>
-        </p>)}
-      </div>}
+      {blockingReason && <p id={draftState === 'approved' ? 'academic-publish-reason' : 'academic-approve-reason'} className="academic-publication__status">{blockingReason}</p>}
+      <section className="academic-publication__section" aria-labelledby="academic-publication-title">
+        <h3 id="academic-publication-title">Decisión</h3>
+        {draftState === 'approved' && <div className="academic-publication__actions">
+          <Button variant="outline" type="button" disabled={!canPublish}
+            aria-describedby={!canPublish ? 'academic-publish-reason' : undefined} onClick={publish}>Publicar (simulada)</Button>
+        </div>}
+        <p className="academic-publication__status">{draftState === 'published' ? 'Esta versión ya está publicada.' : draftState === 'approved' ? 'La aprobación congela el documento. Publicar requiere una confirmación independiente.' : 'La aprobación congela el documento; la publicación se confirma después.'}</p>
+        {!selectedSummary && previewError && <Button variant="outline" type="button" disabled={working || busy || !draftId} onClick={() => void refreshPreview()}>Reintentar vista previa de la versión</Button>}
+      </section>
+      <section className="academic-publication__section" aria-labelledby="academic-publications-title">
+        <h3 id="academic-publications-title">Publicaciones</h3>
+        <div className="academic-publication__toolbar">
+        <div className="academic-publication__history"><Label htmlFor="academic-publication-select">Consultar publicación</Label>
+          <NativeSelect id="academic-publication-select" aria-label="Consultar publicación" value={selectedPublicationId} disabled={working || busy}
+            onChange={(event) => { requestIntent.current += 1; setWorkingScope(null); setSelectedPublicationId(event.currentTarget.value); setPreview(null); setPreviewError(null) }}>
+            <option value="">Propuesta actual · {draftTitle}</option>
+            {publicationList?.items.map((item) => <option key={item.id} value={item.id}>
+              {item.id === publicationList.currentId ? 'Vigente' : 'Anterior'} · Publicación {item.publicationVersion} · {item.title} · {dateLabel(item.publishedAt)}
+            </option>)}
+          </NativeSelect>
+        </div>
+          <Button variant="outline" size="sm" type="button" disabled={working || busy || listLoading}
+            onClick={() => void refreshPublications()}>{listLoading ? 'Actualizando…' : 'Actualizar publicaciones'}</Button>
+          {selectedSummary && <Button variant="outline" size="sm" type="button" disabled={working || busy}
+            onClick={() => void refreshPreview()}>{working ? 'Consultando…' : 'Actualizar vista previa'}</Button>}
+        </div>
+        {publicationList && <p className="academic-publication__status" role="status">{publicationList.currentId
+          ? `Vigente: publicación ${currentLabel?.publicationVersion ?? '—'} · ${currentLabel?.title ?? publicationList.currentId}.`
+          : 'No hay una publicación vigente.'}</p>}
+        {listLoading && <PlanningFetchLoading label="Cargando publicaciones…" layout="table" />}
+        {working && <PlanningFetchLoading label="Consultando vista previa…" layout="publication-table" />}
+        {listError && <Alert variant="destructive" role="alert">No se pudo actualizar el historial: {listError}</Alert>}
+        {(selectedSummary || frozen) && <div className="academic-publication__metadata">
+          {selectedSummary ? <>
+            <span>{selectedSummary.id === publicationList?.currentId ? 'Vigente' : 'Anterior'} · publicación {selectedSummary.publicationVersion}</span>
+            <span>Publicada {dateLabel(selectedSummary.publishedAt)}</span>
+            <span>Versión aprobada {selectedSummary.approvedVersion}</span>
+          </> : <span>{draftState === 'approved' ? 'Aprobada (simulada)' : 'Publicada (simulada)'} · {draftTitle} · versión {draftVersion}</span>}
+          <Button variant="outline" type="button"
+            disabled={busy || working || dirty} onClick={fork}>Crear nuevo borrador</Button>
+        </div>}
+        {previewError && <Alert variant="destructive" role="alert">No se pudo consultar la vista previa: {previewError}</Alert>}
+        {displayPreview && <section className="academic-publication__preview" aria-label="Horario de la propuesta consultada">
+          <p>{displayPreview.title} · {displayPreview.schedule.schoolId} · {displayPreview.schedule.academicPeriod} · {displayPreview.label}
+            {selectedSummary ? ' · solo lectura' : ` · ${stateLabels[displayPreview.state]}`}
+          </p>
+          <div className="academic-publication__table"><Table stickyHeader><TableHeader><TableRow>
+            <TableHead>Código</TableHead><TableHead>Asignatura</TableHead><TableHead>Ciclo</TableHead><TableHead>Sección</TableHead><TableHead>Capacidad</TableHead><TableHead>Docente</TableHead><TableHead>Ambiente</TableHead><TableHead>Día</TableHead><TableHead>Horario</TableHead><TableHead>Componentes</TableHead>
+          </TableRow></TableHeader><TableBody>{blocks.map((block) => <TableRow key={`${block.sectionId}-${block.day}-${block.startMinute}`}>
+            <TableCell>{block.courseId}</TableCell><TableCell>{block.courseName}</TableCell><TableCell>{cycleByCourse.get(block.courseId) ?? '—'}</TableCell>
+            <TableCell>{academicSectionLabel(preview!.schedule, block.sectionId)}</TableCell><TableCell>{block.capacity ?? '—'}</TableCell><TableCell>{block.teacherName}</TableCell><TableCell>{block.roomNames.join(', ')}</TableCell>
+            <TableCell>{days[block.day]}</TableCell><TableCell>{formatAcademicMinute(block.startMinute)}–{formatAcademicMinute(block.endMinute)} · {formatAcademicDuration(block.durationMinutes)}</TableCell>
+            <TableCell>{block.componentDetails.map((component) => `${component.type} · ${formatAcademicDuration(component.durationMinutes)}`).join(' + ')}</TableCell>
+          </TableRow>)}</TableBody></Table></div>
+        </section>}
+        {!displayPreview && <p className="academic-publication__status">{selectedSummary
+          ? 'La vista previa de esta publicación se carga automáticamente; puedes reintentar si falla.'
+          : draftId ? `Propuesta actual · ${draftTitle} · versión ${draftVersion} · ${stateLabels[draftState]}${dirty ? ' · cambios locales sin guardar' : ''}. La vista previa se carga al guardar los cambios.`
+            : 'Guarda una propuesta antes de consultar una vista previa.'}</p>}
+        <Collapsible className="academic-publication__evidence">
+          <CollapsibleTrigger asChild><Button variant="ghost" type="button">Alcance de la simulación</Button></CollapsibleTrigger>
+          <CollapsibleContent><p>Prototipo local sin autenticación ni efecto oficial. La aprobación congela el documento.</p></CollapsibleContent>
+        </Collapsible>
+      </section>
+        <section className="academic-publication__section" aria-labelledby="academic-publication-activation">
+          <h3 id="academic-publication-activation">Matrícula local 2027-I</h3>
+          <div className="academic-publication__actions">
+            <Button variant="outline" type="button"
+              disabled={activating || busy} onClick={() => void refreshOffers()}>{activating ? 'Procesando…' : 'Actualizar ofertas operativas'}</Button>
+            <Button variant="outline" type="button" disabled={!canActivate}
+              onClick={() => void activatePublication()}>{activating ? 'Activando…' : 'Activar publicación seleccionada'}</Button>
+          </div>
+          <p className="academic-publication__status">{!selectedSummary
+            ? 'Selecciona una publicación de Sistemas 2027-I y espera su vista previa para activar una oferta operativa.'
+            : !publicationPreview ? 'Espera la vista previa vigente de la publicación de Sistemas 2027-I para activar una oferta operativa.'
+            : !canActivate ? 'La activación requiere una publicación de Sistemas 2027-I con vista previa vigente.'
+            : 'La publicación de Sistemas 2027-I tiene vista previa vigente y puede activarse como oferta operativa.'}</p>
+          <Collapsible>
+            <CollapsibleTrigger asChild><Button variant="ghost" type="button">Alcance de la activación</Button></CollapsibleTrigger>
+            <CollapsibleContent><p>La activación crea un contexto sintético para una publicación de Sistemas 2027-I. No modifica la publicación ni las matrículas de otras ofertas.</p></CollapsibleContent>
+          </Collapsible>
+          {offerError && <Alert variant="destructive" role="alert">{offerError}</Alert>}
+          {activation && <p className="academic-publication__status" role="status">
+            Origen: {activation.offer.publicationId} · publicación {activation.offer.publicationVersion} · oferta {activation.offer.offerVersion} · ejecución {activation.offer.runId}.
+            {' '}<a href={`/local/login?runId=${encodeURIComponent(activation.offer.runId)}`}>Abrir matrícula 2027-I</a>
+          </p>}
+          {offerCatalog && <div className="academic-publication__status" aria-label="Ofertas operativas disponibles">
+            <p>{offerCatalog.activeRunId ? `Ejecución activa: ${offerCatalog.activeRunId}.` : 'No hay oferta operativa activa.'}</p>
+            {offerCatalog.items.map((offer) => <p key={offer.runId}>
+              <a href={`/local/login?runId=${encodeURIComponent(offer.runId)}`}>Abrir matrícula 2027-I · oferta {offer.offerVersion}</a>
+              {' '}<span>Origen {offer.publicationId} · publicación {offer.publicationVersion} · {offer.courseCount} cursos · {offer.sectionCount} secciones</span>
+            </p>)}
+          </div>}
+        </section>
+        {confirmElement}
+        <ConfirmDialog request={confirmRequest} onClose={() => setConfirmRequest(null)} />
     </section>
-    {!displayPreview && <p className="academic-publication__status">{selectedSummary
-      ? 'Actualiza la vista previa para consultar esta publicación sin editarla.'
-      : draftId ? `Propuesta actual · ${draftTitle} · versión ${draftVersion} · ${stateLabels[draftState]}${dirty ? ' · cambios locales sin guardar' : ''}. Actualiza la vista previa para continuar.`
-        : 'Guarda una propuesta antes de consultar una vista previa.'}</p>}
-  </details>
 }
