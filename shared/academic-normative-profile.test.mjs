@@ -12,7 +12,7 @@ const voluntary = { kind: 'voluntary-declaration', reference: 'DJ-SINT-1' }
 const vrap = (maxLectiveHours) => ({ kind: 'vrap-authorization', reference: 'VRAP-SINT-1', maxLectiveHours })
 const limits = (teacher, lectiveHourMinutes = 50) => teacherLoadLimits(profile, teacher, { lectiveHourMinutes })
 const codes = (result) => result.gaps.map((item) => item.code)
-const sourceIdsOf = (value) => new Set(profile.sources.map((source) => source.id))
+const sourceIdsOf = () => new Set(profile.sources.map((source) => source.id))
 
 test('profile: amended revision, sources A and B with classes, and the explicit gap list', () => {
   assert.equal(profile.revision, 'UNMSM-AAD-2026-04')
@@ -22,7 +22,7 @@ test('profile: amended revision, sources A and B with classes, and the explicit 
   assert.equal(byId.get('OF-07').class, 'normative')
   assert.equal(byId.get('OF-07').date, '2026-04-17')
   assert.ok(!/https?:\/\//.test(byId.get('OF-07').reference), 'the gob.pe URL was not recorded and must not be invented')
-  for (const id of ['INF-APPOINTMENT-PRELATION', 'INF-PERFORMANCE-INACTIVE', 'INF-LEAVE-UNAVAILABLE']) assert.equal(byId.get(id).class, 'inferred')
+  for (const id of ['INF-APPOINTMENT-PRELATION', 'INF-PERFORMANCE-INACTIVE', 'INF-LEAVE-UNAVAILABLE', 'INF-VRAP-OVER-POSTGRADUATE']) assert.equal(byId.get(id).class, 'inferred')
   for (const source of profile.sources) assert.deepEqual(Object.keys(source).sort(), ['articles', 'class', 'date', 'id', 'reference', 'status', 'title'])
   const gapCodes = profile.gaps.map((item) => item.code)
   for (const code of ['FISI_LECTIVE_HOUR_UNVERIFIED', 'TP_MAXIMUM_NOT_REGULATED', 'CONTRACT_LOAD_NOT_REGULATED', 'PERFORMANCE_EVALUATION_NO_SOURCE', 'SOURCE_OF07_URL_NOT_RECORDED']) {
@@ -81,7 +81,10 @@ test('criterion 3: postgraduate cap, RENACYT minimum and leave', () => {
   const capped = limits({ ...tc, loadConditions: ['postgraduate-study'], loadAuthorizations: [voluntary] })
   assert.deepEqual([capped.minimumMinutes, capped.ordinaryMaxMinutes, capped.authorizedMaxMinutes], [500, 500, 500])
   assert.deepEqual([capped.nextException.kind, capped.nextException.maxMinutes], ['vrap-authorization', null])
-  assert.equal(limits({ ...tc, loadConditions: ['postgraduate-study'], loadAuthorizations: [vrap(14)] }).authorizedMaxMinutes, 700)
+  const overCap = limits({ ...tc, loadConditions: ['postgraduate-study'], loadAuthorizations: [vrap(14)] })
+  assert.equal(overCap.authorizedMaxMinutes, 700)
+  assert.ok(overCap.sourceIds.includes('INF-VRAP-OVER-POSTGRADUATE'), 'VRAP over the postgraduate cap is labeled as an interpretation')
+  assert.ok(!capped.sourceIds.includes('INF-VRAP-OVER-POSTGRADUATE'))
   const researcher = limits({ ...de, loadConditions: ['renacyt-researcher'] })
   assert.deepEqual([researcher.minimumMinutes, researcher.ordinaryMaxMinutes, researcher.authorizedMaxMinutes], [300, 600, 600])
   const leave = limits({ ...de, loadConditions: ['on-leave'], loadAuthorizations: [voluntary] })
@@ -160,6 +163,7 @@ test('criterion 8: blockers list exactly the teachers above their authorized max
   const teachers = [
     { id: 'T-OK', ...de },
     { id: 'T-12', ...tc },
+    { id: 'T-22', ...tc },
     { id: 'T-VOL', ...tc, loadAuthorizations: [voluntary] },
     { id: 'T-VRAP', ...tc, loadAuthorizations: [voluntary, vrap(24)] },
     { id: 'T-CONTRACT', appointment: 'contract' },
@@ -167,10 +171,11 @@ test('criterion 8: blockers list exactly the teachers above their authorized max
     { id: 'T-LEAVE', ...de, loadConditions: ['on-leave'] },
     { id: 'T-POST', ...de, loadConditions: ['postgraduate-study'], loadAuthorizations: [voluntary] },
   ]
-  const assigned = { 'T-OK': 600, 'T-12': 650, 'T-VOL': 1050, 'T-VRAP': 1250, 'T-CONTRACT': 9000, 'T-TP': 9000, 'T-LEAVE': 50, 'T-POST': 550 }
+  const assigned = { 'T-OK': 600, 'T-12': 650, 'T-22': 1100, 'T-VOL': 1050, 'T-VRAP': 1250, 'T-CONTRACT': 9000, 'T-TP': 9000, 'T-LEAVE': 50, 'T-POST': 550 }
   const blockers = loadAuthorizationBlockers(profile, teachers, assigned, { lectiveHourMinutes: 50 })
   assert.deepEqual(blockers.map((item) => [item.teacherId, item.assignedMinutes, item.authorizedMaxMinutes, item.requiredAuthorization]), [
     ['T-12', 650, 600, 'voluntary-declaration'],
+    ['T-22', 1100, 600, 'vrap-authorization'],
     ['T-VOL', 1050, 1000, 'vrap-authorization'],
     ['T-VRAP', 1250, 1200, 'vrap-authorization'],
     ['T-LEAVE', 50, 0, 'vrap-authorization'],
@@ -178,7 +183,7 @@ test('criterion 8: blockers list exactly the teachers above their authorized max
   ])
   assert.deepEqual(loadAuthorizationBlockers(profile, teachers, new Map(Object.entries(assigned)), { lectiveHourMinutes: 50 }), blockers)
   // Exactly at the authorized maximum is allowed; nothing is listed when all are within limits; unassigned teachers count as zero.
-  const within = { 'T-OK': 600, 'T-12': 600, 'T-VOL': 1000, 'T-VRAP': 1200, 'T-LEAVE': 0, 'T-POST': 500, 'T-TP': 9000 }
+  const within = { 'T-OK': 600, 'T-12': 600, 'T-22': 600, 'T-VOL': 1000, 'T-VRAP': 1200, 'T-LEAVE': 0, 'T-POST': 500, 'T-TP': 9000 }
   assert.deepEqual(loadAuthorizationBlockers(profile, teachers, within, { lectiveHourMinutes: 50 }), [])
   assert.deepEqual(loadAuthorizationBlockers(profile, teachers, {}, { lectiveHourMinutes: 50 }), [])
   assert.deepEqual(loadAuthorizationBlockers(profile, [], {}, { lectiveHourMinutes: 50 }), [])

@@ -44,7 +44,7 @@ export type NormativeProfile = {
     renacytResearcher: { minimumLectiveHours: number; articles: string[]; sourceIds: string[] }
     postgraduateStudy: { maxLectiveHours: number; articles: string[]; sourceIds: string[] }
     onLeave: { authorizedMaxLectiveHours: number; articles: string[]; sourceIds: string[] }
-    vrapAuthorization: { articles: string[]; sourceIds: string[] }
+    vrapAuthorization: { articles: string[]; sourceIds: string[]; overPostgraduateCapSourceIds: string[] }
   }
   prelation: {
     criteria: Array<{ order: number; id: string; active: boolean; class: 'normative' | 'inferred'; articles: string[]; sourceIds: string[] }>

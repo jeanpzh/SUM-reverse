@@ -52,7 +52,10 @@ Ambas son `inferred` y `unverified`; el perfil las codifica con esa etiqueta y s
 1. **`INF-APPOINTMENT-PRELATION`**: el nombramiento (nombrado de la facultad → ordinario interfacultativo → contrato) precede a la categoría y al régimen. Se funda en el último párrafo del art. 9, que OF-07 no modificó; el texto no dice expresamente que esa regla ordene antes que la categoría. El módulo expone el escalón 0, 1 o 2.
 2. **`INF-PERFORMANCE-INACTIVE`**: la evaluación del desempeño docente (criterio 3 del art. 9) forma parte del perfil, pero está inactiva: no existe fuente de datos local. Es una brecha explícita.
 
-Además, `INF-LEAVE-UNAVAILABLE` (disp. compl. 5.ª) es una inferencia documentada arriba.
+Además, el Backend worker introdujo dos inferencias propias, también `inferred`/`unverified` y pendientes de confirmación:
+
+- `INF-LEAVE-UNAVAILABLE` (disp. compl. 5.ª): licencia o sabático implican autorizado 0 y mínimo 0.
+- `INF-VRAP-OVER-POSTGRADUATE` (disp. final 3.ª): una autorización de la VRAP puede exceder el tope de 10 horas de posgrado.
 
 ## Lista de brechas
 

@@ -77,7 +77,12 @@ const PROFILE = deepFreeze({
       reference: 'Art. 9, criterio 3 de OF-02; ninguna fuente de datos local lo alimenta; pendiente de confirmación del usuario.',
     },
     {
-      id: 'INF-LEAVE-UNAVAILABLE', title: 'Interpretación: docentes con licencia o año sabático no están disponibles para carga lectiva', date: '2026-11-10',
+      id: 'INF-VRAP-OVER-POSTGRADUATE', title: 'Interpretación: una autorización de la VRAP puede exceder el tope de 10 horas de posgrado', date: '2026-11-10',
+      articles: [], class: 'inferred', status: 'unverified',
+      reference: 'Disp. final 3.ª de OF-02 habla de casos que excedan «la carga lectiva máxima»; no se corroboró que alcance al tope de la disp. compl. 2.ª. Implementación del Backend worker, pendiente de confirmación.',
+    },
+    {
+      id: 'INF-LEAVE-UNAVAILABLE', title: 'Interpretación: docentes con licencia o año sabático no están disponibles para carga lectiva (autorizado 0 y mínimo 0)', date: '2026-11-10',
       articles: [], class: 'inferred', status: 'unverified',
       reference: 'La disposición complementaria quinta de OF-02 ordena a SUM registrar licencias y sabático; no dispone su efecto en la carga.',
     },
@@ -93,7 +98,7 @@ const PROFILE = deepFreeze({
     renacytResearcher: { minimumLectiveHours: 6, articles: ['DC-1'], sourceIds: ['OF-02'] },
     postgraduateStudy: { maxLectiveHours: 10, articles: ['DC-2'], sourceIds: ['OF-02'] },
     onLeave: { authorizedMaxLectiveHours: 0, articles: ['DC-5'], sourceIds: ['OF-02', 'INF-LEAVE-UNAVAILABLE'] },
-    vrapAuthorization: { articles: ['DF-3'], sourceIds: ['OF-02'] },
+    vrapAuthorization: { articles: ['DF-3'], sourceIds: ['OF-02'], overPostgraduateCapSourceIds: ['OF-02', 'INF-VRAP-OVER-POSTGRADUATE'] },
   },
   prelation: {
     criteria: [
@@ -232,7 +237,10 @@ export function teacherLoadLimits(profile, teacher, { lectiveHourMinutes } = {})
   const vrapHours = authorizations.filter((item) => item.kind === 'vrap-authorization').map((item) => item.maxLectiveHours)
   let authorizedHours = ordinaryMaxHours === null ? null : Math.max(ordinaryMaxHours, voluntaryRecorded ? voluntaryHours : 0, ...vrapHours)
   if (voluntaryRecorded) articles.push(...rules.voluntaryDeclaration.articles)
-  if (vrapHours.length) articles.push(...rules.vrapAuthorization.articles)
+  if (vrapHours.length) {
+    articles.push(...rules.vrapAuthorization.articles)
+    if (postgraduate) sourceIds.push(...rules.vrapAuthorization.overPostgraduateCapSourceIds)
+  }
 
   let nextKind = null
   let nextHours = null
@@ -290,9 +298,13 @@ export function teacherPrelation(profile, teacher) {
   return { appointmentTier, categoryRank, gaps, sourceIds: unique(sourceIds) }
 }
 
+// The voluntary declaration only helps when it reaches the assigned load; above its ceiling (20 h) the VRAP is the only route.
+const declarationCovers = (next, assignedMinutes) => next?.kind === 'voluntary-declaration' && next.maxMinutes !== null && assignedMinutes <= next.maxMinutes
+
 // Teachers whose assigned lective minutes exceed what is authorized today. A teacher without a regulated maximum (contract,
 // part-time without cap, missing regime) is not listed: its gaps are visible in teacherLoadLimits. A UI approval never
-// replaces the formal authorization named here; with no further regulated step the VRAP (DF-3) is the only route.
+// replaces the formal authorization named here; above the declaration ceiling, with a declaration already recorded, or for a teacher on leave the VRAP (DF-3) is the
+// only named route (an on-leave teacher is really an availability problem, not an authorization one).
 export function loadAuthorizationBlockers(profile, teachers, assignedMinutesByTeacherId, { lectiveHourMinutes } = {}) {
   assertProfile(profile)
   assertLectiveHourMinutes(profile, lectiveHourMinutes)
@@ -311,7 +323,7 @@ export function loadAuthorizationBlockers(profile, teachers, assignedMinutesByTe
       teacherId: teacher.id,
       assignedMinutes,
       authorizedMaxMinutes: limits.authorizedMaxMinutes,
-      requiredAuthorization: limits.nextException?.kind ?? 'vrap-authorization',
+      requiredAuthorization: declarationCovers(limits.nextException, assignedMinutes) ? 'voluntary-declaration' : 'vrap-authorization',
       sourceIds: limits.sourceIds,
     })
   }
