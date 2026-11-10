@@ -6,190 +6,62 @@ import type { AcademicNormativeRequest, AcademicNormativeResponse } from '../../
 import type { PlanningPeriod } from '../../data/academicScheduling'
 import { fetchAcademicNormativeAdvice } from '../../data/academicScheduling'
 import { NormativeMarkdown } from './NormativeMarkdown'
-import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Label } from '../ui/Label'
 import { NativeSelect } from '../ui/NativeSelect'
 import { Textarea } from '../ui/Textarea'
 import { Alert, AlertDescription } from '../ui/Alert'
-import { ChevronDown, ExternalLink, FileText, AlertTriangle } from 'lucide-react'
+import { FileCheck2, CircleHelp, TriangleAlert } from 'lucide-react'
+import { NormativeEvidence } from './NormativeEvidence'
+import { NormativeDetails } from './NormativeDetails'
 import './NormativeAdvice.css'
-
-const statusLabels: Record<string, string> = {
-  supported: 'Sustento documental',
-  'not-determined': 'No determinado',
-  conflict: 'Conflicto documental',
-}
-
-const statusTitles: Record<string, string> = {
-  supported: 'Sustento documental identificado para la consulta',
-  'not-determined': 'No es posible determinar con la evidencia documental disponible',
-  conflict: 'Conflicto normativo entre las fuentes recuperadas',
-}
-
-const modeLabels: Record<string, string> = {
-  hybrid: 'Híbrida (léxica + semántica)',
-  'lexical-only': 'Solo léxica',
-  unavailable: 'No disponible',
-}
-
-const generationReasons: Record<string, string> = {
-  not_configured: 'Proveedor no configurado.',
-  timeout: 'El proveedor superó el tiempo de espera.',
-  upstream_error: 'El proveedor no está disponible.',
-  invalid_llm_output: 'La respuesta del modelo no pasó la validación.',
-  insufficient_evidence: 'Se conserva la abstención porque la evidencia es insuficiente.',
-  disabled: 'Generación con modelo desactivada en este entorno.',
-}
 
 export function NormativeAdvice({ advice }: { advice: AcademicNormativeResponse }) {
   validateAcademicNormativeResponse(advice)
+  const supported = advice.status === 'supported'
+  const conflict = advice.status === 'conflict'
+  const hasSources = advice.citations.length > 0
+  const unavailable = advice.retrievalMode === 'unavailable'
+  const Icon = supported ? FileCheck2 : conflict ? TriangleAlert : CircleHelp
+  const title = supported ? 'Sustento documental' : conflict ? 'Fuentes en conflicto'
+    : unavailable ? 'Consulta documental no disponible' : hasSources ? 'Aplicación sin confirmar' : 'Sin evidencia suficiente'
+  const evidenceReason = advice.citations.some((citation) => citation.effectiveFrom === null)
+    ? 'La entrada en vigencia de los extractos localizados no está confirmada.'
+    : advice.citations.some((citation) => advice.context.asOf > citation.reviewedAt)
+      ? 'La fecha consultada es posterior a la revisión de las fuentes localizadas.'
+      : 'Los extractos localizados no bastan para confirmar la respuesta en este contexto.'
+  const explanation = conflict
+    ? 'Las fuentes se contradicen. Se requiere revisión documental antes de concluir.'
+    : unavailable ? 'No hay una base documental disponible para esta consulta.'
+    : hasSources
+      ? evidenceReason
+      : 'No se recuperaron fuentes aplicables a esta consulta y sus filtros.'
+  const nextStep = conflict ? 'Contrasta las disposiciones y sus fechas con la autoridad correspondiente.'
+    : unavailable ? 'Revisa la disponibilidad del corpus o vuelve a intentar la consulta más tarde.'
+    : advice.context.teacherType === 'unknown'
+      ? 'Comprueba el régimen docente en el contexto de la consulta y revisa las disposiciones del periodo.'
+      : 'Revisa la vigencia y el alcance de las disposiciones para el periodo consultado.'
 
-  const isSupported = advice.status === 'supported'
-  const isNotDetermined = advice.status === 'not-determined'
-
-  return (
-    <section
-      aria-label="Respuesta normativa"
-      className="normative-advice [overflow-wrap:anywhere]"
-    >
-      {/* 1. Conclusión (14px / 500) */}
-      <div className="normative-advice__conclusion">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge
-            variant={isSupported ? 'secondary' : isNotDetermined ? 'warning' : 'destructive'}
-            className="normative-advice__status-badge"
-          >
-            {statusLabels[advice.status]}
-          </Badge>
-          <span className="normative-advice__meta">
-            {advice.context.facultyId} · {advice.context.academicPeriod} · {advice.citations.length}{' '}
-            {advice.citations.length === 1 ? 'fuente recuperada' : 'fuentes recuperadas'}
-          </span>
+  return <section aria-label="Respuesta normativa" data-normative-status={advice.status}
+    className="normative-advice [overflow-wrap:anywhere]">
+    <div className="normative-advice__conclusion">
+      <div className="flex items-start gap-2">
+        <Icon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+        <div className="min-w-0">
+          <p className="normative-advice__conclusion-title">{title}</p>
+          {!supported && <p className="normative-advice__summary">{explanation}</p>}
         </div>
-        <p className="normative-advice__conclusion-title">
-          {statusTitles[advice.status]}
-        </p>
       </div>
-
-      {/* 2. Explicación / Cuerpo (14px / 400, line-height 1.6) */}
-      <div className="normative-advice__body">
-        <NormativeMarkdown>{advice.answer}</NormativeMarkdown>
-      </div>
-
-      {/* 3. Evidencia / Fuentes normativas */}
-      <div className="normative-advice__section">
-        <h5 className="normative-advice__subtitle flex items-center gap-1.5">
-          <FileText className="size-3.5 text-muted-foreground" aria-hidden="true" />
-          <span>Fuentes normativas</span>
-        </h5>
-        {advice.citations.length === 0 ? (
-          <p className="normative-advice__meta m-0">
-            Sin fuentes normativas aplicables recuperadas para este criterio.
-          </p>
-        ) : (
-          <ol className="normative-advice__citations-list m-0 p-0 list-none">
-            {advice.citations.map((citation) => (
-              <li key={citation.id} className="normative-advice__citation-card">
-                <a
-                  href={citation.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  referrerPolicy="no-referrer"
-                  className="normative-advice__citation-link inline-flex items-center gap-1.5"
-                >
-                  <span>
-                    {citation.title} · {citation.article} (pág. {citation.page})
-                  </span>
-                  <ExternalLink className="size-3 shrink-0 opacity-70" aria-hidden="true" />
-                </a>
-                <p className="normative-advice__citation-excerpt m-0">
-                  «{citation.excerpt}»
-                </p>
-                <div className="normative-advice__meta">
-                  Ámbito {citation.scope} · Revisado el {citation.reviewedAt}
-                  {citation.effectiveFrom &&
-                    ` · Vigencia: ${citation.effectiveFrom} a ${citation.effectiveTo ?? 'vigente'}`}
-                  {advice.context.asOf > citation.reviewedAt &&
-                    ' · Fecha de consulta posterior a revisión'}
-                </div>
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
-
-      {/* 4. ¿Qué falta verificar? / Limitaciones (13px / 600 subtítulo, 14px / 400 lista) */}
-      {advice.gaps.length > 0 && (
-        <div className="normative-advice__section">
-          <h5 className="normative-advice__subtitle flex items-center gap-1.5">
-            <AlertTriangle className="size-3.5 text-muted-foreground" aria-hidden="true" />
-            <span>¿Qué falta verificar?</span>
-          </h5>
-          <ul className="normative-advice__list">
-            {advice.gaps.map((gap, i) => (
-              <li key={i}>{gap}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* 5. Detalles técnicos de la consulta (Relegado a nivel secundario, colapsable) */}
-      <Collapsible className="normative-advice__details">
-        <CollapsibleTrigger className="normative-advice__details-trigger group flex w-full items-center justify-between text-left">
-          <span>Detalles técnicos de la consulta</span>
-          <ChevronDown
-            className="size-3.5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180"
-            aria-hidden="true"
-          />
-        </CollapsibleTrigger>
-        <CollapsibleContent className="normative-advice__details-content">
-          <div className="flex flex-wrap gap-1.5">
-            <Badge variant="outline" className="text-xs font-normal">
-              Recuperación: {modeLabels[advice.retrievalMode] ?? advice.retrievalMode}
-            </Badge>
-            {advice.generation && (
-              <Badge variant="outline" className="text-xs font-normal">
-                Generación:{' '}
-                {advice.generation.mode === 'llm-assisted'
-                  ? advice.generation.providerLabel ?? 'IA asistida'
-                  : 'extractiva'}
-              </Badge>
-            )}
-          </div>
-          {advice.generation?.fallbackReason && (
-            <p className="m-0 text-xs text-muted-foreground">
-              {generationReasons[advice.generation.fallbackReason] ??
-                advice.generation.fallbackReason}
-            </p>
-          )}
-          <div className="grid gap-1 text-xs text-muted-foreground">
-            <div>
-              <span className="font-medium text-foreground/80">Filtro de régimen docente:</span>{' '}
-              {advice.context.teacherType === 'unknown'
-                ? 'Todos los regímenes (general)'
-                : advice.context.teacherType}
-            </div>
-            <div>
-              <span className="font-medium text-foreground/80">Régimen verificado en fuentes:</span>{' '}
-              {advice.context.teacherType === 'unknown'
-                ? 'No delimitado en la documentación recuperada'
-                : `Específico (${advice.context.teacherType})`}
-            </div>
-            <div>
-              <span className="font-medium text-foreground/80">Fecha consultada:</span>{' '}
-              {advice.context.asOf}
-            </div>
-            <div>
-              <span className="font-medium text-foreground/80">Ámbito institucional:</span>{' '}
-              Facultad de Ingeniería de Sistemas e Informática (FISI) · {advice.context.academicPeriod}
-            </div>
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
-    </section>
-  )
+      <span className="normative-advice__meta">{advice.context.facultyId} · {advice.context.academicPeriod}</span>
+    </div>
+    {supported ? <div className="normative-advice__body"><NormativeMarkdown>{advice.answer}</NormativeMarkdown></div>
+      : <p className="normative-advice__next-step"><strong>Siguiente paso:</strong> {nextStep}</p>}
+    <div className="normative-advice__disclosures">
+      <NormativeEvidence citations={advice.citations} />
+      <NormativeDetails advice={advice} />
+    </div>
+  </section>
 }
 
 // Mounted only while the advisor is open; its key also follows proposal/version/period.
