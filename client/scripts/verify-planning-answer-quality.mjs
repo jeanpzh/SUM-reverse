@@ -1,9 +1,10 @@
-// Collect actual UI + HTTP answers. Execution success is NOT a quality pass.
+// Actual UI + HTTP answers, with fixed sample-specific quality regressions.
 import assert from 'node:assert/strict'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { chromium } from 'playwright'
 import { qualityCases } from './planning-quality/cases.mjs'
+import { assertQualityObservation } from './planning-quality/assertions.mjs'
 if (process.env.SUM_REDESIGN_SYNTHETIC !== '1') throw new Error('Own synthetic stack required')
 const base = new URL(process.env.SUM_REDESIGN_BASE || 'http://127.0.0.1:5846')
 if (base.protocol !== 'http:' || base.hostname !== '127.0.0.1' || base.pathname !== '/' || base.search || base.hash || base.username || base.password) throw new Error('Own loopback origin required')
@@ -15,6 +16,7 @@ page.setDefaultTimeout(30000)
 page.setDefaultNavigationTimeout(45000)
 const errors = []
 const observations = []
+const qualityFailures = []
 page.on('pageerror', error => errors.push(error.message))
 const ask = async question => {
   const before = await page.locator('[data-normative-status]').count()
@@ -41,6 +43,10 @@ try {
     if (item.follows) await ask(qualityCases.find(parent => parent.id === item.follows).question)
     const { answer, body, latencyMs, requestKeys } = await ask(item.question)
     const initialText = await answer.innerText()
+    if (item.id === 'tc-paraphrase' || item.id === 'academic-hour') {
+      await answer.scrollIntoViewIfNeeded()
+      await page.screenshot({ path: resolve(evidence, `${item.id}.png`) })
+    }
     const original = answer.getByRole('button', { name: 'Ver respuesta completa', exact: true })
     if (await original.count()) await original.click()
     const sources = answer.getByRole('button', { name: /^Fuentes localizadas/ })
@@ -52,6 +58,7 @@ try {
       expectedSourceRetrieved: item.expectedIds.length ? body.citations.some(citation => item.expectedIds.includes(citation.id)) : null,
       requestKeys, visibleTurns: await page.locator('[data-slot="message-scroller-item"]').count(),
     })
+    try { assertQualityObservation(observations.at(-1)) } catch (error) { qualityFailures.push(error.message) }
     console.log(`COLLECT ${item.id}: ${body.retrievalMode}, ${body.generation?.mode}, expected-source=${observations.at(-1).expectedSourceRetrieved}`)
   }
   await page.locator('#planning-toggle-chat').click()
@@ -69,8 +76,9 @@ try {
   await writeFile(resolve(evidence, 'responses.json'), JSON.stringify({
     source: 'Own entirely synthetic React/NestJS/Python stack; reviewed public normative corpus; actual modes recorded per response',
     rubric: ['Question answered directly', 'Relevant documentary evidence', 'Specific uncertainty', 'Actionable next step', 'No unsupported authorization'],
-    observations, errors,
+    observations, errors, qualityFailures,
   }, null, 2))
   await browser.close()
 }
 assert.deepEqual(errors, [])
+assert.deepEqual(qualityFailures, [], 'Sample-specific answer quality regressions')
