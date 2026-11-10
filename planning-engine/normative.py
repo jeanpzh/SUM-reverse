@@ -106,6 +106,7 @@ class NormativeRetriever:
     def __init__(self, chunks=None, embedder=None, *, repository=None, env=None, model_factory=None):
         self.env = dict(os.environ) if env is None else dict(env)
         self.repository = repository
+        self.repository_failure_reason = 'not_configured'
         self.model_factory = model_factory
         if chunks is None:
             # Queries read only the canonical local bundle, never a remote source.
@@ -123,6 +124,7 @@ class NormativeRetriever:
                                                                corpus_fingerprint=corpus_fingerprint(bundle))
                 except Exception:
                     self.repository = None
+                    self.repository_failure_reason = 'configuration_failed' if self.env.get('SUM_RAG_DATABASE_URL') else 'not_configured'
         self.chunks = chunks
         self.embedder = embedder
         ids = set()
@@ -148,17 +150,19 @@ class NormativeRetriever:
             'excerptSha256': hashlib.sha256(c['excerpt'].encode()).hexdigest(),
         }) for c in eligible]
         retriever = HybridRetriever(documents=documents, tokenize=tokens,
-                                    repository=self.repository, callable_embedder=self.embedder)
+                                    repository=self.repository, callable_embedder=self.embedder,
+                                    repository_failure_reason=self.repository_failure_reason)
         selected_docs = (retriever | RunnableLambda(lambda docs: docs[:4])).invoke(req.question)
         selected = [d.metadata for d in selected_docs]
-        mode = 'lexical-only' if retriever.degraded or not eligible else 'hybrid'
+        mode = 'hybrid' if retriever.semantic_used and not retriever.degraded else 'lexical-only'
         gaps = ['Corpus parcial: no acredita autorización, carga individual ni aprobación del horario.',
                 'Falta acuerdo FISI sobre duración de hora académica y disponibilidad/autorizaciones del periodo.',
                 'Mínimos generales no autorizan completar carga ni invalidan una asignación parcial de esta escuela.']
         if not eligible:
             gaps.append('No hay fragmentos aplicables a los filtros y fecha de la consulta.')
         elif retriever.degraded:
-            gaps.append('Repositorio vectorial no disponible o no configurado; recuperación léxica solamente.')
+            from rag_diagnostics import RETRIEVAL_GAPS, retrieval_failure
+            gaps.append(RETRIEVAL_GAPS[retrieval_failure(retriever.failure_reason)])
         ids = {c['id'] for c in selected}
         by_id = {c['id']: c for c in eligible}
         for c in list(selected):

@@ -66,3 +66,35 @@ def test_public_seed_with_real_local_langchain_embeddings_and_readonly_query():
     assert result[0].metadata['id'] == 'art-7'
     assert result[0].page_content == next(c['excerpt'] for c in bundle['chunks'] if c['id'] == 'art-7')
     assert result[0].metadata['documentSha256']
+
+
+def test_hybrid_query_reads_persisted_vectors_for_a_zero_overlap_paraphrase():
+    """Real PostgreSQL and LangChain retrieval; deterministic vectors are a provider double."""
+    import hashlib
+    from langchain_core.embeddings import Embeddings
+    from normative import NormativeRetriever
+    from test_normative import request, synthetic_chunk
+
+    class SyntheticSemanticEmbeddings(Embeddings):
+        def embed_documents(self, texts):
+            return [[1., 0., 0.] if 'carga' in text else [0., 1., 0.] for text in texts]
+        def embed_query(self, text):
+            assert text == 'teaching workload'
+            return [1., 0., 0.]
+
+    chunks = [synthetic_chunk(effectiveFrom=None),
+              synthetic_chunk('excluded', facultyIds=['OTHER'])]
+    documents = [Document(page_content=c['excerpt'], metadata=c | {
+        'excerptSha256': hashlib.sha256(c['excerpt'].encode()).hexdigest(),
+    }) for c in chunks]
+    profile = {'provider': 'synthetic', 'model': 'semantic-test-double', 'dimensions': 3}
+    prefix = 'ux_' + uuid4().hex[:8]
+    writer = PGVectorRepository(SyntheticSemanticEmbeddings(), DSN, prefix, profile, 'a' * 64)
+    assert writer.index(documents) == 2
+    readonly = DSN + '?options=-c%20default_transaction_read_only%3Don'
+    reader = PGVectorRepository(SyntheticSemanticEmbeddings(), readonly, prefix, profile, 'a' * 64)
+    result = NormativeRetriever(chunks, repository=reader, env={'SUM_RAG_GENERATION_MODE': 'extractive'}).query(
+        request().model_copy(update={'question': 'teaching workload'}))
+    assert result.retrievalMode == 'hybrid'
+    assert [citation.id for citation in result.citations] == ['synthetic']
+    assert result.status == 'not-determined'  # Retrieval cannot establish missing validity.

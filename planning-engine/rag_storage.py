@@ -12,6 +12,11 @@ from uuid import NAMESPACE_URL, uuid5
 class VectorRepositoryError(RuntimeError):
     """Safe operational failure; never includes a DSN or driver exception."""
 
+    def __init__(self, message, *, code='search_failed'):
+        super().__init__(message)
+        self.code = code if code in {'index_missing', 'index_mismatch', 'search_failed', 'ingestion_failed'} else 'search_failed'
+
+
 
 def create_vector_repository(embeddings, env=None, *, corpus_fingerprint: str):
     env = os.environ if env is None else env
@@ -53,7 +58,7 @@ class PGVectorRepository:
         if row is None:
             return False
         if row != (self.identity, self.profile['dimensions']):
-            raise VectorRepositoryError('Index identity/dimension mismatch; explicit reindex to a new namespace required')
+            raise VectorRepositoryError('Index identity/dimension mismatch; explicit reindex to a new namespace required', code='index_mismatch')
         return True
 
     def _vectorstore(self):
@@ -90,7 +95,7 @@ class PGVectorRepository:
         try:
             with self._connection() as conn:
                 if not self._existing(conn):
-                    raise VectorRepositoryError('Index not initialized; run explicit ingestion')
+                    raise VectorRepositoryError('Index not initialized; run explicit ingestion', code='index_missing')
             # PGVectorStore compiles this into SQL WHERE before ORDER BY/LIMIT.
             rows = self._vectorstore().similarity_search_with_relevance_scores(query, k=k, filter={'id': {'$in': eligible_ids}})
             return [doc.model_copy(update={'metadata': doc.metadata | {'_rag_similarity': score}})
@@ -127,4 +132,4 @@ class PGVectorRepository:
         except VectorRepositoryError:
             raise
         except Exception:
-            raise VectorRepositoryError('Vector ingestion failed; check database grants and embedding profile') from None
+            raise VectorRepositoryError('Vector ingestion failed; check database grants and embedding profile', code='ingestion_failed') from None

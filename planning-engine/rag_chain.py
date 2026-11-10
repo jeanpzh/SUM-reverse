@@ -19,6 +19,9 @@ class HybridRetriever(BaseRetriever):
     repository: object = None
     callable_embedder: object = None
     degraded: bool = False
+    semantic_used: bool = False
+    failure_reason: str | None = None
+    repository_failure_reason: str = 'not_configured'
 
     def _get_relevant_documents(self, query, *, run_manager):
         if not self.documents:
@@ -47,7 +50,9 @@ class HybridRetriever(BaseRetriever):
                 semantic = [doc for doc in self.repository.search(query, list(canonical), k=8)
                             if doc.metadata.get('_rag_similarity', 1.0) >= .35]
             else:
+                self.failure_reason = self.repository_failure_reason
                 raise ValueError('Vector repository not configured')
+            self.semantic_used = True
             for rank, doc in enumerate(semantic, 1):
                 match = canonical.get(doc.metadata.get('id'))
                 # Stored metadata is never authoritative, including source URLs.
@@ -56,8 +61,11 @@ class HybridRetriever(BaseRetriever):
                     continue
                 key = match.metadata['id']
                 ranks[key] = ranks.get(key, 0) + 1 / (60 + rank)
-        except Exception:
+        except Exception as error:
+            from rag_diagnostics import retrieval_failure, log_retrieval_failure
             self.degraded = True
+            self.failure_reason = retrieval_failure(self.failure_reason or getattr(error, 'code', 'search_failed'))
+            log_retrieval_failure(self.failure_reason)
         order = {d.metadata['id']: i for i, d in enumerate(self.documents)}
         return [canonical[key] for key in sorted(ranks, key=lambda key: (-ranks[key], order[key]))]
 
