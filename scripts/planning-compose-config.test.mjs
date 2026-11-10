@@ -27,3 +27,24 @@ test('planning distribution isolates credentials, engine and persistent syntheti
   assert.equal(services.backend.secrets, undefined)
   assert.equal(services.frontend.secrets, undefined)
 })
+
+test('semantic overlay gates serving on explicit index completion without exposing PostgreSQL', () => {
+  const result = spawnSync('docker', ['compose', '--env-file', '/dev/null', '-f', 'compose.planning.yaml', '-f', 'compose.planning-rag.yaml', 'config', '--format', 'json'], {
+    encoding: 'utf8', env: { PATH: process.env.PATH, AWS_BEARER_TOKEN_BEDROCK: 'synthetic-config-only' },
+  })
+  assert.equal(result.status, 0, result.stderr)
+  const { services, volumes } = JSON.parse(result.stdout)
+  assert.equal(services['vector-db'].ports, undefined)
+  assert.equal(services['rag-index'].network_mode, 'service:backend')
+  assert.deepEqual(services['rag-index'].command.slice(-1), ['rag_ingest.py'])
+  assert.equal(services.engine.depends_on['rag-index'].condition, 'service_completed_successfully')
+  assert.equal(services['rag-index'].environment.SUM_RAG_SOURCE, 'local')
+  for (const name of ['rag-index', 'engine']) {
+    assert.equal(services[name].environment.SUM_RAG_EMBEDDING_MODEL, 'amazon.titan-embed-text-v2:0')
+    assert.equal(services[name].environment.SUM_RAG_EMBEDDING_DIMENSIONS, '1024')
+    assert.equal(services[name].environment.SUM_RAG_DATABASE_URL, services.engine.environment.SUM_RAG_DATABASE_URL)
+    assert.equal(services[name].environment.AWS_BEARER_TOKEN_BEDROCK, undefined)
+    assert.equal(services[name].environment.AWS_BEARER_TOKEN_BEDROCK_FILE, '/run/secrets/bedrock_api_key')
+  }
+  assert.ok(volumes['normative-vectors'])
+})

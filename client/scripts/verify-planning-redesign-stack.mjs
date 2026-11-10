@@ -13,6 +13,8 @@ const ports = {
   web: Number(process.env.SUM_REDESIGN_WEB_PORT || 5436),
 }
 if (new Set(Object.values(ports)).size !== 3 || Object.values(ports).some(port => !Number.isInteger(port) || port < 1024 || port > 65535)) throw new Error('Three distinct valid unprivileged ports required')
+const testScript = process.env.SUM_REDESIGN_TEST_SCRIPT || 'verify-planning-redesign.mjs'
+if (!['verify-planning-redesign.mjs', 'verify-planning-normative.mjs'].includes(testScript)) throw new Error('Unknown synthetic acceptance script')
 const evidence = resolve(process.env.SUM_REDESIGN_EVIDENCE || resolve(root, 'evidence/local/planning-redesign-2026-11-09'))
 for (const port of Object.values(ports)) await new Promise((accept, reject) => {
   const server = createServer()
@@ -58,7 +60,7 @@ try {
   })
   await ready(`http://127.0.0.1:${ports.web}/local/programacion-academica`, frontend)
   console.log(`Own synthetic stack ready; fresh draft store ${draftDir}; LLM disabled`)
-  const tester = spawn(process.execPath, ['scripts/verify-planning-redesign.mjs'], { cwd: resolve(root, 'client'), env: {
+  const tester = spawn(process.execPath, [`scripts/${testScript}`], { cwd: resolve(root, 'client'), env: {
     ...env, SUM_REDESIGN_SYNTHETIC: '1', SUM_REDESIGN_BASE: `http://127.0.0.1:${ports.web}`,
     SUM_REDESIGN_EVIDENCE: evidence,
   }, stdio: 'inherit' })

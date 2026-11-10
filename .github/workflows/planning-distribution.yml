@@ -2,10 +2,10 @@ name: Planning distribution
 
 on:
   pull_request:
-    paths: ['planning-engine/**', 'compose.planning.yaml', 'backend/Dockerfile', 'client/Dockerfile', '.dockerignore', 'scripts/*planning*', '.github/workflows/planning-distribution.yml']
+    paths: ['planning-engine/**', 'compose.planning*.yaml', 'backend/Dockerfile', 'client/Dockerfile', '.dockerignore', 'scripts/*planning*', '.github/workflows/planning-distribution.yml']
   push:
     branches: [master]
-    paths: ['planning-engine/**', 'compose.planning.yaml', 'backend/Dockerfile', 'client/Dockerfile', '.dockerignore', 'scripts/*planning*', '.github/workflows/planning-distribution.yml']
+    paths: ['planning-engine/**', 'compose.planning*.yaml', 'backend/Dockerfile', 'client/Dockerfile', '.dockerignore', 'scripts/*planning*', '.github/workflows/planning-distribution.yml']
 
 permissions:
   contents: read

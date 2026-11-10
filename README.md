@@ -18,6 +18,8 @@ docker compose -f compose.planning.yaml up --build -d --wait
 Abre http://localhost:5180/local/programacion-academica.
 [Guía de instalación, clave y actualización](docs/deployment/planning.md).
 Incluye web, API, motor Python y borradores persistentes con datos sintéticos.
+La guía incluye la variante con embeddings Bedrock y pgvector; la ingesta es
+explícita y utiliza la misma API key.
 
 ## Simulador PostgreSQL y Grafana: un comando
 

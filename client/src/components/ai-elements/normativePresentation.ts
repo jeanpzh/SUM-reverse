@@ -12,4 +12,3 @@ export function uniqueNormativeCitations(citations: AcademicNormativeResponse['c
     return true
   })
 }
-
