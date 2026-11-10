@@ -337,7 +337,7 @@ callers remain valid):
   sections produce one `additional-teacher` row per course with their total
   minutes. IDs are `teacher-load-exception:<teacherId>` and
   `additional-teacher:<courseId>`, in that order and sorted by resource ID.
-  Every decision has `basis: capacity-relaxation`: these are necessary capacity
+  Every capacity decision has `basis: capacity-relaxation`: these are necessary capacity
   concessions, not promises of feasible timetable placement. If any concession
   optimization is unproven, no minimal decisions are claimed and diagnostic
   `CAPACITY_ANALYSIS_LIMIT` is emitted. The authorized certificate may still be
@@ -431,3 +431,91 @@ Actual command results:
 No contract deviation or outstanding implementation blocker. Live services,
 cloud calls, private datasets, browser/visual validation and downstream consumer
 integration were not used to establish these results.
+
+### T6a — window and delivery-mode options (2026-11-10)
+
+For sections already excluded by `NO_SCHEDULING_WINDOW`, the response appends
+counterfactual decisions **after** the unchanged capacity decisions, in this order:
+
+1. `planning-window:afternoon`, kind `planning-window`, with
+   `policyChange: { allowAfternoon: true }` when afternoon is not already allowed.
+2. `planning-window:saturday`, same kind, with
+   `policyChange: { allowSaturday: true }` when Saturday is not already allowed.
+3. `delivery-mode-split`, kind `delivery-mode-split`, for continuous courses only.
+4. `planning-window:combined`, kind `planning-window`, for sections that none of
+   the single changes unlocks but the combination unlocks.
+
+Each single change is evaluated independently. A section unlocked by two options
+counts in both; counts must not be summed as disjoint gains. Only nonempty
+options are returned. All have `basis: window-precheck`, `teacherId: null`,
+`exceptionKind: null`, `additionalMinutes: 0`, sorted affected `courseIds`, and
+`sectionsUnlocked` counting excluded sections that gain a permitted window for
+every block. `policyChange` omits null flags and is absent on delivery-mode and
+capacity decisions. Its flag model is shared with the existing advisor patch.
+
+The combined option enables **all currently disabled policy flags** and evaluates
+each component separately for continuous courses. Its `policyChange` lists those
+flags, while the deterministic `:combined` ID also denotes the split assumption;
+the fixed contract has no separate split field on this decision. Already enabled
+flags and already split modes remain enabled. This is an all-changes comparison,
+not a claim that each participating change is individually necessary or that the
+combination is minimal. Sections that still fail produce one
+`WINDOW_RELAXATION_INSUFFICIENT` diagnostic listing their session IDs.
+
+The analysis reuses the precheck's `planning_time_rank`, request windows, start
+grid and continuous/individual durations. It checks only window existence, not
+teacher/room availability, capacity, clashes or joint component placement.
+Results are necessary conditions, not feasible-timetable promises, rankings or
+automatically selected changes. Upper-cycle window criteria remain `testimony`
+without a located regulation, as recorded in
+[`0003`](../docs/adr/0003-regulated-load-exceptions-and-lexicographic-prelation.md)
+and the normative-engine plan's
+[`Resultado de T2`](../docs/reverse-engineering/plans/programacion-academica-normative-engine.md#resultado-de-t2).
+This is a local product decision, not observed SUM behavior. No UI or design
+direction changes are authorized by this ticket.
+
+Explanation runs after timetable construction, under the original request
+deadline, with request-local memoization and no additional CP-SAT solve. It never
+changes the request, assignments, status, coverage proof, certificate, capacity
+decisions or prelation. No window exclusions means no new information. Additive
+deadline behavior: `WINDOW_ANALYSIS_LIMIT` lists the excluded session IDs if the
+budget expires; no partial options or insufficient-window conclusions are then
+claimed. This explicit diagnostic extends the ticket's diagnostic list to honor
+its deadline requirement without misrepresenting unfinished analysis.
+
+Synthetic acceptance record (independently invented tiny fixtures in
+`test_window_decisions.py`; no private data, services or provider calls):
+
+| Criterion | Pytest check | Expected → actual |
+| --- | --- | --- |
+| 1. Afternoon only | `test_afternoon_option_does_not_schedule_afternoon` | One afternoon decision, count 1/course X, no assignments or request mutation → passed |
+| 2. Saturday only | `test_saturday_option_does_not_schedule_saturday` | One Saturday decision, count 1/course X, no Saturday assignments → passed |
+| 3. Split only | `test_split_option_does_not_change_continuous_delivery` | One split decision; request stays continuous, no split assignments → passed |
+| 4. Independent counts | `test_single_options_count_the_same_section_independently` | One section counted by both afternoon and Saturday → passed |
+| 5. Combined / insufficient | `test_combination_and_insufficient_options_report_only_their_sections` | Combined unlocks X; insufficient diagnostic lists only Y's session → passed |
+| 6. Already allowed | `test_already_allowed_afternoon_is_not_offered` | No afternoon option → passed |
+| 7. Capacity compatibility | Unmodified `test_capacity_prelation.py` | 17 tests pass; 17 responses separately compared with baseline `a768ce4`, matching assignments, status, coverage, certificate, capacity decisions, prelation, limit reason and old diagnostics → passed |
+| 8. Engine/advisor/scale regression | `test_engine.py`, `test_advisor_agent.py`, `test_solver_scale.py` | All pass in the commands below |
+| Wire compatibility, aggregation, empty options and boundaries | Remaining window tests | Null policy keys omitted; sorted course IDs and section counts; already active split not offered; no exclusions give no options; start grid and Sunday unchanged → passed |
+| Deadline | `test_expired_budget_keeps_schedule_and_does_not_claim_options` | Original proven result retained; explicit analysis-limit diagnostic without unsupported options → passed |
+
+Executed with `UV_OFFLINE=1 UV_FROZEN=1` so only locked, cached dependencies
+were used:
+
+```text
+nice uv run --directory planning-engine pytest test_window_decisions.py test_capacity_prelation.py test_engine.py test_advisor_agent.py -q
+50 passed, 1 warning in 1.43s
+
+nice uv run --directory planning-engine pytest test_solver_scale.py -q
+5 passed, 1 warning in 7.85s
+```
+
+The warning is the existing upstream `langchain-community` deprecation. Scale
+suite executed once. A throwaway script in `/tmp` reused the scale fixture
+(`scale_request.__wrapped__()`), without adding a test or changing its data:
+56 synthetic courses / 166 sections / 332 sessions; 18 excluded sections;
+afternoon unlocks **18**, Saturday **0**, split **18**, combined-only **0**;
+no insufficient-relaxation diagnostic. The measured window analysis took
+**0.387 ms** against the 800 ms request budget. The options concern the same
+18 sections and do not constitute 36 unlocked sections. Disk free space stayed
+above 1.8 GB during execution; no additional repository copy was created.
