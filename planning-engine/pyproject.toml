@@ -1,0 +1,22 @@
+[project]
+name = "planning-engine"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "boto3>=1.43.126",
+    "fastapi>=0.162.2",
+    "fastembed>=0.9.1",
+    "httpx>=0.28.1",
+    "langchain>=1.4.9",
+    "langchain-aws>=1.9.2",
+    "langchain-community>=0.4.2",
+    "langchain-core>=1.7.6",
+    "langchain-ollama>=1.1.0",
+    "langchain-openai>=1.7.4",
+    "langchain-postgres>=0.0.19",
+    "ortools>=9.15.6755",
+    "psycopg[binary,pool]>=3.3.8",
+    "pytest>=9.2.0",
+    "rank-bm25>=0.2.2",
+    "uvicorn[standard]>=0.54.0",
+]

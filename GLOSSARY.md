@@ -15,3 +15,9 @@ Términos del dominio de la programación académica interna (`/local/programaci
 **Acción principal**: la única acción destacada que la Sesión de programación calcula para la etapa actual según el estado (decisión local, `local-only`).
 
 **Etapa**: Preparación, Horario, Revisión docente o Aprobación. Preparación tiene las vistas Resumen, Cursos y Recursos.
+
+**Consejero de planificación**: diagnóstico asistido sobre una **Propuesta** con **Pendientes** que explica cuellos de botella de recursos o política y sugiere **Recomendaciones** sin asignar horarios por su cuenta.
+_Evitar_: generador IA, solver IA, copiloto de horarios
+
+**Recomendación**: ajuste candidato y verificable sobre el workspace (carga docente, habilitación de curso, excepción horaria o modalidad de entrega) que el planificador confirma para que el motor determinista regenere la **Propuesta**.
+_Evitar_: auto-corrección, asignación automática IA
