@@ -1,7 +1,7 @@
 import { PlanningFetchLoading } from '../components/PlanningFetchLoading'
 import type { AcademicAdvisorPatch, AcademicAdvisorResponse, AcademicProposal, PlanningPeriod } from '../data/academicScheduling'
 import { academicSectionCoverage, academicSectionLabel, defaultAcademicAdvisorSelection, academicSessionLabel, fetchAcademicProposalAdvice, formatAcademicDuration, hasCurrentAdvisorImpact } from '../data/academicScheduling'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/Dialog'
 import './PlanningStatusBar.css'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../components/ui/Sheet'
@@ -32,6 +32,7 @@ export interface PlanningStatusBarProps {
   roomNames?: Record<string, string>
   isDraft?: boolean
   isLocked?: boolean
+  advisorDisabledReason?: string
 }
 
 function countAssignedConflicts(assignments: AcademicProposal['assignments']): number {
@@ -81,7 +82,8 @@ function resultWording(proposal: AcademicProposal) {
   return { badgeText, headline, subtext, diagnosisText }
 }
 
-export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatches, teacherNames = {}, courseNames = {}, roomNames = {}, isLocked = false }: PlanningStatusBarProps) {
+export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatches, teacherNames = {}, courseNames = {}, roomNames = {}, isLocked = false, advisorDisabledReason }: PlanningStatusBarProps) {
+  const advisorDisabledReasonId = useId()
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
   const [advisorOpen, setAdvisorOpen] = useState(false)
   const [advisorLoading, setAdvisorLoading] = useState(false)
@@ -169,7 +171,13 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
         <span className="planning-status-bar__fact">{conflicts} cruces en lo asignado</span></div>
         <div className="planning-status-bar__actions">
           {proposal.diagnostics.length > 0 && <Button type="button" variant="link" size="sm" aria-haspopup="dialog" onClick={() => setDiagnosticsOpen(true)}>Ver avisos ({proposal.diagnostics.length})</Button>}
-          {(coverage.partial + coverage.pending) > 0 && onApplyAdvisorPatches && <Button type="button" variant="outline" size="sm" disabled={isLocked} onClick={() => void openAdvisor()}>Consultar consejero</Button>}
+          {(coverage.partial + coverage.pending) > 0 && onApplyAdvisorPatches && <>
+            <Button type="button" variant="outline" size="sm" disabled={isLocked}
+              aria-describedby={isLocked && advisorDisabledReason ? advisorDisabledReasonId : undefined}
+              onClick={() => void openAdvisor()}>Consultar consejero</Button>
+            {isLocked && advisorDisabledReason && <span id={advisorDisabledReasonId} role="status"
+              className="text-sm text-muted-foreground">{advisorDisabledReason}</span>}
+          </>}
         </div>
       </div>
       {(subtext || diagnosisText) && <p className="planning-status-bar__subtext">{subtext ?? diagnosisText}</p>}
