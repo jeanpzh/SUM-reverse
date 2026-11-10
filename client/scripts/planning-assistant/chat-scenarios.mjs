@@ -108,6 +108,8 @@ export const chatScenarios = [
     await send(page).click()
     await answers(page).waitFor()
     await page.setViewportSize({ width: 390, height: 844 })
+    await page.waitForFunction(() => document.querySelector('#planning-toggle-chat')?.getAttribute('aria-expanded') === 'false')
+    await page.locator('#planning-toggle-chat').click()
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
     await page.getByRole('button', { name: 'Cerrar asistente', exact: true }).click()
     await page.locator('#planning-toggle-chat').click()
