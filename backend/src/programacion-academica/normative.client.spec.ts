@@ -17,6 +17,18 @@ describe('normative HTTP client; independent synthetic responses', () => {
     }) as typeof fetch
     expect(await queryNormative(request, fetcher)).toEqual(result)
   })
+  it('forwards the bounded antecedent and accepts the optional next step', async () => {
+    const followUp = { ...request, previousQuestion: 'Pregunta anterior' }
+    const answered = { ...result, nextStep: 'Verifica la vigencia de la disposición.' }
+    const fetcher = ((_url: string, init: RequestInit) => {
+      expect(JSON.parse(init.body as string)).toEqual(followUp)
+      return Promise.resolve(Response.json(answered))
+    }) as typeof fetch
+    expect(await queryNormative(followUp, fetcher)).toEqual(answered)
+  })
+  it('rejects a blank antecedent before sending', async () => {
+    await expect(queryNormative({ ...request, previousQuestion: '  ' }, (() => { throw new Error('Must not send') }) as typeof fetch)).rejects.toMatchObject({ status: 400 })
+  })
   it('fails explicitly on network, malformed response and mismatched context', async () => {
     for (const fetcher of [() => Promise.reject(new Error('Synthetic timeout')), () => Promise.resolve(new Response('', { status: 500 })), () => Promise.resolve(Response.json({ ...result, question: 'otra consulta' })), () => Promise.resolve(Response.json({ ...result, approved: true }))]) {
       await expect(queryNormative(request, fetcher as typeof fetch)).rejects.toMatchObject({ status: 502 })

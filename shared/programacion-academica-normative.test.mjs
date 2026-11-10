@@ -3,12 +3,23 @@ import assert from 'node:assert/strict'
 import { validateAcademicNormativeRequest, validateAcademicNormativeResponse } from './programacion-academica-api.mjs'
 const req = { question: 'carga lectiva', facultyId: 'FISI', academicPeriod: '2027-I', asOf: '2026-11-08', teacherType: 'unknown' }
 const response = { revision: 'PA-NORMATIVE-1', question: req.question, context: { facultyId: 'FISI', academicPeriod: req.academicPeriod, asOf: req.asOf, teacherType: req.teacherType }, status: 'not-determined', answer: 'Sin evidencia; no concede autorización.', retrievalMode: 'unavailable', citations: [], gaps: ['Corpus parcial'] }
+test('bounded previous user question is optional and stays out of response context', () => {
+  const contextual = { ...req, previousQuestion: '¿Cuánto dura la hora académica?' }
+  validateAcademicNormativeRequest(contextual)
+  validateAcademicNormativeResponse(response, contextual)
+  for (const previousQuestion of ['', ' ', 'x'.repeat(1001), [], null]) {
+    assert.throws(() => validateAcademicNormativeRequest({ ...req, previousQuestion }))
+  }
+  assert.throws(() => validateAcademicNormativeResponse({ ...response, context: { ...response.context, previousQuestion: 'otra' } }))
+})
 test('strict normative request: dates, bounds and unknown fields', () => {
   validateAcademicNormativeRequest(req)
   for (const patch of [{ question: ' ' }, { question: 'x'.repeat(1001) }, { asOf: '2026-02-30' }, { asOf: '2026-1-01' }, { facultyId: 'OTHER' }, { filePath: '/tmp/x' }, { url: 'https://invalid' }, { teacherType: 'principal' }]) assert.throws(() => validateAcademicNormativeRequest({ ...req, ...patch }))
 })
 test('response identity, explicit gaps and status cannot imply approval', () => {
   validateAcademicNormativeResponse(response, req)
+  validateAcademicNormativeResponse({ ...response, nextStep: 'Verifica el acuerdo del periodo.' }, req)
+  for (const nextStep of ['', ' ', 'x'.repeat(501), null, []]) assert.throws(() => validateAcademicNormativeResponse({ ...response, nextStep }, req))
   for (const patch of [{ revision: 'other' }, { context: { ...response.context, asOf: '2027-01-01' } }, { question: 'otra' }, { status: 'supported' }, { extra: true }, { retrievalMode: 'semantic' }, { answer: 'x'.repeat(6001) }]) assert.throws(() => validateAcademicNormativeResponse({ ...response, ...patch }, req))
 })
 test('citations require reviewed HTTPS allowlist and physical page', () => {
