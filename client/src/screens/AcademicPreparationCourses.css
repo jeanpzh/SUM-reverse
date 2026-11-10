@@ -37,7 +37,7 @@ fieldset.academic-scheduling__locked-workspace {
   display: flex;
   flex-direction: column;
   gap: calc(var(--planning-spacing) * 1);
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-sm);
   font-weight: 500;
   color: var(--planning-text);
 }
@@ -46,7 +46,7 @@ fieldset.academic-scheduling__locked-workspace {
   display: flex;
   flex-direction: column;
   gap: calc(var(--planning-spacing) * 1);
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-sm);
   font-weight: 500;
   color: var(--planning-text);
 }
@@ -58,7 +58,7 @@ fieldset.academic-scheduling__locked-workspace {
   align-items: center;
   gap: calc(var(--planning-spacing) * 3);
   padding: 0;
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-sm);
   font-variant-numeric: tabular-nums;
   color: var(--planning-text);
 }
@@ -70,7 +70,7 @@ fieldset.academic-scheduling__locked-workspace {
 }
 
 .academic-preparation__counter-item strong {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--planning-muted);
 }
 
@@ -116,7 +116,7 @@ fieldset.academic-scheduling__locked-workspace {
 .academic-preparation__table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: var(--planning-text-sm);
   color: var(--planning-text);
   text-align: left;
 }
@@ -124,7 +124,7 @@ fieldset.academic-scheduling__locked-workspace {
 .academic-preparation__group-row th {
   background: var(--planning-canvas);
   color: var(--planning-text);
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-sm);
   font-weight: 700;
   text-transform: none;
   letter-spacing: normal;
@@ -162,25 +162,26 @@ fieldset.academic-scheduling__locked-workspace {
 .academic-preparation__course-cell {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 180px;
+  gap: 0;
+  min-width: 0;
 }
 
 .academic-preparation__course-cell strong {
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: var(--planning-text-sm);
+  font-weight: 700;
   color: var(--planning-text);
   line-height: 1.3;
 }
 
 .academic-preparation__course-code {
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-xs);
+  white-space: nowrap;
   font-family: monospace;
   color: var(--planning-muted);
 }
 
 .academic-preparation__num-input {
-  width: 5.5rem;
+  width: 100%; min-width: 0; box-sizing: border-box;
   text-align: right;
 }
 
@@ -206,7 +207,7 @@ fieldset.academic-scheduling__locked-workspace {
   background: var(--planning-warning-surface);
   border: 1px solid var(--planning-warning);
   border-radius: var(--planning-radius-control);
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-sm);
   color: var(--planning-warning);
   line-height: 1.35;
 }
@@ -221,7 +222,7 @@ fieldset.academic-scheduling__locked-workspace {
   display: flex;
   flex-direction: column;
   gap: calc(var(--planning-spacing) * 1);
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-sm);
   font-weight: 500;
   color: var(--planning-text);
 }
@@ -247,14 +248,14 @@ fieldset.academic-scheduling__locked-workspace {
 
 .academic-preparation__modal-title {
   margin: 0;
-  font-size: 1.125rem;
-  font-weight: 600;
+  font-size: var(--planning-text-lg);
+  font-weight: 700;
   color: var(--planning-text);
 }
 
 .academic-preparation__modal-subtitle {
   margin: calc(var(--planning-spacing) * 1) 0 0;
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-sm);
   color: var(--planning-muted);
 }
 
@@ -285,7 +286,7 @@ fieldset.academic-scheduling__locked-workspace {
   display: inline-flex;
   align-items: center;
   gap: calc(var(--planning-spacing) * 1.5);
-  font-size: 0.875rem;
+  font-size: var(--planning-text-sm);
   font-weight: 500;
   color: var(--planning-text);
   cursor: pointer;
@@ -300,13 +301,13 @@ fieldset.academic-scheduling__locked-workspace {
 .academic-preparation__preview-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-sm);
 }
 
 .academic-preparation__preview-status--excluded {
   color: var(--planning-error);
-  font-weight: 600;
-  font-size: 0.8125rem;
+  font-weight: 700;
+  font-size: var(--planning-text-sm);
 }
 
 .academic-preparation__modal-footer {
@@ -393,7 +394,7 @@ fieldset.academic-scheduling__locked-workspace {
 }
 
 .planning-root .academic-demand__heading h4 {
-  font-size: 18px;
+  font-size: var(--planning-text-lg);
 }
 
 .planning-root .academic-demand__course-heading {
@@ -419,3 +420,46 @@ fieldset.academic-scheduling__locked-workspace {
   color: var(--planning-muted);
   background: transparent;
 }
+
+/* Preparation uses the workspace surface; the table and lower detail scroll independently. */
+.academic-preparation-view { min-width: 0; max-width: 100%; }
+.academic-preparation__toolbar { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; }
+.academic-preparation__period { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
+.academic-preparation__period > label { min-width: 0; }
+.academic-preparation__search-field { flex: 1 1 12rem; min-width: min(100%, 12rem); }
+.academic-preparation__cycle-filter { flex: 0 1 12rem; }
+.academic-preparation__actions-row { margin-left: auto; gap: 8px; }
+.academic-preparation__counters { margin: -8px 0 0; font-size: var(--planning-text-xs); line-height: 16px; color: var(--planning-muted); }
+.academic-preparation__split { flex: 1; min-height: 0; }
+.academic-preparation__table-panel { min-width: 0; }
+.academic-preparation__table-panel .academic-preparation__table-pane { height: 100%; }
+.academic-preparation__table-panel .academic-preparation__table-wrapper { max-height: none; height: 100%; }
+.academic-preparation__table { table-layout: fixed; min-width: 0; }
+.planning-root .academic-preparation__table [data-slot='table-cell'] { height: 40px; padding: 4px 8px; }
+.planning-root .academic-preparation__table [data-slot='table-head'] { padding: 8px; font-size: var(--planning-text-sm); }
+.planning-root .academic-preparation__table .academic-preparation__num-input { height: 32px; padding: 4px 8px; text-align: right; }
+.academic-preparation__th-select, .academic-preparation__td-select { width: 48px; }
+.planning-root .academic-preparation__table .academic-scheduling__selection { margin: 0; justify-content: center; }
+.planning-root .academic-preparation__inspector.planning-inspector--docked { position: static; width: 100%; height: 100%; max-height: none; padding: 16px; box-sizing: border-box; box-shadow: none; z-index: auto; }
+.academic-preparation__detail-pane { min-height: 0; overflow: auto; }
+.planning-root .academic-preparation__course-sheet { width: min(100%, 36rem); padding: 0; overflow-y: auto; }
+.academic-preparation__inspector-body .academic-scheduling__history-section { margin: 0; }
+@media (max-width: 1023px) {
+  .academic-preparation__split { min-height: 24rem; }
+}
+
+.academic-preparation__workbench { flex: 1; min-height: 0; align-items: stretch; }
+.academic-preparation__table-pane { min-height: 0; }
+.academic-preparation__table :is(th, td) { overflow-wrap: normal; white-space: normal; }
+.academic-preparation__table :is(th, td):nth-child(1) { width: 48px; }
+.academic-preparation__table :is(th, td):nth-child(2) { width: 40px; }
+.academic-preparation__table :is(th, td):nth-child(n+4) { width: 88px; }
+.academic-preparation__course-code { white-space: normal; overflow-wrap: anywhere; }
+.academic-demand__summary-trigger { flex-shrink: 0; align-self: flex-start; }
+
+.planning-root .academic-preparation__table thead [data-slot='table-head'] { padding: 8px 4px; }
+.academic-preparation__num-input { appearance: textfield; }
+.academic-preparation__num-input::-webkit-inner-spin-button,
+.academic-preparation__num-input::-webkit-outer-spin-button { appearance: none; margin: 0; }
+
+.academic-preparation__table :is(th, td):nth-child(7) { width: 88px; }

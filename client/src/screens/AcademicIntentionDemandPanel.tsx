@@ -1,3 +1,4 @@
+import { PlanningFetchLoading } from '../components/PlanningFetchLoading'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '../components/ui/Button'
 import { NativeSelect } from '../components/ui/NativeSelect'
@@ -88,6 +89,7 @@ export function AcademicIntentionDemandPanel({ dirty, busy, onFork, potential, f
             <Button variant="outline" type="button" disabled={!publicationId || loading} onClick={() => void query()}>{loading ? 'Consultando…' : 'Consultar intenciones'}</Button>
             <Button variant="outline" type="button" disabled={!publication || busy} onClick={fork}>Crear borrador E1 de esta publicación</Button>
           </div>
+          {loading && <PlanningFetchLoading label="Consultando intenciones…" layout="intention-table" />}
           {error && <Alert variant="destructive" role="alert">{error}</Alert>}
           {publication && <p className="academic-intention-demand__publication">{publication.title} · SISTEMAS · 2027-I · publicación v{publication.publicationVersion} · aprobada v{publication.approvedVersion}</p>}
           {demand && <>

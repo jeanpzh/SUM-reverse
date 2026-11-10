@@ -26,7 +26,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { validateAcademicRequest, validateAcademicResources, validateAcademicWorkspace } from '../../../shared/programacion-academica-api.mjs'
 import type {
-  AcademicAdjustment, AcademicAllocationPolicy, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest,
+  AcademicAdjustment, AcademicAdvisorPatch, AcademicAllocationPolicy, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest,
   AcademicDemandSourceId, AcademicDraftList, AcademicDraftResume, AcademicDraftSaveRequest, AcademicDraftState,
   AcademicPlanningResources, AcademicProposal, AcademicPublicationRequest, AcademicRequest, AcademicReviewDecision,
   AcademicReviewSubmission, AcademicSavedDraft, AcademicTeacherReview, AcademicWorkspace,
@@ -35,7 +35,7 @@ import {
   PLANNING_LIMITS, academicPlanningErrorMessage, academicSectionCoverage, adjustAcademicProposal, aggregateAcademicBlocks, approveAcademicDraft,
   buildAcademicPlanningRequest, createAcademicPlanningDefaults, createAcademicProposal, estimateAcademicDemand,
   fetchAcademicCatalog, fetchAcademicDrafts, forkAcademicDraft, publishAcademicDraft, respondAcademicTeacherReview,
-  resumeAcademicDraft, saveAcademicDraft, submitAcademicTeacherReview,
+  resumeAcademicDraft, saveAcademicDraft, submitAcademicTeacherReview, syntheticTeachingMetadata,
 } from './academicScheduling.ts'
 import type { PlanningPeriod, PlanningPolicy } from './academicScheduling.ts'
 
@@ -144,6 +144,7 @@ export type PlanningSessionEvent =
   | { type: 'updateResources'; value: AcademicPlanningResources }
   | { type: 'updateAllocationPolicy'; value: AcademicAllocationPolicy }
   | { type: 'updatePlanningException'; key: 'allowAfternoon' | 'allowSaturday'; checked: boolean }
+  | { type: 'applyAdvisorPatches'; patches: AcademicAdvisorPatch[] }
   | { type: 'applyPeriodDefaults'; period: PlanningPeriod; force?: boolean }
   | { type: 'setTitle'; title: string }
   | { type: 'setDraftState'; state: AcademicDraftState }
@@ -297,6 +298,78 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
         allowAfternoon: state.policy?.allowAfternoon ?? false, allowSaturday: state.policy?.allowSaturday ?? false,
         [event.key]: event.checked }
       return { ...markDirty(invalidateProposal(state), true), policy }
+    }
+    case 'applyAdvisorPatches': {
+      if (!event.patches.length) return state
+      let nextResources = cloneResources(state.resources)
+      let nextPolicy: PlanningPolicy | null = state.policy ? { ...state.policy } : null
+      const nextDeliveryModes = { ...state.deliveryModes }
+      const defaultWindows = [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 }))
+
+      for (const patch of event.patches) {
+        if (patch.kind === 'increase_teacher_load') {
+          const loadMap = new Map(patch.adjustments.map((item) => [item.teacherId, Math.min(2400, item.nextMaxWeeklyMinutes)]))
+          nextResources = {
+            ...nextResources,
+            teachers: nextResources.teachers.map((teacher) => {
+              const targetLoad = loadMap.get(teacher.id)
+              return targetLoad !== undefined && targetLoad > teacher.maxWeeklyMinutes
+                ? { ...teacher, maxWeeklyMinutes: targetLoad }
+                : teacher
+            }),
+          }
+        } else if (patch.kind === 'enable_planning_window') {
+          nextPolicy ??= { revision: 'FISI-PLANNING-1', period: state.period, allowAfternoon: false, allowSaturday: false }
+          if (patch.allowAfternoon) nextPolicy = { ...nextPolicy, allowAfternoon: true }
+          if (patch.allowSaturday) nextPolicy = { ...nextPolicy, allowSaturday: true }
+        } else if (patch.kind === 'change_delivery_mode') {
+          for (const courseId of patch.courseIds) {
+            nextDeliveryModes[courseId] = 'split'
+          }
+        } else if (patch.kind === 'incorporate_reference_resource' && state.catalog) {
+          const existingTeacherIds = new Set(nextResources.teachers.map((t) => t.id))
+          const refTeachers = state.catalog.referenceTeachers ?? []
+          const addedTeachers = patch.teacherIds
+            .filter((id) => !existingTeacherIds.has(id))
+            .flatMap((id) => {
+              const refIndex = refTeachers.findIndex((t) => t.id === id)
+              if (refIndex < 0) return []
+              const ref = refTeachers[refIndex]!
+              return [{
+                ...ref,
+                courseIds: [...ref.courseIds],
+                maxWeeklyMinutes: 600,
+                ...syntheticTeachingMetadata(refIndex),
+                availability: defaultWindows.map((w) => ({ ...w })),
+              }]
+            })
+          const existingRoomIds = new Set(nextResources.rooms.map((r) => r.id))
+          const refRooms = state.catalog.referenceRooms ?? []
+          const addedRooms = patch.roomIds
+            .filter((id) => !existingRoomIds.has(id))
+            .flatMap((id) => {
+              const ref = refRooms.find((r) => r.id === id)
+              if (!ref) return []
+              return [{
+                id: ref.id,
+                name: ref.name,
+                capacity: ref.capacity,
+                kind: ref.kind,
+                availability: defaultWindows.map((w) => ({ ...w })),
+              }]
+            })
+          nextResources = {
+            teachers: [...nextResources.teachers, ...addedTeachers],
+            rooms: [...nextResources.rooms, ...addedRooms],
+          }
+        }
+      }
+      return {
+        ...markDirty(invalidateProposal(state), true),
+        resources: nextResources,
+        policy: nextPolicy,
+        deliveryModes: nextDeliveryModes,
+      }
     }
     case 'applyPeriodDefaults': {
       if (!state.catalog || (event.period === state.period && !event.force)) return state
@@ -536,6 +609,22 @@ export function derivePlanningPrimaryAction(state: PlanningSessionState, stage: 
   }
 }
 
+export type PlanningStepStatus = 'done' | 'current' | 'upcoming'
+
+// Local-only indicator for navigation. It reflects the saved state and the
+// presence of a usable proposal; it grants nothing and blocks nothing.
+export function derivePlanningProgress(state: Pick<PlanningSessionState, 'proposal' | 'draft'>): Record<PlanningStageId, PlanningStepStatus> {
+  const saved = state.draft.savedState
+  const order: PlanningStageId[] = ['preparacion', 'horario', 'revision', 'aprobacion']
+  if (saved === 'published') return { preparacion: 'done', horario: 'done', revision: 'done', aprobacion: 'done' }
+  const current: PlanningStageId = saved === 'approved' || saved === 'ready-for-approval' ? 'aprobacion'
+    : saved === 'in-review' ? 'revision'
+      : state.proposal && state.proposal.status !== 'invalid-input' ? 'horario' : 'preparacion'
+  const index = order.indexOf(current)
+  return Object.fromEntries(order.map((stage, position) =>
+    [stage, position < index ? 'done' : position === index ? 'current' : 'upcoming'])) as Record<PlanningStageId, PlanningStepStatus>
+}
+
 export function derivePlanningDraftLabel(state: Pick<PlanningSessionState, 'draft' | 'dirty'>): string {
   const { draft, dirty } = state
   if (dirty) return draft.id && draft.version !== null
@@ -559,7 +648,7 @@ export function derivePlanningView(state: PlanningSessionState) {
     invalidCourses,
     proposalComplete: proposalComplete(state.proposal),
     canSave: Boolean(state.catalog) && !state.busy.draft && !locked && offerValid,
-    disabledSaveReason: !state.catalog ? 'Catálogo local no disponible'
+    disabledSaveReason: !state.catalog ? state.busy.catalog ? 'Cargando catálogo local…' : 'Catálogo local no disponible'
       : locked ? 'Versión congelada de solo lectura'
         : !offerValid ? 'Demanda y capacidad requeridas' : null,
     displayedDraftState: state.dirty && state.draft.savedState === 'ready-for-approval' ? 'draft' as const
@@ -609,18 +698,31 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
   const commands = {
     edit: (event: Extract<PlanningSessionEvent, { type: 'toggleCourse' | 'selectCourses' | 'applyBulkChanges' | 'updateDemand'
       | 'updateCapacity' | 'changeDemandSource' | 'updatePattern' | 'updateDeliveryMode' | 'updateResources'
-      | 'updateAllocationPolicy' | 'updatePlanningException' | 'applyPeriodDefaults' | 'setTitle' | 'setDraftState'
+      | 'updateAllocationPolicy' | 'updatePlanningException' | 'applyAdvisorPatches' | 'applyPeriodDefaults' | 'setTitle' | 'setDraftState'
       | 'startBlockReview' | 'changeEditingBlock' | 'cancelBlockReview' | 'setDraftError'
       | 'setDraftMessage' }>) => dispatch(event),
+
+    async applyAdvisorPatchesAndRegenerate(patches: AcademicAdvisorPatch[], expected?: { proposalId: string; editVersion: number }) {
+      if (!patches.length || isPlanningDraftLocked(state) || state.busy.generate || state.busy.draft || state.busy.adjust) return false
+      if (expected && (state.proposal?.proposalId !== expected.proposalId
+        || (state.proposal.editVersion ?? 0) !== expected.editVersion)) {
+        throw new Error('La propuesta cambió. Consulta y simula de nuevo antes de aplicar recomendaciones.')
+      }
+      dispatch({ type: 'applyAdvisorPatches', patches })
+      return commands.generate()
+    },
 
     async loadCatalog() {
       dispatch({ type: 'catalog/started' })
       const controller = open('catalog')
       try {
-        dispatch({ type: 'catalog/succeeded', catalog: await client.fetchCatalog(controller.signal) })
+        const catalog = await client.fetchCatalog(controller.signal)
+        if (controller.signal.aborted) return
+        dispatch({ type: 'catalog/succeeded', catalog })
       } catch (error) {
-        dispatch({ type: 'catalog/failed', message: controller.signal.aborted ? null
-          : error instanceof Error ? academicPlanningErrorMessage(error) : 'No se pudo consultar el catálogo local.' })
+        if (controller.signal.aborted) return
+        dispatch({ type: 'catalog/failed', message: error instanceof Error
+          ? academicPlanningErrorMessage(error) : 'No se pudo consultar el catálogo local.' })
       }
     },
 

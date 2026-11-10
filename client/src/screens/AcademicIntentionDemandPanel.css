@@ -5,7 +5,7 @@
   padding-top: 12px;
   border-top: 1px solid var(--planning-border);
   color: var(--planning-text);
-  font-size: 14px;
+  font-size: var(--planning-text-sm);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
@@ -15,8 +15,8 @@
   align-items: center;
   gap: 8px;
   min-height: 40px;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: var(--planning-text-xl);
+  font-weight: 700;
   cursor: pointer;
   list-style: none;
 }
@@ -62,13 +62,13 @@
 }
 
 .academic-intention-demand__publication {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .academic-intention-demand__totals {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 20px;
+  gap: 8px 16px;
   margin: 0;
   color: var(--planning-muted);
 }
@@ -82,13 +82,13 @@
 .academic-intention-demand__totals dt {
   width: auto;
   flex: none;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .academic-intention-demand__totals dd {
   margin: 0;
   flex: none;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--planning-text);
 }
 
@@ -104,10 +104,19 @@
 .academic-intention-demand__distinction {
   margin: 8px 0 0;
   color: var(--planning-muted);
-  font-size: 13px;
+  font-size: var(--planning-text-xs);
 }
 
 .academic-intention-demand > summary:focus-visible {
   outline: 2px solid var(--planning-primary);
   outline-offset: 4px;
 }
+
+.academic-intention-demand :is(th, td) {
+  height: 40px;
+  padding: 8px 12px;
+  font-size: var(--planning-text-sm);
+  line-height: 20px;
+}
+.academic-intention-demand th { font-weight: 700; }
+.academic-intention-demand__publication { font-size: var(--planning-text-xs); }

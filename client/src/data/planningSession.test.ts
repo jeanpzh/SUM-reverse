@@ -5,7 +5,7 @@ import type {
   AcademicCatalog, AcademicDraftSaveRequest, AcademicProposal, AcademicSavedDraft, AcademicTeacherReview,
 } from '../../../shared/programacion-academica-api.mjs'
 import {
-  createPlanningSession, derivePlanningDraftLabel, derivePlanningPrimaryAction, initialPlanningSessionState, reducePlanningSession,
+  createPlanningSession, derivePlanningProgress, derivePlanningView, derivePlanningDraftLabel, derivePlanningPrimaryAction, initialPlanningSessionState, reducePlanningSession,
 } from './planningSession.ts'
 import type { PlanningBlock, PlanningSessionClient, PlanningSessionState } from './planningSession.ts'
 
@@ -96,6 +96,42 @@ test('catalog load applies period defaults without marking the workspace dirty',
   assert.equal(state.capacities.CS101, '45')
   assert.equal(state.resources.teachers.length, 1)
   assert.deepEqual(state.selectedCourses, [])
+})
+
+test('cancelled catalog request cannot finish the next catalog load', async () => {
+  const obsolete = deferred<AcademicCatalog>()
+  const current = deferred<AcademicCatalog>()
+  let calls = 0
+  const { client } = memoryClient({ fetchCatalog: () => ++calls === 1 ? obsolete.promise : current.promise })
+  const session = createPlanningSession(client)
+  const first = session.commands.loadCatalog()
+  const latest = session.commands.loadCatalog()
+  obsolete.reject(new DOMException('Synthetic cancelled request', 'AbortError'))
+  await first
+  assert.equal(session.getState().busy.catalog, true)
+  assert.equal(derivePlanningView(session.getState()).disabledSaveReason, 'Cargando catálogo local…')
+  current.resolve(catalog)
+  await latest
+  assert.equal(session.getState().catalog, catalog)
+  assert.equal(session.getState().busy.catalog, false)
+})
+
+test('obsolete catalog success cannot reset edits made after the current catalog loaded', async () => {
+  const obsolete = deferred<AcademicCatalog>()
+  const current = deferred<AcademicCatalog>()
+  let calls = 0
+  const { client } = memoryClient({ fetchCatalog: () => ++calls === 1 ? obsolete.promise : current.promise })
+  const session = createPlanningSession(client)
+  const first = session.commands.loadCatalog()
+  const latest = session.commands.loadCatalog()
+  current.resolve(catalog)
+  await latest
+  session.commands.edit({ type: 'toggleCourse', courseId: 'CS101', checked: true })
+  session.commands.edit({ type: 'updateDemand', courseId: 'CS101', value: '25' })
+  obsolete.resolve(catalog)
+  await first
+  assert.deepEqual(session.getState().selectedCourses, ['CS101'])
+  assert.equal(session.getState().demands.CS101, '25')
 })
 
 test('generate stores the proposal; a stale result after an invalidating edit is ignored', async () => {
@@ -353,4 +389,40 @@ test('save translates a title validation error without losing local edits', asyn
   assert.equal(session.getState().errors.draft, 'No se guardaron los cambios. Escribe un nombre para la propuesta.')
   assert.equal(session.getState().draft.title, '')
   assert.equal(session.getState().dirty, true)
+})
+
+
+test('planning progress starts at preparation without a usable proposal', () => {
+  const state = initialPlanningSessionState()
+  const expected = { preparacion: 'current', horario: 'upcoming', revision: 'upcoming', aprobacion: 'upcoming' }
+  assert.deepEqual(derivePlanningProgress(state), expected)
+  assert.deepEqual(derivePlanningProgress({ ...state, proposal: makeProposal({ status: 'invalid-input' }) }), expected)
+})
+
+test('planning progress reaches scheduling with a usable draft proposal', () => {
+  const state = initialPlanningSessionState()
+  for (const status of ['complete', 'search-limit', 'impossible'] as const) {
+    assert.deepEqual(derivePlanningProgress({ ...state, proposal: makeProposal({ status }) }),
+      { preparacion: 'done', horario: 'current', revision: 'upcoming', aprobacion: 'upcoming' })
+  }
+})
+
+test('planning progress derives review from the saved lifecycle', () => {
+  const state = initialPlanningSessionState()
+  assert.deepEqual(derivePlanningProgress({ ...state, draft: { ...state.draft, savedState: 'in-review' } }),
+    { preparacion: 'done', horario: 'done', revision: 'current', aprobacion: 'upcoming' })
+})
+
+test('planning progress reaches approval for ready and approved versions', () => {
+  const state = initialPlanningSessionState()
+  for (const savedState of ['ready-for-approval', 'approved'] as const) {
+    assert.deepEqual(derivePlanningProgress({ ...state, draft: { ...state.draft, savedState } }),
+      { preparacion: 'done', horario: 'done', revision: 'done', aprobacion: 'current' })
+  }
+})
+
+test('planning progress marks every step done after publication', () => {
+  const state = initialPlanningSessionState()
+  assert.deepEqual(derivePlanningProgress({ ...state, draft: { ...state.draft, savedState: 'published' } }),
+    { preparacion: 'done', horario: 'done', revision: 'done', aprobacion: 'done' })
 })

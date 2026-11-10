@@ -13,5 +13,5 @@
   border-radius: var(--planning-radius-panel);
   text-align: center;
   color: var(--planning-muted);
-  font-size: 0.875rem;
+  font-size: var(--planning-text-base);
 }

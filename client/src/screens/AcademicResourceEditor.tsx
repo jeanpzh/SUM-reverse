@@ -1,6 +1,8 @@
 import { useMemo, useRef, useState } from 'react'
+import { CircleCheck, CircleAlert, CircleMinus } from 'lucide-react'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs'
 import type { AcademicCatalog } from '../data/academicScheduling.ts'
-import { filterAcademicResources, PLANNING_LIMITS } from '../data/academicScheduling.ts'
+import { filterAcademicResources, formatAcademicInterval, PLANNING_LIMITS } from '../data/academicScheduling.ts'
 import type {
   AcademicInterval,
   AcademicPlanningResources,
@@ -581,63 +583,19 @@ export function AcademicResourceEditor({
 
 
   return (
-    <div className="academic-scheduling__resource-editor academic-resource-workbench">
-      {/* Navigation Tabs: Docentes vs Ambientes */}
-      <nav className="academic-resource-workbench__tabs" aria-label="Vistas de recursos">
-        <Button
-          variant="outline"
-          type="button"
-          className={`academic-resource-workbench__tab ${activeTab === 'teachers' ? 'academic-resource-workbench__tab--active' : ''}`}
-          aria-selected={activeTab === 'teachers'}
-          role="tab"
-          onClick={() => handleTabChange('teachers')}
-        >
-          Docentes ({teacherCounts.included} incluidos)
-        </Button>
-        <Button
-          variant="outline"
-          type="button"
-          className={`academic-resource-workbench__tab ${activeTab === 'rooms' ? 'academic-resource-workbench__tab--active' : ''}`}
-          aria-selected={activeTab === 'rooms'}
-          role="tab"
-          onClick={() => handleTabChange('rooms')}
-        >
-          Aulas y laboratorios ({roomCounts.included} incluidos)
-        </Button>
-      </nav>
-
+    <Tabs value={activeTab} onValueChange={(value) => handleTabChange(value as 'teachers' | 'rooms')} className="academic-scheduling__resource-editor academic-resource-workbench">
+      <TabsList className="academic-resource-workbench__tabs" aria-label="Vistas de recursos">
+        <TabsTrigger value="teachers">Docentes ({teacherCounts.included})</TabsTrigger>
+        <TabsTrigger value="rooms">Aulas y laboratorios ({roomCounts.included})</TabsTrigger>
+      </TabsList>
+      <TabsContent value={activeTab} className="academic-resource-workbench__tab-content">
       {/* Heading */}
       <div className="academic-resource-workbench__header">
-        <h4 className="academic-resource-workbench__title">
-          {activeTab === 'teachers' ? 'Docentes disponibles' : 'Aulas y laboratorios'}
-        </h4>
         <p className="academic-resource-workbench__subtitle">
           {activeTab === 'teachers'
-            ? 'Las referencias del catálogo representan supuestos de partida y no confirman disponibilidad institucional para el nuevo periodo.'
-            : 'El tipo identifica el recurso; no agrega requisitos de equipamiento por sesión. La disponibilidad editable es sintética.'}
+            ? 'Los nombres y disponibilidades de referencia son supuestos sintéticos; no confirman asignaciones institucionales para el nuevo periodo.'
+            : 'Los ambientes y su disponibilidad son sintéticos; el tipo no agrega requisitos de equipamiento por sesión ni confirma asignaciones institucionales.'}
         </p>
-      </div>
-
-      {/* Unequivocal Counters */}
-      <div className="academic-resource-workbench__counters" role="status" aria-label="Contadores de recursos">
-        <div className="academic-resource-workbench__counter-item">
-          <span className="academic-resource-workbench__counter-label">Referencias del catálogo:</span>
-          <span className="academic-resource-workbench__counter-value">
-            {activeTab === 'teachers' ? teacherCounts.references : roomCounts.references}
-          </span>
-        </div>
-        <div className="academic-resource-workbench__counter-item">
-          <span className="academic-resource-workbench__counter-label">Incorporados en borrador:</span>
-          <span className="academic-resource-workbench__counter-value">
-            {activeTab === 'teachers' ? teacherCounts.included : roomCounts.included}
-          </span>
-        </div>
-        <div className="academic-resource-workbench__counter-item">
-          <span className="academic-resource-workbench__counter-label">Visibles:</span>
-          <span className="academic-resource-workbench__counter-value">
-            {activeTab === 'teachers' ? teacherCounts.visible : roomCounts.visible}
-          </span>
-        </div>
       </div>
 
       {/* Toolbar: Search, Filters, Multi-actions & Under-demand additions */}
@@ -646,7 +604,7 @@ export function AcademicResourceEditor({
           {activeTab === 'teachers' ? (
             <>
               <div className="academic-resource-workbench__search-field">
-                <Label htmlFor="search-teachers-input">Buscar docente</Label>
+                <Label className="sr-only" htmlFor="search-teachers-input">Buscar docente</Label>
                 <Input
                   id="search-teachers-input"
                   type="search"
@@ -657,7 +615,7 @@ export function AcademicResourceEditor({
                 />
               </div>
               <div className="academic-resource-workbench__filter-field">
-                <Label htmlFor="filter-teachers-inclusion">Filtrar por inclusión</Label>
+                <Label className="sr-only" htmlFor="filter-teachers-inclusion">Filtrar por inclusión</Label>
                 <NativeSelect
                   id="filter-teachers-inclusion"
                   aria-label="Filtrar docentes por inclusión"
@@ -673,7 +631,7 @@ export function AcademicResourceEditor({
           ) : (
             <>
               <div className="academic-resource-workbench__search-field">
-                <Label htmlFor="search-rooms-input">Buscar ambiente</Label>
+                <Label className="sr-only" htmlFor="search-rooms-input">Buscar ambiente</Label>
                 <Input
                   id="search-rooms-input"
                   type="search"
@@ -684,7 +642,7 @@ export function AcademicResourceEditor({
                 />
               </div>
               <div className="academic-resource-workbench__filter-field">
-                <Label htmlFor="filter-rooms-kind">Tipo de ambiente</Label>
+                <Label className="sr-only" htmlFor="filter-rooms-kind">Tipo de ambiente</Label>
                 <NativeSelect
                   id="filter-rooms-kind"
                   aria-label="Filtrar por tipo de ambiente"
@@ -697,7 +655,7 @@ export function AcademicResourceEditor({
                 </NativeSelect>
               </div>
               <div className="academic-resource-workbench__filter-field">
-                <Label htmlFor="filter-rooms-inclusion">Filtrar por inclusión</Label>
+                <Label className="sr-only" htmlFor="filter-rooms-inclusion">Filtrar por inclusión</Label>
                 <NativeSelect
                   id="filter-rooms-inclusion"
                   aria-label="Filtrar ambientes por inclusión"
@@ -761,12 +719,12 @@ export function AcademicResourceEditor({
               ))}
             </NativeSelect>
           )}
-        </div>
 
         {/* Action buttons: Bulk selection & Add demo */}
         <div className="academic-resource-workbench__toolbar-actions">
           {activeTab === 'teachers' ? (
             <>
+              {selectedTeacherIds.length > 0 && (
               <Button
                 variant="outline"
                 type="button"
@@ -776,6 +734,8 @@ export function AcademicResourceEditor({
               >
                 Incorporar seleccionados ({selectedTeacherIds.length})
               </Button>
+              )}
+              {selectedTeacherIds.length > 0 && (
               <Button
                 variant="outline"
                 type="button"
@@ -785,6 +745,7 @@ export function AcademicResourceEditor({
               >
                 Retirar seleccionados ({selectedTeacherIds.length})
               </Button>
+              )}
               <Button
                 variant="outline"
                 type="button"
@@ -802,7 +763,7 @@ export function AcademicResourceEditor({
                 Deseleccionar visibles
               </Button>
               <Button
-                variant="outline"
+                variant="link"
                 type="button"
                 onClick={addTeacher}
                 disabled={isLocked || resources.teachers.length >= PLANNING_LIMITS.teachers}
@@ -812,6 +773,7 @@ export function AcademicResourceEditor({
             </>
           ) : (
             <>
+              {selectedRoomIds.length > 0 && (
               <Button
                 variant="outline"
                 type="button"
@@ -821,6 +783,8 @@ export function AcademicResourceEditor({
               >
                 Incorporar seleccionados ({selectedRoomIds.length})
               </Button>
+              )}
+              {selectedRoomIds.length > 0 && (
               <Button
                 variant="outline"
                 type="button"
@@ -830,6 +794,7 @@ export function AcademicResourceEditor({
               >
                 Retirar seleccionados ({selectedRoomIds.length})
               </Button>
+              )}
               <Button
                 variant="outline"
                 type="button"
@@ -847,7 +812,7 @@ export function AcademicResourceEditor({
                 Deseleccionar visibles
               </Button>
               <Button
-                variant="outline"
+                variant="link"
                 type="button"
                 onClick={() => addRoom('classroom')}
                 disabled={isLocked || resources.rooms.length >= PLANNING_LIMITS.rooms}
@@ -855,7 +820,7 @@ export function AcademicResourceEditor({
                 Agregar aula
               </Button>
               <Button
-                variant="outline"
+                variant="link"
                 type="button"
                 onClick={() => addRoom('laboratory')}
                 disabled={isLocked || resources.rooms.length >= PLANNING_LIMITS.rooms}
@@ -866,6 +831,11 @@ export function AcademicResourceEditor({
           )}
         </div>
       </div>
+
+      </div>
+      <p className="academic-resource-workbench__counters" role="status" aria-label="Contadores de recursos">
+        {activeTab === 'teachers' ? teacherCounts.references : roomCounts.references} referencias del catálogo · {activeTab === 'teachers' ? teacherCounts.included : roomCounts.included} incorporados en borrador · {activeTab === 'teachers' ? teacherCounts.visible : roomCounts.visible} visibles
+      </p>
 
       {/* Searchable table; at most one resource sheet (Sheet overlay) */}
       <div className="academic-resource-workbench__split">
@@ -895,14 +865,13 @@ export function AcademicResourceEditor({
                         }}
                       />
                     </TableHead>
-                    <TableHead>Código</TableHead>
                     <TableHead>Nombre</TableHead>
                     <TableHead>Inclusión</TableHead>
-                    <TableHead>Asignaturas</TableHead>
+                    <TableHead><abbr title="Asignaturas">Asign.</abbr></TableHead>
                     <TableHead>Carga máx.</TableHead>
                     <TableHead>Carga asig.</TableHead>
-                    <TableHead>Disponibilidad</TableHead>
-                    <TableHead className="academic-resource-table__td-actions">Acciones</TableHead>
+                    <TableHead><abbr title="Disponibilidad">Disp.</abbr></TableHead>
+
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -914,6 +883,8 @@ export function AcademicResourceEditor({
                     return (
                       <TableRow
                         key={teacher.id}
+                        aria-selected={isInspected}
+                        onClick={(event) => { if (!(event.target as HTMLElement).closest('button, input, label')) openTeacherInspector(teacher.id) }}
                         data-state={isSelected ? 'selected' : undefined}
                         className={`${isSelected ? 'academic-resource-workbench__row--selected' : ''} ${isInspected ? 'academic-resource-workbench__row--inspected' : ''}`}
                       >
@@ -927,22 +898,21 @@ export function AcademicResourceEditor({
                           />
                         </TableCell>
                         <TableCell>
-                          <code>{teacher.id}</code>
+                          <Button type="button" variant="link" className="planning-table-name" aria-label={`Abrir ficha de ${teacher.name}`} onClick={() => openTeacherInspector(teacher.id)}>{teacher.name}</Button>
+                          <code title={teacher.id}>{teacher.id}</code>
                         </TableCell>
                         <TableCell>
-                          <strong>{teacher.name}</strong>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline"
-                            className={`academic-resource-badge ${teacher.isIncluded ? 'academic-resource-badge--included' : teacher.isLocal ? 'academic-resource-badge--local' : 'academic-resource-badge--reference'}`}
+                          <span
+                            className={`academic-resource-table__status academic-resource-badge ${teacher.isIncluded ? 'academic-resource-badge--included' : teacher.isLocal ? 'academic-resource-badge--local' : 'academic-resource-badge--reference'}`}
                           >
+                            {teacher.isIncluded ? <CircleCheck size={16} aria-hidden="true" /> : <CircleMinus size={16} aria-hidden="true" />}
                             {teacher.isIncluded ? (teacher.isLocal ? 'Local (incorporado)' : 'Incorporado') : 'Referencia (no incorporado)'}
-                          </Badge>
+                          </span>
                         </TableCell>
                         <TableCell>
                           {teacher.courseIds.length > 0 ? (
                             <span title={teacher.courseIds.join(', ')}>
-                              {teacher.courseIds.length} {teacher.courseIds.length === 1 ? 'asignatura' : 'asignaturas'}
+                              {teacher.courseIds.length} asign.
                             </span>
                           ) : (
                             <span className="academic-resource-workbench__resource-note">Sin asignaturas</span>
@@ -952,7 +922,7 @@ export function AcademicResourceEditor({
                           {teacher.maxWeeklyMinutes !== null ? (
                             <span>{teacher.maxWeeklyMinutes} min</span>
                           ) : (
-                            <Badge variant="warning">Sin configurar</Badge>
+                            <span className="academic-resource-table__status"><CircleAlert size={16} aria-hidden="true" />Sin configurar</span>
                           )}
                         </TableCell>
                         <TableCell>
@@ -963,24 +933,15 @@ export function AcademicResourceEditor({
                           )}
                         </TableCell>
                         <TableCell>
-                          <span>{formatAvailabilitySummary(teacher.availability)}</span>
+                          <span className="academic-resource-table__availability" title={teacher.availability?.map(formatAcademicInterval).join(' · ') || formatAvailabilitySummary(teacher.availability)}>{formatAvailabilitySummary(teacher.availability)}</span>
                         </TableCell>
-                        <TableCell className="academic-resource-table__td-actions">
-                          <Button
-                            variant="outline"
-                            type="button"
-                            aria-label={`Abrir ficha de ${teacher.name}`}
-                            onClick={() => openTeacherInspector(teacher.id)}
-                          >
-                            Abrir ficha
-                          </Button>
-                        </TableCell>
+
                       </TableRow>
                     )
                   })}
                   {filteredTeachers.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={9} className="academic-resource-workbench__empty">
+                      <TableCell colSpan={8} className="academic-resource-workbench__empty">
                         {unifiedTeachers.length === 0
                           ? 'No hay docentes disponibles en el catálogo ni en el borrador.'
                           : 'No se encontraron docentes con los filtros y búsqueda aplicados.'}
@@ -1008,14 +969,13 @@ export function AcademicResourceEditor({
                         }}
                       />
                     </TableHead>
-                    <TableHead>Código</TableHead>
                     <TableHead>Nombre</TableHead>
                     <TableHead>Inclusión</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Capacidad</TableHead>
                     <TableHead>Pabellón</TableHead>
-                    <TableHead>Disponibilidad</TableHead>
-                    <TableHead className="academic-resource-table__td-actions">Acciones</TableHead>
+                    <TableHead><abbr title="Disponibilidad">Disp.</abbr></TableHead>
+
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1026,6 +986,8 @@ export function AcademicResourceEditor({
                     return (
                       <TableRow
                         key={room.id}
+                        aria-selected={isInspected}
+                        onClick={(event) => { if (!(event.target as HTMLElement).closest('button, input, label')) openRoomInspector(room.id) }}
                         data-state={isSelected ? 'selected' : undefined}
                         className={`${isSelected ? 'academic-resource-workbench__row--selected' : ''} ${isInspected ? 'academic-resource-workbench__row--inspected' : ''}`}
                       >
@@ -1039,40 +1001,30 @@ export function AcademicResourceEditor({
                           />
                         </TableCell>
                         <TableCell>
-                          <code>{room.id}</code>
+                          <Button type="button" variant="link" className="planning-table-name" aria-label={`Abrir ficha de ${room.name}`} onClick={() => openRoomInspector(room.id)}>{room.name}</Button>
+                          <code title={room.id}>{room.id}</code>
                         </TableCell>
                         <TableCell>
-                          <strong>{room.name}</strong>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline"
-                            className={`academic-resource-badge ${room.isIncluded ? 'academic-resource-badge--included' : room.isLocal ? 'academic-resource-badge--local' : 'academic-resource-badge--reference'}`}
+                          <span
+                            className={`academic-resource-table__status academic-resource-badge ${room.isIncluded ? 'academic-resource-badge--included' : room.isLocal ? 'academic-resource-badge--local' : 'academic-resource-badge--reference'}`}
                           >
+                            {room.isIncluded ? <CircleCheck size={16} aria-hidden="true" /> : <CircleMinus size={16} aria-hidden="true" />}
                             {room.isIncluded ? (room.isLocal ? 'Local (incorporado)' : 'Incorporado') : 'Referencia (no incorporado)'}
-                          </Badge>
+                          </span>
                         </TableCell>
                         <TableCell>{room.kind === 'laboratory' ? 'Laboratorio' : 'Aula'}</TableCell>
                         <TableCell>{room.capacity}</TableCell>
                         <TableCell>{room.pavilion ?? '—'}</TableCell>
                         <TableCell>
-                          <span>{formatAvailabilitySummary(room.availability)}</span>
+                          <span className="academic-resource-table__availability" title={room.availability?.map(formatAcademicInterval).join(' · ') || formatAvailabilitySummary(room.availability)}>{formatAvailabilitySummary(room.availability)}</span>
                         </TableCell>
-                        <TableCell className="academic-resource-table__td-actions">
-                          <Button
-                            variant="outline"
-                            type="button"
-                            aria-label={`Abrir ficha de ${room.name}`}
-                            onClick={() => openRoomInspector(room.id)}
-                          >
-                            Abrir ficha
-                          </Button>
-                        </TableCell>
+
                       </TableRow>
                     )
                   })}
                   {filteredRooms.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={9} className="academic-resource-workbench__empty">
+                      <TableCell colSpan={8} className="academic-resource-workbench__empty">
                         {unifiedRooms.length === 0
                           ? 'No hay ambientes disponibles en el catálogo ni en el borrador.'
                           : 'No se encontraron ambientes con los filtros y búsqueda aplicados.'}
@@ -1882,7 +1834,8 @@ export function AcademicResourceEditor({
           </DialogContent>
         </Dialog>
       )}
-    </div>
+      </TabsContent>
+    </Tabs>
   )
 }
 

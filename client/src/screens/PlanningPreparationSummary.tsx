@@ -1,31 +1,64 @@
 import type { ReactNode } from 'react'
+import { Link } from '@tanstack/react-router'
+import { Button } from '../components/ui/Button'
+import { CircleCheck, CircleAlert } from 'lucide-react'
 import './PlanningPreparationSummary.css'
-import { Card, CardContent } from '../components/ui/Card'
-import { Badge } from '../components/ui/Badge'
 
-type Props = {
+export interface PlanningPreparationSummaryProps {
   selectedCourses: number
   invalidCourses: number
   teachers: number
   rooms: number
   offerReady: boolean
+  catalogCourseCount: number
+  onSelectAllCourses: () => void
+  selectionDisabled: boolean
+  invalidOfferNote?: string
   children: ReactNode
 }
 
-export function PlanningPreparationSummary({ selectedCourses, invalidCourses, teachers, rooms, offerReady, children }: Props) {
-  return <section className="planning-preparation-summary min-w-0 text-foreground" aria-labelledby="planning-preparation-summary-title">
-    <h2 className="m-0 mb-4 text-lg font-semibold" id="planning-preparation-summary-title">Resumen de preparación</h2>
-    <Card>
-      <CardContent className="p-4">
-        <dl className="planning-preparation-summary__counts m-0 grid min-w-0 grid-cols-2 gap-4 sm:grid-cols-5 [&>div]:min-w-0 [&>div]:[overflow-wrap:anywhere] [&_dt]:text-[13px] [&_dt]:text-muted-foreground [&_dd]:m-0 [&_dd]:mt-2 [&_dd]:font-semibold [&_dd]:tabular-nums">
-          <div><dt>Cursos seleccionados</dt><dd>{selectedCourses}</dd></div>
-          <div><dt>Cursos inválidos</dt><dd>{invalidCourses}</dd></div>
-          <div><dt>Docentes</dt><dd>{teachers}</dd></div>
-          <div><dt>Ambientes</dt><dd>{rooms}</dd></div>
-          <div><dt>Estado de la oferta</dt><dd><Badge variant={offerReady ? 'success' : 'warning'}>{offerReady ? 'Oferta lista' : 'Oferta incompleta'}</Badge></dd></div>
-        </dl>
-      </CardContent>
-    </Card>
-    {children}
-  </section>
+
+export function PlanningPreparationSummary({
+  selectedCourses,
+  invalidCourses,
+  teachers,
+  rooms,
+  offerReady,
+  catalogCourseCount,
+  onSelectAllCourses,
+  selectionDisabled,
+  invalidOfferNote,
+  children,
+}: PlanningPreparationSummaryProps): ReactNode {
+  const rows = [
+    { text: `${selectedCourses} cursos seleccionados`, ready: selectedCourses > 0, action: 'Revisar cursos', view: 'cursos' },
+    { text: invalidCourses > 0 ? `${invalidCourses} cursos con datos por corregir` : 'Demanda y capacidad completas', ready: invalidCourses === 0, action: invalidCourses > 0 ? 'Corregir' : null, view: 'cursos' },
+    { text: `${teachers} docentes · ${rooms} ambientes`, ready: teachers > 0 && rooms > 0, action: 'Revisar recursos', view: 'recursos' },
+    { text: offerReady ? 'Oferta lista para generar' : 'Oferta incompleta', ready: offerReady },
+  ] as const
+
+  return (
+    <section className="planning-preparation-summary" aria-label="Resumen de preparación">
+      <h3 className="planning-preparation-summary__title">Lista de preparación</h3>
+      <ul className="planning-preparation-summary__list">
+        {rows.map((row) => (
+          <li key={row.text} className="planning-preparation-summary__row" data-ready={row.ready}>
+            {row.ready ? <CircleCheck size={16} aria-hidden="true" /> : <CircleAlert size={16} aria-hidden="true" />}
+            <span>{row.text}</span>
+            {'action' in row && row.action && <Button asChild variant="link" size="sm">
+              <Link to="/local/programacion-academica" search={{ etapa: 'preparacion', vista: row.view }}>{row.action}</Link>
+            </Button>}
+          </li>
+        ))}
+      </ul>
+      {invalidOfferNote && <p className="planning-preparation-summary__note">{invalidOfferNote}</p>}
+      {selectedCourses === 0 && catalogCourseCount > 0 && (
+        <Button type="button" variant="link" disabled={selectionDisabled} onClick={onSelectAllCourses}>
+          Seleccionar los {catalogCourseCount} cursos del catálogo
+        </Button>
+      )}
+      <p className="planning-preparation-summary__note">Los cambios quedan en memoria hasta generar o guardar.</p>
+      {children}
+    </section>
+  )
 }

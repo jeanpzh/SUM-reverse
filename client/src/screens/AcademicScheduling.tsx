@@ -1,9 +1,10 @@
+import { PlanningFetchLoading } from '../components/PlanningFetchLoading'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { formatAcademicInterval } from '../data/academicScheduling'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { academicSectionCoverage, formatAcademicInterval } from '../data/academicScheduling'
 import type { PlanningPeriod } from '../data/academicScheduling'
 import type { AcademicAdjustment, AcademicAllocationPolicy, AcademicDraftState, AcademicPlanningResources } from '../../../shared/programacion-academica-api.mjs'
-import { usePlanningSession } from '../data/planningSession'
+import { usePlanningSessionContext } from '../components/PlanningSessionProvider'
 import type { PlanningPreparationView, PlanningBlock } from '../data/planningSession'
 import { AcademicResourceEditor } from './AcademicResourceEditor'
 import { AcademicPreparationCourses } from './AcademicPreparationCourses'
@@ -24,15 +25,29 @@ import { Tour, TourPortal, TourSpotlight, TourSpotlightRing, TourStep, TourHeade
   TourDescription, TourFooter, TourPrev, TourNext, TourSkip, TourStepCounter } from '../components/ui/Tour'
 import { PlanningScopeHeader } from './PlanningScopeHeader'
 import { PlanningPreparationSummary } from './PlanningPreparationSummary'
-import { PlanningStageNav } from './PlanningStageNav'
-import { PlanningStatusBar } from './PlanningStatusBar'
+import { PlanningScheduleToolbar } from './PlanningScheduleToolbar'
+import { PlanningStatusBar, PlanningSearchDetails } from './PlanningStatusBar'
 import { PlanningSectionsTable } from './PlanningSectionsTable'
 import { PlanningInspector } from './PlanningInspector'
 import { PlanningWeekView } from './PlanningWeekView'
+import { useDefaultLayout } from 'react-resizable-panels'
+import { useMediaQuery } from '../lib/useMediaQuery'
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '../components/ui/Resizable'
+import { Sheet, SheetContent, SheetTitle } from '../components/ui/Sheet'
+import { useNormativeChat } from './useNormativeChat'
+import { PlanningContextPanel } from './PlanningContextPanel'
+import { FolderKanban } from 'lucide-react'
 import type { PlanningStage } from '../routes/local.programacion-academica'
 import './AcademicScheduling.css'
 import './PlanningWorkbench.css'
 import './PlanningSections.css'
+
+const GUIDE_STEPS = [
+  ['nav', 'Recorrido', 'El menú sigue el orden del trabajo: preparar la oferta, programar, revisar y publicar.'],
+  ['proposal', 'Propuesta', 'Aquí ves qué propuesta editas y su estado. Puedes renombrarla o abrir otra guardada.'],
+  ['save', 'Guardar', 'Guarda explícitamente la versión que quieres conservar.'],
+  ['primary', 'Siguiente paso', 'Este botón indica la acción que sigue según el estado de la propuesta.'],
+] as const
 
 export function AcademicScheduling({ currentStage = 'preparacion', preparationView = 'resumen', onPreparationViewChange }: {
   currentStage?: PlanningStage
@@ -40,30 +55,35 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
   onPreparationViewChange: (view: PlanningPreparationView) => void
 }) {
   // Workflow state and rules live in the Sesión de programación (client/src/data/planningSession.ts).
-  const { state, view, commands } = usePlanningSession()
+  const { state, view, commands } = usePlanningSessionContext()
+  const [applyingAdvisor, setApplyingAdvisor] = useState(false)
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'tabla' | 'semana'>('tabla')
   const [searchQuery, setSearchQuery] = useState('')
+  const [teacherFilter, setTeacherFilter] = useState('all')
   const [cycleFilter, setCycleFilter] = useState('all')
   const navigate = useNavigate()
   const [confirmElement, confirm] = useConfirm()
   const [tourOpen, setTourOpen] = useState(false)
   const [tourStep, setTourStep] = useState(0)
-  const guideOrigin = useRef<{ stage: PlanningStage; view: PlanningPreparationView; scrollY: number } | null>(null)
+  const [guideSteps, setGuideSteps] = useState<ReadonlyArray<readonly [string, string, string]>>([])
+  const wideLayout = useMediaQuery('(min-width: 1024px)')
+  const [chatOpen, setChatOpen] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 1280px)').matches)
+  const scrollerRef = useRef<HTMLDivElement | null>(null)
   const [draftListOpen, setDraftListOpen] = useState(false)
   const viewScrollPositions = useRef<{ tabla: number; semana: number }>({ tabla: 0, semana: 0 })
 
   const handleToggleView = useCallback((nextMode: 'tabla' | 'semana') => {
     if (nextMode === viewMode) return
-    viewScrollPositions.current[viewMode] = window.scrollY
+    viewScrollPositions.current[viewMode] = scrollerRef.current?.scrollTop ?? 0
     setViewMode(nextMode)
   }, [viewMode])
 
   useLayoutEffect(() => {
     const targetY = viewScrollPositions.current[viewMode] ?? 0
-    window.scrollTo({ top: targetY, behavior: 'instant' })
+    scrollerRef.current?.scrollTo({ top: targetY, behavior: 'instant' })
     const rafId = requestAnimationFrame(() => {
-      window.scrollTo({ top: targetY, behavior: 'instant' })
+      scrollerRef.current?.scrollTo({ top: targetY, behavior: 'instant' })
     })
     return () => cancelAnimationFrame(rafId)
   }, [viewMode])
@@ -71,6 +91,8 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
   const { catalog, proposal, proposalResources, editingBlock, demands, capacities, patterns, deliveryModes,
     selectedCourses, demandSourceId, demandEstimate, resources, allocationPolicy } = state
   const planningPeriod = state.period
+  const chat = useNormativeChat(planningPeriod)
+  const [chatExpanded, setChatExpanded] = useState(false)
   const planningPolicy = state.policy
   const draftTitle = state.draft.title
   const draftId = state.draft.id
@@ -99,7 +121,14 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
   const scheduleAction = view.primaryAction('horario')
   const reviewAction = view.primaryAction('revision')
   const approvalAction = view.primaryAction('aprobacion')
-  const primaryVariant = (active: boolean) => active ? 'default' as const : 'outline' as const
+  const currentAction = currentStage === 'preparacion' ? preparationAction
+    : currentStage === 'horario' ? scheduleAction
+      : currentStage === 'revision' ? reviewAction : approvalAction
+  const pageTitle = currentStage === 'horario' ? 'Horario'
+    : currentStage === 'revision' ? 'Revisión docente'
+      : currentStage === 'aprobacion' ? 'Aprobación y publicación'
+        : preparationView === 'cursos' ? 'Cursos'
+          : preparationView === 'recursos' ? 'Docentes y ambientes' : 'Resumen de preparación'
 
   useEffect(() => {
     if (!draftMessage) return
@@ -120,29 +149,14 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
     previousAction.current = { draftBusy, generating, draftError, proposalError }
   }, [draftBusy, generating, draftError, proposalError])
 
-  const openGuide = async () => {
-    guideOrigin.current = { stage: currentStage, view: preparationView, scrollY: window.scrollY }
-    // Preparation holds the stable targets; restore the caller's context on close.
-    await navigate({ to: '/local/programacion-academica', search: { etapa: 'preparacion', vista: 'resumen' } })
+  const openGuide = () => {
+    setGuideSteps(GUIDE_STEPS.filter(([target]) => {
+      const element = document.getElementById(`planning-tour-${target}`)
+      return Boolean(element && element.getClientRects().length > 0)
+    }))
     setTourStep(0)
     setTourOpen(true)
   }
-
-  const restoreGuideContext = () => {
-    const origin = guideOrigin.current
-    guideOrigin.current = null
-    if (!origin) return
-    void navigate({
-      to: '/local/programacion-academica',
-      search: { etapa: origin.stage, ...(origin.stage === 'preparacion' ? { vista: origin.view } : {}) },
-      resetScroll: false,
-    }).then(() => {
-      window.scrollTo({ top: origin.scrollY, behavior: 'instant' })
-      document.getElementById('planning-tour-guide')?.focus({ preventScroll: true })
-    })
-  }
-
-  const hasGuidePrimaryTarget = preparationAction?.id === 'generate' || preparationAction?.id === 'review-offer'
 
   const retryCatalog = () => void commands.loadCatalog()
   const refreshDraftList = () => commands.refreshDrafts()
@@ -205,10 +219,133 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
     commands.edit({ type: 'startBlockReview', block })
   }
 
+  const inspectorOpen = currentStage === 'horario' && Boolean(proposal) && selectedSectionId !== null
+  const inspectorDocked = wideLayout && inspectorOpen
+  const railLayout = useMediaQuery('(min-width: 1280px)')
+  const chatInRail = railLayout && chatOpen && !chatExpanded
+  const chatInSheet = chatOpen && !chatInRail
+  const railOpen = chatInRail
+  const closeInspector = () => {
+    setSelectedSectionId(null)
+    cancelBlockReview()
+  }
+  const closeChat = () => {
+    setChatOpen(false)
+    setChatExpanded(false)
+    document.getElementById('planning-toggle-chat')?.focus()
+  }
+  const { defaultLayout, onLayoutChanged } = useDefaultLayout({
+    id: 'planning-workspace',
+    panelIds: railOpen ? ['planning-content', 'planning-rail'] : ['planning-content'],
+  })
+
+  const { defaultLayout: detailLayout, onLayoutChanged: onDetailLayoutChanged } = useDefaultLayout({
+    id: 'planning-schedule-detail',
+    panelIds: inspectorDocked ? ['planning-schedule-content', 'planning-section-detail'] : ['planning-schedule-content'],
+  })
+  const reviewPending = () => {
+    if (!proposal) return
+    const sectionId = proposal.pending[0]?.sectionId
+      ?? proposal.sections.find((section) => !proposal.assignments.some((assignment) => assignment.sectionId === section.sectionId))?.sectionId
+    if (sectionId) setSelectedSectionId(sectionId)
+  }
+  const retrySearch = async () => {
+    if (!(await confirm({
+      title: 'Reemplazar esta propuesta',
+      description: 'Reintentar usa la configuración actual y reemplaza esta propuesta, incluidos sus ajustes manuales. Guarda antes si deseas conservarla.',
+      confirmLabel: 'Reintentar búsqueda',
+      destructive: true,
+    }))) return
+    await generate()
+  }
+
+  const stageLink = (search: {
+    etapa: PlanningStage
+    vista?: PlanningPreparationView
+  }, label: string, variant: 'default' | 'outline' = 'default') => (
+    <Button asChild variant={variant} size="sm" id="planning-tour-primary">
+      <Link to="/local/programacion-academica" search={search}>{label}</Link>
+    </Button>
+  )
+  let nextAction: ReactNode = null
+  if (currentAction) {
+    switch (currentAction.id) {
+      case 'review-offer':
+        nextAction = preparationView === 'cursos' ? null
+          : <Button type="button" size="sm" id="planning-tour-primary" onClick={() => onPreparationViewChange('cursos')}>{currentAction.label}</Button>
+        break
+      case 'generate':
+        nextAction = <Button type="button" size="sm" id="planning-tour-primary"
+          disabled={!validDemands || generating || lockedDraft || draftBusy}
+          onClick={() => void generate()}>{generating ? 'Generando…' : currentAction.label}</Button>
+        break
+      case 'resolve-pending':
+        nextAction = <Button type="button" size="sm" id="planning-tour-primary" onClick={reviewPending}>Revisar {proposal ? academicSectionCoverage(proposal).partial + academicSectionCoverage(proposal).pending : 0} pendientes</Button>
+        break
+      case 'submit-review':
+        nextAction = <Button type="button" size="sm" id="planning-tour-primary"
+          disabled={lockedDraft || draftBusy} onClick={() => void submitTeacherReview()}>{currentAction.label}</Button>
+        break
+      case 'back-preparation':
+        nextAction = stageLink({ etapa: 'preparacion' }, currentAction.label, 'outline')
+        break
+      case 'back-schedule':
+        nextAction = stageLink({ etapa: 'horario' }, currentAction.label, 'outline')
+        break
+      case 'to-approval':
+        nextAction = stageLink({ etapa: 'aprobacion' }, currentAction.label)
+        break
+      case 'back-review':
+        nextAction = stageLink({ etapa: 'revision' }, currentAction.label, 'outline')
+        break
+      default:
+        nextAction = null // save, record-response, approve, publish stay in their panels
+    }
+  }
+
   return <section className="screen-academic-scheduling">
     {confirmElement}
     <PlanningScopeHeader
-      onGuide={() => void openGuide()}
+      title={pageTitle}
+      nextAction={nextAction}
+      tertiaryAction={currentStage === 'horario' && proposal ? <Button type="button" variant="link" disabled={lockedDraft || draftBusy} onClick={() => void retrySearch()}>Reintentar búsqueda</Button> : null}
+      draftState={view.displayedDraftState}
+      proposalControls={
+        <div className="academic-scheduling__draft-field"><Label className="sr-only" htmlFor="planning-proposal-title">Propuesta</Label>
+          <Input id="planning-proposal-title" aria-label="Nombre de la propuesta" aria-invalid={Boolean(draftError && (!draftTitle.trim() || draftTitle.trim() !== draftTitle))} aria-describedby={draftError && !draftListOpen ? 'planning-draft-error' : undefined} maxLength={100} value={draftTitle} disabled={lockedDraft || draftBusy}
+            onChange={(event) => markTitle(event.currentTarget.value)} />
+        </div>
+      }
+      proposalActions={
+        <div className="academic-scheduling__draft-actions">
+          {!lockedDraft && view.proposalComplete && view.displayedDraftState === 'draft' && (
+            <Button type="button" variant="link" disabled={draftBusy} onClick={() => markDraftState('ready-for-review')}>
+              Marcar lista para revisión
+            </Button>
+          )}
+          {!lockedDraft && view.displayedDraftState === 'ready-for-review' && (
+            <Button type="button" variant="link" disabled={draftBusy} onClick={() => markDraftState('draft')}>
+              Volver a borrador
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            id="planning-tour-proposals"
+            aria-haspopup="dialog"
+            aria-label="Ver mis propuestas guardadas"
+            className="gap-1.5"
+            onClick={() => {
+              setDraftListOpen(true)
+              void refreshDraftList()
+            }}
+          >
+            <FolderKanban className="size-3.5" aria-hidden="true" />
+            <span>Propuestas</span>
+          </Button>
+        </div>
+      }
+      onGuide={openGuide}
       school="Sistemas"
       period={planningPeriod}
       draftStateText={view.draftLabel}
@@ -217,77 +354,49 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       draftBusy={draftBusy}
       onSave={() => void saveDraft()}
       disabledReason={disabledSaveReason}
+      onToggleChat={() => {
+        if (chatOpen) {
+          closeChat()
+          return
+        }
+        setChatOpen(true)
+      }}
+      isChatOpen={chatOpen}
     />
+    <Dialog open={draftListOpen} onOpenChange={setDraftListOpen}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Mis propuestas</DialogTitle>
+          <DialogDescription>Almacenamiento local compartido; no está asociado a una cuenta.</DialogDescription>
+        </DialogHeader>
+        {draftError && <Alert variant="destructive" role="alert"><AlertDescription>{draftError}</AlertDescription></Alert>}
+        {draftBusy && <PlanningFetchLoading label="Consultando propuestas guardadas…" layout="table" />}
+        <div id="academic-scheduling-saved-proposals" className="academic-scheduling__saved-proposals">
+          {draftList?.unavailableCount ? <p role="status">{draftList.unavailableCount} propuesta(s) no se pudieron leer.</p> : null}
+          {draftList?.items.length === 0 && <p>No hay propuestas guardadas.</p>}
+          <ul className="academic-scheduling__saved-list">{draftList && draftList.items.map((item) => <li className="academic-scheduling__saved-row" key={item.id}>
+            <strong>{item.title} · {item.schoolId} · {item.academicPeriod} · {item.state === 'draft' ? 'Borrador' : item.state === 'ready-for-review' ? 'Lista para revisión' : item.state === 'in-review' ? 'En revisión docente' : item.state === 'ready-for-approval' ? 'Lista para aprobación' : item.state === 'approved' ? 'Aprobada (simulada)' : 'Publicada (simulada)'} · v{item.version}</strong>
+            <div><span>Actualizada {new Date(item.updatedAt).toLocaleString('es-PE')} · {item.hasSchedule ? 'Con horario' : 'Solo configuración'}</span>
+              <Button type="button" variant="outline"
+                disabled={draftBusy} onClick={() => void resumeDraft(item.id, item.version)}>{item.state === 'approved' || item.state === 'published' ? 'Consultar' : 'Continuar edición'}</Button></div>
+          </li>)}</ul>
+        </div>
+      </DialogContent>
+    </Dialog>
 
-    <PlanningStageNav
-      currentStage={currentStage}
-      nextActionLabel={(currentStage === 'preparacion' ? preparationAction : currentStage === 'horario' ? scheduleAction : currentStage === 'revision' ? reviewAction : approvalAction)?.label ?? null}
-    />
+    <ResizablePanelGroup orientation="horizontal" defaultLayout={defaultLayout} onLayoutChanged={onLayoutChanged} className="planning-workspace">
+    <ResizablePanel id="planning-content" minSize="45%" className="planning-workspace__panel">
+    <ResizablePanelGroup orientation="vertical" defaultLayout={detailLayout} onLayoutChanged={onDetailLayoutChanged} className="planning-schedule-split">
+    <ResizablePanel id="planning-schedule-content" minSize="40%" className="planning-workspace__panel">
+    <div ref={scrollerRef} className={`planning-workspace__content ${currentStage === 'preparacion' && preparationView === 'cursos' ? 'planning-workspace__content--courses' : ''}`}>
     {draftError && !draftListOpen && <Alert id="planning-draft-error" variant="destructive" role="alert"><AlertDescription>{draftError}</AlertDescription></Alert>}
-    {currentStage === 'preparacion' && <nav id="planning-tour-preparation" className="planning-preparation-views" aria-label="Vistas de preparación">
-      {(['resumen', 'cursos', 'recursos'] as const).map((vista) => <Link key={vista}
-        to="/local/programacion-academica" search={{ etapa: 'preparacion', vista }}
-        aria-current={preparationView === vista ? 'page' : undefined}
-        onClick={(event) => {
-          if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
-          event.preventDefault()
-          onPreparationViewChange(vista)
-        }}>{vista === 'resumen' ? 'Resumen' : vista === 'cursos' ? 'Cursos' : 'Recursos'}</Link>)}
-    </nav>}
-
+    {loadingCatalog && preparationView !== 'cursos' && currentStage === 'preparacion' && <PlanningFetchLoading label="Consultando catálogo local…" layout="cards" />}
     {/* Stage 1: Preparación */}
     <section
       className="planning-stage-panel planning-stage-panel--preparacion"
       hidden={currentStage !== 'preparacion'}
       aria-label="Etapa de preparación"
     >
-      <section className="academic-scheduling__draft-bar" aria-label="Propuestas locales">
-        <div className="academic-scheduling__draft-heading">
-          <div className="academic-scheduling__draft-field"><Label htmlFor="planning-proposal-title">Propuesta</Label>
-            <Input id="planning-proposal-title" aria-label="Nombre de la propuesta" aria-invalid={Boolean(draftError && (!draftTitle.trim() || draftTitle.trim() !== draftTitle))} aria-describedby={draftError && !draftListOpen ? 'planning-draft-error' : undefined} maxLength={100} value={draftTitle} disabled={lockedDraft || draftBusy}
-              onChange={(event) => markTitle(event.currentTarget.value)} />
-          </div>
-          <div className="academic-scheduling__draft-field"><Label htmlFor="planning-proposal-state">Estado</Label>
-            <NativeSelect id="planning-proposal-state" aria-label="Estado de la propuesta" disabled={lockedDraft || draftBusy} value={view.displayedDraftState}
-              onChange={(event) => markDraftState(event.currentTarget.value as AcademicDraftState)}>
-              <option value="draft">Borrador</option>
-              <option value="ready-for-review" disabled={!proposal || proposal.status !== 'complete' || !proposal.coverageComplete || proposal.assignments.length === 0}>Lista para revisión</option>
-              <option value="in-review" disabled>En revisión docente</option>
-              <option value="ready-for-approval" disabled>Lista para aprobación</option>
-              {savedDraftState === 'approved' && <option value="approved" disabled>Aprobada (simulada)</option>}
-              {savedDraftState === 'published' && <option value="published" disabled>Publicada (simulada)</option>}
-            </NativeSelect>
-          </div>
-          <div className="academic-scheduling__draft-actions">
-            <Button type="button" variant="outline"
-              id="planning-tour-proposals" aria-haspopup="dialog"
-              onClick={() => {
-                setDraftListOpen(true)
-                void refreshDraftList()
-              }}>Mis propuestas</Button>
-          </div>
-        </div>
-        <Dialog open={draftListOpen} onOpenChange={setDraftListOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Mis propuestas</DialogTitle>
-              <DialogDescription>Almacenamiento local compartido; no está asociado a una cuenta.</DialogDescription>
-            </DialogHeader>
-            {draftError && <Alert variant="destructive" role="alert"><AlertDescription>{draftError}</AlertDescription></Alert>}
-            <div id="academic-scheduling-saved-proposals" className="academic-scheduling__saved-proposals">
-              {draftList?.unavailableCount ? <p role="status">{draftList.unavailableCount} propuesta(s) no se pudieron leer.</p> : null}
-              {draftList?.items.length === 0 && <p>No hay propuestas guardadas.</p>}
-              <ul className="academic-scheduling__saved-list">{draftList && draftList.items.map((item) => <li className="academic-scheduling__saved-row" key={item.id}>
-                <strong>{item.title} · {item.schoolId} · {item.academicPeriod} · {item.state === 'draft' ? 'Borrador' : item.state === 'ready-for-review' ? 'Lista para revisión' : item.state === 'in-review' ? 'En revisión docente' : item.state === 'ready-for-approval' ? 'Lista para aprobación' : item.state === 'approved' ? 'Aprobada (simulada)' : 'Publicada (simulada)'} · v{item.version}</strong>
-                <div><span>Actualizada {new Date(item.updatedAt).toLocaleString('es-PE')} · {item.hasSchedule ? 'Con horario' : 'Solo configuración'}</span>
-                  <Button type="button" variant="outline"
-                    disabled={draftBusy} onClick={() => void resumeDraft(item.id, item.version)}>{item.state === 'approved' || item.state === 'published' ? 'Consultar' : 'Continuar edición'}</Button></div>
-              </li>)}</ul>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </section>
-
       <div className="planning-preparation-view" hidden={preparationView !== 'cursos'}>
         <fieldset className="academic-scheduling__locked-workspace" disabled={lockedDraft || draftBusy}>
           <AcademicPreparationCourses
@@ -325,9 +434,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
 
       </div>
       <div className="planning-preparation-view" hidden={preparationView !== 'recursos'}>
-        {catalog && <section className="academic-scheduling__section" aria-labelledby="academic-scheduling-resource-editor">
-          <div className="academic-scheduling__step-heading"><h3 id="academic-scheduling-resource-editor">Configurar recursos</h3>
-            <p>Los nombres de referencia provienen del escenario sintético y no confirman asignaciones del nuevo periodo.</p></div>
+        {catalog && <section id="academic-scheduling-resource-editor" className="planning-resources-view" aria-label="Configurar recursos">
           <AcademicResourceEditor
             catalog={catalog}
             resources={resources}
@@ -336,7 +443,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
             proposal={proposal}
           />
           <Collapsible className="academic-scheduling__general-windows">
-            <CollapsibleTrigger asChild><Button type="button" variant="ghost">Franjas generales del catálogo</Button></CollapsibleTrigger>
+            <CollapsibleTrigger asChild><Button type="button" variant="ghost" className="planning-resources-disclosure">Franjas generales del catálogo</Button></CollapsibleTrigger>
             <CollapsibleContent>
             <span>La disponibilidad de cada recurso se intersecta con estas franjas; no se deduce del historial.</span>
             <ul>{catalog.windows.map((window, index) => <li key={index}>{formatAcademicInterval(window)}</li>)}</ul>
@@ -347,14 +454,17 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       </div>
       <div className="planning-preparation-view" hidden={preparationView !== 'resumen'}>
         <PlanningPreparationSummary selectedCourses={selectedCourses.length} invalidCourses={view.invalidCourses.length}
+          catalogCourseCount={catalog?.courses.length ?? 0} selectionDisabled={lockedDraft || draftBusy || generating}
+          onSelectAllCourses={() => selectCourses(catalog?.courses.map((course) => course.courseId) ?? [])}
+          invalidOfferNote={!validDemands ? 'Ingresa demanda válida y capacidad entera positiva para cada curso seleccionado. Sin selección se genera una propuesta vacía.' : undefined}
           teachers={resources.teachers.length} rooms={resources.rooms.length} offerReady={preparationAction?.id === 'generate'}>
           <div className="academic-scheduling__locked-workspace">
             {catalog && <section className="academic-scheduling__section academic-scheduling__generate" aria-labelledby="academic-scheduling-generate">
-              <h3 id="academic-scheduling-generate">Generar propuesta</h3>
-              <p>Periodo: {planningPeriod}. Se envían todos los cursos seleccionados, incluidos los que estén ocultos por el filtro de ciclo.</p>
+              <h3 id="academic-scheduling-generate">Opciones de generación</h3>
+              <p>El horario de {planningPeriod} incluirá todos los cursos seleccionados, también los ocultos por los filtros.</p>
               <Collapsible className="academic-scheduling__advanced">
-                <CollapsibleTrigger asChild><Button type="button" variant="ghost">Opciones avanzadas</Button></CollapsibleTrigger>
-                <CollapsibleContent>
+                <CollapsibleTrigger asChild><Button type="button" variant="ghost" className="academic-scheduling__advanced-toggle">Opciones avanzadas</Button></CollapsibleTrigger>
+                <CollapsibleContent className="academic-scheduling__advanced-content">
                   <fieldset className="academic-scheduling__policy">
                     <legend>Excepciones de horario · decisión local explícita</legend>
                     <div className="academic-scheduling__exception"><Checkbox id="planning-allow-afternoon" disabled={lockedDraft || draftBusy} checked={planningPolicy?.allowAfternoon ?? false}
@@ -377,16 +487,10 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
                   </p>
                 </CollapsibleContent>
               </Collapsible>
-              <div id={preparationAction?.id === 'generate' ? 'planning-tour-primary' : undefined} className="academic-scheduling__actions">
-                <Button type="button" variant={primaryVariant(preparationAction?.id === 'generate')} disabled={!validDemands || generating || lockedDraft || draftBusy}
-                  onClick={() => void generate()}>{generating ? 'Generando…' : 'Generar horarios'}</Button>
-                {!validDemands && <span>Ingresa demanda válida y capacidad entera positiva para cada curso seleccionado. Sin selección se genera una propuesta vacía.</span>}
-              </div>
+
             </section>}
             {proposalError && <Alert variant="destructive" role="alert"><AlertDescription>{proposalError}</AlertDescription></Alert>}
           </div>
-          {preparationAction?.id === 'review-offer' && <Button id="planning-tour-primary" type="button" variant="default"
-            onClick={() => onPreparationViewChange('cursos')}>{preparationAction.label}</Button>}
         </PlanningPreparationSummary>
       </div>
     </section>
@@ -397,34 +501,43 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       hidden={currentStage !== 'horario'}
       aria-label="Etapa de horario"
     >
-      <div className="planning-stage-actions">
-        {scheduleAction?.id === 'back-preparation' && <Button asChild><Link to="/local/programacion-academica" search={{ etapa: 'preparacion' }}>{scheduleAction.label}</Link></Button>}
-        {scheduleAction?.id === 'save' && <Button type="button" variant="default"
-          disabled={!canSave || draftBusy} onClick={() => void saveDraft()}>{scheduleAction.label}</Button>}
-        {scheduleAction?.id === 'submit-review' && <Button type="button" variant="default"
-          disabled={lockedDraft || draftBusy} onClick={() => void submitTeacherReview()}>{scheduleAction.label}</Button>}
-      </div>
       <fieldset className="academic-scheduling__locked-workspace" disabled={draftBusy}>
         {proposalError && <Alert variant="destructive" role="alert"><AlertDescription>{proposalError}</AlertDescription></Alert>}
-        {!proposal && (
-          <div className="academic-scheduling__empty-stage">
-            <p>No hay una propuesta generada. Ve a la etapa de <strong>Preparación</strong> y selecciona <strong>Generar horarios</strong>.</p>
-          </div>
-        )}
+        {!proposal && <div className="planning-schedule-empty">
+          {generating || applyingAdvisor ? <p role="status">{applyingAdvisor ? 'Aplicando y regenerando…' : 'Generando horarios…'}</p>
+            : <><p>Selecciona los cursos y revisa los recursos en Preparación para generar una propuesta.</p>
+              <Button asChild variant="link"><Link to="/local/programacion-academica" search={{ etapa: 'preparacion', vista: 'resumen' }}>Ir a Preparación</Link></Button></>}
+        </div>}
         {proposal && <>
-          <PlanningStatusBar
+          <PlanningStatusBar key={`${proposal.proposalId}:${proposal.editVersion ?? 0}`}
+            teacherNames={Object.fromEntries([...(catalog?.referenceTeachers ?? []), ...resources.teachers].map((teacher) => [teacher.id, teacher.name]))}
+            courseNames={Object.fromEntries((catalog?.courses ?? []).map((course) => [course.courseId, course.name]))}
+            roomNames={Object.fromEntries([...(catalog?.referenceRooms ?? []), ...resources.rooms].map((room) => [room.id, room.name]))}
             proposal={proposal}
-            primaryActionId={scheduleAction?.id}
+            academicPeriod={state.period}
             isDraft={!lockedDraft}
-            onRegenerate={() => void generate()}
-            onReviewPending={() => {
-              const sectionId = proposal.pending[0]?.sectionId
-                ?? proposal.sections.find((section) => !proposal.assignments.some((assignment) => assignment.sectionId === section.sectionId))?.sectionId
-              if (sectionId) setSelectedSectionId(sectionId)
+            onApplyAdvisorPatches={async (patches) => {
+              if ((proposal.manuallyAdjustedSectionIds?.length ?? 0) > 0) {
+                const confirmed = await confirm({
+                  title: 'Reemplazar ajustes manuales',
+                  description: 'Aplicar recomendaciones y regenerar el horario descartará los movimientos manuales realizados en esta propuesta. ¿Deseas continuar?',
+                  confirmLabel: 'Aplicar y regenerar',
+                  destructive: true,
+                })
+                if (!confirmed) return false
+              }
+              setApplyingAdvisor(true)
+              try {
+                return await commands.applyAdvisorPatchesAndRegenerate(patches, { proposalId: proposal.proposalId, editVersion: proposal.editVersion ?? 0 })
+              } finally {
+                setApplyingAdvisor(false)
+              }
             }}
             isLocked={lockedDraft || draftBusy}
           />
 
+          <PlanningScheduleToolbar proposal={proposal} searchQuery={searchQuery} onSearchChange={setSearchQuery}
+            teacherFilter={teacherFilter} onTeacherFilterChange={setTeacherFilter} viewMode={viewMode} onToggleView={handleToggleView} />
           <div className="planning-workbench-container">
             <div className="planning-workbench-main">
               <div
@@ -440,13 +553,13 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
                   catalog={catalog}
                   demands={demands}
                   selectedSectionId={selectedSectionId}
-                  onSelectSection={setSelectedSectionId}
+                  onSelectSection={(sectionId) => {
+                    setSelectedSectionId(sectionId)
+                  }}
                   onEditBlock={startBlockReview}
                   isLocked={lockedDraft || draftBusy}
-                  viewMode={viewMode}
-                  onToggleView={handleToggleView}
                   searchQuery={searchQuery}
-                  onSearchChange={setSearchQuery}
+                  teacherFilter={teacherFilter}
                 />
 
               </div>
@@ -462,10 +575,10 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
                   selectedSectionId={selectedSectionId}
                   editingBlock={editingBlock}
                   searchQuery={searchQuery}
-                  onSearchChange={setSearchQuery}
-                  viewMode={viewMode}
-                  onToggleView={handleToggleView}
-                  onSelectSection={setSelectedSectionId}
+                  teacherFilter={teacherFilter}
+                  onSelectSection={(sectionId) => {
+                    setSelectedSectionId(sectionId)
+                  }}
                   onStartEditBlock={startBlockReview}
                   onChangeEditingBlock={setEditingBlock}
                   isLocked={lockedDraft || draftBusy}
@@ -473,7 +586,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
               </div>
             </div>
 
-            {selectedSectionId && (
+            {selectedSectionId && !wideLayout && (
               <PlanningInspector
                 sectionId={selectedSectionId}
                 proposal={proposal}
@@ -483,10 +596,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
                 adjusting={adjusting}
                 adjustmentError={adjustmentError}
                 isLocked={lockedDraft || draftBusy}
-                onClose={() => {
-                  setSelectedSectionId(null)
-                  cancelBlockReview()
-                }}
+                onClose={closeInspector}
                 onStartEdit={startBlockReview}
                 onCancelEdit={cancelBlockReview}
                 onSubmitEdit={submitBlockReview}
@@ -494,6 +604,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
               />
             )}
           </div>
+          <PlanningSearchDetails proposal={proposal} />
         </>}
       </fieldset>
     </section>
@@ -504,10 +615,6 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       hidden={currentStage !== 'revision'}
       aria-label="Etapa de revisión docente"
     >
-      <div className="planning-stage-actions">
-        {reviewAction?.id === 'back-schedule' && <Button asChild><Link to="/local/programacion-academica" search={{ etapa: 'horario' }}>{reviewAction.label}</Link></Button>}
-        {reviewAction?.id === 'to-approval' && <Button asChild><Link to="/local/programacion-academica" search={{ etapa: 'aprobacion' }}>{reviewAction.label}</Link></Button>}
-      </div>
       <fieldset className="academic-scheduling__locked-workspace" disabled={lockedDraft || draftBusy}>
         <AcademicTeacherReviewPanel primaryActionId={reviewAction?.id} key={`${draftId ?? 'new'}-${savedReview?.round ?? 0}`} review={savedReview} proposal={proposal} draftId={draftId} draftVersion={draftVersion}
           derivedState={workspaceDirty ? `${savedDraftState === 'ready-for-approval' ? 'La versión guardada está lista para aprobación' : savedDraftState === 'in-review' ? 'La versión guardada está en revisión docente' : savedDraftState === 'ready-for-review' ? 'La versión guardada está lista para revisión' : savedDraftState === 'approved' ? 'La versión guardada está aprobada (simulada)' : savedDraftState === 'published' ? 'La versión guardada está publicada (simulada)' : 'Borrador'}; cambios locales sin guardar` : savedDraftState === 'ready-for-approval' ? 'Lista para aprobación' : savedDraftState === 'in-review' ? 'En revisión docente' : savedDraftState === 'ready-for-review' ? 'Lista para revisión' : savedDraftState === 'approved' ? 'Aprobada (simulada)' : savedDraftState === 'published' ? 'Publicada (simulada)' : 'Borrador'}
@@ -525,9 +632,6 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       hidden={currentStage !== 'aprobacion'}
       aria-label="Etapa de aprobación"
     >
-      <div className="planning-stage-actions">
-        {approvalAction?.id === 'back-review' && <Button asChild><Link to="/local/programacion-academica" search={{ etapa: 'revision' }}>{approvalAction.label}</Link></Button>}
-      </div>
       <AcademicPublicationPanel primaryActionId={approvalAction?.id} draftId={draftId} draftVersion={draftVersion} draftTitle={draftTitle}
         draftState={savedDraftState} dirty={workspaceDirty} busy={draftBusy || generating || adjusting || demandLoading} onApprove={approveDraft}
         onPublish={publishDraft} onFork={forkDraft}
@@ -537,26 +641,63 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
         onFork={(id, version) => void forkDraft(id, version)} potential={demandEstimate}
         finalDemand={Object.fromEntries(selectedCourses.map((courseId) => [courseId, demands[courseId] ?? '']))} />
     </section>
+    </div>
+    </ResizablePanel>
+    {inspectorDocked && proposal && <>
+      <ResizableHandle withHandle aria-label="Redimensionar detalle de sección" />
+      <ResizablePanel id="planning-section-detail" defaultSize="35%" minSize="20%" maxSize="60%" className="planning-workspace__panel planning-workspace__detail">
+              <PlanningInspector docked
+                sectionId={selectedSectionId}
+                proposal={proposal}
+                proposalResources={proposalResources}
+                catalog={catalog}
+                editingBlock={editingBlock}
+                adjusting={adjusting}
+                adjustmentError={adjustmentError}
+                isLocked={lockedDraft || draftBusy}
+                onClose={closeInspector}
+                onStartEdit={startBlockReview}
+                onCancelEdit={cancelBlockReview}
+                onSubmitEdit={submitBlockReview}
+                onChangeEditingBlock={setEditingBlock}
+              />
+      </ResizablePanel>
+    </>}
+    </ResizablePanelGroup>
+    </ResizablePanel>
+    {railOpen && <>
+      <ResizableHandle withHandle aria-label="Redimensionar asistente" />
+      <ResizablePanel id="planning-rail" defaultSize="30%" minSize="280px" maxSize="45%" className="planning-workspace__panel">
+        <aside className="planning-rail" aria-label="Asistente normativo">
+          <PlanningContextPanel academicPeriod={planningPeriod} chat={chat}
+            expanded={false} onExpandedChange={setChatExpanded} onClose={closeChat} />
+        </aside>
+      </ResizablePanel>
+    </>}
+    </ResizablePanelGroup>
+    <Sheet open={chatInSheet} onOpenChange={(open) => { if (!open) closeChat() }}>
+      <SheetContent side="right" showCloseButton={false} className="planning-copilot-sheet" aria-describedby={undefined}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault()
+          document.getElementById('planning-toggle-chat')?.focus({ preventScroll: true })
+        }}>
+        <SheetTitle className="sr-only">Asistente normativo</SheetTitle>
+        <PlanningContextPanel academicPeriod={planningPeriod} chat={chat}
+          expanded={chatExpanded} onExpandedChange={setChatExpanded} onClose={closeChat} />
+      </SheetContent>
+    </Sheet>
     <Tour open={tourOpen} onOpenChange={setTourOpen} value={tourStep} onValueChange={setTourStep}
-      onCloseAutoFocus={(event) => { event.preventDefault(); restoreGuideContext() }}>
+      onCloseAutoFocus={(event) => { event.preventDefault(); document.getElementById('planning-tour-guide')?.focus({ preventScroll: true }) }}>
       <TourPortal>
         <TourSpotlight />
         <TourSpotlightRing />
-        {[
-          ['stages', 'Etapas', 'Avanza de la preparación a la publicación desde estas etapas.'],
-          ['preparation', 'Preparación', 'Revisa el resumen, los cursos y los recursos antes de generar.'],
-          ['save', 'Guardar', 'Guarda explícitamente la versión que quieres conservar.'],
-          [hasGuidePrimaryTarget ? 'primary' : 'preparation', 'Siguiente acción', hasGuidePrimaryTarget
-            ? 'Esta acción indica el siguiente paso según el estado de la propuesta.'
-            : 'La siguiente acción está en otra etapa. Usa las etapas para continuar con la propuesta.'],
-          ['proposals', 'Mis propuestas', 'Continúa una edición guardada o consulta una versión congelada.'],
-        ].map(([target, title, description], index) => <TourStep key={index} target={`#planning-tour-${target}`} role="dialog" aria-labelledby={`planning-guide-title-${index}`}>
+        {guideSteps.map(([target, title, description], index) => <TourStep key={index} target={`#planning-tour-${target}`} role="dialog" aria-labelledby={`planning-guide-title-${index}`}>
           <TourHeader><TourTitle id={`planning-guide-title-${index}`}>{title}</TourTitle><TourDescription>{description}</TourDescription></TourHeader>
           <TourStepCounter format={(current, total) => `Paso ${current} de ${total}`} />
           <TourFooter>
             <TourSkip variant="ghost" aria-label="Cerrar guía">Cerrar</TourSkip>
             <TourPrev aria-label="Paso anterior">Anterior</TourPrev>
-            <TourNext variant="outline" aria-label={index === 4 ? 'Finalizar guía' : 'Paso siguiente'}>{index === 4 ? 'Finalizar' : 'Siguiente'}</TourNext>
+            <TourNext variant="outline" aria-label={index === guideSteps.length - 1 ? 'Finalizar guía' : 'Paso siguiente'}>{index === guideSteps.length - 1 ? 'Finalizar' : 'Siguiente'}</TourNext>
           </TourFooter>
         </TourStep>)}
       </TourPortal>

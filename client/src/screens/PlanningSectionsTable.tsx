@@ -1,8 +1,7 @@
+import { CircleCheck, CircleAlert } from 'lucide-react'
 import { Button } from '../components/ui/Button'
-import { Badge } from '../components/ui/Badge'
-import { Input } from '../components/ui/Input'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import type { AcademicCatalog, AcademicProposal } from '../data/academicScheduling'
 import {
   academicSectionLabel,
@@ -19,10 +18,8 @@ export interface PlanningSectionsTableProps {
   onSelectSection: (sectionId: string) => void
   onEditBlock: (block: ReturnType<typeof aggregateAcademicBlocks>[number]) => void
   isLocked?: boolean
-  viewMode: 'tabla' | 'semana'
-  onToggleView: (mode: 'tabla' | 'semana') => void
   searchQuery?: string
-  onSearchChange?: (query: string) => void
+  teacherFilter?: string
 }
 
 export function PlanningSectionsTable({
@@ -31,15 +28,11 @@ export function PlanningSectionsTable({
   demands,
   selectedSectionId,
   onSelectSection,
-  onEditBlock,
-  isLocked = false,
-  viewMode,
-  onToggleView,
   searchQuery,
-  onSearchChange,
+  teacherFilter,
 }: PlanningSectionsTableProps) {
-  const [internalSearchQuery, setInternalSearchQuery] = useState('')
-  const effectiveQuery = searchQuery !== undefined ? searchQuery : internalSearchQuery
+  const effectiveQuery = searchQuery ?? ''
+  const effectiveTeacherFilter = teacherFilter ?? 'all'
   const prevSelectedId = useRef<string | null>(selectedSectionId)
 
   useEffect(() => {
@@ -97,9 +90,15 @@ export function PlanningSectionsTable({
       total += group.sections.length
 
       const matchedSections = group.sections.filter((section) => {
+        const sBlocks = blocksBySection.get(section.sectionId) ?? []
+        if (effectiveTeacherFilter === '__unassigned__') {
+          if (sBlocks.length > 0) return false
+        } else if (effectiveTeacherFilter && effectiveTeacherFilter !== 'all') {
+          if (!sBlocks.some((b) => b.teacherId === effectiveTeacherFilter)) return false
+        }
+
         if (!normalizedQuery) return true
         const sLabel = academicSectionLabel(proposal, section.sectionId)
-        const sBlocks = blocksBySection.get(section.sectionId) ?? []
         const teachers = sBlocks.map((b) => b.teacherName).join(' ')
         const rooms = sBlocks.flatMap((b) => b.roomNames).join(' ')
         const hay = normalizeAcademicSearch(
@@ -130,57 +129,12 @@ export function PlanningSectionsTable({
       totalSectionsCount: total,
       filteredSectionsCount: filtered,
     }
-  }, [proposal, blocksBySection, normalizedQuery, demands, catalog])
+  }, [proposal, blocksBySection, normalizedQuery, effectiveTeacherFilter, demands, catalog])
 
   return (
     <div className="planning-sections">
-      <div className="planning-sections__toolbar">
-        <div className="planning-sections__toolbar-left">
-          <h3 className="planning-sections__title">Secciones</h3>
-          <Badge variant="secondary" className="planning-sections__count">
-            Mostrando {filteredSectionsCount} de {totalSectionsCount}
-          </Badge>
-        </div>
-
-        <div className="planning-sections__toolbar-right">
-          <Input
-            type="search"
-            className="planning-sections__search"
-            placeholder="Buscar por curso, sección o recurso…"
-            aria-label="Buscar secciones"
-            value={effectiveQuery}
-            onChange={(e) => {
-              if (onSearchChange) {
-                onSearchChange(e.target.value)
-              } else {
-                setInternalSearchQuery(e.target.value)
-              }
-            }}
-          />
-
-          <div className="planning-sections__view-toggle" role="group" aria-label="Vista">
-            <Button variant="outline"
-              type="button"
-              className={`planning-sections__toggle-btn ${viewMode === 'tabla' ? 'planning-sections__toggle-btn--active' : ''}`}
-              aria-pressed={viewMode === 'tabla'}
-              onClick={() => onToggleView('tabla')}
-            >
-              Tabla
-            </Button>
-            <Button variant="outline"
-              type="button"
-              className={`planning-sections__toggle-btn ${viewMode === 'semana' ? 'planning-sections__toggle-btn--active' : ''}`}
-              aria-pressed={viewMode === 'semana'}
-              onClick={() => onToggleView('semana')}
-            >
-              Semana
-            </Button>
-          </div>
-        </div>
-      </div>
-
       <div className="planning-sections__table-wrapper">
-        <Table stickyHeader className="academic-scheduling__sections-table planning-sections__table">
+        <Table stickyHeader containerClassName="planning-sections__table-scroll" className="academic-scheduling__sections-table planning-sections__table">
           <TableHeader>
             <TableRow>
               <TableHead scope="col">Sección</TableHead>
@@ -189,13 +143,12 @@ export function PlanningSectionsTable({
               <TableHead scope="col">Ambiente</TableHead>
               <TableHead scope="col">Horario</TableHead>
               <TableHead scope="col">Estado</TableHead>
-              <TableHead scope="col">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           {courseGroups.length === 0 ? (
             <TableBody>
               <TableRow>
-                <TableCell colSpan={7} className="planning-sections__empty">
+                <TableCell colSpan={6} className="planning-sections__empty">
                   No se encontraron secciones que coincidan con la búsqueda.
                 </TableCell>
               </TableRow>
@@ -206,7 +159,7 @@ export function PlanningSectionsTable({
               return (
                 <TableBody key={group.courseId} className="planning-sections__group">
                   <TableRow className="planning-sections__group-row">
-                    <TableHead colSpan={7} scope="colgroup" className="planning-sections__group-header">
+                    <TableHead colSpan={6} scope="colgroup" className="planning-sections__group-header">
                       {group.courseId} · {group.courseName} · Demanda {group.demand} · {sectionCountText}
                     </TableHead>
                   </TableRow>
@@ -214,11 +167,12 @@ export function PlanningSectionsTable({
                     const isSelected = selectedSectionId === section.sectionId
                     const sBlocks = blocksBySection.get(section.sectionId) ?? []
                     const isPending = sBlocks.length === 0
+                    const isPartial = !isPending && proposal.pending.some((item) => item.sectionId === section.sectionId)
                     const isAdjusted = proposal.manuallyAdjustedSectionIds?.includes(section.sectionId)
                     const label = academicSectionLabel(proposal, section.sectionId)
 
                     const teacherText = isPending
-                      ? '—'
+                      ? 'Por asignar'
                       : [...new Set(sBlocks.map((b) => b.teacherName))].join(', ')
                     const roomText = isPending
                       ? '—'
@@ -263,52 +217,26 @@ export function PlanningSectionsTable({
                         aria-selected={isSelected}
                         data-state={isSelected ? 'selected' : undefined}
                       >
-                        <TableCell className="planning-sections__cell-section">{label}</TableCell>
+                        <TableCell className="planning-sections__cell-section">
+                          <Button variant="link" size="sm" type="button"
+                            aria-label={`Inspeccionar sección ${label} de ${section.courseName}`}
+                            onClick={(event) => { event.stopPropagation()
+                              onSelectSection(section.sectionId) }}>
+                            {label}
+                          </Button>
+                        </TableCell>
                         <TableCell className="planning-sections__cell-capacity">{section.capacity}</TableCell>
                         <TableCell className="planning-sections__cell-teacher">{teacherText}</TableCell>
                         <TableCell className="planning-sections__cell-room">{roomText}</TableCell>
                         <TableCell className="planning-sections__cell-schedule">{scheduleNode}</TableCell>
                         <TableCell className="planning-sections__cell-status">
-                          {isPending ? (
-                            <Badge variant="warning" className="planning-sections__status planning-sections__status--pending">
-                              Pendiente
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary" className="planning-sections__status planning-sections__status--complete">
-                              Completa{isAdjusted ? ' · Ajustada' : ''}
-                            </Badge>
-                          )}
+                          <span className={`planning-sections__status ${isPending || isPartial ? 'planning-sections__status--pending' : 'planning-sections__status--complete'}`}>
+                            {isPending || isPartial ? <CircleAlert size={16} aria-hidden="true" /> : <CircleCheck size={16} aria-hidden="true" />}
+                            {isPending ? 'Pendiente' : isPartial ? 'Parcial' : 'Completa'}
+                            {isAdjusted && <span className="planning-meta"> · Ajustada</span>}
+                          </span>
                         </TableCell>
-                        <TableCell className="planning-sections__cell-actions">
-                          <div className="planning-sections__row-actions">
-                            <Button variant="outline"
-                              type="button"
-                              className="planning-sections__action-button"
-                              aria-label={`Inspeccionar sección ${label} de ${section.courseName}`}
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                onSelectSection(section.sectionId)
-                              }}
-                            >
-                              Inspeccionar
-                            </Button>
-                            {sBlocks.length > 0 && (
-                              <Button variant="ghost" size="sm"
-                                type="button"
-                                disabled={isLocked}
-                                aria-expanded={isSelected}
-                                aria-controls="academic-scheduling-manual-editor"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  onSelectSection(section.sectionId)
-                                  onEditBlock(sBlocks[0])
-                                }}
-                              >
-                                Editar horario
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
+
                       </TableRow>
                     )
                   })}
@@ -318,6 +246,7 @@ export function PlanningSectionsTable({
           )}
         </Table>
       </div>
+      <p className="planning-sections__count">Mostrando {filteredSectionsCount} de {totalSectionsCount}</p>
     </div>
   )
 }

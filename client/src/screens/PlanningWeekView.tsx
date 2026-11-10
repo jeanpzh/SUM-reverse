@@ -1,8 +1,8 @@
+import { LockKeyhole, MousePointer2 } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { NativeSelect } from '../components/ui/NativeSelect'
 import { Label } from '../components/ui/Label'
 import { Badge } from '../components/ui/Badge'
-import { Input } from '../components/ui/Input'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AcademicAdjustment, AcademicPlanningResources } from '../../../shared/programacion-academica-api.mjs'
 import type { AcademicCatalog, AcademicProposal } from '../data/academicScheduling'
@@ -23,9 +23,7 @@ export interface PlanningWeekViewProps {
   selectedSectionId: string | null
   editingBlock: AcademicAdjustment | null
   searchQuery: string
-  onSearchChange: (query: string) => void
-  viewMode: 'tabla' | 'semana'
-  onToggleView: (mode: 'tabla' | 'semana') => void
+  teacherFilter?: string
   onSelectSection: (sectionId: string) => void
   onStartEditBlock: (block: ReturnType<typeof aggregateAcademicBlocks>[number]) => void
   onChangeEditingBlock?: (adjustment: AcademicAdjustment) => void
@@ -36,6 +34,25 @@ const dayNamesFull = ['—', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes
 const dayNamesShort = ['—', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const hourHeight = 60
 
+function componentKind(type: string) {
+  const label = normalizeAcademicSearch(type)
+  if (label === 't' || label.includes('teor')) return 'theory'
+  if (label === 'p' || label.includes('pract')) return 'practice'
+  if (label === 'l' || label.includes('lab')) return 'lab'
+  return 'session'
+}
+
+function BlockComponents({ details }: { details: ReturnType<typeof aggregateAcademicBlocks>[number]['componentDetails'] }) {
+  return <div className="planning-week__components" aria-label="Componentes del bloque">
+    {details.map((component, index) => <span key={`${component.type}-${index}`}
+      className="planning-week__component" data-kind={componentKind(component.type)}
+      title={`${component.type} · ${formatAcademicDuration(component.durationMinutes)}`}>
+      <span className="planning-week__component-dot" aria-hidden="true" />
+      {component.type} <span className="planning-week__component-duration">{formatAcademicDuration(component.durationMinutes).split(' (')[0]}</span>
+    </span>)}
+  </div>
+}
+
 export function PlanningWeekView({
   proposal,
   catalog,
@@ -43,9 +60,7 @@ export function PlanningWeekView({
   selectedSectionId,
   editingBlock,
   searchQuery,
-  onSearchChange,
-  viewMode,
-  onToggleView,
+  teacherFilter = 'all',
   onSelectSection,
   onStartEditBlock,
   onChangeEditingBlock,
@@ -64,13 +79,20 @@ export function PlanningWeekView({
 
   // Align section membership: match sections across all their blocks (WV-4)
   const matchedSectionIds = useMemo(() => {
-    if (!normalizedQuery) {
-      return new Set(proposal.sections.map((s) => s.sectionId))
-    }
     const matched = new Set<string>()
     for (const section of proposal.sections) {
-      const sLabel = academicSectionLabel(proposal, section.sectionId)
       const sBlocks = blocks.filter((b) => b.sectionId === section.sectionId)
+      if (teacherFilter === '__unassigned__') {
+        if (sBlocks.length > 0) continue
+      } else if (teacherFilter && teacherFilter !== 'all') {
+        if (!sBlocks.some((b) => b.teacherId === teacherFilter)) continue
+      }
+
+      if (!normalizedQuery) {
+        matched.add(section.sectionId)
+        continue
+      }
+      const sLabel = academicSectionLabel(proposal, section.sectionId)
       const teachers = sBlocks.map((b) => b.teacherName).join(' ')
       const rooms = sBlocks.flatMap((b) => b.roomNames).join(' ')
       const hay = normalizeAcademicSearch(
@@ -81,12 +103,18 @@ export function PlanningWeekView({
       }
     }
     return matched
-  }, [proposal, blocks, normalizedQuery])
+  }, [proposal, blocks, normalizedQuery, teacherFilter])
 
-  // Include all blocks of matching sections consistently
+  // Include blocks of matching sections (and if filtered to a specific teacher, only that teacher's blocks)
   const filteredBlocks = useMemo(() => {
-    return blocks.filter((b) => matchedSectionIds.has(b.sectionId))
-  }, [blocks, matchedSectionIds])
+    return blocks.filter((b) => {
+      if (!matchedSectionIds.has(b.sectionId)) return false
+      if (teacherFilter && teacherFilter !== 'all' && teacherFilter !== '__unassigned__') {
+        return b.teacherId === teacherFilter
+      }
+      return true
+    })
+  }, [blocks, matchedSectionIds, teacherFilter])
 
   // Pending sections that match search but have no calendar blocks
   const pendingSectionsMatchingCount = useMemo(() => {
@@ -279,48 +307,28 @@ export function PlanningWeekView({
 
   return (
     <div className="planning-sections planning-week">
-      {/* Shared Toolbar */}
-      <div className="planning-sections__toolbar">
-        <div className="planning-sections__toolbar-left">
-          <h3 className="planning-sections__title">Semana</h3>
+      <div className="planning-week__summary">
           <span className="planning-sections__count">
             Mostrando {filteredBlocks.length} de {blocks.length} {blocks.length === 1 ? 'bloque' : 'bloques'}
             {pendingSectionsMatchingCount > 0 && (
               <> · {pendingSectionsMatchingCount} {pendingSectionsMatchingCount === 1 ? 'sección pendiente permanece en Tabla' : 'secciones pendientes permanecen en Tabla'}</>
             )}
           </span>
-        </div>
-
-        <div className="planning-sections__toolbar-right">
-          <Input
-            type="search"
-            className="planning-sections__search"
-            placeholder="Buscar por curso, sección o recurso…"
-            aria-label="Buscar secciones"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
-
-          <div className="planning-sections__view-toggle" role="group" aria-label="Vista">
-            <Button variant={viewMode === 'tabla' ? 'secondary' : 'ghost'}
-              type="button"
-              size="sm"
-              aria-pressed={viewMode === 'tabla'}
-              onClick={() => onToggleView('tabla')}
-            >
-              Tabla
-            </Button>
-            <Button variant={viewMode === 'semana' ? 'secondary' : 'ghost'}
-              type="button"
-              size="sm"
-              aria-pressed={viewMode === 'semana'}
-              onClick={() => onToggleView('semana')}
-            >
-              Semana
-            </Button>
-          </div>
-        </div>
       </div>
+
+      <div className="planning-week__legend">
+        <div className="planning-week__legend-types" aria-label="Tipos de componente">
+          <span className="planning-week__component" data-kind="theory"><span className="planning-week__component-dot" aria-hidden="true" />Teoría</span>
+          <span className="planning-week__component" data-kind="practice"><span className="planning-week__component-dot" aria-hidden="true" />Práctica</span>
+          <span className="planning-week__component" data-kind="lab"><span className="planning-week__component-dot" aria-hidden="true" />Laboratorio</span>
+        </div>
+        <span className="planning-week__interaction-hint">{isLocked
+          ? <><LockKeyhole size={13} aria-hidden="true" /> Solo lectura · selecciona para consultar</>
+          : <><MousePointer2 size={13} aria-hidden="true" /> Selecciona un bloque para ajustar</>}</span>
+      </div>
+      {filteredBlocks.length === 0 && <p className="planning-week__no-results" role="status">
+        {blocks.length === 0 ? 'Aún no hay bloques asignados. Revisa las secciones pendientes en Tabla.' : 'No hay bloques que coincidan con los filtros. Prueba otro docente o búsqueda.'}
+      </p>}
 
       {/* Desktop Day Filter Bar */}
       <div className="planning-week__day-filter-bar" role="group" aria-label="Filtrar calendario por día">
@@ -472,7 +480,7 @@ export function PlanningWeekView({
                         key={blockKey}
                         data-week-grid-section-id={block.sectionId}
                         data-week-section-id={block.sectionId}
-                        className={`planning-week__block ${isSelected ? 'planning-week__block--selected' : ''} ${
+                        className={`planning-week__block ${heightPx <= 90 ? 'planning-week__block--compact' : ''} ${heightPx <= 42 ? 'planning-week__block--tiny' : ''} ${isSelected ? 'planning-week__block--selected' : ''} ${
                           isBeingEdited ? 'planning-week__block--current-placement' : ''
                         }`}
                         style={{
@@ -498,12 +506,13 @@ export function PlanningWeekView({
                         }}
                       >
                         <div className="planning-week__block-header">
-                          <strong className="planning-week__block-course" title={block.courseName}>{block.courseName}</strong>
+                          <strong className="planning-week__block-course" title={block.courseName}>{isBeingEdited && heightPx <= 90 ? 'Actual · ' : ''}{block.courseName}</strong>
                           <span className="planning-week__block-section">Sec. {sLabel}</span>
                         </div>
                         <div className="planning-week__block-time">
                           {formatAcademicMinute(block.startMinute)}–{formatAcademicMinute(block.endMinute)}
                         </div>
+                        <BlockComponents details={block.componentDetails} />
                         <div className="planning-week__block-details">
                           <span className="planning-week__block-teacher" title={block.teacherName}>
                             {block.teacherName}
@@ -529,7 +538,7 @@ export function PlanningWeekView({
 
                     return (
                       <article
-                        className="planning-week__block planning-week__block--proposed-preview"
+                        className={`planning-week__block planning-week__block--proposed-preview ${activeBlock.durationMinutes <= 90 ? 'planning-week__block--compact' : ''} ${activeBlock.durationMinutes <= 42 ? 'planning-week__block--tiny' : ''}`}
                         style={{
                           top: `${((editingBlock.startMinute - minMinute) / 60) * hourHeight}px`,
                           height: `${Math.max((activeBlock.durationMinutes / 60) * hourHeight, 36)}px`,
@@ -547,7 +556,7 @@ export function PlanningWeekView({
                           Propuesta (vista previa)
                         </Badge>
                         <div className="planning-week__block-header">
-                          <strong className="planning-week__block-course">{activeBlock.courseName}</strong>
+                          <strong className="planning-week__block-course">{activeBlock.durationMinutes <= 90 ? 'Propuesta · ' : ''}{activeBlock.courseName}</strong>
                           <span className="planning-week__block-section">
                             Sec. {academicSectionLabel(proposal, editingBlock.sectionId)}
                           </span>
@@ -556,6 +565,7 @@ export function PlanningWeekView({
                           {formatAcademicMinute(editingBlock.startMinute)}–
                           {formatAcademicMinute(editingBlock.startMinute + activeBlock.durationMinutes)}
                         </div>
+                        <BlockComponents details={activeBlock.componentDetails} />
                         <div className="planning-week__block-details">
                           <span className="planning-week__block-teacher" title={proposedTeacherName}>
                             {proposedTeacherName}
@@ -683,9 +693,13 @@ export function PlanningWeekView({
                               </span>
                               <span>Docente: {block.teacherName}</span>
                               <span>Ambiente: {block.roomNames.join(', ')}</span>
-                              <span>Componentes: {block.componentDetails.map((c) => c.type).join(' + ')}</span>
+                              <BlockComponents details={block.componentDetails} />
                             </div>
                             <div className="planning-week__agenda-card-actions">
+                              <Button type="button" variant="ghost" size="sm" onClick={(event) => {
+                                event.stopPropagation()
+                                onSelectSection(block.sectionId)
+                              }}>Consultar sección</Button>
                               <Button variant="outline"
                                 type="button"
                                 className="planning-sections__action-button"

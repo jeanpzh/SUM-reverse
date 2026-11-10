@@ -1029,6 +1029,14 @@ dd {
   background: #fff;
   color: #304f73;
 }
+.route-status--pending {
+  margin: 0;
+  padding: 16px 24px;
+  background: transparent;
+  border: none;
+  width: 100%;
+  box-sizing: border-box;
+}
 .route-status p {
   margin: 12px 0;
 }

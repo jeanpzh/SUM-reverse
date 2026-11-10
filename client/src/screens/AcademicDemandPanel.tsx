@@ -1,3 +1,4 @@
+import { PlanningFetchLoading } from '../components/PlanningFetchLoading'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { NativeSelect } from '../components/ui/NativeSelect'
@@ -43,6 +44,7 @@ export function AcademicDemandPanel({ sourceId, onSourceChange, courses, estimat
         onClick={onEstimate}>{loading ? 'Estimando…' : 'Estimar demanda potencial'}</Button>
     </div>
     {error && <p className="academic-demand__error" role="alert">{error} La edición manual y el generador siguen disponibles.</p>}
+    {loading && <PlanningFetchLoading label="Estimando demanda potencial…" layout="cards" />}
     {!estimate && !loading && !error && <p className="academic-demand__empty">Estima una base para ver elegibilidad y causas agregadas. La demanda final manual se conserva.</p>}
     {estimate && <div className="academic-demand__source" aria-label="Procedencia de la estimación">
         <strong>{estimate.source.label}</strong>

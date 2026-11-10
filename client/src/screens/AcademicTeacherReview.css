@@ -1,30 +1,19 @@
 .academic-teacher-review {
   min-width: 0;
   max-width: 100%;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--planning-border);
+  margin: 0;
+  padding: 0;
   color: var(--planning-text);
-  font-size: 14px;
+  font-size: var(--planning-text-sm);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
-}
-
-.academic-teacher-review > summary {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  font-size: 18px;
-  font-weight: 600;
 }
 
 .academic-teacher-review__state,
 .academic-teacher-review__warning {
   margin: 8px 0;
   color: var(--planning-muted);
-  font-size: 13px;
+  font-size: var(--planning-text-xs);
 }
 
 .academic-teacher-review__warning {
@@ -32,7 +21,6 @@
 }
 
 .academic-teacher-review__toolbar,
-.academic-teacher-review__counts,
 .academic-teacher-review__actions {
   display: flex;
   flex-wrap: wrap;
@@ -66,20 +54,20 @@
 .academic-teacher-review__observation-readonly {
   margin: 8px 0;
   white-space: pre-wrap;
-  font-size: 14px;
+  font-size: var(--planning-text-sm);
 }
 
 .academic-teacher-review__history {
   margin-top: 12px;
   color: var(--planning-muted);
-  font-size: 13px;
+  font-size: var(--planning-text-sm);
 }
 
 .academic-teacher-review__history ol {
   display: grid;
   gap: 8px;
   margin: 8px 0 0;
-  padding-left: 20px;
+  padding-left: 24px;
 }
 
 .academic-teacher-review__history li {
@@ -94,7 +82,60 @@
   white-space: pre-wrap;
 }
 
-.academic-teacher-review > summary:focus-visible {
-  outline: 2px solid var(--planning-primary);
+
+
+.academic-teacher-review__strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: var(--planning-surface-subtle);
+  line-height: 20px;
+}
+.academic-teacher-review__strip > span {
+  border-left: 1px solid var(--planning-border);
+  padding-left: 16px;
+}
+.academic-teacher-review__strip small {
+  color: var(--planning-muted);
+  font-size: var(--planning-text-xs);
+}
+.academic-teacher-review__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.academic-teacher-review__status svg { flex-shrink: 0; }
+.academic-teacher-review__section {
+  min-width: 0;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--planning-border);
+}
+.planning-root .academic-teacher-review__section h3 {
+  margin: 0 0 12px;
+  color: var(--planning-text);
+  font-size: var(--planning-text-xl);
+  line-height: 22px;
+  font-weight: 700;
+}
+.academic-teacher-review__table-wrap :is(th, td) {
+  height: 40px;
+  padding: 8px 12px;
+  font-size: var(--planning-text-sm);
+  line-height: 20px;
+}
+.academic-teacher-review__table-wrap th { font-weight: 700; }
+.academic-teacher-review__table-wrap tr[data-state='selected'] { background: var(--planning-selected); }
+.academic-teacher-review__empty { margin: 16px 0; }
+.academic-teacher-review details > summary { cursor: pointer; }
+.academic-teacher-review summary:focus-visible {
+  outline: 2px solid var(--planning-focus-ring);
   outline-offset: 4px;
+}
+@media (max-width: 639px) {
+  .academic-teacher-review__strip { padding: 8px; gap: 8px; }
+  .academic-teacher-review__strip > span { padding-left: 8px; }
 }

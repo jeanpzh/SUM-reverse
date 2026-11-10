@@ -1,8 +1,8 @@
-/* Planning Week View (Semana) - Design Direction A */
+/* Internal planning timetable: neutral shadcn workspace. */
 
 .planning-week {
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--planning-text-base);
   display: flex;
   flex-direction: column;
   background: var(--planning-surface);
@@ -28,7 +28,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: calc(var(--planning-spacing) * 2);
-  font-size: 0.875rem;
+  font-size: var(--planning-text-base);
   color: var(--planning-text);
 }
 
@@ -40,7 +40,7 @@
 
 .planning-week__editing-hint {
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-base);
   color: var(--planning-muted);
 }
 
@@ -76,7 +76,7 @@
   width: 64px;
   flex-shrink: 0;
   padding: calc(var(--planning-spacing) * 2);
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-base);
   font-weight: 600;
   color: var(--planning-muted);
   text-align: center;
@@ -93,7 +93,7 @@
   min-width: 130px;
   padding: calc(var(--planning-spacing) * 2);
   text-align: center;
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-base);
   font-weight: 600;
   color: var(--planning-text);
   border-right: 1px solid var(--planning-border);
@@ -135,7 +135,7 @@
   left: 0;
   right: 0;
   padding-right: calc(var(--planning-spacing) * 2);
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-base);
   font-variant-numeric: tabular-nums;
   color: var(--planning-muted);
   text-align: right;
@@ -196,7 +196,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-base);
   line-height: 1.25;
   cursor: pointer;
   z-index: 2;
@@ -245,7 +245,7 @@
 }
 
 .planning-week__block-course {
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-base);
   font-weight: 600;
   color: var(--planning-text);
   white-space: nowrap;
@@ -255,7 +255,7 @@
 }
 
 .planning-week__block-section {
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-base);
   color: var(--planning-muted);
   flex-shrink: 0;
   font-weight: 600;
@@ -263,7 +263,7 @@
 }
 
 .planning-week__block-time {
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-base);
   color: var(--planning-muted);
   font-variant-numeric: tabular-nums;
   font-weight: 500;
@@ -276,7 +276,7 @@
   display: flex;
   flex-direction: column;
   gap: 1px;
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-base);
   color: var(--planning-muted);
   overflow: hidden;
   min-width: 0;
@@ -305,7 +305,7 @@
 }
 
 .planning-week__agenda-nav-label {
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-base);
   font-weight: 600;
   color: var(--planning-text);
   white-space: nowrap;
@@ -333,13 +333,13 @@
 
 .planning-week__agenda-day-title {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: var(--planning-text-xl);
   font-weight: 600;
   color: var(--planning-text);
 }
 
 .planning-week__agenda-day-count {
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-base);
   color: var(--planning-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -347,7 +347,7 @@
 .planning-week__agenda-empty {
   margin: 0;
   padding: calc(var(--planning-spacing) * 2);
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-base);
   color: var(--planning-muted);
   font-style: italic;
   background: var(--planning-canvas);
@@ -401,12 +401,12 @@
 }
 
 .planning-week__agenda-card-title strong {
-  font-size: 0.875rem;
+  font-size: var(--planning-text-base);
   color: var(--planning-text);
 }
 
 .planning-week__agenda-card-title span {
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-base);
   font-weight: 600;
   color: var(--planning-muted);
 }
@@ -415,7 +415,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-base);
   color: var(--planning-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -427,7 +427,7 @@
 }
 
 /* Breakpoint for narrow screens (at 768px and below) */
-@media (max-width: 768px) {
+@container planning-content (max-width: 48rem) {
   .planning-week__grid-wrapper,
   .planning-week__day-filter-bar {
     display: none;
@@ -449,7 +449,7 @@
 }
 
 .planning-week__day-filter-label {
-  font-size: 0.8125rem;
+  font-size: var(--planning-text-base);
   font-weight: 600;
   color: var(--planning-muted);
 }
@@ -489,3 +489,92 @@
   min-height: 0;
   border-radius: 0;
 }
+
+/* Operational timetable: compact controls, legible hierarchy, restrained type tints. */
+.planning-root .planning-week .planning-sections__toolbar {
+  padding: 14px 16px;
+  gap: 12px;
+  border-bottom: 1px solid var(--planning-border);
+  background: var(--planning-surface);
+}
+.planning-root .planning-week .planning-sections__toolbar-left { gap: 5px; }
+.planning-root .planning-week .planning-sections__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--planning-text-lg);
+  line-height: 1.5;
+  letter-spacing: -0.015em;
+}
+.planning-week .planning-sections__toolbar-right { flex-wrap: wrap; gap: 8px; }
+.planning-root .planning-week .planning-sections__teacher-filter { min-width: 0; max-width: 240px; }
+.planning-week__search-wrap { position: relative; min-width: 0; flex: 1 1 180px; }
+.planning-week__search-wrap > svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--planning-muted); pointer-events: none; }
+.planning-root .planning-week__search-wrap .planning-sections__search { width: 100%; min-width: 0; padding-left: 32px; box-sizing: border-box; }
+.planning-week__legend { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 16px; border-bottom: 1px solid var(--planning-border); }
+.planning-week__legend-types { display: flex; flex-wrap: wrap; gap: 10px; }
+.planning-week__interaction-hint { display: inline-flex; align-items: center; gap: 5px; color: var(--planning-muted); font-size: var(--planning-text-sm); }
+.planning-week__components { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.planning-week__component { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px; max-width: 100%; font-size: var(--planning-text-sm); font-weight: 600; line-height: 1.5; color: var(--planning-text); }
+.planning-week__components .planning-week__component { padding: 0 4px; border-radius: 4px; background: var(--planning-selected); }
+.planning-week__component-dot { width: 5px; height: 5px; border-radius: 2px; background: var(--planning-muted); flex: 0 0 auto; }
+.planning-week__component[data-kind='theory'] .planning-week__component-dot { background: #749cb9; }
+.planning-week__component[data-kind='practice'] .planning-week__component-dot { background: #7fa68c; }
+.planning-week__component[data-kind='lab'] .planning-week__component-dot { background: #b39b6f; }
+.planning-week__components .planning-week__component[data-kind='theory'] { background: color-mix(in srgb, #749cb9 13%, var(--planning-surface)); }
+.planning-week__components .planning-week__component[data-kind='practice'] { background: color-mix(in srgb, #7fa68c 13%, var(--planning-surface)); }
+.planning-week__components .planning-week__component[data-kind='lab'] { background: color-mix(in srgb, #b39b6f 13%, var(--planning-surface)); }
+.planning-week__component-duration { font-weight: 400; color: var(--planning-muted); font-variant-numeric: tabular-nums; }
+.planning-root .planning-week__day-filter-bar { padding: 6px 12px; gap: 6px; }
+.planning-root .planning-week__day-filter-pills [data-slot='button'] { font-size: var(--planning-text-sm); min-height: 32px; padding: 3px 7px; }
+.planning-week__grid-wrapper { max-height: 760px; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.planning-week__header-row { min-height: 38px; align-items: stretch; }
+.planning-week__day-col-header { display: flex; align-items: center; justify-content: center; font-size: var(--planning-text-sm); }
+.planning-week__time-label { font-size: var(--planning-text-sm); }
+.planning-week__block { padding: 7px; border-left: 3px solid var(--planning-muted); gap: 4px; border-radius: 5px; }
+.planning-week__block:hover { background: var(--planning-selected); }
+.planning-week__block--selected, .planning-week__block--proposed-preview { border-left-color: var(--planning-primary); }
+.planning-week__block-course { font-size: var(--planning-text-sm); line-height: 1.4; }
+.planning-week__block-section { font-size: var(--planning-text-sm); }
+.planning-week__block-time { color: var(--planning-text); font-size: var(--planning-text-sm); }
+.planning-week__block-details { font-size: var(--planning-text-sm); line-height: 1.5; }
+.planning-week__no-results { margin: 0; padding: 16px; color: var(--planning-muted); font-size: var(--planning-text-base); border-bottom: 1px solid var(--planning-border); }
+
+/* Duration determines geometry. Keep course/time visible before secondary details. */
+.planning-week__block-header,
+.planning-week__block-time { flex-shrink: 0; }
+.planning-week__block--compact { padding: 4px 6px; gap: 2px; }
+.planning-week__block--compact .planning-week__block-details,
+.planning-week__block--compact .planning-week__placement-tag { display: none; }
+.planning-week__block--compact .planning-week__components {
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  max-height: 18px;
+  overflow: hidden;
+}
+.planning-week__block--compact .planning-week__component { flex-wrap: nowrap; white-space: nowrap; padding-block: 0; }
+.planning-week__block--compact .planning-week__component-duration { display: inline; }
+.planning-week__block--tiny { padding: 2px 4px; }
+.planning-week__block--tiny .planning-week__components { display: none; }
+.planning-week__block--tiny .planning-week__block-course,
+.planning-week__block--tiny .planning-week__block-section,
+.planning-week__block--tiny .planning-week__block-time { line-height: 1.1; }
+@media (max-width: 1000px) {
+  .planning-week .planning-sections__toolbar-right { width: 100%; }
+}
+@container planning-content (max-width: 48rem) {
+  .planning-root .planning-week__day-filter-bar { display: none; }
+  .planning-root .planning-week .planning-sections__toolbar { padding: 12px; }
+  .planning-root .planning-week .planning-sections__teacher-filter { max-width: none; flex: 1 1 100%; }
+  .planning-week__legend { padding: 8px 12px; }
+  .planning-week__agenda-card { padding: 12px; gap: 8px; }
+  .planning-week__agenda-day-title { font-size: var(--planning-text-base); }
+  .planning-week__agenda-card-actions { justify-content: flex-start; flex-wrap: wrap; gap: 6px; }
+}
+
+.planning-week__summary { padding: 8px 16px; font-size: var(--planning-text-xs); color: var(--planning-muted); }
+
+.planning-week__components .planning-week__component { display: inline-flex; align-items: center; flex-wrap: nowrap; gap: 4px; white-space: nowrap; font-size: var(--planning-text-xs); line-height: 16px; }
+
+/* Keep the first tick below the sticky header without moving schedule blocks. */
+.planning-week__time-label:first-child { transform: none; padding-top: 4px; }

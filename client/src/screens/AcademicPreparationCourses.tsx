@@ -1,6 +1,7 @@
+import { PlanningFetchLoading } from '../components/PlanningFetchLoading'
+import { Badge } from '../components/ui/Badge'
 import { Checkbox } from '../components/ui/Checkbox'
 import { Button, buttonVariants } from '../components/ui/Button'
-import { Badge } from '../components/ui/Badge'
 import { Input } from '../components/ui/Input'
 import { NativeSelect } from '../components/ui/NativeSelect'
 import { Label } from '../components/ui/Label'
@@ -20,6 +21,11 @@ import {
 import type { BulkChangePreview } from '../data/academicPreparation.ts'
 import { AcademicDemandPanel } from './AcademicDemandPanel.tsx'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../components/ui/Dialog'
+import { RotateCcw, CheckSquare, Square, SlidersHorizontal } from 'lucide-react'
+import { useDefaultLayout } from 'react-resizable-panels'
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '../components/ui/Resizable'
+import { Sheet, SheetContent, SheetTitle } from '../components/ui/Sheet'
+import { useMediaQuery } from '../lib/useMediaQuery'
 import './AcademicPreparationCourses.css'
 
 export interface AcademicPreparationCoursesProps {
@@ -85,9 +91,14 @@ export function AcademicPreparationCourses({
   onEstimateDemand,
   onUseBaseDemand,
 }: AcademicPreparationCoursesProps) {
+  const wideLayout = useMediaQuery('(min-width: 1024px)')
   const [searchQuery, setSearchQuery] = useState('')
   const [inspectedCourseId, setInspectedCourseId] = useState<string | null>(null)
   const [demandOpen, setDemandOpen] = useState(false)
+  const { defaultLayout, onLayoutChanged } = useDefaultLayout({
+    id: 'planning-course-detail',
+    panelIds: wideLayout && inspectedCourseId ? ['planning-course-table', 'planning-course-inspector'] : ['planning-course-table'],
+  })
 
   // Bulk edit modal state
   const [isBulkOpen, setIsBulkOpen] = useState(false)
@@ -180,22 +191,114 @@ export function AcademicPreparationCourses({
     handleCloseBulkModal()
   }
 
+  const courseInspector = inspectedCourse && (
+    <aside
+      className="planning-inspector planning-inspector--docked academic-preparation__inspector"
+      aria-label={`Inspector de curso ${inspectedCourse.courseId}`}
+    >
+      <div className="planning-inspector__header">
+        <div className="planning-inspector__heading-info">
+          <h4 className="planning-inspector__title">{inspectedCourse.name}</h4>
+          <p className="planning-inspector__meta">
+            {inspectedCourse.courseId} · Ciclo {inspectedCourse.cycle ?? '—'} ·{' '}
+            {inspectedCourse.credits ?? '—'} créditos
+          </p>
+        </div>
+        <Button variant="ghost"
+          type="button"
+          className="planning-inspector__close-btn"
+          aria-label="Cerrar inspector"
+          onClick={() => setInspectedCourseId(null)}
+        >
+          ✕ Cerrar
+        </Button>
+      </div>
+
+      <div className="academic-preparation__inspector-body">
+        {!selectedCourses.includes(inspectedCourse.courseId) && (
+          <p className="academic-preparation__inspector-warning" role="note">
+            Curso no incluido en la propuesta. Marca su casilla para habilitar sus opciones de configuración.
+          </p>
+        )}
+
+        {inspectedCourse.planningPatterns && inspectedCourse.planningPatterns.length > 0 && (
+          <Label>
+            Patrón semanal de planificación
+            <NativeSelect
+              value={patterns[inspectedCourse.courseId] ?? ''}
+              disabled={isLocked || !selectedCourses.includes(inspectedCourse.courseId)}
+              aria-label={`Patrón ${inspectedCourse.courseId}`}
+              onChange={(event) =>
+                onUpdatePattern(inspectedCourse.courseId, event.currentTarget.value)
+              }
+            >
+              {inspectedCourse.planningPatterns.map((pattern) => (
+                <option key={pattern.id} value={pattern.id}>
+                  {pattern.label} —{' '}
+                  {pattern.weeklySessions
+                    .map((session) => `${session.type ?? 'Sesión'} ${session.durationMinutes} min`)
+                    .join(', ')}
+                </option>
+              ))}
+            </NativeSelect>
+          </Label>
+        )}
+
+        <Label>
+          Modalidad de sesiones
+          <NativeSelect
+            value={deliveryModes[inspectedCourse.courseId] ?? 'continuous'}
+            disabled={isLocked || !selectedCourses.includes(inspectedCourse.courseId)}
+            aria-label={`Modalidad de sesiones ${inspectedCourse.courseId}`}
+            onChange={(event) =>
+              onUpdateDeliveryMode(
+                inspectedCourse.courseId,
+                event.currentTarget.value as 'continuous' | 'split'
+              )
+            }
+          >
+            <option value="continuous">Bloque continuo · predeterminado</option>
+            <option value="split">Sesiones divididas · excepción</option>
+          </NativeSelect>
+        </Label>
+
+        {/* Native details: read-only reference stays openable inside the locked fieldset. */}
+        {inspectedCourse.history && (
+          <details className="academic-scheduling__history">
+            <summary className={`planning-disclosure-trigger ${buttonVariants({ variant: 'ghost' })}`}>Referencia histórica · {inspectedCourse.history.sections.length} secciones</summary>
+            <div className="academic-scheduling__history-content">
+              {inspectedCourse.history.sections.map((section) => (
+                <div
+                  className="academic-scheduling__history-section"
+                  key={section.sectionId}
+                >
+                  <strong>
+                    Sección {section.sectionId} · capacidad histórica {section.capacity}
+                  </strong>
+                  <ul>
+                    {section.sessions.map((session, index) => (
+                      <li key={`${section.sectionId}-${index}`}>
+                        {formatAcademicInterval(session)} · {session.type} · {session.room} ·{' '}
+                        {session.teacherName
+                          ? `Docente de referencia: ${session.teacherName}`
+                          : session.teacherId}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+
+          </details>
+        )}
+      </div>
+    </aside>
+  )
+
   return (
-    <section className="academic-scheduling__panel" aria-labelledby="academic-scheduling-courses">
-      <header className="academic-scheduling__panel-heading">
-        <div>
-          <h3 id="academic-scheduling-courses">Seleccionar cursos</h3>
-
-        </div>
-        <div className="academic-scheduling__panel-meta">
-          <Badge variant="outline" className="academic-scheduling__revision">{catalog?.revision ?? 'PA-DEMO-1'}</Badge>
-        </div>
-      </header>
-
+    <section id="academic-scheduling-courses" className="academic-preparation-view" aria-label="Seleccionar cursos">
       {loadingCatalog && (
-        <p className="academic-scheduling__state" role="status">
-          Consultando catálogo local…
-        </p>
+        <PlanningFetchLoading label="Consultando catálogo local…" layout="courses-table" />
       )}
 
       {catalogError && (
@@ -212,11 +315,12 @@ export function AcademicPreparationCourses({
 
       {catalog && (
         <div className="academic-preparation">
-          {/* Top Period Configuration */}
-          <div className="academic-scheduling__cycle-filter">
+          <div className="academic-preparation__toolbar">
+          <div className="academic-preparation__period">
             <Label>
-              Periodo de planificación
+              <span className="sr-only">Periodo de planificación</span>
               <NativeSelect
+                title="Al cambiar de periodo se aplican los valores iniciales a demanda y capacidad. Los ajustes requieren confirmación si hay cambios pendientes."
                 aria-label="Periodo de planificación"
                 value={planningPeriod}
                 disabled={isLocked}
@@ -231,23 +335,22 @@ export function AcademicPreparationCourses({
                 <option value="2027-II">2027-II</option>
               </NativeSelect>
             </Label>
-            <Button variant="outline"
+            <Button
+              variant="link"
               type="button"
               disabled={isLocked}
               onClick={() => onApplyPeriodDefaults(planningPeriod, true)}
+              aria-label="Aplicar valores iniciales del periodo"
+              className="gap-2 text-sm font-normal"
             >
-              Aplicar valores iniciales del periodo
+              <RotateCcw className="size-3.5" aria-hidden="true" />
+              <span>Valores iniciales</span>
             </Button>
-            <p>
-              Al cambiar de periodo se aplican los valores iniciales a demanda y capacidad. Los ajustes requieren confirmación si hay cambios pendientes.
-            </p>
+
           </div>
 
-          {/* Search, Filter & Bulk Toolbar */}
-          <div className="academic-preparation__toolbar">
-            <div className="academic-preparation__toolbar-row">
               <div className="academic-preparation__search-field">
-                <Label htmlFor={searchInputId}>Buscar por código o nombre</Label>
+                <Label className="sr-only" htmlFor={searchInputId}>Buscar por código o nombre</Label>
                 <Input
                   id={searchInputId}
                   type="search"
@@ -259,7 +362,7 @@ export function AcademicPreparationCourses({
               </div>
 
               <div className="academic-preparation__cycle-filter">
-                <Label htmlFor={cycleSelectId}>Filtrar cursos por ciclo</Label>
+                <Label className="sr-only" htmlFor={cycleSelectId}>Filtrar cursos por ciclo</Label>
                 <NativeSelect
                   id={cycleSelectId}
                   aria-label="Filtrar cursos por ciclo"
@@ -278,60 +381,51 @@ export function AcademicPreparationCourses({
                 </NativeSelect>
                 {availableCycles.length === 0 && <span>El catálogo no especifica ciclos.</span>}
               </div>
-            </div>
-
-            {/* Counters Bar distinguishing Catálogo, Incluidos, and Visibles */}
-            <div className="academic-preparation__counters" role="status" aria-label="Contadores de preparación">
-              <span className="academic-preparation__counter-item">
-                <strong>Catálogo:</strong>
-                <Badge variant="secondary" data-testid="count-catalog">
-                  {counts.totalCatalog}
-                </Badge>
-              </span>
-              <span className="academic-preparation__counter-item">
-                <strong>Incluidos:</strong>
-                <Badge variant="secondary" data-testid="count-included">
-                  {counts.totalIncluded}
-                </Badge>
-              </span>
-              <span className="academic-preparation__counter-item">
-                <strong>Visibles:</strong>
-                <Badge variant="secondary" data-testid="count-visible">
-                  {counts.totalVisible}
-                </Badge>
-              </span>
-              <span>Máximo {PLANNING_LIMITS.courses} cursos</span>
-            </div>
-
-            {/* Selection actions & Bulk edit */}
             <div className="academic-preparation__actions-row">
-              <Button variant="outline"
+              <Button
+                variant="outline"
                 type="button"
                 disabled={isLocked || visibleCourses.length === 0}
                 onClick={handleSelectVisible}
+                aria-label="Seleccionar cursos visibles"
+                className="gap-2 text-sm font-normal"
               >
-                Seleccionar visibles
+                <CheckSquare className="size-3.5" aria-hidden="true" />
+                <span>Seleccionar visibles</span>
               </Button>
-              <Button variant="outline"
+              <Button
+                variant="outline"
                 type="button"
                 disabled={isLocked || visibleCourses.every((c) => !selectedCourses.includes(c.courseId))}
                 onClick={handleDeselectVisible}
+                aria-label="Deseleccionar cursos visibles"
+                className="gap-2 text-sm font-normal"
               >
-                Deseleccionar visibles
+                <Square className="size-3.5" aria-hidden="true" />
+                <span>Quitar selección</span>
               </Button>
-              <Button variant="outline"
+              <Button
+                variant="outline"
                 type="button"
                 disabled={isLocked || selectedCourses.length === 0}
                 onClick={handleOpenBulkModal}
                 aria-haspopup="dialog"
+                aria-label={`Edición en lote (${selectedCourses.length} cursos seleccionados)`}
+                className="gap-2 text-sm font-normal"
               >
-                Edición en lote ({selectedCourses.length})
+                <SlidersHorizontal className="size-3.5" aria-hidden="true" />
+                <span>Editar en lote ({selectedCourses.length})</span>
               </Button>
             </div>
           </div>
+          <p className="academic-preparation__counters" role="status" aria-label="Contadores de preparación" title={catalog.revision}>
+            <span><span data-testid="count-catalog">{counts.totalCatalog}</span> en catálogo · <span data-testid="count-included">{counts.totalIncluded}</span> incluidos · <span data-testid="count-visible">{counts.totalVisible}</span> visibles · máximo {PLANNING_LIMITS.courses}</span>
+          </p>
 
           {/* Workbench: Table + Single Inspector */}
           <div className="academic-preparation__workbench">
+            <ResizablePanelGroup orientation="vertical" defaultLayout={defaultLayout} onLayoutChanged={onLayoutChanged} className="academic-preparation__split">
+            <ResizablePanel id="planning-course-table" minSize="40%" className="academic-preparation__table-panel">
             {/* Table Pane */}
             <div className="academic-preparation__table-pane">
               <div
@@ -344,7 +438,7 @@ export function AcademicPreparationCourses({
                   <TableHeader>
                     <TableRow>
                       <TableHead scope="col" className="academic-preparation__th-select">
-                        Selección
+                        <span className="sr-only">Selección</span>
                       </TableHead>
                       <TableHead scope="col">Ciclo</TableHead>
                       <TableHead scope="col">Asignatura</TableHead>
@@ -353,13 +447,13 @@ export function AcademicPreparationCourses({
                       <TableHead scope="col">Sec. sugeridas</TableHead>
                       <TableHead scope="col">Capacidad obj.</TableHead>
                       <TableHead scope="col">Sec. prev.</TableHead>
-                      <TableHead scope="col">Inspector</TableHead>
+
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {visibleCourses.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={9} className="planning-sections__empty">
+                        <TableCell colSpan={8} className="planning-sections__empty">
                           No hay cursos que coincidan con los filtros aplicados.
                         </TableCell>
                       </TableRow>
@@ -367,7 +461,7 @@ export function AcademicPreparationCourses({
                     {cycleGroups.map((group) => (
                       <Fragment key={String(group.cycle)}>
                         <TableRow className="academic-preparation__group-row">
-                          <TableHead colSpan={9} scope="colgroup">
+                          <TableHead colSpan={8} scope="colgroup">
                             {group.label} · {group.courses.length}{' '}
                             {group.courses.length === 1 ? 'curso' : 'cursos'}
                           </TableHead>
@@ -393,6 +487,8 @@ export function AcademicPreparationCourses({
                             <TableRow
                               key={course.courseId}
                               data-course-id={course.courseId}
+                              aria-selected={isInspected}
+                              onClick={(event) => { if (!(event.target as HTMLElement).closest('button, input, label')) setInspectedCourseId(course.courseId) }}
                               data-state={isSelected ? 'selected' : undefined}
                               className={`academic-preparation__row ${
                                 isInspected ? 'academic-preparation__row--inspected' : ''
@@ -421,7 +517,7 @@ export function AcademicPreparationCourses({
                               <TableCell>{course.cycle !== undefined ? course.cycle : '—'}</TableCell>
                               <TableCell className="academic-preparation__td-course">
                                 <div className="academic-preparation__course-cell">
-                                  <strong>{course.name}</strong>
+                                  <Button type="button" variant="link" className="planning-table-name" aria-label={`Inspeccionar ${course.courseId}`} aria-expanded={isInspected} onClick={() => setInspectedCourseId(course.courseId)}>{course.name}</Button>
                                   <span className="academic-preparation__course-code">
                                     {course.courseId}
                                   </span>
@@ -458,19 +554,7 @@ export function AcademicPreparationCourses({
                                 />
                               </TableCell>
                               <TableCell>{computedSections}</TableCell>
-                              <TableCell className="academic-preparation__td-actions">
-                                <Button variant="outline"
-                                  type="button"
-                                  className={`academic-preparation__inspect-btn ${
-                                    isInspected ? 'academic-preparation__inspect-btn--active' : ''
-                                  }`}
-                                  aria-label={`Inspeccionar ${course.courseId}`}
-                                  aria-expanded={isInspected}
-                                  onClick={() => setInspectedCourseId(course.courseId)}
-                                >
-                                  Configurar
-                                </Button>
-                              </TableCell>
+
                             </TableRow>
                           )
                         })}
@@ -481,117 +565,28 @@ export function AcademicPreparationCourses({
               </div>
             </div>
 
-            {/* Single Course Inspector */}
-            {inspectedCourse && (
-              <aside
-                className="planning-inspector academic-scheduling__course academic-preparation__inspector"
-                aria-label={`Inspector de curso ${inspectedCourse.courseId}`}
-              >
-                <div className="planning-inspector__header">
-                  <div className="planning-inspector__heading-info">
-                    <h4 className="planning-inspector__title">{inspectedCourse.name}</h4>
-                    <p className="planning-inspector__meta">
-                      {inspectedCourse.courseId} · Ciclo {inspectedCourse.cycle ?? '—'} ·{' '}
-                      {inspectedCourse.credits ?? '—'} créditos
-                    </p>
-                  </div>
-                  <Button variant="ghost"
-                    type="button"
-                    className="planning-inspector__close-btn"
-                    aria-label="Cerrar inspector"
-                    onClick={() => setInspectedCourseId(null)}
-                  >
-                    ✕ Cerrar
-                  </Button>
-                </div>
+            </ResizablePanel>
+            {wideLayout && inspectedCourse && <>
+              <ResizableHandle withHandle aria-label="Ajustar altura del detalle de curso" />
+              <ResizablePanel id="planning-course-inspector" defaultSize="35%" minSize="20%" maxSize="60%" className="academic-preparation__detail-pane">
+                {courseInspector}
+              </ResizablePanel>
+            </>}
+            </ResizablePanelGroup>
+            {!wideLayout && inspectedCourse && <Sheet open onOpenChange={(open) => { if (!open) setInspectedCourseId(null) }}>
+              <SheetContent className="academic-preparation__course-sheet" showCloseButton={false} aria-describedby={undefined}>
+                <SheetTitle className="sr-only">Detalle de curso {inspectedCourse.courseId}</SheetTitle>
+                {courseInspector}
+              </SheetContent>
+            </Sheet>}
 
-                <div className="academic-preparation__inspector-body">
-                  {!selectedCourses.includes(inspectedCourse.courseId) && (
-                    <p className="academic-preparation__inspector-warning" role="note">
-                      Curso no incluido en la propuesta. Marca su casilla para habilitar sus opciones de configuración.
-                    </p>
-                  )}
-
-                  {inspectedCourse.planningPatterns && inspectedCourse.planningPatterns.length > 0 && (
-                    <Label>
-                      Patrón semanal de planificación
-                      <NativeSelect
-                        value={patterns[inspectedCourse.courseId] ?? ''}
-                        disabled={isLocked || !selectedCourses.includes(inspectedCourse.courseId)}
-                        aria-label={`Patrón ${inspectedCourse.courseId}`}
-                        onChange={(event) =>
-                          onUpdatePattern(inspectedCourse.courseId, event.currentTarget.value)
-                        }
-                      >
-                        {inspectedCourse.planningPatterns.map((pattern) => (
-                          <option key={pattern.id} value={pattern.id}>
-                            {pattern.label} —{' '}
-                            {pattern.weeklySessions
-                              .map((session) => `${session.type ?? 'Sesión'} ${session.durationMinutes} min`)
-                              .join(', ')}
-                          </option>
-                        ))}
-                      </NativeSelect>
-                    </Label>
-                  )}
-
-                  <Label>
-                    Modalidad de sesiones
-                    <NativeSelect
-                      value={deliveryModes[inspectedCourse.courseId] ?? 'continuous'}
-                      disabled={isLocked || !selectedCourses.includes(inspectedCourse.courseId)}
-                      aria-label={`Modalidad de sesiones ${inspectedCourse.courseId}`}
-                      onChange={(event) =>
-                        onUpdateDeliveryMode(
-                          inspectedCourse.courseId,
-                          event.currentTarget.value as 'continuous' | 'split'
-                        )
-                      }
-                    >
-                      <option value="continuous">Bloque continuo · predeterminado</option>
-                      <option value="split">Sesiones divididas · excepción</option>
-                    </NativeSelect>
-                  </Label>
-
-                  {/* Native details: read-only reference stays openable inside the locked fieldset. */}
-                  {inspectedCourse.history && (
-                    <details className="academic-scheduling__history">
-                      <summary className={buttonVariants({ variant: 'ghost' })}>Referencia histórica · {inspectedCourse.history.sections.length} secciones</summary>
-                      <div className="academic-scheduling__history-content">
-                        {inspectedCourse.history.sections.map((section) => (
-                          <div
-                            className="academic-scheduling__history-section"
-                            key={section.sectionId}
-                          >
-                            <strong>
-                              Sección {section.sectionId} · capacidad histórica {section.capacity}
-                            </strong>
-                            <ul>
-                              {section.sessions.map((session, index) => (
-                                <li key={`${section.sectionId}-${index}`}>
-                                  {formatAcademicInterval(session)} · {session.type} · {session.room} ·{' '}
-                                  {session.teacherName
-                                    ? `Docente de referencia: ${session.teacherName}`
-                                    : session.teacherId}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ))}
-                      </div>
-                    
-                    </details>
-                  )}
-                </div>
-              </aside>
-            )}
           </div>
 
           {/* Academic Demand Summary (2027-I) */}
           {planningPeriod === '2027-I' ? (
             <>
-            <Button variant="outline" type="button" className=" academic-demand__summary-trigger"
-              aria-haspopup="dialog" onClick={() => setDemandOpen(true)}>Resumen de demanda</Button>
+            <Button variant="ghost" type="button" className="planning-disclosure-trigger academic-demand__summary-trigger"
+              aria-haspopup="dialog" aria-expanded={demandOpen} data-state={demandOpen ? 'open' : 'closed'} onClick={() => setDemandOpen(true)}>Resumen de demanda</Button>
             <Dialog open={demandOpen} onOpenChange={setDemandOpen}>
               <DialogContent className="academic-demand__dialog">
                 <DialogTitle>Resumen de demanda potencial</DialogTitle>

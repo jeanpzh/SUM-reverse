@@ -1,7 +1,12 @@
 import { useRouter } from '@tanstack/react-router'
+import { PlanningFetchLoading } from './PlanningFetchLoading'
 
 export function RoutePending() {
-  return <section className="route-status" role="status">Cargando información…</section>
+  return (
+    <div className="route-status route-status--pending" role="status">
+      <PlanningFetchLoading label="Cargando información…" layout="page" />
+    </div>
+  )
 }
 
 export function RouteError({ error }: { error: unknown }) {

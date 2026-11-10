@@ -1,9 +1,11 @@
-import { ACADEMIC_API, ACADEMIC_REVISION, ACADEMIC_ROUTE, validateAcademicAdjustment, validateAcademicCatalog, validateAcademicDemandEstimate, validateAcademicDemandRequest, validateAcademicProposal, validateAcademicRequest, validateAcademicDraftList, validateAcademicDraftResume, validateAcademicDraftSaveRequest, validateAcademicSavedDraft, validateAcademicReviewSubmission, validateAcademicReviewDecision, validateAcademicPublicationRequest, validateAcademicReleasePreview, validateAcademicPublication, validateAcademicPublicationList } from '../../../shared/programacion-academica-api.mjs'
-import type { AcademicAdjustment, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest, AcademicProposal, AcademicRequest, AcademicInterval, AcademicDraftList, AcademicDraftResume, AcademicDraftSaveRequest, AcademicSavedDraft, AcademicReviewSubmission, AcademicReviewDecision, AcademicReleasePreview, AcademicPublication, AcademicPublicationList, AcademicPublicationRequest } from '../../../shared/programacion-academica-api.mjs'
+import { validateAcademicNormativeRequest, validateAcademicNormativeResponse } from '../../../shared/programacion-academica-api.mjs'
+import type { AcademicNormativeRequest, AcademicNormativeResponse } from '../../../shared/programacion-academica-api.mjs'
+import { ACADEMIC_API, ACADEMIC_REVISION, ACADEMIC_ROUTE, validateAcademicAdjustment, validateAcademicAdvisorRequest, validateAcademicAdvisorResponse, validateAcademicCatalog, validateAcademicDemandEstimate, validateAcademicDemandRequest, validateAcademicProposal, validateAcademicRequest, validateAcademicDraftList, validateAcademicDraftResume, validateAcademicDraftSaveRequest, validateAcademicSavedDraft, validateAcademicReviewSubmission, validateAcademicReviewDecision, validateAcademicPublicationRequest, validateAcademicReleasePreview, validateAcademicPublication, validateAcademicPublicationList } from '../../../shared/programacion-academica-api.mjs'
+import type { AcademicAdjustment, AcademicAdvisorRequest, AcademicAdvisorResponse, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest, AcademicProposal, AcademicRequest, AcademicInterval, AcademicDraftList, AcademicDraftResume, AcademicDraftSaveRequest, AcademicSavedDraft, AcademicReviewSubmission, AcademicReviewDecision, AcademicReleasePreview, AcademicPublication, AcademicPublicationList, AcademicPublicationRequest } from '../../../shared/programacion-academica-api.mjs'
 import { planningDefaults as getPlanningDefaults, PLANNING_LIMITS, syntheticTeachingMetadata, validatePlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
 import type { PlanningPeriod, PlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
 
-export type { AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest, AcademicProposal, AcademicRequest } from '../../../shared/programacion-academica-api.mjs'
+export type { AcademicAdvisorBottleneck, AcademicAdvisorPatch, AcademicAdvisorRecommendation, AcademicAdvisorResponse, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest, AcademicProposal, AcademicRequest } from '../../../shared/programacion-academica-api.mjs'
 export { PLANNING_LIMITS, syntheticTeachingMetadata }
 export type { PlanningPeriod, PlanningPolicy }
 
@@ -177,6 +179,34 @@ export async function adjustAcademicProposal(proposalId: string, adjustment: Aca
   }))
   validateAcademicProposal(body)
   return body
+}
+
+export async function fetchAcademicProposalAdvice(proposalId: string, expectedEditVersion: number,
+  fetchImpl: typeof fetch = globalThis.fetch, signal?: AbortSignal,
+  selectedRecommendationIds?: string[]): Promise<AcademicAdvisorResponse> {
+  if (typeof proposalId !== 'string' || !proposalId || proposalId.trim() !== proposalId) throw new TypeError('Identificación de propuesta inválida.')
+  const request: AcademicAdvisorRequest = { expectedEditVersion,
+    ...(selectedRecommendationIds === undefined ? {} : { selectedRecommendationIds }) }
+  validateAcademicAdvisorRequest(request)
+  const body = await readJson(await fetchImpl(`${ACADEMIC_API}/propuestas/${encodeURIComponent(proposalId)}/consejero`, {
+    method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    credentials: 'omit', signal, body: JSON.stringify(request),
+  }))
+  validateAcademicAdvisorResponse(body)
+  if (body.proposalId !== proposalId || body.editVersion !== expectedEditVersion) {
+    throw new TypeError('El análisis corresponde a otra versión de la propuesta. Vuelve a consultar al consejero.')
+  }
+  return body
+}
+
+// A preview belongs to exactly one proposal version and one set of recommendation IDs.
+export function hasCurrentAdvisorImpact(advice: AcademicAdvisorResponse | null, proposalId: string,
+  editVersion: number, selectedIds: readonly string[]): boolean {
+  const impact = advice?.verifiedImpact
+  return Boolean(advice && impact && advice.proposalId === proposalId && advice.editVersion === editVersion
+    && impact.recommendationIds.length === selectedIds.length
+    && new Set(selectedIds).size === selectedIds.length
+    && selectedIds.every((id) => impact.recommendationIds.includes(id)))
 }
 
 export async function fetchAcademicDrafts(fetchImpl: typeof fetch = globalThis.fetch, signal?: AbortSignal): Promise<AcademicDraftList> {
@@ -456,3 +486,24 @@ export function academicSectionCoverage(proposal: AcademicProposal) {
   }, { complete: 0, partial: 0, pending: 0 })
 }
 
+
+// Keep validation and request/response identity at the HTTP seam for all callers.
+export async function fetchAcademicNormativeAdvice(request: AcademicNormativeRequest,
+  fetchImpl: typeof fetch = globalThis.fetch, signal?: AbortSignal): Promise<AcademicNormativeResponse> {
+  validateAcademicNormativeRequest(request)
+  const sent = { ...request, question: request.question.trim() }
+  signal?.throwIfAborted()
+  const body = await readJson(await fetchImpl(`${ACADEMIC_API}/normativa/consultas`, {
+    method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    credentials: 'omit', signal, body: JSON.stringify(sent),
+  }))
+  signal?.throwIfAborted()
+  validateAcademicNormativeResponse(body, sent)
+  return body
+}
+
+// A documented explanation cannot make a load increase a default selection.
+export function defaultAcademicAdvisorSelection(advice: AcademicAdvisorResponse): string[] {
+  return advice.recommendations.filter((item) => item.recommendedByDefault
+    && item.patch.kind !== 'increase_teacher_load').map((item) => item.id)
+}

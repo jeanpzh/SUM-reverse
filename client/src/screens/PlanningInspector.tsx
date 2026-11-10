@@ -1,3 +1,4 @@
+import { X } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Input } from '../components/ui/Input'
@@ -29,6 +30,7 @@ export interface PlanningInspectorProps {
   editingBlock: AcademicAdjustment | null
   adjusting: boolean
   adjustmentError: string | null
+  docked?: boolean
   isLocked?: boolean
   onClose: () => void
   onStartEdit: (block: ReturnType<typeof aggregateAcademicBlocks>[number]) => void
@@ -45,6 +47,7 @@ export function PlanningInspector({
   editingBlock,
   adjusting,
   adjustmentError,
+  docked = false,
   isLocked = false,
   onClose,
   onStartEdit,
@@ -90,25 +93,11 @@ export function PlanningInspector({
   const dayNamesFull = ['—', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
   const sLabel = academicSectionLabel(proposal, section.sectionId)
 
-  // Non-modal shadcn Sheet: the sections table and the Semana grid stay usable behind it
-  // (selecting another section or dragging a block keeps it open); Escape or ✕ closes it.
-  return (
-    <Sheet open modal={false} onOpenChange={(open) => { if (!open) onClose() }}>
-      <SheetContent
-        className="planning-inspector planning-inspector--sheet"
-        aria-label={`Inspector de sección ${sLabel}`}
-        aria-describedby={undefined}
-        showCloseButton={false}
-        onOpenAutoFocus={(event) => event.preventDefault()}
-        onInteractOutside={(event) => event.preventDefault()}
-      >
+  const title = <h4 className="planning-inspector__title">{section.courseName} · Sección {sLabel}</h4>
+  const body = (<>
         <div className="planning-inspector__header">
           <div className="planning-inspector__heading-info">
-            <SheetTitle asChild>
-              <h4 className="planning-inspector__title">
-                {section.courseName} · Sección {sLabel}
-              </h4>
-            </SheetTitle>
+            {docked ? title : <SheetTitle asChild>{title}</SheetTitle>}
             <p className="planning-inspector__meta">
               {section.courseId} · Capacidad {section.capacity}
             </p>
@@ -119,7 +108,7 @@ export function PlanningInspector({
             onClick={onClose}
             aria-label="Cerrar inspector"
           >
-            ✕
+            <X size={16} aria-hidden="true" />
           </Button>
         </div>
 
@@ -325,16 +314,12 @@ export function PlanningInspector({
                 <div className="planning-inspector__blocks-list">
                   {sectionBlocks.map((b, idx) => (
                     <div key={`${b.sectionId}-${idx}`} className="planning-inspector__block-card">
-                      <div className="planning-inspector__block-time">
-                        <strong>
-                          {dayNamesFull[b.day]} {formatAcademicMinute(b.startMinute)}–{formatAcademicMinute(b.endMinute)}
-                        </strong>
-                        <span>{formatAcademicDuration(b.durationMinutes)}</span>
-                      </div>
-                      <div className="planning-inspector__block-resource">
-                        <span>Docente: <strong>{b.teacherName}</strong></span>
-                        <span>Ambiente: <strong>{b.roomNames.join(', ')}</strong></span>
-                      </div>
+                      <dl className="planning-inspector__block-facts">
+                        <div><dt>Docente</dt><dd>{b.teacherName}</dd></div>
+                        <div><dt>Aula</dt><dd>{b.roomNames.join(', ')}</dd></div>
+                        <div><dt>Día</dt><dd>{dayNamesFull[b.day]}</dd></div>
+                        <div><dt>Horario</dt><dd>{formatAcademicMinute(b.startMinute)}–{formatAcademicMinute(b.endMinute)}</dd></div>
+                      </dl>
                       <div className="planning-inspector__block-components">
                         {b.componentDetails.map((c, cIdx) => (
                           <Badge variant="secondary" key={cIdx} className="planning-inspector__component-tag">
@@ -417,6 +402,28 @@ export function PlanningInspector({
             )}
           </div>
         )}
+  </>)
+
+  if (docked) {
+    return (
+      <section className="planning-inspector planning-inspector--docked"
+        aria-label={`Inspector de sección ${sLabel}`}
+        onKeyDown={(event) => { if (event.key === 'Escape') onClose() }}>
+        {body}
+      </section>
+    )
+  }
+  return (
+    <Sheet open modal={false} onOpenChange={(open) => { if (!open) onClose() }}>
+      <SheetContent
+        className="planning-inspector planning-inspector--sheet"
+        aria-label={`Inspector de sección ${sLabel}`}
+        aria-describedby={undefined}
+        showCloseButton={false}
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        onInteractOutside={(event) => event.preventDefault()}
+      >
+        {body}
       </SheetContent>
     </Sheet>
   )
