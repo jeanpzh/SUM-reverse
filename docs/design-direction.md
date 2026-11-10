@@ -1,6 +1,6 @@
 # Design direction: internal academic planning product
 
-Status: **binding**. Decided by the user on 2026-11-07 and not open for redesign. Source exploration: [academic-planning-2026-11-07](design/academic-planning-2026-11-07/README.md), cited below as "the report". This file states the decisions. The report holds the reasoning, the images and the detailed tables, which are not repeated here.
+Status: **binding**, revised by the user on 2026-11-09. The current direction below supersedes the earlier visual decisions from 2026-11-07/08 within the same internal-product scope. Source exploration: [academic-planning-2026-11-07](design/academic-planning-2026-11-07/README.md), cited below as "the report". This file states the decisions. The report holds the reasoning, the images and the detailed tables, which are not repeated here.
 
 ## Scope
 
@@ -8,25 +8,38 @@ Status: **binding**. Decided by the user on 2026-11-07 and not open for redesign
 - **Does not apply to:** student SUM screens. Those keep [DESIGN.md](../DESIGN.md), the `--sum-*` tokens, the student components and the root SUM fidelity rule.
 - **Integration with SUM:** only through data contracts (`shared/`, backend modules). The two products do not share a visual identity, and SUM-observed evidence is not required for internal screens.
 
-## The decision
+## Current visual direction (2026-11-09)
 
-| Concept | What we adopt | What we do not adopt |
-| --- | --- | --- |
-| **A, Operational Workbench** ([image](design/academic-planning-2026-11-07/images/operational-workbench.png), report §2) | The visual language of the whole internal product: typography, color, spacing, navigation rail, scope header, stage navigation, the grouped section table with a row inspector, and the exception-first status bar. | The image's flaws: a 2-hour Redes01 block, the taller canvas, and demand values shown per section. |
-| **B, Visual Planning Studio** ([image](design/academic-planning-2026-11-07/images/visual-planning-studio.png), report §3) | Only its calendar interactions: the **Semana** view and adjustment of an existing block, drawn in A's visual language. | B's horizontal navigation, palette and unassigned tray as a separate layout. |
-| **C, Institutional Platform** ([image](design/academic-planning-2026-11-07/images/institutional-platform.png), report §4) | Only its decision structure: the approval dossier, approval kept separate from publication, and an immutable version timeline, drawn in A's visual language. | C's palette and process outline as navigation, duplicated readiness counts, and change reasons the system does not record. |
+The binding [2026-11-10 redesign specification](design/academic-planning-2026-11-10/redesign-spec.md) supersedes this direction on the theme default, palette, header layout, sidebar grouping and inspector placement. Its scope remains the internal academic planning route; the interaction rules below continue to apply.
 
-Never mix the visual identities of A, B and C. A screen built from B's interaction or C's structure still uses only A's tokens and components.
+The user explicitly requested a major UX/UI redesign inspired by five supplied images, then required building on **shadcn/ui**, and supplied a neutral gray palette. This authorizes replacing the previous A visual language and restoring a useful navigation sidebar within the existing internal route. It does not authorize changes to student screens, the module chooser, backend contracts or academic rules.
 
-## Visual system (A)
+References (user-provided design inspiration, not SUM evidence):
 
-Use the tokens from report §7 as the starting values, scoped as `--planning-*` on the internal root element. Do not edit `--sum-*`, the global reset or font rules, or the student components. Check contrast on rendered states before treating any value as final.
+- [Courses and teachers](design/academic-planning-2026-11-09/courses-and-teachers.png)
+- [Weekly planning](design/academic-planning-2026-11-09/weekly-planning.png)
+- [Planning and conflicts](design/academic-planning-2026-11-09/planning-and-conflicts.png)
+- [Change review](design/academic-planning-2026-11-09/change-review.png)
+- [Scenario comparison](design/academic-planning-2026-11-09/scenario-comparison.png)
 
-- **Type:** a readable sans-serif. IBM Plex Sans is the candidate, pending a check of local availability and licensing. Tables and body text 14px, labels 13px, section titles 18px, page titles 24px. Use tabular numerals, and never set essential text below 12px.
-- **Color:** white working surfaces (the charcoal rail was removed; see below) and a forest-green primary for the next valid transition. Amber means unresolved work, red means an error. Status is never shown by color alone.
-- **Layout:** 4px spacing scale, thin row separators, no nested cards and no decorative shadows. Use shadow only on overlays.
-- **No navigation rail (user decision, 2026-11-08):** the rail held a single destination, so it was removed. The theme selector and the link back to the local modules live in the scope header. Color follows a 60-30-10 split: neutral surfaces, then muted text, borders and secondary controls, and the forest-green primary only on the next valid transition.
-- **Text:** no secondary descriptions or captions that restate the layout. A disabled gate shows its reason next to the control.
+Adopt the references' information density, persistent navigation, strong page hierarchy, compact tables, prominent timetable and contextual assistance. User revision on 2026-11-09: use the shadcn AI Elements Chat composition (Message Scroller, Message, Bubble, Input Group) for normative assistance. Offer a resizable right rail that is a panel of the workspace and can be closed, plus a full-width mode; the section inspector shares that rail. The draggable floating window was withdrawn by the user on 2026-11-09 because it covered the content. Keep the conversation while changing display mode. Narrow screens use the viewport width with collapse always available. This replaces the earlier Card/Sheet assistant composition and the proposed CopilotKit onboarding. The compact form discloses its scope filters on demand and never sends a query on mount. Use existing preparation, courses, resources, schedule, review and approval destinations. Do not add nonfunctional navigation or invented comparison/report capabilities. Reference numbers, people, explanations and outcomes are illustrative; render actual synthetic API results.
+
+### Palette and components
+
+- Build on the existing shadcn/Radix kit in `client/src/components/ui/`: Button, Card, Badge, Table, Tabs, Sheet, Dialog, Collapsible and form controls. Reuse current domain tables and calendar logic. New layout compositions are allowed; parallel primitive libraries are not.
+- Scope all tokens to `.planning-root` / `--planning-*`. Keep student tokens and components intact.
+- User palette: bright snow `#f8f9fa`, platinum `#e9ecef`, alabaster `#dee2e6`, slate-light `#ced4da`, slate `#adb5bd`, slate gray `#6c757d`, iron `#495057`, gunmetal `#343a40`, carbon black `#212529`, with their supplied shades for surfaces and borders. The input repeated `pale_slate`; retain both as separate tokens.
+- Default to a deliberate dark workspace on first visit; preserve existing explicit light/dark/system choices. Provide a complete light theme.
+- User revision during the usability redesign (2026-11-09, recorded in `advisor-plans/README.md`): retain the current blue primary actions on neutral surfaces. This supersedes the earlier monochrome-action decision. Reserve semantic green, amber and red for actual status, warnings and errors, with text. Calendar component types may use restrained distinguishable colors and explicit type labels.
+- Thin borders, 6–12px radii, calm surfaces, no decorative gradients, glows, sparkles or charts without a meaningful metric. Use Lucide icons (one shared dependency, justified for navigation and controls).
+- Desktop sidebar collapses into a shadcn Sheet on narrow screens. Keep all destinations, keyboard navigation and focus restoration available. No document-wide horizontal overflow.
+- User revision after evaluating AWS references (2026-11-09): Asistente and Guía in the planning header use icon buttons with tooltips on hover/focus and accessible names. Academic actions retain visible text. This changes only the header tools; typography and the student interface are unchanged.
+- Concise headings and useful inline explanations. Keep disabled reasons and explicit local/synthetic provenance without repeating large disclaimer cards.
+- User revision during the usability redesign (2026-11-09): retain the current self-hosted Geist sans family (Regular 400 and Medium 500), with the planning-only type scale in `PlanningShell.css`. Keep `font-display: swap`, fallbacks, no global preload and no synthesized faces. The previously requested root CSS weight 450 remains unchanged pending a separate decision. Student typography stays intact. The earlier [serif research](design/academic-planning-2026-11-09/font-loading-research.md) is historical.
+
+### Preserved structure
+
+The existing Semana interactions and approval/publication separation remain binding. This is an interface redesign of the existing product, not an implementation of every feature illustrated in the references. API validation, save semantics, version checks, diagnostic honesty, selection and filters remain unchanged.
 
 ## Interaction rules
 
@@ -40,11 +53,11 @@ Use the tokens from report §7 as the starting values, scoped as `--planning-*` 
 - Reuse the existing adapters (`client/src/data/academicScheduling.ts`), the shared validators and contracts, expected-version/CAS checks and explicit save. A visual change must not alter API effects.
 - Reuse `DataTable` and `WeeklySchedule` logic only through planning-specific rendering. Do not restyle the shared student components. Record any incompatibility before introducing a replacement.
 - No new dependencies unless a ticket justifies them, and the font is the first candidate to evaluate.
-- Report §8 holds the implementation sequence. The first slice is to isolate the internal shell and the `--planning-*` tokens.
+- The current implementation and validation scope is recorded in [the redesign plan](design/academic-planning-2026-11-09/plan.md).
 
 ## Acceptance criteria for any internal-UI change
 
-1. The screen uses only A's tokens and components. A screen that draws on B or C uses only the interaction or structure listed above.
+1. The screen uses the current neutral palette and shadcn components. The calendar and approval flow preserve the interaction and structure listed above.
 2. Student SUM screens show no regression at equivalent viewport, content and state.
 3. Client build, lint and `test:data` pass. Changed flows also pass real local React to NestJS scenarios with synthetic data.
 4. Keyboard path, visible focus, 200% zoom and the narrow layout are checked. Status never relies on color alone.

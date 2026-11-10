@@ -4,7 +4,7 @@ These instructions apply to `client/` and inherit the repository-root `AGENTS.md
 
 ## Local skills and dispatch
 
-Use this folder's skills for client work. The root coordinates shared contracts, handoffs and integration:
+Select skills by task under root `AGENTS.md` → «Skill selection by task». Product development uses relevant installed frontend/testing skills, then `mattpocock-skills:*`, or `npx autoskills` when guidance is missing. The following `sum-*` entrypoints apply only to SUM reverse engineering. The root coordinates shared contracts, handoffs and integration:
 
 | Task | Local skill |
 | --- | --- |
@@ -21,7 +21,7 @@ Roles, models and delegation are defined in the root `AGENTS.md` §5. Workers do
 - Runtime-validate HTTP JSON at the data boundary before UI use. TypeScript types alone are insufficient. Use explicit local DTOs and envelopes; do not silently coerce malformed responses or fall back to mocks after a local API failure. Preserve existing mock behavior where the contract requires it.
 - `mock` is the default data mode. `local` mode uses only this project's API through Vite's same-origin `/api` proxy; its configuration and DTOs must not call, proxy, or mimic connectivity to production SUM. Do not modify `backend/` or its contracts unless separately assigned.
 - Keep loading, empty and error states grounded in evidence or label them as local behavior. Preserve accessible semantics, keyboard operation and existing navigation patterns.
-- The root `sum-fullstack-verify` workflow owns client-to-backend integration verification. A client worker may run local checks and inspect the local app; it must not navigate a shared browser unless explicitly assigned browser ownership. Never inspect production SUM without the root authorization gate.
+- The root owns client-to-backend integration verification; `sum-fullstack-verify` applies only to reverse-engineering work. A client worker may run local checks and inspect the local app; it must not navigate a shared browser unless explicitly assigned browser ownership. Never inspect production SUM without the root authorization gate.
 
 ## Commands
 

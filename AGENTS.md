@@ -23,7 +23,7 @@ This repository recreates the **observable interface and behavior** of the UNMSM
 - Academic domain dossier: `docs/domain/fisi/2026-II/`; its faculty, period, provenance and unresolved questions delimit its use.
 - Spec Kit is initialized at the root in `.specify/`. Review its active templates, workflow and constitution before use; an unfilled template is not an adopted project principle.
 - Persistent reverse-engineering notes and plans: `docs/reverse-engineering/`.
-- Workflow and model-routing policy: `.agents/skills/sum-workflow/SKILL.md` and its linked references.
+- Model-routing and delegation policy: §5 of this file. Reverse-engineering workflow: `.agents/skills/sum-workflow/SKILL.md`, within the scope below.
 
 Implement only behavior supported by evidence or explicitly identified as a local prototype assumption. Never represent an assumption as a verified SUM behavior.
 
@@ -35,21 +35,27 @@ Before creating a contract, component, DTO, validator or data adapter, review th
 
 ## Root orchestration and folder ownership
 
-The root agent coordinates the task using `.agents/skills/sum-workflow/SKILL.md`. Root responsibilities are evidence acquisition, specifications/shared API contracts, task dependencies, model dispatch, browser ownership and integrated acceptance. Reuse existing plans and dispatch implementation only after its contract and acceptance criteria are ready.
+### Skill selection by task
+
+**User decision (2026-11-08): skills named `sum-*` are reserved for SUM reverse engineering.** Use them when the task explicitly investigates or reconstructs SUM from observable evidence. Ordinary development, maintenance and testing of the internal academic-planning product use other relevant installed skills; they do not activate `sum-workflow` or the `sum-*` implementation/verification entrypoints merely because they live in this repository. An explicit user instruction can select a different scope.
+
+For product work, choose a relevant frontend, backend, architecture or testing skill first; use `mattpocock-skills:*` where applicable. If installed skills are insufficient, use `npx autoskills` to discover relevant frontend/backend guidance. Load only the selected guidance. Folder instructions and the ownership table below remain applicable; their `sum-*` pointers apply only to reverse-engineering tasks. Privacy, existing interface reuse, design direction and required validation remain mandatory for every task.
+
+The root agent coordinates contracts, task dependencies, model dispatch, browser ownership and integrated acceptance. For reverse-engineering tasks it also coordinates evidence acquisition using `sum-workflow`. Reuse existing plans and dispatch implementation only after its contract and acceptance criteria are ready.
 
 The orchestrator coordinates workers through T3 Code (see §5). Each worker must receive the current root and folder instructions, assigned stage, source restrictions, exclusive files, contract revision, acceptance criteria and required tests. Existing coordination does not authorize additional workers, broader access or implementation during a documentation stage. These root restrictions prevail over conflicting folder instructions, skills, historical plans or automation hooks.
 
-| Working folder | Instructions | Skills owned by that folder |
+| Working folder | Instructions | Reverse-engineering skills owned by that folder |
 | --- | --- | --- |
 | Root | This file | `sum-workflow`, `sum-behavior-discovery`, `sum-evidence-to-spec`, `sum-fullstack-verify` under root `.agents/skills/` |
 | `backend/` | [backend/AGENTS.md](backend/AGENTS.md) | `sum-nestjs-implement`, `sum-nestjs-verify` under `backend/.agents/skills/` |
 | `client/` | [client/AGENTS.md](client/AGENTS.md) | `sum-react-implement`, `sum-react-verify` under `client/.agents/skills/` |
 
-A handoff includes the target folder, its AGENTS.md and local SKILL.md, exclusive files, contract revision, dependencies, criteria and required checks. Assign backend and client to separate workers only with a fixed shared contract and disjoint file ownership. Workers do not edit root contracts/configuration or the other layer without explicit assignment. The principal may perform a diagnosed isolated correction and must record it.
+A handoff includes the target folder, its AGENTS.md and selected skill instructions, exclusive files, contract revision, dependencies, criteria and required checks. Assign backend and client to separate workers only with a fixed shared contract and disjoint file ownership. Workers do not edit root contracts/configuration or the other layer without explicit assignment. The principal may perform a diagnosed isolated correction and must record it.
 
 Todo futuro prompt de planificación, implementación o delegación debe incluir la obligación de preservar la fidelidad visual y de interacción al SUM (o, para el producto interno, `docs/design-direction.md`), las pantallas cuyo cambio está autorizado y la reutilización de las interfaces existentes como criterio de aceptación.
 
-Roles and models are defined in §5. Existing root implementation/verification skill names are compatibility entrypoints that route to folder skills. Fullstack acceptance belongs to the root and requires actual client/server scenarios. Each layer's own checks alone do not establish integration.
+Roles and models are defined in §5. For reverse engineering, existing root implementation/verification skill names are compatibility entrypoints that route to folder skills. Fullstack acceptance belongs to the root and requires actual client/server scenarios. Each layer's own checks alone do not establish integration.
 
 Source, authorization and privacy rules below apply to all folders. Folder instructions refine their own implementation details and must not relax those shared boundaries. Do not duplicate global policy in multiple independent conflicting copies.
 
@@ -137,6 +143,8 @@ During `specify` and `clarify`, inspect relevant non-private code/contracts read
 Write measurable acceptance criteria and planned synthetic test scenarios for every requirement. Link each to its source class or explicit local decision, and retain unanswered questions as gaps rather than generated behavior. Use the FISI dossier's N0–N3 distinctions where applicable: normative fidelity and local simulation do not establish observable parity. Implementation starts in a separately assigned stage after the plan, shared contract and acceptance criteria are ready.
 
 ## 5. Orchestration, Roles and Model Routing
+
+**User preference (2026-11-08): delegate only to Codex subagents.** This overrides the provider preferences in the historical role table below. Keep role responsibilities, use available Codex models, and do not start Claude, Gemini or other providers unless the user changes this preference.
 
 This section is the single source of truth for roles, models and delegation. It replaces the previous Luna-only, principal-only-planning and two-subagent policy (superseded by the user on 2026-11-07). Folder `AGENTS.md` files and skills point here instead of restating it.
 

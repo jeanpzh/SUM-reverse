@@ -1,0 +1,12 @@
+{
+  "source": "Root-owned local synthetic stack on 5436, API 3436, engine 3437; injected transport error",
+  "results": [
+    "no-query-on-mount",
+    "real-api-response-and-history",
+    "close-reopen-fullwidth-preserve-conversation",
+    "mobile-sidebar-and-context-reset",
+    "transport-error-and-retry",
+    "cancel-pending-query"
+  ],
+  "errors": []
+}

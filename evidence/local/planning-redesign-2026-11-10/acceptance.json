@@ -1,0 +1,157 @@
+{
+  "source": "Dedicated stack: built-in entirely synthetic academic seed, fresh /tmp draft store, extractive local normative corpus, disabled LLM",
+  "base": "http://127.0.0.1:5636",
+  "results": [
+    {
+      "id": "light-default-catalog-checklist-and-header",
+      "passed": true
+    },
+    {
+      "id": "theme-dark-and-light-persist",
+      "passed": true
+    },
+    {
+      "id": "select-all-courses-and-preparation-table-layout",
+      "passed": true
+    },
+    {
+      "id": "row-a-generation-and-result-facts",
+      "passed": true
+    },
+    {
+      "id": "table-week-filters-selection-and-section-detail",
+      "passed": true
+    },
+    {
+      "id": "assistant-minimum-close-returns-width-and-sheet",
+      "passed": true
+    },
+    {
+      "id": "sidebar-collapse-and-mobile-keyboard-menu",
+      "passed": true
+    },
+    {
+      "id": "all-six-views-no-document-overflow",
+      "passed": true
+    },
+    {
+      "id": "no-browser-exceptions-or-external-requests",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "external": [],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/api/local/programacion-academica/v1/catalogo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/local/programacion-academica/v1/catalogo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/local/programacion-academica/v1/publicaciones"
+    },
+    {
+      "method": "GET",
+      "path": "/api/local/programacion-academica/v1/publicaciones"
+    },
+    {
+      "method": "GET",
+      "path": "/api/local/programacion-academica/v1/publicaciones"
+    },
+    {
+      "method": "GET",
+      "path": "/api/local/programacion-academica/v1/catalogo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/local/programacion-academica/v1/catalogo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/local/programacion-academica/v1/publicaciones"
+    },
+    {
+      "method": "GET",
+      "path": "/api/local/programacion-academica/v1/publicaciones"
+    },
+    {
+      "method": "GET",
+      "path": "/api/local/programacion-academica/v1/publicaciones"
+    },
+    {
+      "method": "GET",
+      "path": "/api/local/programacion-academica/v1/catalogo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/local/programacion-academica/v1/catalogo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/local/programacion-academica/v1/publicaciones"
+    },
+    {
+      "method": "GET",
+      "path": "/api/local/programacion-academica/v1/publicaciones"
+    },
+    {
+      "method": "GET",
+      "path": "/api/local/programacion-academica/v1/publicaciones"
+    },
+    {
+      "method": "POST",
+      "path": "/api/local/programacion-academica/v1/propuestas"
+    }
+  ],
+  "responses": [
+    {
+      "path": "/api/local/programacion-academica/v1/catalogo",
+      "status": 200
+    },
+    {
+      "path": "/api/local/programacion-academica/v1/publicaciones",
+      "status": 200
+    },
+    {
+      "path": "/api/local/programacion-academica/v1/publicaciones",
+      "status": 200
+    },
+    {
+      "path": "/api/local/programacion-academica/v1/catalogo",
+      "status": 200
+    },
+    {
+      "path": "/api/local/programacion-academica/v1/publicaciones",
+      "status": 200
+    },
+    {
+      "path": "/api/local/programacion-academica/v1/publicaciones",
+      "status": 200
+    },
+    {
+      "path": "/api/local/programacion-academica/v1/catalogo",
+      "status": 200
+    },
+    {
+      "path": "/api/local/programacion-academica/v1/publicaciones",
+      "status": 200
+    },
+    {
+      "path": "/api/local/programacion-academica/v1/publicaciones",
+      "status": 200
+    },
+    {
+      "path": "/api/local/programacion-academica/v1/publicaciones",
+      "status": 200
+    },
+    {
+      "path": "/api/local/programacion-academica/v1/propuestas",
+      "status": 200
+    }
+  ],
+  "savedDraftId": null
+}
