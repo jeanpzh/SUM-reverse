@@ -125,5 +125,3 @@ def test_cpsat_solver_places_feasible_sections() -> None:
     body = resp.json()
     assert body["status"] == "complete"
     assert len(body["assignments"]) == 4
-
-

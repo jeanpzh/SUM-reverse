@@ -17,24 +17,25 @@ const advice = { revision: 'PA-NORMATIVE-1', question: 'Pregunta sintética', co
 
 test('normative pane renders real retrieval modes, abstention, conflict and exact citation provenance', () => {
   const html = render(NormativeAdvice, { advice })
-  for (const text of ['lexical-only', 'abstención', 'Acuerdo FISI pendiente', 'Artículo sintético 7', 'página PDF 3', 'vigencia futura no confirmada', 'autorización externa']) assert.ok(html.includes(text), text)
+  for (const text of ['No determinado', 'Acuerdo FISI pendiente', 'Artículo sintético 7', 'pág. 3', 'Fecha de consulta posterior a revisión', 'Detalles técnicos de la consulta']) assert.ok(html.includes(text), text)
   assert.ok(html.includes('referrerPolicy="no-referrer"'))
   assert.ok(html.includes('rel="noopener noreferrer"'))
   assert.ok(html.includes(advice.citations[0].url))
-  for (const mode of ['hybrid', 'unavailable']) assert.ok(render(NormativeAdvice, { advice: { ...advice, retrievalMode: mode } }).includes(mode))
+  for (const mode of ['hybrid', 'unavailable']) assert.ok(render(NormativeAdvice, { advice: { ...advice, retrievalMode: mode } }).includes('Detalles técnicos de la consulta'))
   assert.ok(render(NormativeAdvice, { advice: { ...advice, status: 'conflict' } }).includes('Conflicto documental'))
 })
 
-test('normative pane distinguishes actual model generation from extractive fallback and legacy responses', () => {
+test('technical generation metadata stays collapsed initially for model, fallback and legacy responses', () => {
   const legacy = render(NormativeAdvice, { advice })
   assert.doesNotMatch(legacy, /Generación:/)
   const generated = render(NormativeAdvice, { advice: { ...advice,
     generation: { mode: 'llm-assisted', providerLabel: 'Bedrock · modelo sintético' } } })
-  assert.ok(generated.includes('Generación: Bedrock · modelo sintético'))
+  assert.doesNotMatch(generated, /Generación:|Bedrock · modelo sintético/)
+  assert.ok(generated.includes('Detalles técnicos de la consulta'))
   const fallback = render(NormativeAdvice, { advice: { ...advice,
     generation: { mode: 'extractive', providerLabel: null, fallbackReason: 'insufficient_evidence' } } })
-  assert.ok(fallback.includes('Generación: extractiva'))
-  assert.ok(fallback.includes('Se conserva la abstención porque la evidencia es insuficiente.'))
+  assert.doesNotMatch(fallback, /Generación:|Se conserva la abstención/)
+  assert.ok(fallback.includes('Detalles técnicos de la consulta'))
   assert.doesNotMatch(fallback, /Generación: Bedrock/)
 })
 
