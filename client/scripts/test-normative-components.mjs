@@ -11,6 +11,7 @@ after(() => vite.close())
 const { NormativeAdvice, NormativeQuestionForm } = await vite.ssrLoadModule('/src/components/ai-elements/NormativeAdvice.tsx')
 const { NormativeMarkdown } = await vite.ssrLoadModule('/src/components/ai-elements/NormativeMarkdown.tsx')
 const { SuggestionCard } = await vite.ssrLoadModule('/src/components/ai-elements/SuggestionCard.tsx')
+const { AdvisorOutcome } = await vite.ssrLoadModule('/src/components/ai-elements/AdvisorOutcome.tsx')
 const { AdvisorImpact } = await vite.ssrLoadModule('/src/components/ai-elements/AdvisorImpact.tsx')
 const { AdvisorFindings } = await vite.ssrLoadModule('/src/components/ai-elements/AdvisorFindings.tsx')
 const { uniqueNormativeCitations } = await vite.ssrLoadModule('/src/components/ai-elements/normativePresentation.ts')
@@ -135,4 +136,16 @@ test('advisor prioritizes measured bottlenecks while full diagnosis remains behi
   assert.doesNotMatch(html, /Explicación sintética completa|Detalle sintético del cuello/)
   const noFindings = render(AdvisorFindings, { advice: { summary: 'Diagnóstico sin cuellos identificados.', bottlenecks: [] } })
   assert.ok(noFindings.includes('Diagnóstico sin cuellos identificados.'))
+})
+
+
+test('actual advisor outcome reports a decline honestly instead of reusing projected improvement', () => {
+  const html = render(AdvisorOutcome, { outcome: { sourceProposalId: 'synthetic-before', proposalId: 'synthetic-after', editVersion: 0,
+    recommendationCount: 2, before: { components: 10, completeSections: 5 }, after: { components: 8, completeSections: 4 },
+    requiredComponents: 12, totalSections: 6 } })
+  assert.ok(html.includes('data-advisor-outcome'))
+  assert.ok(html.includes('10 → 8/12 (-2)'))
+  assert.ok(html.includes('5 → 4/6 (-1)'))
+  assert.ok(html.includes('Quedan 4 componentes pendientes'))
+  assert.doesNotMatch(html, /Simulada|mejor[oó]|resuelt[oa]|complet[oó] la cobertura/)
 })

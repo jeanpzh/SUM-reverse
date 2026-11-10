@@ -2,10 +2,10 @@ name: Planning distribution
 
 on:
   pull_request:
-    paths: ['planning-engine/**', 'client/src/screens/Planning*.tsx', 'client/src/screens/useNormativeChat.ts', 'client/src/screens/usePlanningAssistantDisplay.ts', 'client/src/screens/AcademicScheduling.tsx', 'client/src/components/ai-elements/**', 'client/scripts/**', 'backend/src/programacion-academica/**', 'shared/programacion-academica*', 'compose.planning*.yaml', 'backend/Dockerfile', 'client/Dockerfile', '.dockerignore', 'scripts/*planning*', '.github/workflows/planning-distribution.yml']
+    paths: ['planning-engine/**', 'client/src/screens/Planning*.tsx', 'client/src/screens/useNormativeChat.ts', 'client/src/screens/usePlanningAssistantDisplay.ts', 'client/src/screens/AcademicScheduling.tsx', 'client/src/data/planningSession.ts', 'client/src/data/advisorOutcome.ts', 'client/src/components/ai-elements/**', 'client/scripts/**', 'backend/src/programacion-academica/**', 'shared/programacion-academica*', 'compose.planning*.yaml', 'backend/Dockerfile', 'client/Dockerfile', '.dockerignore', 'scripts/*planning*', '.github/workflows/planning-distribution.yml']
   push:
     branches: [master]
-    paths: ['planning-engine/**', 'client/src/screens/Planning*.tsx', 'client/src/screens/useNormativeChat.ts', 'client/src/screens/usePlanningAssistantDisplay.ts', 'client/src/screens/AcademicScheduling.tsx', 'client/src/components/ai-elements/**', 'client/scripts/**', 'backend/src/programacion-academica/**', 'shared/programacion-academica*', 'compose.planning*.yaml', 'backend/Dockerfile', 'client/Dockerfile', '.dockerignore', 'scripts/*planning*', '.github/workflows/planning-distribution.yml']
+    paths: ['planning-engine/**', 'client/src/screens/Planning*.tsx', 'client/src/screens/useNormativeChat.ts', 'client/src/screens/usePlanningAssistantDisplay.ts', 'client/src/screens/AcademicScheduling.tsx', 'client/src/data/planningSession.ts', 'client/src/data/advisorOutcome.ts', 'client/src/components/ai-elements/**', 'client/scripts/**', 'backend/src/programacion-academica/**', 'shared/programacion-academica*', 'compose.planning*.yaml', 'backend/Dockerfile', 'client/Dockerfile', '.dockerignore', 'scripts/*planning*', '.github/workflows/planning-distribution.yml']
 
 permissions:
   contents: read
@@ -72,6 +72,15 @@ jobs:
           SUM_REDESIGN_WEB_PORT: '5746'
           SUM_REDESIGN_EVIDENCE: /tmp/planning-assistant-e2e/access
           SUM_ASSISTANT_CASES: advisor-saving-state-explains-global-block,responsive-open-rail-does-not-silently-block-workspace,mobile-menu-assistant-close-and-focus
+      - name: Advisor application utility
+        run: |
+          node client/scripts/verify-planning-redesign-stack.mjs verify-planning-advisor-utility.mjs
+          SUM_ASSISTANT_CASES=advisor-policy-window-complete SUM_REDESIGN_EVIDENCE=/tmp/planning-assistant-e2e/utility-complete node client/scripts/verify-planning-redesign-stack.mjs verify-planning-advisor-utility.mjs
+        env:
+          SUM_REDESIGN_API_PORT: '3746'
+          SUM_REDESIGN_ENGINE_PORT: '3747'
+          SUM_REDESIGN_WEB_PORT: '5746'
+          SUM_REDESIGN_EVIDENCE: /tmp/planning-assistant-e2e/utility-all
       - if: failure()
         uses: actions/upload-artifact@v4
         with:

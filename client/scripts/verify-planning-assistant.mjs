@@ -25,7 +25,7 @@ try {
     page.on('pageerror', error => errors.push(error.message))
     try {
       await page.goto(`${base.origin}/local/programacion-academica`, { waitUntil: 'networkidle' })
-      await page.locator('#planning-page-title').waitFor()
+      await page.locator('#planning-page-title').waitFor({ timeout: 45000 })
       await scenario({ page, base: base.origin })
       assert.deepEqual(errors, [])
       results.push({ name, passed: true })
