@@ -67,7 +67,7 @@ de cada nivel, no las asignaciones.
 | T3 | Backend: perfil → entrada del motor, resultado en la Propuesta, datos sintéticos con régimen y procedencia, retiro del tope de demo de 10 h, bloqueo de publicación, unificación con los perfiles sintéticos del chat normativo | T1, T2 | Codex GPT-6.1 Sol | despachado 2026-11-10 |
 | T4 | Búsqueda en segundo plano con progreso y tope de candidatos adaptativo | T3 | por asignar | pendiente |
 | T5 | Interfaz: cola de decisiones, registro de evidencias, etiquetas de procedencia de cada regla | T3 | por asignar | pendiente |
-| T6a | Motor: decisiones de franja y de modalidad para las secciones sin franja (`planning-window`, `delivery-mode-split`, base `window-precheck`) | T2 | Codex GPT-6.1 Sol | despachado 2026-11-10 |
+| T6a | Motor: decisiones de franja y de modalidad para las secciones sin franja (`planning-window`, `delivery-mode-split`, base `window-precheck`) | T2 | Codex GPT-6.1 Sol | verificado e integrado 2026-11-10 (`1ca4df2`) |
 | T6b | El consejero consume las decisiones del motor en lugar de proponer y simular; recursos de referencia | T3, T6a | por asignar | pendiente |
 | T7 | Auditoría del resultado integrado | T3–T6 | por asignar | pendiente |
 
@@ -122,6 +122,25 @@ Además, 18 secciones quedan excluidas por no tener franja para su bloque
 (`NO_SCHEDULING_WINDOW`) con la política sin tarde ni sábado: esa parte del faltante es de
 horario, no de docentes, y la cubrirá T6. Con 2,5 s los niveles de prelación no quedan
 probados; lo resuelve el presupuesto de T4.
+
+### Resultado de T6a
+
+Verificación del orquestador tras integrar: 50 pruebas del motor y del consejero y las 5 de
+escala pasan. El agente añadió el diagnóstico `WINDOW_ANALYSIS_LIMIT` para cuando el plazo
+no alcanza a completar el análisis.
+
+Medición del orquestador sobre el catálogo sintético (tope de 720 min, 2,5 s de búsqueda):
+
+| Política | Secciones sin franja | Programadas | Prueba |
+| --- | --- | --- | --- |
+| Sin tarde ni sábado | 18 | 124 de 166 | inconclusa |
+| Con tarde | 0 | 140 de 166 | inconclusa |
+| Cursos partidos | 0 | 122 de 166 | inconclusa |
+| Con tarde y cursos partidos | 0 | 141 de 166 | faltante probado: se alcanza el máximo de capacidad docente |
+
+Habilitar la tarde o partir los cursos da franja a las 18 secciones; el sábado, a ninguna.
+Las 25 secciones restantes son de capacidad docente: 15 excepciones de carga liberan 21 y
+4 cursos requieren docente adicional.
 
 ## Criterios de aceptación
 
