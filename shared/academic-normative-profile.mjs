@@ -303,8 +303,9 @@ const declarationCovers = (next, assignedMinutes) => next?.kind === 'voluntary-d
 
 // Teachers whose assigned lective minutes exceed what is authorized today. A teacher without a regulated maximum (contract,
 // part-time without cap, missing regime) is not listed: its gaps are visible in teacherLoadLimits. A UI approval never
-// replaces the formal authorization named here; above the declaration ceiling, with a declaration already recorded, or for a teacher on leave the VRAP (DF-3) is the
-// only named route (an on-leave teacher is really an availability problem, not an authorization one).
+// replaces the formal authorization named here; above the declaration ceiling or with a declaration already recorded the
+// VRAP (DF-3) is the only named route. A teacher on leave is unavailable rather than short of an authorization: the
+// blocker carries reason `on-leave` and names no authorization.
 export function loadAuthorizationBlockers(profile, teachers, assignedMinutesByTeacherId, { lectiveHourMinutes } = {}) {
   assertProfile(profile)
   assertLectiveHourMinutes(profile, lectiveHourMinutes)
@@ -319,11 +320,13 @@ export function loadAuthorizationBlockers(profile, teachers, assignedMinutesByTe
     if (!Number.isFinite(assignedMinutes) || assignedMinutes < 0) throw new TypeError(`assignedMinutes de ${teacher.id}: número no negativo requerido`)
     const limits = teacherLoadLimits(profile, teacher, { lectiveHourMinutes })
     if (limits.authorizedMaxMinutes === null || assignedMinutes <= limits.authorizedMaxMinutes) continue
+    const onLeave = (teacher.loadConditions ?? []).includes('on-leave')
     blockers.push({
       teacherId: teacher.id,
       assignedMinutes,
       authorizedMaxMinutes: limits.authorizedMaxMinutes,
-      requiredAuthorization: declarationCovers(limits.nextException, assignedMinutes) ? 'voluntary-declaration' : 'vrap-authorization',
+      reason: onLeave ? 'on-leave' : 'over-authorized-load',
+      requiredAuthorization: onLeave ? null : declarationCovers(limits.nextException, assignedMinutes) ? 'voluntary-declaration' : 'vrap-authorization',
       sourceIds: limits.sourceIds,
     })
   }

@@ -79,7 +79,8 @@ export type LoadAuthorizationBlocker = {
   teacherId: string
   assignedMinutes: number
   authorizedMaxMinutes: number
-  requiredAuthorization: LoadAuthorizationKind
+  reason: 'over-authorized-load' | 'on-leave'
+  requiredAuthorization: LoadAuthorizationKind | null
   sourceIds: string[]
 }
 

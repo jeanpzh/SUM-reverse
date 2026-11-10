@@ -178,9 +178,11 @@ test('criterion 8: blockers list exactly the teachers above their authorized max
     ['T-22', 1100, 600, 'vrap-authorization'],
     ['T-VOL', 1050, 1000, 'vrap-authorization'],
     ['T-VRAP', 1250, 1200, 'vrap-authorization'],
-    ['T-LEAVE', 50, 0, 'vrap-authorization'],
+    ['T-LEAVE', 50, 0, null],
     ['T-POST', 550, 500, 'vrap-authorization'],
   ])
+  // A teacher on leave is unavailable, not short of an authorization: no formal route is named.
+  assert.deepEqual(blockers.map((item) => item.reason), ['over-authorized-load', 'over-authorized-load', 'over-authorized-load', 'over-authorized-load', 'on-leave', 'over-authorized-load'])
   assert.deepEqual(loadAuthorizationBlockers(profile, teachers, new Map(Object.entries(assigned)), { lectiveHourMinutes: 50 }), blockers)
   // Exactly at the authorized maximum is allowed; nothing is listed when all are within limits; unassigned teachers count as zero.
   const within = { 'T-OK': 600, 'T-12': 600, 'T-22': 600, 'T-VOL': 1000, 'T-VRAP': 1200, 'T-LEAVE': 0, 'T-POST': 500, 'T-TP': 9000 }
