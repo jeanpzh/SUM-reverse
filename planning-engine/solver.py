@@ -363,7 +363,7 @@ def solve_academic_schedule(req: SolveScheduleRequest) -> SolveScheduleResponse:
                     break
 
     capacity_certificate, decisions, decisions_proven, capacity_upper_bound = analyze_capacity(req, teachers_by_course,
-        min(deadline, time.monotonic() + min(0.25, req.maxTimeSeconds * 0.1)), excluded_sections)
+        min(deadline, time.monotonic() + min(1.0, req.maxTimeSeconds * 0.2)), excluded_sections)
     if not decisions_proven:
         precheck_diagnostics.append(DiagnosticOutput(code='CAPACITY_ANALYSIS_LIMIT',
             message='Análisis de capacidad o concesiones sin prueba óptima dentro del presupuesto', sessionIds=[]))

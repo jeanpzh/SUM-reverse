@@ -354,8 +354,13 @@ callers remain valid):
   sampling keeps affected priority proofs false, even with complete coverage.
   Without priority data, existing preference assignment behavior is retained.
 
-Capacity analysis shares the request deadline and gets at most 10% of the request
-budget, capped at 250 ms, after the existing cheap timetable incumbent is built.
+Capacity analysis shares the request deadline and gets at most 20% of the request
+budget, capped at 1 s, after the existing cheap timetable incumbent is built. It
+counts sections per (course, required minutes, teacher) rather than choosing a
+teacher per section: with the per-section model the minimal-concession objectives
+stayed unproven after 60 s on the 166-section synthetic catalog; aggregated, the
+full analysis with exception caps is proven in 0.16–0.25 s (orchestrator
+measurement, 2026-11-10).
 This preserves a useful feasible schedule if candidate preparation later expires.
 It uses one CP-SAT worker; the existing timetable coverage search uses four.
 
