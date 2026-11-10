@@ -2,10 +2,10 @@ name: Planning distribution
 
 on:
   pull_request:
-    paths: ['planning-engine/**', 'compose.planning.yaml', 'backend/Dockerfile', 'client/Dockerfile', '.dockerignore', 'scripts/*planning*', '.github/workflows/planning-distribution.yml']
+    paths: ['planning-engine/**', 'client/src/screens/Planning*.tsx', 'client/src/screens/useNormativeChat.ts', 'client/src/components/ai-elements/**', 'client/scripts/**', 'backend/src/programacion-academica/**', 'shared/programacion-academica*', 'compose.planning*.yaml', 'backend/Dockerfile', 'client/Dockerfile', '.dockerignore', 'scripts/*planning*', '.github/workflows/planning-distribution.yml']
   push:
     branches: [master]
-    paths: ['planning-engine/**', 'compose.planning.yaml', 'backend/Dockerfile', 'client/Dockerfile', '.dockerignore', 'scripts/*planning*', '.github/workflows/planning-distribution.yml']
+    paths: ['planning-engine/**', 'client/src/screens/Planning*.tsx', 'client/src/screens/useNormativeChat.ts', 'client/src/components/ai-elements/**', 'client/scripts/**', 'backend/src/programacion-academica/**', 'shared/programacion-academica*', 'compose.planning*.yaml', 'backend/Dockerfile', 'client/Dockerfile', '.dockerignore', 'scripts/*planning*', '.github/workflows/planning-distribution.yml']
 
 permissions:
   contents: read
@@ -38,3 +38,34 @@ jobs:
         run: docker compose -p planning-ci -f compose.planning.yaml logs --tail 80
       - if: always()
         run: docker compose -p planning-ci -f compose.planning.yaml down -v
+
+  assistant-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.10.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.11.15'
+      - run: uv sync --directory planning-engine --frozen
+      - run: pnpm --dir client install --frozen-lockfile
+      - run: pnpm --dir backend install --frozen-lockfile
+      - run: pnpm --dir backend build
+      - run: pnpm --dir client exec playwright install --with-deps chromium
+      - run: pnpm --dir client verify:planning-assistant
+        env:
+          SUM_REDESIGN_API_PORT: '3746'
+          SUM_REDESIGN_ENGINE_PORT: '3747'
+          SUM_REDESIGN_WEB_PORT: '5746'
+          SUM_REDESIGN_EVIDENCE: /tmp/planning-assistant-e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: planning-assistant-e2e
+          path: /tmp/planning-assistant-e2e

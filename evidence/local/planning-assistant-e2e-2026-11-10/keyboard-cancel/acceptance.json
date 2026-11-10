@@ -1,0 +1,10 @@
+{
+  "source": "Own synthetic React/NestJS/Python stack, public corpus, LLM disabled; declared transport failure/delay injections",
+  "base": "http://127.0.0.1:5746",
+  "results": [
+    {
+      "name": "chat-cancel-allows-a-new-query",
+      "passed": true
+    }
+  ]
+}

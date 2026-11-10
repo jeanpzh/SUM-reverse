@@ -1,0 +1,13 @@
+{
+  "source": "Own built-in synthetic stack; disabled LLM; public reviewed corpus; no snapshots or live AWS",
+  "base": "http://127.0.0.1:5746",
+  "results": [
+    "no-query-on-mount-or-open",
+    "empty-evidence-has-one-visible-conclusion",
+    "partial-evidence-keyboard-disclosure-and-metadata",
+    "transport-error-retry-and-cancel-remain-explicit",
+    "history-preserved-and-mobile-reflows",
+    "advisor-shows-measured-impact-and-keeps-mutation-explicit"
+  ],
+  "errors": []
+}

@@ -3,6 +3,7 @@ import type { AcademicAdvisorRecommendation } from '../../data/academicSchedulin
 import { Badge } from '../ui/Badge'
 import { Checkbox } from '../ui/Checkbox'
 import { MessageResponse } from './MessageResponse'
+import { AdviceDisclosure } from './AdviceDisclosure'
 
 export function SuggestionCard({ recommendation, checked, disabled, onCheckedChange, teacherNames, courseNames, roomNames }: {
   recommendation: AcademicAdvisorRecommendation
@@ -30,7 +31,7 @@ export function SuggestionCard({ recommendation, checked, disabled, onCheckedCha
         <label htmlFor={id} className="cursor-pointer font-semibold">{recommendation.title}</label>
         <div className="my-2"><Badge variant="outline" className="whitespace-normal [overflow-wrap:anywhere]">Estimación: {recommendation.impactSummary}</Badge></div>
         {patch.kind === 'increase_teacher_load' && <p className="my-2 font-medium">Escenario de simulación: requiere autorización externa para aumentar la carga docente. La consulta normativa no concede esa autorización.</p>}
-        <MessageResponse>{recommendation.rationale}</MessageResponse>
+        <AdviceDisclosure label="Por qué se recomienda"><MessageResponse>{recommendation.rationale}</MessageResponse></AdviceDisclosure>
         <details className="mt-2">
           <summary className="cursor-pointer focus-visible:outline-2 focus-visible:outline-ring">Ver cambios exactos ({details.length})</summary>
           <ul className="mb-0 pl-5 [overflow-wrap:anywhere]">{details.map((detail, index) => <li key={index}>{detail}</li>)}</ul>

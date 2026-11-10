@@ -294,3 +294,22 @@ cuatro estados, pendientes/diagnósticos, cambio demanda sin mostrar resultado v
 como vigente, error/reintento. Flujo real navegador → React → API Nest → generador.
 193 regresiones, builds/tipos fuente/lint y pruebas focalizadas. Registrar fallos
 preexistentes aparte. Sin nuevas dependencias, Docker, migraciones ni commits.
+
+### Consultas documentales normativas (PA-NORMATIVE-1)
+
+La implementación compartida valida `question`, `facultyId`, `academicPeriod`,
+`asOf` y `teacherType`. La ampliación compatible de 2026-11-10 admite además
+`previousQuestion?: string`, con 1–1000 caracteres tras trim: solo la pregunta
+previa del usuario, usada como antecedente en seguimientos explícitos. No incluye
+respuestas del modelo, historial ilimitado ni permisos. Los filtros actuales
+siguen determinando la elegibilidad; el antecedente no aparece en `context`.
+Cambiar filtros/periodo borra el antecedente y reintentar conserva el original.
+
+La respuesta conserva `status`, citas canónicas, límites, modos y validación de
+identidad. `answer` puede explicar el contenido documental aunque el estado sea
+`not-determined`; esto no confirma vigencia, aplicación individual ni autorización.
+`nextStep?: string` (1–500 caracteres) ofrece una verificación específica de la
+pregunta. Los extractos completos permanecen en `citations`. Los consumidores
+anteriores siguen siendo válidos; cliente/backend y motor deben desplegarse
+juntos antes de enviar el nuevo campo. Generación con modelo sigue exigiendo
+estado `supported`, sin modificar vigencias del corpus.

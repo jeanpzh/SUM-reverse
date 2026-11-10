@@ -1,0 +1,50 @@
+{
+  "source": "Own synthetic React/NestJS/Python stack, public corpus, LLM disabled; declared transport failure/delay injections",
+  "base": "http://127.0.0.1:5746",
+  "results": [
+    {
+      "name": "chat-real-response-and-scope",
+      "passed": true
+    },
+    {
+      "name": "chat-retry-resends-failed-turn",
+      "passed": true
+    },
+    {
+      "name": "chat-double-submit-keeps-one-pending-request",
+      "passed": true
+    },
+    {
+      "name": "chat-http-error-recovers-on-retry",
+      "passed": true
+    },
+    {
+      "name": "chat-cancel-allows-a-new-query",
+      "passed": true
+    },
+    {
+      "name": "chat-rejects-mismatched-response",
+      "passed": true
+    },
+    {
+      "name": "chat-invalid-date-and-mobile-history",
+      "passed": true
+    },
+    {
+      "name": "advisor-selection-invalidates-impact",
+      "passed": true
+    },
+    {
+      "name": "advisor-applies-only-on-command-and-regenerates",
+      "passed": true
+    },
+    {
+      "name": "advisor-retry-preserves-requested-selection",
+      "passed": true
+    },
+    {
+      "name": "advisor-retry-preserves-empty-selection",
+      "passed": true
+    }
+  ]
+}

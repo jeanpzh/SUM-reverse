@@ -46,7 +46,7 @@ export function PlanningNormativeChat({ academicPeriod, chat }: { academicPeriod
   const selectSuggestion = (item: ExampleQuestion) => {
     chat.changeTeacherType(item.teacherType)
     chat.setQuestion(item.question)
-    void chat.submit(item.question, item.teacherType)
+    void chat.submit(item.question, item.teacherType, undefined, true)
   }
 
   return (
@@ -65,6 +65,7 @@ export function PlanningNormativeChat({ academicPeriod, chat }: { academicPeriod
           </span>
         </summary>
         <div className="planning-chat__filters">
+          <p className="m-0 text-xs text-muted-foreground">Las preguntas de seguimiento usan tu última consulta respondida. Cambiar los filtros inicia otra conversación.</p>
           <Label className="text-xs font-medium">
             Fecha de consulta
             <Input
@@ -148,7 +149,7 @@ export function PlanningNormativeChat({ academicPeriod, chat }: { academicPeriod
                             variant="outline"
                             size="sm"
                             disabled={loading}
-                            onClick={() => setQuestion(turn.question)}
+                            onClick={() => chat.retry(turn.id)}
                           >
                             Reintentar consulta normativa
                           </Button>
@@ -200,7 +201,10 @@ export function PlanningNormativeChat({ academicPeriod, chat }: { academicPeriod
                 {question.length > 0 ? `${question.length}/1000` : ''}
               </span>
               {loading ? (
-                <InputGroupButton aria-label="Cancelar consulta" onClick={cancel}>
+                <InputGroupButton aria-label="Cancelar consulta" onClick={(event) => {
+                  // The second click of Enviar's double-click lands on this replacement.
+                  if (event.detail < 2) cancel()
+                }}>
                   <Square className="size-3.5" />
                   <span>Cancelar</span>
                 </InputGroupButton>

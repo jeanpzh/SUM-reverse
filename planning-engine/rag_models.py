@@ -2,6 +2,7 @@
 import os
 import math
 from langchain_core.embeddings import Embeddings
+from bedrock_credentials import resolve_bedrock_bearer, create_bearer_embedding_client
 
 def create_chat_model(env=None):
     """Use operator process configuration only; never load dotenv or discover services."""
@@ -21,11 +22,7 @@ def create_chat_model(env=None):
         from botocore.config import Config
         kwargs.update(region_name=env.get('AWS_REGION', 'us-east-1'), max_tokens=1024,
                       config=Config(connect_timeout=2, read_timeout=8, retries={'max_attempts': 0}))
-        bearer = env.get('AWS_BEARER_TOKEN_BEDROCK')
-        if not bearer and env.get('AWS_BEARER_TOKEN_BEDROCK_FILE'):
-            # Runtime-only operator configuration; never loaded by tests or at import time.
-            from pathlib import Path
-            bearer = Path(env['AWS_BEARER_TOKEN_BEDROCK_FILE']).read_text().strip()
+        bearer = resolve_bedrock_bearer(env)
         if bearer:
             kwargs['api_key'] = bearer
         for key in ('AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN'):
@@ -97,11 +94,17 @@ def create_embeddings(env=None):
     if provider == 'bedrock':
         from langchain_aws import BedrockEmbeddings
         from botocore.config import Config
-        return BedrockEmbeddings(
+        config = Config(connect_timeout=2, read_timeout=8, retries={'max_attempts': 0})
+        kwargs = dict(
             model_id=model, region_name=env.get('AWS_REGION', 'us-east-1'),
             model_kwargs={'dimensions': dimensions, 'normalize': True},
-            config=Config(connect_timeout=2, read_timeout=8, retries={'max_attempts': 0}),
+            config=config,
         )
+        bearer = resolve_bedrock_bearer(env)
+        if bearer:
+            kwargs['client'] = create_bearer_embedding_client(
+                bearer, region_name=kwargs['region_name'], config=config)
+        return BedrockEmbeddings(**kwargs)
     if provider == 'ollama':
         from langchain_ollama import OllamaEmbeddings
         return OllamaEmbeddings(model=model, base_url=env.get('SUM_RAG_EMBEDDING_BASE_URL', 'http://127.0.0.1:11434'),

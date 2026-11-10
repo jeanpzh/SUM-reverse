@@ -8,7 +8,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { CalendarCheck2, CircleAlert } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
-import { MessageResponse } from '../components/ai-elements/MessageResponse'
+import { AdvisorFindings } from '../components/ai-elements/AdvisorFindings'
+import { AdvisorImpact } from '../components/ai-elements/AdvisorImpact'
 import { NormativeAdvice } from '../components/ai-elements/NormativeAdvice'
 import { Reasoning } from '../components/ai-elements/Reasoning'
 import { SuggestionCard } from '../components/ai-elements/SuggestionCard'
@@ -89,6 +90,7 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
   const [selectedRecIds, setSelectedRecIds] = useState<string[]>([])
   const [applying, setApplying] = useState(false)
   const requestRef = useRef<AbortController | null>(null)
+  const requestedSelection = useRef<string[] | undefined>(undefined)
   const editVersion = proposal.editVersion ?? 0
   useEffect(() => () => requestRef.current?.abort(), [proposal.proposalId, editVersion])
 
@@ -98,6 +100,7 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
   const impact = previewCurrent ? currentAdvice?.verifiedImpact : undefined
 
   const requestAdvice = async (ids?: string[]) => {
+    requestedSelection.current = ids === undefined ? undefined : [...ids]
     requestRef.current?.abort()
     const controller = new AbortController()
     requestRef.current = controller
@@ -260,7 +263,6 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
               )}
             </SheetDescription>
           </SheetHeader>
-          <p className="m-0 text-sm">Aumentar la carga docente requiere autorización externa. La explicación normativa no autoriza aplicar parches.</p>
           {advisorLoading && (
             <PlanningFetchLoading label="Analizando propuesta y restricciones…" layout="cards" />
           )}
@@ -269,39 +271,14 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
               <AlertDescription>{advisorError}</AlertDescription>
             </Alert>
           )}
-          {advisorError && !advisorLoading && <Button type="button" variant="outline" onClick={() => void requestAdvice()}>Reintentar consejero</Button>}
+          {advisorError && !advisorLoading && <Button type="button" variant="outline" onClick={() => void requestAdvice(requestedSelection.current)}>Reintentar consejero</Button>}
           {(advisorLoading || !currentAdvice) && <Button type="button" variant="outline" onClick={() => {
             requestRef.current?.abort(); setAdvisorLoading(false); setAdvisorOpen(false)
           }}>Volver al horario</Button>}
           {!advisorLoading && currentAdvice && (
             <div className="grid min-w-0 gap-4">
-              <div className="typeset typeset-planning rounded-planning-control border border-solid border-border bg-muted/40 p-3 text-sm">
-                <MessageResponse>{currentAdvice.summary}</MessageResponse>
-                {currentAdvice.bottlenecks.length > 0 && (
-                  <ul className="mt-2 mb-0 pl-4 text-muted-foreground">
-                    {currentAdvice.bottlenecks.map((item, idx) => (
-                      <li key={idx}>
-                        <strong className="text-foreground">{item.title}</strong>: {item.detail}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              {currentAdvice.normativeContext && (currentAdvice.normativeContext.context.academicPeriod === academicPeriod
-                && currentAdvice.normativeContext.context.facultyId === 'FISI'
-                ? <NormativeAdvice advice={currentAdvice.normativeContext} />
-                : <Alert variant="warning"><AlertDescription>El contexto normativo no corresponde al periodo actual. Consulta las fuentes con los filtros de esta propuesta.</AlertDescription></Alert>)}
-              <Reasoning steps={currentAdvice.reasoningSteps} />
-              <div role="status" aria-live="polite" className="border border-solid border-border p-3 text-sm">
-                {impact ? <>
-                  <strong>Simulación verificada en CP-SAT</strong>
-                  <p className="mb-1">{impact.currentCompleteSections}/{impact.totalSections} → {impact.projectedCompleteSections}/{impact.totalSections} secciones completas</p>
-                  <p className="my-1">{impact.currentScheduledSessions}/{impact.requiredSessions} → {impact.projectedScheduledSessions}/{impact.requiredSessions} componentes asignados</p>
-                  <p className="my-1">{impact.solverStatus === 'search-limit' ? 'Búsqueda inconclusa: se alcanzó el límite de simulación.'
-                    : impact.solverStatus === 'impossible' ? 'La simulación no encontró una solución completa con estas condiciones.' : 'La simulación completó la cobertura.'}</p>
-                  <p className="mb-0">Resultado para esta selección y versión. La regeneración realiza una nueva búsqueda y puede obtener otra cobertura.</p>
-                </> : <p className="m-0">Sin vista previa vigente. Simula la selección actual antes de aplicar.</p>}
-              </div>
+              <AdvisorImpact impact={impact} />
+              <AdvisorFindings advice={currentAdvice} />
               {currentAdvice.recommendations.length > 0 ? (
                 <div className="grid min-w-0 gap-2.5">
                   <h4 className="m-0 text-sm font-semibold text-foreground">Recomendaciones aplicables</h4>
@@ -315,6 +292,11 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
                   No se encontraron parches automáticos adicionales para esta configuración.
                 </p>
               )}
+              {currentAdvice.normativeContext && (currentAdvice.normativeContext.context.academicPeriod === academicPeriod
+                && currentAdvice.normativeContext.context.facultyId === 'FISI'
+                ? <NormativeAdvice advice={currentAdvice.normativeContext} />
+                : <Alert variant="warning"><AlertDescription>El contexto normativo no corresponde al periodo actual. Consulta las fuentes con los filtros de esta propuesta.</AlertDescription></Alert>)}
+              <Reasoning steps={currentAdvice.reasoningSteps} />
               <div className="flex flex-wrap items-center justify-end gap-2 border-0 border-t border-solid border-border pt-3">
                 <Button type="button" variant="outline" disabled={applying} onClick={() => setAdvisorOpen(false)}>
                   Volver al horario

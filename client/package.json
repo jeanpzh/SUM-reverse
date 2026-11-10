@@ -13,7 +13,8 @@
     "verify:planning-shell": "node scripts/verify-planning-shell.mjs",
     "test:data": "tsc -p tsconfig.data-tests.json && node --experimental-strip-types --test --test-isolation=none src/data/*.test.ts",
     "check:planning-contrast": "node scripts/check-planning-contrast.mjs",
-    "verify:planning-redesign": "node scripts/verify-planning-redesign-stack.mjs"
+    "verify:planning-redesign": "node scripts/verify-planning-redesign-stack.mjs",
+    "verify:planning-assistant": "node scripts/verify-planning-redesign-stack.mjs verify-planning-assistant.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

@@ -1,0 +1,57 @@
+# Opt-in semantic retrieval. The operator explicitly starts ingestion with this overlay.
+x-rag-environment: &rag-environment
+  SUM_RAG_VECTOR_BACKEND: pgvector
+  SUM_RAG_DATABASE_URL: postgresql+psycopg://planning_rag:local-planning-rag-only@vector-db:5432/planning_rag
+  SUM_RAG_EMBEDDING_PROVIDER: bedrock
+  SUM_RAG_EMBEDDING_MODEL: amazon.titan-embed-text-v2:0
+  SUM_RAG_EMBEDDING_DIMENSIONS: '1024'
+  SUM_RAG_SOURCE: local
+
+services:
+  vector-db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: planning_rag
+      POSTGRES_PASSWORD: local-planning-rag-only
+      POSTGRES_DB: planning_rag
+    volumes:
+      - normative-vectors:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U planning_rag -d planning_rag']
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+  rag-index:
+    build:
+      context: .
+      dockerfile: planning-engine/Dockerfile
+    network_mode: service:backend
+    depends_on:
+      backend:
+        condition: service_healthy
+      vector-db:
+        condition: service_healthy
+    environment:
+      <<: *rag-environment
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_BEARER_TOKEN_BEDROCK_FILE: /run/secrets/bedrock_api_key
+      AWS_EC2_METADATA_DISABLED: 'true'
+    secrets:
+      - bedrock_api_key
+    command: ['/app/planning-engine/.venv/bin/python', 'rag_ingest.py']
+    healthcheck:
+      disable: true
+    init: true
+    restart: 'no'
+  engine:
+    environment:
+      <<: *rag-environment
+    depends_on:
+      vector-db:
+        condition: service_healthy
+      rag-index:
+        condition: service_completed_successfully
+
+volumes:
+  normative-vectors:

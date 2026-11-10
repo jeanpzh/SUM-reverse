@@ -1,0 +1,40 @@
+{
+  "source": "Own synthetic React/NestJS/Python stack, public corpus, LLM disabled; declared transport failure/delay injections",
+  "base": "http://127.0.0.1:5746",
+  "results": [
+    {
+      "name": "chat-real-response-and-scope",
+      "passed": true
+    },
+    {
+      "name": "chat-retry-resends-failed-turn",
+      "passed": false,
+      "error": "locator.waitFor: Timeout 4000ms exceeded.\nCall log:\n  - waiting for locator('[data-normative-status]') to be visible\n",
+      "pageErrors": []
+    },
+    {
+      "name": "chat-cancel-allows-a-new-query",
+      "passed": true
+    },
+    {
+      "name": "chat-rejects-mismatched-response",
+      "passed": true
+    },
+    {
+      "name": "chat-invalid-date-and-mobile-history",
+      "passed": false,
+      "error": "locator.fill: Timeout 12000ms exceeded.\nCall log:\n  - waiting for getByLabel('Fecha de consulta normativa')\n",
+      "pageErrors": []
+    },
+    {
+      "name": "advisor-selection-invalidates-impact",
+      "passed": true
+    },
+    {
+      "name": "advisor-retry-preserves-requested-selection",
+      "passed": false,
+      "error": "Retry must preserve selectedRecommendationIds, including []\n+ actual - expected\n\n  {\n    expectedEditVersion: 0,\n-   selectedRecommendationIds: [\n-     'rec-enable-planning-window',\n-     'rec-increase-teacher-load'\n-   ]\n  }\n",
+      "pageErrors": []
+    }
+  ]
+}

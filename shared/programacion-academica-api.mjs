@@ -642,20 +642,22 @@ function normativeDate(value) {
     || value.startsWith('0000-') || new Date(value).toISOString().slice(0, 10) !== value) throw new TypeError('Fecha normativa inválida')
 }
 export function validateAcademicNormativeRequest(value) {
-  object(value, ['question', 'facultyId', 'academicPeriod', 'asOf', 'teacherType'], 'normativeRequest')
+  object(value, ['question', 'facultyId', 'academicPeriod', 'asOf', 'teacherType'], 'normativeRequest', ['previousQuestion'])
   if (typeof value.question !== 'string' || !value.question.trim() || value.question.trim().length > 1000) throw new TypeError('Pregunta normativa inválida')
+  if (value.previousQuestion !== undefined && (typeof value.previousQuestion !== 'string' || !value.previousQuestion.trim() || value.previousQuestion.trim().length > 1000)) throw new TypeError('Antecedente normativo inválido')
   if (value.facultyId !== 'FISI' || !isPlanningPeriod(value.academicPeriod)
     || !['ordinario', 'contratado', 'unknown'].includes(value.teacherType)) throw new TypeError('Ámbito normativo inválido')
   normativeDate(value.asOf)
 }
 export function validateAcademicNormativeResponse(value, request) {
-  object(value, ['revision', 'question', 'context', 'status', 'answer', 'retrievalMode', 'citations', 'gaps'], 'normativeResponse', ['generation'])
+  object(value, ['revision', 'question', 'context', 'status', 'answer', 'retrievalMode', 'citations', 'gaps'], 'normativeResponse', ['generation', 'nextStep'])
   validateAcademicNormativeRequest({ question: value.question, ...value.context })
   object(value.context, ['facultyId', 'academicPeriod', 'asOf', 'teacherType'], 'normativeContext')
   if (value.question.trim() !== value.question || value.revision !== 'PA-NORMATIVE-1'
     || !['supported', 'not-determined', 'conflict'].includes(value.status)
     || !['hybrid', 'lexical-only', 'unavailable'].includes(value.retrievalMode)) throw new TypeError('Respuesta normativa inválida')
   if (typeof value.answer !== 'string' || !value.answer.trim() || value.answer.length > 6000) throw new TypeError('Respuesta normativa sin texto válido')
+  if (value.nextStep !== undefined && (typeof value.nextStep !== 'string' || !value.nextStep.trim() || value.nextStep.length > 500)) throw new TypeError('Siguiente paso normativo inválido')
   array(value.citations, 'citations', 8).forEach((c) => {
     object(c, ['id', 'documentId', 'title', 'article', 'page', 'url', 'excerpt', 'sourceClass', 'scope', 'reviewedAt', 'effectiveFrom', 'effectiveTo'], 'citation')
     for (const key of ['id', 'documentId', 'title', 'article', 'excerpt']) string(c[key], key)

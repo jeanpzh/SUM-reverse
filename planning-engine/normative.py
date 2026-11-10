@@ -14,8 +14,9 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from langchain_core.documents import Document
-from langchain_core.runnables import RunnableLambda
 from rag_chain import HybridRetriever, generate_answer
+from normative_relevance import contextual_question, retrieval_question, facets, focus_documents, ambiguous_followup
+from normative_answer import documentary_answer, query_next_step
 
 REVISION = 'PA-NORMATIVE-1'
 MODEL = 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
@@ -34,11 +35,19 @@ class NormativeRequest(StrictModel):
     academicPeriod: str = Field(pattern=r'^20\d{2}-(I|II)$')
     asOf: str
     teacherType: Literal['ordinario', 'contratado', 'unknown']
+    previousQuestion: str | None = Field(default=None, min_length=1, max_length=1000, exclude_if=lambda value: value is None)
 
-    @field_validator('question', mode='before')
+    @field_validator('question', 'previousQuestion', mode='before')
     @classmethod
     def trim_question(cls, value):
         return value.strip() if isinstance(value, str) else value
+
+    @field_validator('previousQuestion', mode='before')
+    @classmethod
+    def previous_is_text(cls, value):
+        if value is None:
+            raise ValueError('Previous question must be a bounded nonblank string')
+        return value
 
     @field_validator('asOf')
     @classmethod
@@ -94,6 +103,7 @@ class NormativeResponse(StrictModel):
     citations: list[NormativeCitation] = Field(max_length=8)
     gaps: list[str]
     generation: NormativeGeneration | None = Field(default=None, exclude_if=lambda value: value is None)
+    nextStep: str | None = Field(default=None, min_length=1, max_length=500, exclude_if=lambda value: value is None)
 
 
 def tokens(text):
@@ -106,6 +116,7 @@ class NormativeRetriever:
     def __init__(self, chunks=None, embedder=None, *, repository=None, env=None, model_factory=None):
         self.env = dict(os.environ) if env is None else dict(env)
         self.repository = repository
+        self.repository_failure_reason = 'not_configured'
         self.model_factory = model_factory
         if chunks is None:
             # Queries read only the canonical local bundle, never a remote source.
@@ -123,6 +134,7 @@ class NormativeRetriever:
                                                                corpus_fingerprint=corpus_fingerprint(bundle))
                 except Exception:
                     self.repository = None
+                    self.repository_failure_reason = 'configuration_failed' if self.env.get('SUM_RAG_DATABASE_URL') else 'not_configured'
         self.chunks = chunks
         self.embedder = embedder
         ids = set()
@@ -148,17 +160,24 @@ class NormativeRetriever:
             'excerptSha256': hashlib.sha256(c['excerpt'].encode()).hexdigest(),
         }) for c in eligible]
         retriever = HybridRetriever(documents=documents, tokenize=tokens,
-                                    repository=self.repository, callable_embedder=self.embedder)
-        selected_docs = (retriever | RunnableLambda(lambda docs: docs[:4])).invoke(req.question)
+                                    repository=self.repository, callable_embedder=self.embedder,
+                                    repository_failure_reason=self.repository_failure_reason)
+        subject, _ = contextual_question(req.question, req.previousQuestion)
+        facet = facets(subject)
+        ranked = retriever.invoke(retrieval_question(subject))
+        unresolved = ambiguous_followup(req.question) and not req.previousQuestion
+        selected_docs = [] if unresolved else focus_documents(ranked, facet, subject)
+        primary_ids = {d.metadata['id'] for d in selected_docs}
         selected = [d.metadata for d in selected_docs]
-        mode = 'lexical-only' if retriever.degraded or not eligible else 'hybrid'
+        mode = 'hybrid' if retriever.semantic_used and not retriever.degraded else 'lexical-only'
         gaps = ['Corpus parcial: no acredita autorización, carga individual ni aprobación del horario.',
                 'Falta acuerdo FISI sobre duración de hora académica y disponibilidad/autorizaciones del periodo.',
                 'Mínimos generales no autorizan completar carga ni invalidan una asignación parcial de esta escuela.']
         if not eligible:
             gaps.append('No hay fragmentos aplicables a los filtros y fecha de la consulta.')
         elif retriever.degraded:
-            gaps.append('Repositorio vectorial no disponible o no configurado; recuperación léxica solamente.')
+            from rag_diagnostics import RETRIEVAL_GAPS, retrieval_failure
+            gaps.append(RETRIEVAL_GAPS[retrieval_failure(retriever.failure_reason)])
         ids = {c['id'] for c in selected}
         by_id = {c['id']: c for c in eligible}
         for c in list(selected):
@@ -188,16 +207,14 @@ class NormativeRetriever:
             gaps.append('Conflicto documental explícito; la puntuación de recuperación no determina prevalencia normativa.')
         status = 'conflict' if conflicts else 'not-determined' if not selected or future or unknown_effective or req.teacherType != 'ordinario' else 'supported'
         citations = [NormativeCitation(**{key: c[key] for key in NormativeCitation.model_fields}) for c in selected]
-        # Extracts are data, never executable instructions. No provider needed.
-        intro = 'Respuesta extractiva determinista. Requiere autorización externa para cualquier aumento de carga; estas citas no la conceden.'
-        if citations:
-            items = [f'{intro}\n\n### Artículos y disposiciones aplicables\n']
-            for c in citations:
-                items.append(f'- **[{c.id}] {c.article}**:\n  > {c.excerpt}')
-            answer = '\n\n'.join(items)
-        else:
-            answer = f'{intro}\n\n*Sin evidencia aplicable para esta consulta y filtros.*'
-        result = NormativeResponse(question=req.question, context=req.model_dump(exclude={'question'}), status=status, answer=answer[:6000], retrievalMode=mode if self.chunks else 'unavailable', citations=citations, gaps=gaps)
+        answer = documentary_answer(citations, primary_ids, facet, req.teacherType, conflicts)
+        next_step = query_next_step(facet, req.teacherType, bool(citations), conflicts)
+        if unresolved:
+            answer = 'Falta el antecedente para saber a qué autorización te refieres; no se puede determinar una autoridad sin identificar el caso.'
+            next_step = 'Indica si preguntas por la duración de la hora, un exceso de carga u otra decisión concreta.'
+        result = NormativeResponse(question=req.question, context=req.model_dump(exclude={'question', 'previousQuestion'}), status=status,
+                                   answer=answer[:6000], retrievalMode=mode if self.chunks else 'unavailable', citations=citations, gaps=gaps,
+                                   nextStep=next_step)
         # Synchronous public query also supports callers already in an event loop.
         def generate():
             return asyncio.run(generate_answer(result, self.env, self.model_factory))
