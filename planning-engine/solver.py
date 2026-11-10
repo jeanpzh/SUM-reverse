@@ -11,6 +11,7 @@ from capacity import analyze_capacity
 
 from models import (
     AssignmentOutput,
+    CapacityDecision,
     CourseInput,
     DiagnosticOutput,
     PlanningPolicyInput,
@@ -98,6 +99,99 @@ def intervals_overlap(
 
 def solve_academic_schedule(req: SolveScheduleRequest) -> SolveScheduleResponse:
     deadline = time.monotonic() + req.maxTimeSeconds
+    result = _solve_academic_schedule(req, deadline)
+    # Explain the existing precheck only after scheduling. Counterfactual options
+    # never enter capacity optimization, the incumbent, or the timetable model.
+    excluded_ids = {sid for d in result.diagnostics if d.code == 'NO_SCHEDULING_WINDOW'
+        for sid in d.sessionIds}
+    if not excluded_ids:
+        return result
+    try:
+        decisions, diagnostics = _window_options(req, excluded_ids, deadline)
+    except TimeoutError:
+        result.diagnostics.append(DiagnosticOutput(code='WINDOW_ANALYSIS_LIMIT',
+            message='Sin presupuesto para completar el análisis de alternativas de franja',
+            sessionIds=sorted(excluded_ids)))
+    else:
+        result.decisions.extend(decisions)
+        result.diagnostics.extend(diagnostics)
+    return result
+
+
+def _window_options(
+    req: SolveScheduleRequest, excluded_ids: set[str], deadline: float,
+) -> tuple[list[CapacityDecision], list[DiagnosticOutput]]:
+    courses = {c.courseId: c for c in req.courses}
+    excluded_sections = {r.sectionId for r in req.requirements if r.id in excluded_ids}
+    by_section = defaultdict(list)
+    for r in req.requirements:
+        if r.sectionId in excluded_sections:
+            by_section[r.sectionId].append(r)
+    policy = req.planningPolicy
+    flags = {key: True for key in ('allowAfternoon', 'allowSaturday')
+        if policy is not None and not getattr(policy, key)}
+    options = [('planning-window:afternoon', {'allowAfternoon': True}, False),
+        ('planning-window:saturday', {'allowSaturday': True}, False),
+        ('delivery-mode-split', {}, True),
+        ('planning-window:combined', flags, True)]
+    unlocked = defaultdict(set)
+    insufficient = []
+
+    @lru_cache(maxsize=None)
+    def fits(cycle, blocks, afternoon, saturday):
+        changed_policy = policy.model_copy(update=dict(allowAfternoon=afternoon, allowSaturday=saturday)) if policy else None
+        for duration in blocks:
+            found = False
+            for window in req.windows:
+                if time.monotonic() >= deadline:
+                    raise TimeoutError
+                for start in range(window.startMinute, window.endMinute - duration + 1, req.startStepMinutes):
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError
+                    if planning_time_rank(cycle, start, window.day, duration, changed_policy) is not None:
+                        found = True
+                        break
+                if found:
+                    break
+            if not found:
+                return False
+        return True
+
+    for sid, items in sorted(by_section.items()):
+        if time.monotonic() >= deadline:
+            raise TimeoutError
+        course = courses[items[0].courseId]
+        single_unlocked = False
+        for key, changes, split in options:
+            if key.endswith(':combined'):
+                if single_unlocked:
+                    break
+            elif changes and not all(flag in flags for flag in changes):
+                continue
+            elif split and course.deliveryMode == 'split':
+                continue
+            blocks = tuple(r.durationMinutes for r in items) if split or course.deliveryMode == 'split' else (
+                sum(w.durationMinutes for w in course.weeklySessions),)
+            if fits(course.cycle, blocks,
+                    changes.get('allowAfternoon', policy.allowAfternoon if policy else False),
+                    changes.get('allowSaturday', policy.allowSaturday if policy else False)):
+                unlocked[key].add(sid)
+                single_unlocked = True
+            elif key.endswith(':combined'):
+                insufficient.extend(r.id for r in items)
+
+    decisions = [CapacityDecision(id=key,
+        kind='delivery-mode-split' if key == 'delivery-mode-split' else 'planning-window',
+        courseIds=sorted({by_section[sid][0].courseId for sid in unlocked[key]}),
+        additionalMinutes=0, sectionsUnlocked=len(unlocked[key]), basis='window-precheck',
+        policyChange=changes or None) for key, changes, _ in options if unlocked[key]]
+    diagnostics = [DiagnosticOutput(code='WINDOW_RELAXATION_INSUFFICIENT',
+        message='Ni tarde, sábado y componentes separados dan franja a estas sesiones',
+        sessionIds=sorted(insufficient))] if insufficient else []
+    return decisions, diagnostics
+
+
+def _solve_academic_schedule(req: SolveScheduleRequest, deadline: float) -> SolveScheduleResponse:
     capacity_certificate = None
     decisions = []
     incumbent = []

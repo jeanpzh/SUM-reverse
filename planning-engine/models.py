@@ -135,15 +135,21 @@ class CapacityCertificate(BaseModel):
     courses: list[CapacityCourse]
 
 
+class PlanningWindowChange(BaseModel):
+    allowAfternoon: Literal[True] | None = Field(default=None, exclude_if=lambda value: value is None)
+    allowSaturday: Literal[True] | None = Field(default=None, exclude_if=lambda value: value is None)
+
+
 class CapacityDecision(BaseModel):
     id: str
-    kind: Literal['teacher-load-exception', 'additional-teacher']
+    kind: Literal['teacher-load-exception', 'additional-teacher', 'planning-window', 'delivery-mode-split']
     teacherId: str | None = None
     courseIds: list[str]
     exceptionKind: Literal['voluntary-declaration', 'vrap-authorization'] | None = None
     additionalMinutes: int
     sectionsUnlocked: int
-    basis: Literal['capacity-relaxation'] = 'capacity-relaxation'
+    basis: Literal['capacity-relaxation', 'window-precheck'] = 'capacity-relaxation'
+    policyChange: PlanningWindowChange | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class PrelationLevel(BaseModel):
@@ -194,10 +200,8 @@ class IncreaseTeacherLoadPatch(BaseModel):
     adjustments: list[TeacherLoadAdjustment]
 
 
-class EnablePlanningWindowPatch(BaseModel):
+class EnablePlanningWindowPatch(PlanningWindowChange):
     kind: Literal["enable_planning_window"] = "enable_planning_window"
-    allowAfternoon: Literal[True] | None = Field(default=None, exclude_if=lambda value: value is None)
-    allowSaturday: Literal[True] | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class ChangeDeliveryModePatch(BaseModel):
