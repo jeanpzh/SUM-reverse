@@ -1,0 +1,24 @@
+{
+  "source": "Own synthetic React/NestJS/Python stack, public corpus, LLM disabled; declared transport failure/delay injections",
+  "base": "http://127.0.0.1:5746",
+  "results": [
+    {
+      "name": "chat-retry-resends-failed-turn",
+      "passed": false,
+      "error": "locator.waitFor: Timeout 4000ms exceeded.\nCall log:\n  - waiting for locator('[data-normative-status]') to be visible\n",
+      "pageErrors": []
+    },
+    {
+      "name": "advisor-retry-preserves-requested-selection",
+      "passed": false,
+      "error": "Retry must preserve selectedRecommendationIds, including []\n+ actual - expected\n\n  {\n    expectedEditVersion: 0,\n-   selectedRecommendationIds: [\n-     'rec-enable-planning-window',\n-     'rec-increase-teacher-load'\n-   ]\n  }\n",
+      "pageErrors": []
+    },
+    {
+      "name": "advisor-retry-preserves-empty-selection",
+      "passed": false,
+      "error": "Retry must preserve selectedRecommendationIds, including []\n+ actual - expected\n\n  {\n    expectedEditVersion: 0,\n-   selectedRecommendationIds: []\n  }\n",
+      "pageErrors": []
+    }
+  ]
+}

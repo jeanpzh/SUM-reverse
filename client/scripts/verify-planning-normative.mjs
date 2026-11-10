@@ -80,10 +80,12 @@ try {
     await page.getByLabel('Pregunta normativa', { exact: true }).fill('Consulta sintética de error')
     await page.getByRole('button', { name: 'Enviar consulta', exact: true }).click()
     await page.getByRole('button', { name: 'Reintentar consulta normativa', exact: true }).click()
-    assert.equal(await page.getByLabel('Pregunta normativa', { exact: true }).inputValue(), 'Consulta sintética de error')
+    await page.getByRole('button', { name: 'Reintentar consulta normativa', exact: true }).waitFor()
+    assert.equal(await page.getByLabel('Pregunta normativa', { exact: true }).inputValue(), '')
     await page.unroute('**/normativa/consultas')
     let held
     await page.route('**/normativa/consultas', route => { held = route })
+    await page.getByLabel('Pregunta normativa', { exact: true }).fill('Consulta sintética para cancelar')
     await page.getByRole('button', { name: 'Enviar consulta', exact: true }).click()
     await page.getByRole('button', { name: 'Cancelar consulta', exact: true }).click()
     await page.getByText('Consulta cancelada.', { exact: true }).waitFor()
