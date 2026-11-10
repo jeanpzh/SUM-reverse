@@ -115,4 +115,72 @@ export const chatScenarios = [
     await page.locator('#planning-toggle-chat').click()
     assert.equal(await answers(page).count(), 1)
   }],
+  ['chat-named-regime-mismatch-offers-explicit-requery', async ({ page }) => {
+    await input(page).fill('¿Cuál es la carga lectiva máxima para un docente ordinario?')
+    const first = page.waitForResponse(response => response.url().includes('/normativa/consultas'))
+    await send(page).click()
+    assert.equal((await first).request().postDataJSON().teacherType, 'unknown')
+    await answers(page).waitFor()
+    await page.getByText('La pregunta menciona el régimen ordinario, pero el filtro está en Todos los regímenes.').waitFor()
+    const second = page.waitForResponse(response => response.url().includes('/normativa/consultas'))
+    await page.getByRole('button', { name: 'Consultar como docente ordinario', exact: true }).click()
+    const sent = (await second).request().postDataJSON()
+    const result = await (await second).json()
+    assert.equal(sent.teacherType, 'ordinario')
+    assert.equal(sent.previousQuestion, undefined)
+    assert.equal(result.context.teacherType, 'ordinario')
+    assert.ok(result.citations.length > 0)
+    // The filter is never changed silently.
+    assert.ok((await page.locator('.planning-chat__context-meta').innerText()).includes('Todos los regímenes'))
+  }],
+  ['chat-teacher-profile-sets-regime-and-locks-filter', async ({ page }) => {
+    await page.locator('.planning-chat__context-summary').click()
+    const teacher = page.getByLabel('Docente (prototipo', { exact: false })
+    await teacher.selectOption('REF-TEACHER-001')
+    assert.equal(await page.getByLabel('Régimen docente').inputValue(), 'ordinario')
+    assert.equal(await page.getByLabel('Régimen docente').isDisabled(), true)
+    assert.ok((await page.locator('.planning-chat__context-meta').innerText()).includes('REF-TEACHER-001 · Ordinario TC'))
+    await input(page).fill('¿Cuál es la carga lectiva máxima?')
+    const ordinary = page.waitForResponse(response => response.url().includes('/normativa/consultas'))
+    await send(page).click()
+    const ordinaryResult = await (await ordinary).json()
+    assert.equal((await ordinary).request().postDataJSON().teacherType, 'ordinario')
+    assert.ok(ordinaryResult.citations.length > 0)
+    await answers(page).waitFor()
+    assert.equal(await page.getByText(/La pregunta menciona el régimen/).count(), 0)
+    // Another teacher starts another conversation and uses that profile's regime.
+    await teacher.selectOption('REF-TEACHER-003')
+    assert.equal(await answers(page).count(), 0)
+    assert.equal(await page.getByLabel('Régimen docente').inputValue(), 'contratado')
+    await input(page).fill('¿Cuál es la carga lectiva máxima?')
+    const contract = page.waitForResponse(response => response.url().includes('/normativa/consultas'))
+    await send(page).click()
+    const contractResult = await (await contract).json()
+    assert.equal((await contract).request().postDataJSON().teacherType, 'contratado')
+    assert.equal(contractResult.citations.length, 0)
+    await answers(page).waitFor()
+    assert.ok((await answers(page).innerText()).includes('docente contratado'))
+    // Clearing the teacher unlocks the manual regime filter.
+    await teacher.selectOption('')
+    assert.equal(await page.getByLabel('Régimen docente').isDisabled(), false)
+    assert.equal(await page.getByLabel('Régimen docente').inputValue(), 'unknown')
+  }],
+  ['chat-suggestion-keeps-selected-teacher', async ({ page }) => {
+    await page.locator('.planning-chat__context-summary').click()
+    await page.getByLabel('Docente (prototipo', { exact: false }).selectOption('REF-TEACHER-003')
+    const response = page.waitForResponse(response => response.url().includes('/normativa/consultas'))
+    await page.getByRole('button', { name: /¿Quién aprueba la asignación de actividades lectivas\?/ }).click()
+    assert.equal((await response).request().postDataJSON().teacherType, 'contratado')
+    await answers(page).waitFor()
+    assert.ok((await page.locator('.planning-chat__context-meta').innerText()).includes('REF-TEACHER-003 · Contratado TP'))
+    assert.equal(await page.getByLabel('Régimen docente').isDisabled(), true)
+  }],
+  ['chat-profile-and-named-regime-disagree-warns', async ({ page }) => {
+    await page.locator('.planning-chat__context-summary').click()
+    await page.getByLabel('Docente (prototipo', { exact: false }).selectOption('REF-TEACHER-003')
+    await input(page).fill('¿Cuál es la carga lectiva máxima para un docente ordinario?')
+    await send(page).click()
+    await answers(page).waitFor()
+    await page.getByText('La pregunta menciona el régimen ordinario, pero esta consulta usó el régimen contratado.').waitFor()
+  }],
 ]
