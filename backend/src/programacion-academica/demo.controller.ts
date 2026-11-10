@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Headers, HttpCode, HttpException, Post, Req, UseFilters } from '@nestjs/common'
 import type { Request } from 'express'
+import { queryNormative } from './normative.client.js'
 import { DemoProposalService } from './demo-proposal.service.js'
 import { DemoHttpErrorFilter } from './demo-http.filter.js'
 import { DemoAccessService } from './demo-access.js'
@@ -39,12 +40,20 @@ export class DemoController {
     return this.proposals.getCatalog()
   }
 
+  @Post('normativa/consultas')
+  @HttpCode(200)
+  async normativeQuery(@Req() request: Request, @Headers('origin') origin: string | undefined, @Headers('sec-fetch-site') fetchSite: string | undefined, @Body() body: unknown) {
+    await this.access.assertAllowed(request)
+    assertWriteScope(request, origin, fetchSite)
+    return queryNormative(body)
+  }
+
   @Post('propuestas')
   @HttpCode(200)
   async createProposal(@Req() request: Request, @Headers('origin') origin: string | undefined, @Headers('sec-fetch-site') fetchSite: string | undefined, @Body() body: unknown) {
     await this.access.assertAllowed(request)
     assertWriteScope(request, origin, fetchSite)
-    return this.proposals.createProposal(body)
+    return this.proposals.createProposalAsync(body)
   }
 
   @Post('demanda/estimar')
@@ -63,6 +72,17 @@ export class DemoController {
     assertWriteScope(request, origin, fetchSite)
     const proposalId = request.params.proposalId
     if (typeof proposalId === 'string') return this.proposals.adjustProposal(proposalId, body)
+    return fail(404, 'PROPOSAL_NOT_FOUND', 'No se encontró la propuesta o ya expiró')
+  }
+
+  @Post('propuestas/:proposalId/consejero')
+  @HttpCode(200)
+  async adviseProposal(@Req() request: Request, @Headers('origin') origin: string | undefined, @Headers('sec-fetch-site') fetchSite: string | undefined,
+    @Body() body: unknown) {
+    await this.access.assertAllowed(request)
+    assertWriteScope(request, origin, fetchSite)
+    const proposalId = request.params.proposalId
+    if (typeof proposalId === 'string') return this.proposals.adviseProposal(proposalId, body)
     return fail(404, 'PROPOSAL_NOT_FOUND', 'No se encontró la propuesta o ya expiró')
   }
 

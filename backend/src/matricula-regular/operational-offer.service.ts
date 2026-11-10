@@ -1,9 +1,10 @@
-import { HttpException, Injectable } from '@nestjs/common'
+import { HttpException, Inject, Injectable } from '@nestjs/common'
 import { randomUUID } from 'node:crypto'
 import { validateOfferActivationRequest, validateOfferActivationResponse, validateOperationalOfferCatalog } from '../../../shared/enrollment-offer.mjs'
 import type { OfferActivationRequest, OperationalOffer, OperationalOfferCatalog } from '../../../shared/enrollment-offer.mjs'
 import type { AcademicPublication } from '../../../shared/programacion-academica-api.d.mts'
-import { SavedDraftService } from '../programacion-academica/saved-draft.service.js'
+import { ACADEMIC_PUBLICATION_READER } from '../common/academic-publication-reader.js'
+import type { AcademicPublicationReader } from '../common/academic-publication-reader.js'
 import { MatriculaRegularRepository } from './matricula-regular.repository.js'
 import { createOperationalRun, E3_CLOCK_BASE } from './operational-offer.factory.js'
 import { OperationalOfferStore } from './operational-offer.store.js'
@@ -16,7 +17,7 @@ const fail = (status: number, code: string, message: string): never => {
 export class OperationalOfferService {
   constructor(
     private readonly repository: MatriculaRegularRepository,
-    private readonly publications: SavedDraftService,
+    @Inject(ACADEMIC_PUBLICATION_READER) private readonly publications: AcademicPublicationReader,
     store: OperationalOfferStore,
   ) { this.repository.configureOperationalStore(store) }
 

@@ -1,8 +1,6 @@
-import type { CourseDocument } from '../matricula-regular/profile.types.js'
-
 /** Local planning input, independent of enrollment and actual seat occupancy. */
 export type CourseDemand = {
-  courseId: CourseDocument['courseId']
+  courseId: string
   estimatedDemand: number
   targetCapacity: number
 }

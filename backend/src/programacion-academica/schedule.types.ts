@@ -1,6 +1,8 @@
-import type { Meeting } from '../matricula-regular/profile.types.js'
-
-export type TimeInterval = Meeting
+export type TimeInterval = {
+  day: number
+  startMinute: number
+  endMinute: number
+}
 export type AcademicTeacher = {
   id: string
   courseIds: string[]

@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { HttpException, Injectable } from '@nestjs/common'
-import { validateAcademicAdjustment, validateAcademicCatalog, validateAcademicProposal, validateAcademicRequest, validateAcademicDemandRequest } from '../../../shared/programacion-academica-api.mjs'
-import type { AcademicAdjustment, AcademicCatalog, AcademicProposal, AcademicRequest, AcademicInterval, AcademicPlanningResources, AcademicWorkspace, AcademicDemandEstimate } from '../../../shared/programacion-academica-api.mjs'
+import { validateAcademicAdjustment, validateAcademicAdvisorRequest, validateAcademicCatalog, validateAcademicProposal, validateAcademicRequest, validateAcademicDemandRequest } from '../../../shared/programacion-academica-api.mjs'
+import type { AcademicAdjustment, AcademicAdvisorResponse, AcademicCatalog, AcademicProposal, AcademicRequest, AcademicInterval, AcademicPlanningResources, AcademicWorkspace, AcademicDemandEstimate } from '../../../shared/programacion-academica-api.mjs'
 import { createCoverageAuthority } from './session-coverage.js'
 import { generateAcademicSchedule } from './schedule-generator.js'
 import type { GeneratorInput, GeneratorDiagnostic, GeneratorResult, GeneratorSeed, RequiredSession } from './generator.types.js'
@@ -13,6 +13,7 @@ import { assessTeacherPreferences } from './teacher-preferences.js'
 import { createDemandSources } from './demand-fixtures.js'
 import { estimateAcademicDemand } from './demand-estimator.js'
 import { prepareGeneratorInput } from './generator-input.js'
+import { buildLocalDeterministicAdvisor, analyzeProposalAdvisor, trySolveWithPythonEngine } from './planning-engine.client.js'
 import { THESIS_COURSE_IDS } from '../../../shared/academic-planning-policy.mjs'
 
 type RetainedProposal = {
@@ -60,7 +61,12 @@ export class DemoProposalService {
     }
   }
 
-  createProposal(value: unknown): AcademicProposal {
+  private validateAndPrepareProposalRequest(value: unknown): {
+    request: AcademicRequest
+    resources: AcademicPlanningResources
+    input: GeneratorInput
+    authority: ReturnType<typeof createCoverageAuthority>
+  } {
     let request: AcademicRequest
     try {
       validateAcademicRequest(value)
@@ -90,13 +96,64 @@ export class DemoProposalService {
     const resources = this.resolveResources(request)
     const input = this.toGeneratorInput(request, resources)
     const authority = createCoverageAuthority(input)
-    const result = generateAcademicSchedule(input)
+    return { request, resources, input, authority }
+  }
+
+  private storeProposalResult(
+    request: AcademicRequest,
+    input: GeneratorInput,
+    resources: AcademicPlanningResources,
+    authority: ReturnType<typeof createCoverageAuthority>,
+    result: GeneratorResult,
+  ): AcademicProposal {
     const view = this.buildProposalView(request, input, resources, result, authority)
     const retainedInput = structuredClone(input)
     const retainedView = structuredClone(view)
-    this.proposals.set(view.proposalId, { request: structuredClone(request), input: retainedInput, resources: structuredClone(resources), requirements: structuredClone(result.requirements),
-      authority, automaticView: structuredClone(retainedView), view: retainedView })
+    this.proposals.set(view.proposalId, {
+      request: structuredClone(request),
+      input: retainedInput,
+      resources: structuredClone(resources),
+      requirements: structuredClone(result.requirements),
+      authority,
+      automaticView: structuredClone(retainedView),
+      view: retainedView,
+    })
     return structuredClone(view)
+  }
+
+  createProposal(value: unknown): AcademicProposal {
+    const { request, resources, input, authority } = this.validateAndPrepareProposalRequest(value)
+    const result = generateAcademicSchedule(input)
+    return this.storeProposalResult(request, input, resources, authority, result)
+  }
+
+  async createProposalAsync(value: unknown): Promise<AcademicProposal> {
+    const { request, resources, input, authority } = this.validateAndPrepareProposalRequest(value)
+    const pythonResult = await trySolveWithPythonEngine(input, this.catalog, resources)
+    const result = pythonResult ?? generateAcademicSchedule(input)
+    return this.storeProposalResult(request, input, resources, authority, result)
+  }
+
+  async adviseProposal(proposalId: string, value: unknown): Promise<AcademicAdvisorResponse> {
+    try {
+      validateAcademicAdvisorRequest(value)
+    } catch (error) {
+      throw this.httpError(400, 'INVALID_REQUEST', error instanceof Error ? error.message : 'Solicitud de consejero inválida')
+    }
+    this.cleanExpired()
+    const retained = this.proposals.get(proposalId)
+    if (!retained) throw this.httpError(404, 'PROPOSAL_NOT_FOUND', 'No se encontró la propuesta o ya expiró')
+    const currentVersion = retained.view.editVersion ?? 0
+    if (value.expectedEditVersion !== currentVersion) {
+      throw this.httpError(409, 'VERSION_MISMATCH', `Versión vigente ${currentVersion}; se recibió ${value.expectedEditVersion}`)
+    }
+    const candidates = buildLocalDeterministicAdvisor(retained.view, retained.input, retained.resources, this.catalog).recommendations
+    if (value.selectedRecommendationIds?.some((id) => !candidates.some((r) => r.id === id))) {
+      throw this.httpError(400, 'INVALID_REQUEST', 'Recomendación desconocida')
+    }
+    const result = await analyzeProposalAdvisor(retained.view, retained.input, retained.resources, retained.requirements, this.catalog, globalThis.fetch, value.selectedRecommendationIds)
+    if ((retained.view.editVersion ?? 0) !== currentVersion) throw this.httpError(409, 'VERSION_MISMATCH', 'La propuesta cambió durante la simulación')
+    return result
   }
 
   adjustProposal(proposalId: string, value: unknown): AcademicProposal {
