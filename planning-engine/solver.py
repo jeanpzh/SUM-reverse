@@ -7,11 +7,15 @@ from functools import lru_cache
 from collections import defaultdict
 from ortools.sat.python import cp_model
 
+from capacity import analyze_capacity
+
 from models import (
     AssignmentOutput,
     CourseInput,
     DiagnosticOutput,
     PlanningPolicyInput,
+    PrelationOutput,
+    PrelationLevel,
     RequiredSessionInput,
     RoomInput,
     SectionInput,
@@ -94,14 +98,19 @@ def intervals_overlap(
 
 def solve_academic_schedule(req: SolveScheduleRequest) -> SolveScheduleResponse:
     deadline = time.monotonic() + req.maxTimeSeconds
+    capacity_certificate = None
+    decisions = []
     incumbent = []
     incumbent_visits = 0
+    prelation_proofs = [False, False, False]
     def generation_timeout():
         complete = len(incumbent) == len(req.requirements)
         return SolveScheduleResponse(status='complete' if complete else 'search-limit', assignments=incumbent, exploredCandidates=0,
+            coverageProof='complete' if complete else 'inconclusive', capacityCertificate=capacity_certificate, decisions=decisions,
+            prelation=prelation_for(incumbent),
             candidateVisits=incumbent_visits, backtracks=0, limitReason=None if complete else 'time', diagnostics=[DiagnosticOutput(
                 code='COMPLETE' if complete else 'SEARCH_LIMIT', message='Construcción factible completa' if complete else 'Se agotó el presupuesto durante la preparación CP-SAT; se conserva el mejor horario factible',
-                sessionIds=[r.id for r in req.requirements if r.id not in {a.id for a in incumbent}])])
+                sessionIds=[r.id for r in req.requirements if r.id not in {a.id for a in incumbent}])] + prelation_diagnostics)
     courses_by_id: dict[str, CourseInput] = {c.courseId: c for c in req.courses}
     sections_by_id: dict[str, SectionInput] = {s.id: s for s in req.sections}
     reqs_by_section: dict[str, list[RequiredSessionInput]] = defaultdict(list)
@@ -119,6 +128,23 @@ def solve_academic_schedule(req: SolveScheduleRequest) -> SolveScheduleResponse:
         ]
         for c in req.courses
     }
+
+    eligible_ids = {t.id for sec in req.sections for t in teachers_by_course.get(sec.courseId, [])}
+    prelation_enabled = all(t.appointmentTier is not None and t.categoryRank is not None
+        for t in req.teachers if t.id in eligible_ids)
+    prelation_diagnostics = [] if prelation_enabled else [DiagnosticOutput(code='PRELATION_DATA_MISSING',
+        message='Faltan appointmentTier o categoryRank en docentes habilitados; no se aplica prelación', sessionIds=[])]
+
+    def prelation_for(assignments):
+        if not prelation_enabled:
+            return None
+        assigned = {(a.sectionId, a.teacherId) for a in assignments}
+        teachers = {t.id: t for t in req.teachers}
+        values = [sum(teachers[tid].appointmentTier == 2 for _, tid in assigned),
+            sum(teachers[tid].appointmentTier == 1 for _, tid in assigned),
+            sum(teachers[tid].categoryRank for _, tid in assigned)]
+        return PrelationOutput(levels=[PrelationLevel(id=key, value=value, proven=proof)
+            for key, value, proof in zip(['contract-sections', 'interfaculty-sections', 'category-rank'], values, prelation_proofs)])
 
     precheck_diagnostics: list[DiagnosticOutput] = []
     excluded_sections: set[str] = set()
@@ -157,31 +183,6 @@ def solve_academic_schedule(req: SolveScheduleRequest) -> SolveScheduleResponse:
                 f"{course.courseId} requiere {len(c_sections)} secciones de {minutes} min; hay 0 docentes habilitados",
             )
             continue
-
-        total_cap = 0
-        for t in eligible_teachers:
-            cap_limit = next(
-                (
-                    lim.maxSections
-                    for lim in (t.sectionLimits or [])
-                    if lim.courseId == course.courseId
-                ),
-                None,
-            )
-            by_mins = t.maxWeeklyMinutes // minutes if minutes > 0 else len(c_sections)
-            total_cap += (
-                min(by_mins, cap_limit)
-                if cap_limit is not None
-                else min(by_mins, len(c_sections))
-            )
-
-        if total_cap < len(c_sections):
-            avail_sum = sum(t.maxWeeklyMinutes for t in eligible_teachers)
-            exclude_secs(
-                [s.id for s in c_sections[total_cap:]],
-                "TEACHER_CAPACITY_SHORTFALL",
-                f"{course.courseId} requiere {len(c_sections)} secciones de {minutes} min; los docentes habilitados cubren {total_cap} ({avail_sum} min disponibles)",
-            )
 
         for sec in c_sections:
             if sec.id in excluded_sections:
@@ -360,6 +361,21 @@ def solve_academic_schedule(req: SolveScheduleRequest) -> SolveScheduleResponse:
                     for key, mask in local.items():
                         occupied[key] |= mask
                     break
+
+    capacity_certificate, decisions, decisions_proven, capacity_upper_bound = analyze_capacity(req, teachers_by_course,
+        min(deadline, time.monotonic() + min(0.25, req.maxTimeSeconds * 0.1)), excluded_sections)
+    if not decisions_proven:
+        precheck_diagnostics.append(DiagnosticOutput(code='CAPACITY_ANALYSIS_LIMIT',
+            message='Análisis de capacidad o concesiones sin prueba óptima dentro del presupuesto', sessionIds=[]))
+    for shortfall in capacity_certificate.courses:
+        if not capacity_certificate.proven or not teachers_by_course.get(shortfall.courseId):
+            continue
+        precheck_diagnostics.append(DiagnosticOutput(code='TEACHER_CAPACITY_SHORTFALL',
+            message=f'{shortfall.courseId} requiere {shortfall.requiredSections} secciones de '
+                f'{sum(w.durationMinutes for w in courses_by_id[shortfall.courseId].weeklySessions)} min; '
+                f'los docentes habilitados cubren {shortfall.coverableSections} '
+                f'({sum(t.maxWeeklyMinutes for t in teachers_by_course[shortfall.courseId])} min disponibles)',
+            sessionIds=[r.id for r in req.requirements if r.courseId == shortfall.courseId]))
 
     model = cp_model.CpModel()
 
@@ -580,27 +596,48 @@ def solve_academic_schedule(req: SolveScheduleRequest) -> SolveScheduleResponse:
             if c_vars:
                 model.add(sum(c_vars) <= lim.maxSections)
 
-    # Objective: lexicographically prioritize total scheduled sessions (weight 1000 per session)
-    # + preference/policy rank bonus
-    objective_terms = []
-    for sec_id, opts in section_options.items():
-        num_sessions = len(reqs_by_section[sec_id])
-        for var, _sid, _tid, _placements, pref_bonus, _dur in opts:
-            objective_terms.append(var * (num_sessions * 1000 + pref_bonus))
-
-    if objective_terms:
-        model.maximize(sum(objective_terms))
-
+    coverage = sum(var * len(reqs_by_section[sid]) for sid, opts in section_options.items()
+        for var, *_ in opts)
+    preference = sum(var * bonus for opts in section_options.values()
+        for var, _sid, _tid, _placements, bonus, _dur in opts)
+    # Legacy requests retain their preference behavior; complete priority data
+    # activates PA-ENGINE-2's strict sequence, never freezing teacher assignments.
+    model.maximize(coverage if prelation_enabled else coverage * 1000 + preference)
     solver = cp_model.CpSolver()
     if time.monotonic() >= deadline:
         return generation_timeout()
-    # Reserve serialization/CP shutdown time inside the caller's end-to-end budget.
-    solver.parameters.max_time_in_seconds = max(0.001, deadline - time.monotonic() - min(0.05, req.maxTimeSeconds * 0.1))
+    reserve = min(0.05, req.maxTimeSeconds * 0.1)
+    solver.parameters.max_time_in_seconds = max(0.001, deadline - time.monotonic() - reserve)
     solver.parameters.num_search_workers = 4
     status_code = solver.solve(model)
-
     if status_code == cp_model.MODEL_INVALID:
-        raise ValueError("Invalid CP-SAT model")
+        raise ValueError('Invalid CP-SAT model')
+
+    if prelation_enabled and status_code == cp_model.OPTIMAL:
+        model.add(coverage == int(solver.value(coverage)))
+        objectives = [
+            sum(var for tid, opts in teacher_options.items() if teachers_by_id[tid].appointmentTier == 2 for var, *_ in opts),
+            sum(var for tid, opts in teacher_options.items() if teachers_by_id[tid].appointmentTier == 1 for var, *_ in opts),
+            sum(var * teachers_by_id[tid].categoryRank for tid, opts in teacher_options.items() for var, *_ in opts),
+            -preference,
+        ]
+        for index, objective in enumerate(objectives):
+            remaining = deadline - time.monotonic() - reserve
+            if remaining <= 0:
+                break
+            model.minimize(objective)
+            next_solver = cp_model.CpSolver()
+            next_solver.parameters.max_time_in_seconds = remaining
+            next_solver.parameters.num_search_workers = 1
+            next_status = next_solver.solve(model)
+            if next_status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+                break  # Keep the preceding feasible solution.
+            solver = next_solver
+            if index < 3:
+                prelation_proofs[index] = next_status == cp_model.OPTIMAL and not candidates_truncated
+            if next_status != cp_model.OPTIMAL:
+                break
+            model.add(objective == int(solver.value(objective)))
 
     assignments: list[AssignmentOutput] = []
     if status_code in (cp_model.OPTIMAL, cp_model.FEASIBLE):
@@ -636,11 +673,19 @@ def solve_academic_schedule(req: SolveScheduleRequest) -> SolveScheduleResponse:
         assignments = incumbent
         # Construction is a feasible witness, never a proof of infeasibility/optimality.
         candidates_truncated = True
+        prelation_proofs = [False, False, False]
 
     assigned_ids = {a.id for a in assignments}
     missing_ids = [r.id for r in req.requirements if r.id not in assigned_ids]
     complete = len(missing_ids) == 0
 
+    scheduled_sections = {a.sectionId for a in assignments}
+    missing_sections = {r.sectionId for r in req.requirements if r.id in missing_ids}
+    capacity_saturated = (capacity_certificate.proven and
+        capacity_upper_bound is not None and len(scheduled_sections) == capacity_upper_bound)
+    shortfall_proven = (capacity_certificate.proven and
+        (capacity_saturated or missing_sections <= excluded_sections))
+    coverage_proof = 'complete' if complete else 'shortfall-proven' if shortfall_proven else 'inconclusive'
     diagnostics: list[DiagnosticOutput] = []
     if complete:
         status_str = "complete"
@@ -652,7 +697,7 @@ def solve_academic_schedule(req: SolveScheduleRequest) -> SolveScheduleResponse:
             )
         )
     else:
-        status_str = "search-limit" if status_code in (cp_model.UNKNOWN, cp_model.FEASIBLE) or candidates_truncated else "impossible"
+        status_str = "impossible" if shortfall_proven else "search-limit"
         diagnostics.append(
             DiagnosticOutput(
                 code="PARTIAL_PROPOSAL",
@@ -661,6 +706,7 @@ def solve_academic_schedule(req: SolveScheduleRequest) -> SolveScheduleResponse:
             )
         )
     diagnostics.extend(precheck_diagnostics)
+    diagnostics.extend(prelation_diagnostics)
 
     return SolveScheduleResponse(
         status=status_str,  # type: ignore[arg-type]
@@ -668,6 +714,8 @@ def solve_academic_schedule(req: SolveScheduleRequest) -> SolveScheduleResponse:
         exploredCandidates=int(solver.num_booleans),
         candidateVisits=max(candidate_visits, int(solver.num_branches)),
         backtracks=int(solver.num_conflicts),
-        limitReason="time" if not complete and status_code in (cp_model.UNKNOWN, cp_model.FEASIBLE) else "explorations" if not complete and candidates_truncated else None,
+        limitReason="time" if coverage_proof == 'inconclusive' and status_code in (cp_model.UNKNOWN, cp_model.FEASIBLE) else "explorations" if coverage_proof == 'inconclusive' and candidates_truncated else None,
         diagnostics=diagnostics,
+        coverageProof=coverage_proof, capacityCertificate=capacity_certificate, decisions=decisions,
+        prelation=prelation_for(assignments),
     )
