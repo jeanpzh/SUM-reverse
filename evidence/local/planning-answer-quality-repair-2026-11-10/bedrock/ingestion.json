@@ -1,0 +1,1 @@
+{"profile": {"provider": "bedrock", "model": "amazon.titan-embed-text-v2:0", "dimensions": 1024}, "namespace": "quality_3693bdd65b5a8581531716d4f4ae1cd4fadcfd3d", "corpusFingerprint": "eb0ab81839d80f2e454868d58d30c2db55e5e1bdef377a436e097ad6db37ed39", "count": 17}
