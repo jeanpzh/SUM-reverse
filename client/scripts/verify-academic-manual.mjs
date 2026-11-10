@@ -47,8 +47,8 @@ try {
   const preferenceLabel = 'Preferencias semanales · prioridad blanda'
   const stage = async (name, etapa) => {
     await closeResourceSheet(page)
-    await page.getByRole('navigation', { name: 'Etapas de programación', exact: true }).getByRole('link', { name, exact: true }).click()
-    await page.waitForURL(new RegExp(`etapa=${etapa}$`))
+    await page.locator('.planning-root').getByRole('link', { name: name === 'Preparación' ? 'Resumen' : name, exact: true }).click()
+    await page.waitForURL(new RegExp(`etapa=${etapa}(?:&|$)`))
   }
   const setIntervals = async (label, days, start = '18:00', end = '22:00') => {
     const group = page.getByRole('group', { name: new RegExp(`^${label}`) })
@@ -66,7 +66,7 @@ try {
     await stage('Preparación', 'preparacion')
     const pending = page.waitForResponse((response) => response.url().endsWith('/propuestas') && response.request().method() === 'POST')
     await closeResourceSheet(page)
-    await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
+    await page.locator('#planning-tour-primary').click()
     const response = await pending
     assert.equal(response.status(), 200, await response.text())
     const value = await response.json()
@@ -152,8 +152,8 @@ try {
   const weekBlocks = page.locator('.planning-week__grid-wrapper article[data-week-grid-section-id]')
   assert.equal(await sectionsTable.locator('tr[data-section-id]').count(), 4)
   assert.equal(await page.locator('.academic-scheduling__manual-review').count(), 0, 'No editor appears before a section is selected')
-  assert.equal(await sectionsTable.getByRole('columnheader', { name: 'Acciones', exact: true }).count(), 1)
-  assert.equal(await sectionsTable.getByRole('button', { name: 'Editar horario', exact: true }).count(), 4)
+  assert.equal(await sectionsTable.getByRole('columnheader', { name: 'Acciones', exact: true }).count(), 0)
+  assert.equal(await sectionsTable.getByRole('button', { name: /^Inspeccionar sección/ }).count(), 4)
   for (const cell of await sectionsTable.locator('tr[data-section-id] .planning-sections__cell-section').all()) assert.match((await cell.innerText()).trim(), /^\d+$/, 'The section cell contains only its number')
   assert.equal(await sectionsTable.getByRole('columnheader', { name: 'Modalidad', exact: true }).count(), 0)
   await page.locator('.academic-scheduling__sections-table').screenshot({ path: resolve(output, 'sections-table.png') })
@@ -168,11 +168,13 @@ try {
   assert.equal(await weekBlocks.count(), 4)
   const firstSectionId = complete.assignments[0].sectionId
   const firstSectionRowIndex = complete.sections.findIndex((section) => section.sectionId === firstSectionId)
-  await sectionRow(firstSectionRowIndex).getByRole('button', { name: 'Editar horario', exact: true }).click()
+  await sectionRow(firstSectionRowIndex).getByRole('button', { name: /^Inspeccionar sección/ }).click()
+  await page.locator('.planning-inspector').getByRole('button', { name: 'Editar horario', exact: true }).first().click()
   assert.equal(await page.locator('.academic-scheduling__manual-review').count(), 1)
   assert.match(await page.locator('.academic-scheduling__manual-review h4').innerText(), new RegExp(`Sección ${firstSectionRowIndex + 1}`))
   const otherSectionRowIndex = (firstSectionRowIndex + 1) % complete.sections.length
-  await sectionRow(otherSectionRowIndex).getByRole('button', { name: 'Editar horario', exact: true }).click()
+  await sectionRow(otherSectionRowIndex).getByRole('button', { name: /^Inspeccionar sección/ }).click()
+  await page.locator('.planning-inspector').getByRole('button', { name: 'Editar horario', exact: true }).first().click()
   assert.equal(await page.locator('.academic-scheduling__manual-review').count(), 1, 'Switching sections retains one editor')
   assert.match(await page.locator('.academic-scheduling__manual-review h4').innerText(), new RegExp(`Sección ${otherSectionRowIndex + 1}`))
   await page.getByRole('button', { name: 'Cancelar', exact: true }).click()
@@ -197,7 +199,8 @@ try {
   assert.ok(slot, 'Se requiere un día distinto con bloque libre de 18:00 a 22:00 sin colisión docente o de ambiente')
   // Friday 16:00 is an afternoon slot for a senior course: rejected by default, accepted only with allowAfternoon.
   const afternoonSlot = { day: 5, startMinute: 16 * 60 }
-  await sectionRow(firstSectionRowIndex).getByRole('button', { name: 'Editar horario', exact: true }).click()
+  await sectionRow(firstSectionRowIndex).getByRole('button', { name: /^Inspeccionar sección/ }).click()
+  await page.locator('.planning-inspector').getByRole('button', { name: 'Editar horario', exact: true }).first().click()
   const firstTargetDay = page.getByLabel(`Día revisión ${firstSectionId}`, { exact: true })
   const firstTargetStart = page.getByLabel(`Inicio revisión ${firstSectionId}`, { exact: true })
   const tableBeforePolicyRejection = await sectionsTable.innerText()
@@ -253,7 +256,8 @@ try {
   'El docente original del bloque debe estar libre en el horario de colisión')
   const otherSection = complete.sections.find((section) => section.sectionId === collisionAssignment.sectionId)
   const tableBeforeRejectedEdit = await sectionsTable.innerText()
-  await sectionRow(firstSectionRowIndex).getByRole('button', { name: 'Editar horario', exact: true }).click()
+  await sectionRow(firstSectionRowIndex).getByRole('button', { name: /^Inspeccionar sección/ }).click()
+  await page.locator('.planning-inspector').getByRole('button', { name: 'Editar horario', exact: true }).first().click()
   await page.getByLabel(`Docente revisión ${firstSectionId}`, { exact: true }).selectOption(collisionAssignment.teacherId)
   await page.getByLabel(`Día revisión ${firstSectionId}`, { exact: true }).selectOption(String(collisionAssignment.day))
   await page.getByLabel(`Inicio revisión ${firstSectionId}`, { exact: true }).fill(`${String(Math.floor(collisionAssignment.startMinute / 60)).padStart(2, '0')}:${String(collisionAssignment.startMinute % 60).padStart(2, '0')}`)
@@ -375,7 +379,8 @@ try {
   assert.equal(splitProposal.assignments.length, 2)
   assert.equal(new Set(splitProposal.assignments.map((assignment) => assignment.day)).size, 2, 'Two 2-hour sessions must use the two 2-hour availability windows on different days')
   const splitSectionRow = sectionsTable.locator('tr[data-section-id]').first()
-  await splitSectionRow.getByRole('button', { name: 'Editar horario', exact: true }).click()
+  await splitSectionRow.getByRole('button', { name: /^Inspeccionar sección/ }).click()
+  await page.locator('.planning-inspector').getByRole('button', { name: 'Editar horario', exact: true }).first().click()
   assert.equal(await page.locator('.academic-scheduling__manual-review').count(), 1)
   const splitBlockSelect = page.locator('.academic-scheduling__block-select select')
   assert.equal(await splitBlockSelect.count(), 1, 'Two split days expose the compact block selector')

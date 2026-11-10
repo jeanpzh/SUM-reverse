@@ -42,7 +42,7 @@ try {
   assert.equal(teachers.length, 2)
   await page.goto(`${base}/local/modulos`)
   await page.getByRole('link', { name: /^Escuela · Programación académica/ }).click()
-  await page.getByRole('heading', { name: 'Seleccionar cursos', exact: true }).waitFor()
+  await page.locator('#academic-scheduling-courses').waitFor()
   await page.getByLabel('Filtrar cursos por ciclo').selectOption(String(course.cycle ?? 'all'))
   await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }))
   await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).fill('180')
@@ -151,7 +151,7 @@ try {
   }
   const proposalResponse = page.waitForResponse((response) => response.url().endsWith('/propuestas')
     && response.request().method() === 'POST')
-  await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
+  await page.locator('#planning-tour-primary').click()
   const generated = await proposalResponse
   assert.equal(generated.status(), 200, await generated.text())
   const generatedBody = generated.request().postDataJSON()

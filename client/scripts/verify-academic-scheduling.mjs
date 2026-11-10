@@ -84,7 +84,7 @@ try {
     if (request.url().includes('/api/')) apiRequests.push(new URL(request.url()).pathname)
   })
   await page.goto(`${web}${route}`)
-  await page.getByRole('heading', { name: 'Programación académica asistida', exact: true }).waitFor()
+  await page.locator('#planning-page-title').waitFor()
   const catalogResponse = await fetch(`${api}/local/programacion-academica/v1/catalogo`)
   assert.equal(catalogResponse.status, 200)
   const catalog = await catalogResponse.json()
@@ -183,14 +183,14 @@ try {
   }
   assert.equal(new URL(page.url()).pathname, route)
   const stage = async (name, etapa) => {
-    await page.getByRole('navigation', { name: 'Etapas de programación', exact: true }).getByRole('link', { name, exact: true }).click()
-    await page.waitForURL(new RegExp(`etapa=${etapa}$`))
+    await page.locator('.planning-root').getByRole('link', { name: name === 'Preparación' ? 'Resumen' : name, exact: true }).click()
+    await page.waitForURL(new RegExp(`etapa=${etapa}(?:&|$)`))
   }
   let lastRequest
   const generate = async () => {
     await stage('Preparación', 'preparacion')
     const response = page.waitForResponse((res) => res.url().endsWith('/propuestas') && res.request().method() === 'POST')
-    await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
+    await page.locator('#planning-tour-primary').click()
     const received = await response
     assert.equal(received.status(), 200)
     lastRequest = received.request().postDataJSON()
@@ -252,7 +252,7 @@ try {
   assert.equal(impossible.status, 'impossible')
   assert.ok(impossible.pending.length > 0)
   await page.locator('.planning-status-bar[data-status="impossible"]').waitFor()
-  await page.locator('.planning-status-bar').getByText('Detalles de búsqueda', { exact: true }).click()
+  await page.getByRole('button', { name: 'Detalles de búsqueda', exact: true }).click()
   await page.getByRole('heading', { name: 'Componentes pendientes', exact: true }).waitFor()
   await page.locator('.planning-status-bar').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(evidence, 'impossible.png') })
@@ -278,7 +278,7 @@ try {
   // API error and UI recovery, without mocking generator responses.
   await stage('Preparación', 'preparacion')
   await page.route('**/api/local/programacion-academica/v1/propuestas', (request) => request.abort())
-  await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
+  await page.locator('#planning-tour-primary').click()
   await page.getByRole('alert').waitFor()
   await page.unroute('**/api/local/programacion-academica/v1/propuestas')
   assert.equal((await generate()).status, 'complete')

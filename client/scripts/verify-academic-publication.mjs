@@ -37,7 +37,7 @@ try {
   page.on('pageerror', (error) => errors.push(error.message))
   page.on('request', (request) => assert.ok(request.url().startsWith(`${base}/`) || request.url().startsWith('data:'), `Solicitud externa inesperada: ${request.url()}`))
   await page.goto(`${base}/local/programacion-academica`)
-  await page.getByRole('heading', { name: 'Programación académica asistida', exact: true }).waitFor()
+  await page.locator('#planning-page-title').waitFor()
   const readOffer = async () => {
     const response = await page.request.get(`${base}/api/local/matricula-regular/v1/contextos/SYN-SIS-A`)
     assert.equal(response.status(), 200, await response.text())
@@ -45,15 +45,13 @@ try {
   }
   const offerBefore = await readOffer()
   const stage = async (name, etapa) => {
-    await page.getByRole('navigation', { name: 'Etapas de programación', exact: true }).getByRole('link', { name, exact: true }).click()
-    await page.waitForURL(new RegExp(`etapa=${etapa}$`))
+    await page.locator('.planning-root').getByRole('link', { name: name === 'Preparación' ? 'Resumen' : name, exact: true }).click()
+    await page.waitForURL(new RegExp(`etapa=${etapa}(?:&|$)`))
   }
   const openPanel = async () => {
-    const summary = page.locator('.academic-publication > summary')
-    await summary.waitFor()
-    if (await summary.evaluate((element) => !(element.parentElement instanceof HTMLDetailsElement) || !element.parentElement.open)) await summary.click()
+    await page.locator('.academic-publication').waitFor()
   }
-  await stage('Aprobación', 'aprobacion')
+  await stage('Aprobación y publicación', 'aprobacion')
   await openPanel()
   const refreshPublicationList = async () => {
     const response = page.waitForResponse((value) => apiResponse(value, '/publicaciones'))
@@ -67,11 +65,9 @@ try {
   }
   const submitAndConform = async (id) => {
     await stage('Revisión docente', 'revision')
-    if (await page.locator('.academic-teacher-review > summary').evaluate((element) => !(element.parentElement instanceof HTMLDetailsElement) || !element.parentElement.open)) {
-      await page.locator('.academic-teacher-review > summary').click()
-    }
+    await page.locator('.academic-teacher-review').waitFor()
     const submitResponse = page.waitForResponse((value) => apiResponse(value, `/borradores/${id}/revision/enviar`, 'POST'))
-    await page.getByRole('button', { name: 'Enviar a revisión', exact: true }).click()
+    await page.getByRole('button', { name: /^(Enviar a revisión|Enviar a revisión docente)$/ }).click()
     let state = (await (await submitResponse).json()).draft
     for (const teacher of state.review.teachers) {
       await page.getByLabel('Rol simulado de revisión', { exact: true }).selectOption('teacher')
@@ -85,7 +81,7 @@ try {
     return state
   }
   const approveAndPublish = async (saved) => {
-    await stage('Aprobación', 'aprobacion')
+    await stage('Aprobación y publicación', 'aprobacion')
     await openPanel()
     const previewResponse = await previewCurrent(saved.id)
     const preview = await previewResponse.json()
@@ -127,14 +123,14 @@ try {
     await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).fill('1')
     await page.getByLabel(`Patrón ${course.courseId}`, { exact: true }).selectOption(pattern.id)
     const generate = page.waitForResponse((response) => apiResponse(response, '/propuestas', 'POST'))
-    await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
+    await page.locator('#planning-tour-primary').click()
     const proposal = await (await generate).json()
     assert.equal(proposal.status, 'complete')
     assert.ok(proposal.assignments.length)
     const title1 = `Publicación sintética ${Date.now()}`
     await page.getByLabel('Nombre de la propuesta', { exact: true }).fill(title1)
     const save1Response = page.waitForResponse((response) => apiResponse(response, '/borradores/guardar', 'POST'))
-    await page.getByRole('button', { name: 'Guardar propuesta', exact: true }).click()
+    await page.locator('#planning-tour-save').click()
     const saved1 = await save1Response.then((response) => response.json())
     assert.equal(saved1.state, 'draft')
     const ready1 = await submitAndConform(saved1.id)
@@ -155,7 +151,7 @@ try {
     await stage('Preparación', 'preparacion')
     await page.getByLabel('Nombre de la propuesta', { exact: true }).fill(forkTitle)
     const save2Response = page.waitForResponse((response) => apiResponse(response, '/borradores/guardar', 'POST'))
-    await page.getByRole('button', { name: 'Guardar propuesta', exact: true }).click()
+    await page.locator('#planning-tour-save').click()
     const saved2 = await save2Response.then((response) => response.json())
     assert.equal(saved2.id, forked.id)
     assert.equal(saved2.origin.draftId, first.draft.id)
@@ -176,7 +172,7 @@ try {
       title: second.draft.title, currentId: history.currentId, itemIds: history.items.map((item) => item.id) }, null, 2)}\n`)
   } else {
     const saved = JSON.parse(await readFile(statePath, 'utf8'))
-    await stage('Aprobación', 'aprobacion')
+    await stage('Aprobación y publicación', 'aprobacion')
     const history = await refreshPublicationList()
     assert.deepEqual(history.items.map((item) => item.id).sort(), [...saved.itemIds].sort())
     assert.equal(history.currentId, saved.currentId)
@@ -197,14 +193,14 @@ try {
     }
     const oldPublicationBefore = await requestJson(page, `/publicaciones/${saved.second.id}`)
     await stage('Preparación', 'preparacion')
-    await page.getByRole('button', { name: 'Mis propuestas', exact: true }).click()
+    await page.locator('#planning-tour-proposals').click()
     const row = page.locator('.academic-scheduling__saved-row').filter({ hasText: saved.title })
     const resumeResponse = page.waitForResponse((response) => apiResponse(response, `/borradores/${saved.second.id}/continuar`, 'POST'))
     await row.getByRole('button', { name: 'Consultar', exact: true }).click()
     const recovered = (await (await resumeResponse).json()).draft
     assert.equal(recovered.state, 'published')
     assert.equal(recovered.version, saved.second.version)
-    await stage('Aprobación', 'aprobacion')
+    await stage('Aprobación y publicación', 'aprobacion')
     const forkResponse = page.waitForResponse((response) => apiResponse(response, `/borradores/${saved.second.id}/nuevo-borrador`, 'POST'))
     await page.getByRole('button', { name: 'Crear nuevo borrador', exact: true }).click()
     await page.getByRole('alertdialog').getByRole('button', { name: 'Crear borrador', exact: true }).click()

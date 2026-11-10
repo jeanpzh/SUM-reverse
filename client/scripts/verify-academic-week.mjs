@@ -148,14 +148,14 @@ try {
   page.on('pageerror', (err) => jsErrors.push(err.message))
 
   await page.goto(`${web}${route}`)
-  await page.getByRole('heading', { name: 'Programación académica asistida', exact: true }).waitFor()
+  await page.locator('#planning-page-title').waitFor()
 
   console.log('✓ Stage 0: Synthetic server and app launched successfully')
 
   // Helper to switch stages
   const goToStage = async (name, etapa) => {
-    await page.getByRole('navigation', { name: 'Etapas de programación', exact: true }).getByRole('link', { name, exact: true }).click()
-    await page.waitForURL(new RegExp(`etapa=${etapa}$`))
+    await page.locator('.planning-root').getByRole('link', { name: name === 'Preparación' ? 'Resumen' : name, exact: true }).click()
+    await page.waitForURL(new RegExp(`etapa=${etapa}(?:&|$)`))
   }
 
   // --- PREPARATION & GENERATION ---
@@ -178,7 +178,7 @@ try {
 
   // Generate proposal
   const genPending = page.waitForResponse((res) => res.url().endsWith('/propuestas') && res.request().method() === 'POST')
-  await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
+  await page.locator('#planning-tour-primary').click()
   const genResponse = await genPending
   assert.equal(genResponse.status(), 200)
   const proposalData = await genResponse.json()
@@ -201,8 +201,8 @@ try {
   assert.ok(selectedId)
 
   // Scroll tabla down
-  await page.evaluate(() => window.scrollTo(0, 240))
-  const tablaScrollY = await page.evaluate(() => window.scrollY)
+  await page.evaluate(() => document.querySelector('.planning-workspace__content').scrollTo(0, 240))
+  const tablaScrollY = await page.evaluate(() => document.querySelector('.planning-workspace__content').scrollTop)
   assert.equal(tablaScrollY, 240, 'Tabla scroll offset should be 240px')
 
   // Switch to Semana view
@@ -216,8 +216,8 @@ try {
   assert.equal(await page.locator('.planning-week__block--selected').first().getAttribute('data-week-grid-section-id'), selectedId)
 
   // Scroll semana view down to different offset
-  await page.evaluate(() => window.scrollTo(0, 160))
-  const semanaScrollY = await page.evaluate(() => window.scrollY)
+  await page.evaluate(() => document.querySelector('.planning-workspace__content').scrollTo(0, 160))
+  const semanaScrollY = await page.evaluate(() => document.querySelector('.planning-workspace__content').scrollTop)
   assert.equal(semanaScrollY, 160, 'Semana scroll offset should be 160px')
 
   // Switch back to Tabla view
@@ -225,7 +225,7 @@ try {
   await page.locator('.planning-sections__table').waitFor()
 
   // Verify tabla scroll offset is restored!
-  const restoredTablaScroll = await page.evaluate(() => window.scrollY)
+  const restoredTablaScroll = await page.evaluate(() => document.querySelector('.planning-workspace__content').scrollTop)
   assert.equal(restoredTablaScroll, 240, 'Tabla scroll offset restored on return to Tabla')
 
   // Switch to Semana view again
@@ -233,7 +233,7 @@ try {
   await page.locator('.planning-week').waitFor()
 
   // Verify semana scroll offset is restored!
-  const restoredSemanaScroll = await page.evaluate(() => window.scrollY)
+  const restoredSemanaScroll = await page.evaluate(() => document.querySelector('.planning-workspace__content').scrollTop)
   assert.equal(restoredSemanaScroll, 160, 'Semana scroll offset restored on return to Semana')
 
   // Check 720px viewport: visible agenda refs and no page overflow

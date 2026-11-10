@@ -132,7 +132,7 @@ try {
   assert.equal(await page.locator('[aria-label="Ambientes incorporados"] .academic-scheduling__roster-item').count(), 2)
   await page.screenshot({ path: resolve(evidence, 'escuela-cursos.png') })
   const generatedResponse = page.waitForResponse((response) => response.url().endsWith('/propuestas') && response.request().method() === 'POST')
-  await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
+  await page.locator('#planning-tour-primary').click()
   const response = await generatedResponse
   assert.equal(response.status(), 200)
   const proposal = await response.json()
@@ -169,7 +169,7 @@ try {
   await page.getByLabel('Carga semanal docente').fill('1799')
   assert.equal(await page.locator('.planning-status-bar').count(), 0, 'cambiar recursos invalida el resultado visible')
   const resourceChangedResponse = page.waitForResponse((response) => response.url().endsWith('/propuestas') && response.request().method() === 'POST')
-  await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
+  await page.locator('#planning-tour-primary').click()
   const resourceChanged = await resourceChangedResponse
   assert.equal(resourceChanged.status(), 200)
   assert.equal((await resourceChanged.json()).status, 'complete')
@@ -177,7 +177,7 @@ try {
   await page.getByLabel(`Capacidad ${chosen[0].courseId}`, { exact: true }).fill('31')
   await page.locator('.planning-status-bar[data-status="complete"]').waitFor({ state: 'detached' })
   const regeneratedResponse = page.waitForResponse((response) => response.url().endsWith('/propuestas') && response.request().method() === 'POST')
-  await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
+  await page.locator('#planning-tour-primary').click()
   const regenerated = await regeneratedResponse
   assert.equal(regenerated.status(), 200)
   const updatedProposal = await regenerated.json()
@@ -197,7 +197,7 @@ try {
   await page.getByLabel(`Modalidad de sesiones ${chosen[1].courseId}`).selectOption('split')
   assert.equal(await page.locator('.planning-status-bar').count(), 0, 'cambiar modalidad invalida la propuesta visible')
   const splitResponse = page.waitForResponse((response) => response.url().endsWith('/propuestas') && response.request().method() === 'POST')
-  await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
+  await page.locator('#planning-tour-primary').click()
   const splitProposal = await (await splitResponse).json()
   assert.equal(splitProposal.status, 'complete')
   assert.equal((await read(`/local/programacion-academica/v1/propuestas/${proposal.proposalId}`)).proposalId, proposal.proposalId)

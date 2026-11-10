@@ -125,7 +125,7 @@ try {
 
   await page.goto(`${webUrl}${route}`, { waitUntil: 'domcontentloaded' })
   page.on('pageerror', (err) => console.error('[BROWSER PAGE ERROR]', err.message))
-  await page.getByRole('heading', { name: 'Configurar recursos', exact: true }).waitFor()
+  await page.locator('#academic-scheduling-resource-editor').waitFor()
 
   // -------------------------------------------------------------
   if (!['integration', 'layout'].includes(process.env.SUM_TEST_PHASE)) {
@@ -369,7 +369,7 @@ try {
   const generateResponse = page.waitForResponse(
     (res) => res.url().endsWith('/propuestas') && res.request().method() === 'POST',
   )
-  await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
+  await page.locator('#planning-tour-primary').click()
   const genRes = await generateResponse
   assert.equal(genRes.status(), 200, 'La API debe aceptar la petición con recursos incluidos')
   const generatedProposal = await genRes.json()
@@ -382,7 +382,7 @@ try {
   const saveResponse = page.waitForResponse(
     (res) => res.url().endsWith('/borradores/guardar') && res.request().method() === 'POST',
   )
-  await page.getByRole('button', { name: 'Guardar propuesta', exact: true }).click()
+  await page.locator('#planning-tour-save').click()
   const savedRes = await saveResponse
   assert.equal(savedRes.status(), 200, 'Debe guardar el borrador en la API real')
   const savedData = await savedRes.json()
@@ -390,8 +390,8 @@ try {
 
   // Recargar y continuar edición
   await page.reload()
-  await page.getByRole('heading', { name: 'Configurar recursos', exact: true }).waitFor()
-  await page.getByRole('button', { name: 'Mis propuestas', exact: true }).click()
+  await page.locator('#academic-scheduling-resource-editor').waitFor()
+  await page.locator('#planning-tour-proposals').click()
   const savedProposals = page.locator('#academic-scheduling-saved-proposals')
   await savedProposals.waitFor()
   const savedRow = savedProposals.locator('.academic-scheduling__saved-row').filter({ hasText: draftTitle })
@@ -408,18 +408,15 @@ try {
   // -------------------------------------------------------------
   console.log('[RUI8] Verificando aprobación por API real y consulta de recursos en versión congelada...')
   const stage = async (name, etapa) => {
-    await page.getByRole('navigation', { name: 'Etapas de programación', exact: true }).getByRole('link', { name, exact: true }).click()
-    await page.waitForURL(new RegExp(`etapa=${etapa}$`))
+    await page.locator('.planning-root').getByRole('link', { name: name === 'Preparación' ? 'Resumen' : name, exact: true }).click()
+    await page.waitForURL(new RegExp(`etapa=${etapa}(?:&|$)`))
   }
 
   // Enviar a revisión docente y dar conformidades requeridas para aprobación
   await stage('Revisión docente', 'revision')
-  const reviewDetails = page.locator('.academic-teacher-review > summary')
-  if (await reviewDetails.evaluate((element) => !(element.parentElement instanceof HTMLDetailsElement) || !element.parentElement.open)) {
-    await reviewDetails.click()
-  }
+  await page.locator('.academic-teacher-review').waitFor()
   const submitResponse = page.waitForResponse((res) => res.url().includes('/revision/enviar') && res.request().method() === 'POST')
-  await page.getByRole('button', { name: 'Enviar a revisión', exact: true }).click()
+  await page.getByRole('button', { name: /^(Enviar a revisión|Enviar a revisión docente)$/ }).click()
   let currentReviewDraft = (await (await submitResponse).json()).draft
 
   for (const teacher of currentReviewDraft.review.teachers) {
@@ -432,11 +429,8 @@ try {
   assert.equal(currentReviewDraft.state, 'ready-for-approval')
 
   // Aprobar propuesta en etapa Aprobación
-  await stage('Aprobación', 'aprobacion')
-  const pubSummary = page.locator('.academic-publication > summary')
-  if (await pubSummary.evaluate((element) => !(element.parentElement instanceof HTMLDetailsElement) || !element.parentElement.open)) {
-    await pubSummary.click()
-  }
+  await stage('Aprobación y publicación', 'aprobacion')
+  await page.locator('.academic-publication').waitFor()
   const previewResponse = page.waitForResponse((res) => res.url().includes('/vista-previa'))
   await page.getByRole('button', { name: 'Actualizar vista previa', exact: true }).click()
   await previewResponse
@@ -450,8 +444,8 @@ try {
   // Regresar a Preparación, recargar y Consultar
   await stage('Preparación', 'preparacion')
   await page.reload()
-  await page.getByRole('heading', { name: 'Configurar recursos', exact: true }).waitFor()
-  await page.getByRole('button', { name: 'Mis propuestas', exact: true }).click()
+  await page.locator('#academic-scheduling-resource-editor').waitFor()
+  await page.locator('#planning-tour-proposals').click()
   const approvedSavedRow = page.locator('.academic-scheduling__saved-row').filter({ hasText: draftTitle })
 
   const consultResponse = page.waitForResponse((res) => res.url().endsWith(`/borradores/${savedData.id}/continuar`))

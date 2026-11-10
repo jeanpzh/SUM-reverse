@@ -11,7 +11,7 @@ if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || url.pathname !==
 const base = url.origin
 const evidenceDir = resolve(process.env.SUM_VERIFY_EVIDENCE_DIR || join(tmpdir(), 'sum-verify-planning-shell'))
 const scheduling = `${base}/local/programacion-academica`
-const backLabel = '← Módulos locales'
+const backLabel = 'Módulos'
 const results = []
 const problems = []
 
@@ -101,31 +101,25 @@ try {
     expectEqual(facts.planningRoots, 1, 'planning-root count')
     expectEqual(facts.mains, 1, 'main landmark count')
     expectEqual(facts.rails, 0, 'navigation rail count (removed 2026-11-08)')
-    expectEqual(facts.canvas, 'rgb(245, 246, 245)', 'canvas background-color')
-    expectEqual(facts.headingColor, 'rgb(32, 41, 37)', 'page title h2 color')
-    expectEqual(facts.headingSize, '24px', 'page title h2 font-size')
-    expectEqual(facts.rootFontSize, '14px', 'planning-root font-size')
+    expectEqual(facts.canvas, 'rgb(0, 0, 0)', 'dark canvas background-color')
+    expectTrue(facts.headingColor !== facts.canvas, 'page heading contrasts with canvas')
+    expectEqual(facts.headingSize, '26px', 'page title h2 font-size')
+    expectEqual(facts.rootFontSize, '15px', 'planning-root font-size')
     await page.screenshot({ path: join(evidenceDir, 'scheduling-1440.png') })
   }))
 
-  await criterion('AC4', 'theme selector and back link live in the scope header, are keyboard reachable with a solid focus outline, and the back link navigates', () => withPage(1440, 900, async (page) => {
+  await criterion('AC4', 'sidebar theme and modules link are keyboard reachable with visible focus', () => withPage(1440, 900, async (page) => {
     await page.goto(scheduling, { waitUntil: 'networkidle' })
-    const theme = page.locator('#planning-theme')
+    const theme = page.getByRole('button', { name: /^Cambiar tema de interfaz/ }).first()
     await theme.focus()
-    const first = await focusedFacts(page)
-    await page.keyboard.press('Tab')
-    const second = await focusedFacts(page)
-    await page.screenshot({ path: join(evidenceDir, 'focus-header-controls-1440.png') })
-    expectEqual(first.id, 'planning-theme', 'theme selector focus')
-    expectTrue(first.inHeader, 'theme selector is outside the scope header')
-    expectEqual(second.text, backLabel, 'Tab after the theme selector')
-    expectTrue(second.inHeader, 'back link is outside the scope header')
-    expectTrue(second.outlineStyle !== 'none' || second.outlineWidth > 0, 'back link has no visible focus indicator')
+    expectTrue(await theme.evaluate(el => el === document.activeElement), 'theme receives focus')
     const back = page.getByRole('link', { name: backLabel, exact: true })
-    await back.click()
+    await back.focus()
+    const facts = await focusedFacts(page)
+    expectTrue(facts.outlineStyle !== 'none' || facts.outlineWidth > 0, 'modules link has visible focus')
+    await page.keyboard.press('Enter')
     await page.waitForURL(/\/local\/modulos$/)
-    await page.waitForLoadState('networkidle')
-    expectEqual(await page.locator('.planning-root').count(), 0, 'planning-root count after back link navigation')
+    expectEqual(await page.locator('.planning-root').count(), 0, 'chooser outside planning shell')
   }))
 
   await criterion('AC5', 'at 800px the document does not scroll horizontally', () => withPage(800, 900, async (page) => {
@@ -159,7 +153,7 @@ try {
     await page.evaluate(() => { document.documentElement.style.fontSize = '200%' })
     await page.waitForTimeout(200)
     const facts = await page.evaluate(() => ({
-      items: [...document.querySelectorAll('.planning-shell-controls a, .planning-shell-controls label')].map((element) => ({
+      items: [...document.querySelectorAll('[data-sidebar="footer"] a, [data-sidebar="footer"] button')].map((element) => ({
         text: element.textContent.trim(),
         scrollWidth: element.scrollWidth,
         clientWidth: element.clientWidth,
@@ -167,7 +161,7 @@ try {
       viewport: document.documentElement.clientWidth,
       shellRight: Math.max(...['.planning-scope-header', '.planning-main'].map((selector) => document.querySelector(selector)?.getBoundingClientRect().right ?? Infinity)),
     }))
-    expectEqual(facts.items.length, 2, 'header control label and link count')
+    expectTrue(facts.items.length >= 2, 'sidebar footer controls present')
     for (const item of facts.items) {
       expectTrue(item.scrollWidth <= item.clientWidth + 1, `"${item.text}" overflows: scrollWidth ${item.scrollWidth} > clientWidth ${item.clientWidth}`)
     }

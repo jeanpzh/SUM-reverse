@@ -36,7 +36,7 @@ try {
   page.on('request', (request) => assert.ok(request.url().startsWith(`${base}/`) || request.url().startsWith('data:'), `Solicitud externa inesperada: ${request.url()}`))
   const offerBefore = (await read(page, '/local/matricula-regular/v1/contextos/SYN-SIS-A')).data.offer
   await page.goto(`${base}/local/programacion-academica`)
-  await page.getByRole('heading', { name: 'Programación académica asistida', exact: true }).waitFor()
+  await page.locator('#planning-page-title').waitFor()
 
   if (phase === 'save') {
     const catalog = await read(page, '/local/programacion-academica/v1/catalogo')
@@ -55,7 +55,7 @@ try {
     const finalDemand = baseDemand === 1 ? 2 : 1
     await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).fill(String(finalDemand))
     const generationPending = page.waitForResponse((response) => response.url().endsWith('/propuestas') && response.request().method() === 'POST')
-    await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
+    await page.locator('#planning-tour-primary').click()
     const generationResponse = await generationPending
     assert.equal(generationResponse.status(), 200, await generationResponse.text())
     const proposal = await generationResponse.json()
@@ -70,7 +70,8 @@ try {
     assert.ok(catalog.windows.some((item) => item.day === originalAssignment.day && item.startMinute <= nextStart && item.endMinute >= nextStart + duration))
     assert.ok(teacher?.availability.some((item) => item.day === originalAssignment.day && item.startMinute <= nextStart && item.endMinute >= nextStart + duration))
     assert.ok(room?.availability.some((item) => item.day === originalAssignment.day && item.startMinute <= nextStart && item.endMinute >= nextStart + duration))
-    await page.locator('.academic-scheduling__sections-table').getByRole('button', { name: 'Editar horario', exact: true }).first().click()
+    await page.locator('.academic-scheduling__sections-table').getByRole('button', { name: /^Inspeccionar sección/ }).first().click()
+  await page.locator('.planning-inspector').getByRole('button', { name: 'Editar horario', exact: true }).first().click()
     await page.getByLabel(`Inicio revisión ${sectionId}`, { exact: true }).fill(`${String(Math.floor(nextStart / 60)).padStart(2, '0')}:${String(nextStart % 60).padStart(2, '0')}`)
     const adjustmentPending = page.waitForResponse((response) => response.url().endsWith('/ajustes') && response.request().method() === 'POST')
     await page.getByRole('button', { name: 'Aplicar ajuste', exact: true }).click()
@@ -83,9 +84,9 @@ try {
     assert.equal(movedAssignment.startMinute, nextStart)
 
     await page.getByLabel('Nombre de la propuesta', { exact: true }).fill('Persistencia E1 sintética')
-    await page.getByLabel('Estado de la propuesta', { exact: true }).selectOption('ready-for-review')
+    await page.getByRole('button', { name: 'Marcar lista para revisión', exact: true }).click()
     const savePending = page.waitForResponse((response) => response.url().endsWith('/borradores/guardar') && response.request().method() === 'POST')
-    await page.getByRole('button', { name: 'Guardar propuesta', exact: true }).click()
+    await page.locator('#planning-tour-save').click()
     const saveResponse = await savePending
     assert.equal(saveResponse.status(), 200, await saveResponse.text())
     const saved = await saveResponse.json()
@@ -109,13 +110,13 @@ try {
     const advanced = await concurrent.json()
     await page.getByLabel('Nombre de la propuesta', { exact: true }).fill('Edición local desactualizada')
     const stalePending = page.waitForResponse((response) => response.url().endsWith('/borradores/guardar') && response.request().method() === 'POST')
-    await page.getByRole('button', { name: 'Guardar propuesta', exact: true }).click()
+    await page.locator('#planning-tour-save').click()
     const staleResponse = await stalePending
     assert.equal(staleResponse.status(), 409)
     await page.getByRole('alert').filter({ hasText: 'No se guardaron los cambios' }).waitFor()
     assert.equal(await page.getByLabel('Nombre de la propuesta', { exact: true }).inputValue(), 'Edición local desactualizada')
     await page.locator('.planning-scope-header__draft-state').filter({ hasText: 'Cambios sin guardar' }).waitFor()
-    await page.locator('.academic-scheduling__draft-bar').screenshot({ path: outputPath })
+    await page.locator('#planning-tour-proposal').screenshot({ path: outputPath })
     await page.locator('.planning-status-bar').screenshot({ path: resolve(evidenceDir, 'phase-save-result.png') })
     const runtimeProposalId = saved.proposal.proposalId
     await writeFile(statePath, `${JSON.stringify({ id: advanced.id, version: advanced.version, title: advanced.title,
@@ -127,7 +128,7 @@ try {
     const course = (await read(page, '/local/programacion-academica/v1/catalogo')).courses.find((item) => item.courseId === saved.courseId)
     assert.ok(course, 'El curso sintético guardado debe existir en el mismo catálogo')
     const listPending = page.waitForResponse((response) => response.url().endsWith('/borradores') && response.request().method() === 'GET')
-    await page.getByRole('button', { name: 'Mis propuestas', exact: true }).click()
+    await page.locator('#planning-tour-proposals').click()
     const listResponse = await listPending
     assert.equal(listResponse.status(), 200, await listResponse.text())
     const list = await listResponse.json()
@@ -148,17 +149,17 @@ try {
     assert.equal(await isPlanningCheckboxChecked(page.getByRole('checkbox', { name: `Seleccionar ${saved.courseId}`, exact: true })), true)
     assert.equal(await page.getByLabel(`Demanda ${saved.courseId}`, { exact: true }).inputValue(), String(saved.finalDemand))
     assert.deepEqual(resumed.draft.proposal.manuallyAdjustedSectionIds, saved.manuallyAdjustedSectionIds)
-    assert.equal(await page.getByLabel('Estado de la propuesta', { exact: true }).inputValue(), 'ready-for-review')
-    await page.locator('.planning-status-bar').getByText('Componentes asignados', { exact: true }).waitFor()
-    await page.locator('.academic-scheduling__draft-bar').screenshot({ path: outputPath })
+    assert.equal(await page.locator('.planning-scope-header__draft-state').getAttribute('data-draft-state'), 'ready-for-review')
+    await page.getByRole('button', { name: 'Detalles de búsqueda', exact: true }).waitFor()
+    await page.locator('#planning-tour-proposal').screenshot({ path: outputPath })
 
     // A demand edit invalidates the recovered result and downgrades its state before saving config only.
     const changedDemand = saved.finalDemand + 1
     await page.getByLabel(`Demanda ${saved.courseId}`, { exact: true }).fill(String(changedDemand))
     assert.equal(await page.locator('.planning-status-bar').count(), 0)
-    assert.equal(await page.getByLabel('Estado de la propuesta', { exact: true }).inputValue(), 'draft')
+    assert.equal(await page.locator('.planning-scope-header__draft-state').getAttribute('data-draft-state'), 'draft')
     const configSavePending = page.waitForResponse((response) => response.url().endsWith('/borradores/guardar') && response.request().method() === 'POST')
-    await page.getByRole('button', { name: 'Guardar propuesta', exact: true }).click()
+    await page.locator('#planning-tour-save').click()
     const configSaveResponse = await configSavePending
     assert.equal(configSaveResponse.status(), 200, await configSaveResponse.text())
     const configSaved = await configSaveResponse.json()
@@ -175,7 +176,7 @@ try {
     freshPage.on('pageerror', (error) => errors.push(error.message))
     await freshPage.goto(`${base}/local/programacion-academica`)
     const freshListPending = freshPage.waitForResponse((response) => response.url().endsWith('/borradores') && response.request().method() === 'GET')
-    await freshPage.getByRole('button', { name: 'Mis propuestas', exact: true }).click()
+    await freshPage.locator('#planning-tour-proposals').click()
     await freshListPending
     const freshRow = freshPage.locator('.academic-scheduling__saved-row').filter({ hasText: saved.title })
     const freshResumePending = freshPage.waitForResponse((response) => response.url().endsWith(`/borradores/${saved.id}/continuar`))

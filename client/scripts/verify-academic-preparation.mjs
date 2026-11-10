@@ -225,7 +225,7 @@ try {
   })
 
   await page.goto(`${web}${route}`)
-  await page.getByRole('heading', { name: 'Seleccionar cursos', exact: true }).waitFor()
+  await page.locator('#academic-scheduling-courses').waitFor()
 
   // --- P1: 96 compact rows, no 96 expanded forms, at most 1 inspector ---
   const rows = page.locator('.academic-preparation__row')
@@ -333,7 +333,7 @@ try {
   const expectedCourseIds = await allChecked.evaluateAll((nodes) => nodes.map((node) => node.getAttribute('aria-label').replace('Seleccionar ', '')))
   await page.getByLabel('Filtrar cursos por ciclo').selectOption('3')
   // Trigger generation while selected courses are hidden by the cycle filter.
-  const genBtn = page.getByRole('button', { name: 'Generar horarios' })
+  const genBtn = page.locator('#planning-tour-primary')
   await genBtn.click()
   await page.waitForTimeout(500)
 
@@ -499,7 +499,7 @@ try {
   realPage.on('pageerror', (err) => runtimeErrors.push(err.message))
 
   await realPage.goto(`${web}${route}`)
-  await realPage.getByRole('heading', { name: 'Seleccionar cursos', exact: true }).waitFor()
+  await realPage.locator('#academic-scheduling-courses').waitFor()
 
   // Check real catalog courses count (built-in 56 courses)
   const realCatalogBadge = realPage.locator('[data-testid="count-catalog"]')
@@ -523,7 +523,7 @@ try {
 
   // Generate proposal via real NestJS engine
   const genResponsePromise = realPage.waitForResponse((res) => res.url().endsWith('/propuestas') && res.request().method() === 'POST')
-  await realPage.getByRole('button', { name: 'Generar horarios' }).click()
+  await realPage.locator('#planning-tour-primary').click()
   const genRes = await genResponsePromise
   assert.equal(genRes.status(), 200, 'P9: Generación exitosa con motor NestJS real')
   const genData = await genRes.json()
@@ -533,21 +533,21 @@ try {
   const draftTitle = `Borrador P9 Verificación ${Date.now()}`
   await realPage.getByLabel('Nombre de la propuesta').fill(draftTitle)
   const savePromise = realPage.waitForResponse((res) => res.url().endsWith('/borradores/guardar') && res.request().method() === 'POST')
-  await realPage.getByRole('button', { name: 'Guardar propuesta' }).click()
+  await realPage.locator('#planning-tour-save').click()
   const saveRes = await savePromise
   assert.equal(saveRes.status(), 200, 'P9: Guardado exitoso en NestJS local')
   const savedData = await saveRes.json()
   assert.equal(savedData.title, draftTitle)
 
   // Resume draft via draft list
-  await realPage.getByRole('button', { name: 'Mis propuestas' }).click()
+  await realPage.locator('#planning-tour-proposals').click()
   const savedProposals = realPage.locator('#academic-scheduling-saved-proposals')
   await savedProposals.waitFor()
   const savedRow = savedProposals.locator('.academic-scheduling__saved-row').filter({ hasText: draftTitle })
   assert.equal(await savedRow.count(), 1, 'P9: Propuesta guardada listada en Mis propuestas')
 
   await realPage.reload()
-  await realPage.getByRole('button', { name: 'Mis propuestas' }).click()
+  await realPage.locator('#planning-tour-proposals').click()
   const resumedRow = realPage.locator('.academic-scheduling__saved-row').filter({ hasText: draftTitle })
   const resumeResponse = realPage.waitForResponse((res) => res.url().endsWith(`/borradores/${savedData.id}/continuar`))
   await resumedRow.getByRole('button', { name: 'Continuar edición', exact: true }).click()
@@ -575,7 +575,7 @@ try {
   saved = (await post(`borradores/${saved.id}/aprobar`, { expectedVersion: saved.version })).draft
   assert.equal(saved.state, 'approved')
   await realPage.reload()
-  await realPage.getByRole('button', { name: 'Mis propuestas' }).click()
+  await realPage.locator('#planning-tour-proposals').click()
   const approvedRow = realPage.locator('.academic-scheduling__saved-row').filter({ hasText: draftTitle })
   const approvedResume = realPage.waitForResponse((res) => res.url().endsWith(`/borradores/${saved.id}/continuar`))
   await approvedRow.getByRole('button', { name: 'Consultar', exact: true }).click()

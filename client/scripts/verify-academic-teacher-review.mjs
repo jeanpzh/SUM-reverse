@@ -32,7 +32,7 @@ try {
   page.on('pageerror', (error) => errors.push(error.message))
   page.on('request', (request) => assert.ok(request.url().startsWith(`${base}/`) || request.url().startsWith('data:'), `Solicitud externa inesperada: ${request.url()}`))
   await page.goto(`${base}/local/programacion-academica`)
-  await page.getByRole('heading', { name: 'Programación académica asistida', exact: true }).waitFor()
+  await page.locator('#planning-page-title').waitFor()
   const api = `${base}/api/local/programacion-academica/v1`
   const readOffer = async () => {
     const response = await page.request.get(`${base}/api/local/matricula-regular/v1/contextos/SYN-SIS-A`)
@@ -40,8 +40,8 @@ try {
     return (await response.json()).data.offer
   }
   const stage = async (name, etapa) => {
-    await page.getByRole('navigation', { name: 'Etapas de programación', exact: true }).getByRole('link', { name, exact: true }).click()
-    await page.waitForURL(new RegExp(`etapa=${etapa}$`))
+    await page.locator('.planning-root').getByRole('link', { name: name === 'Preparación' ? 'Resumen' : name, exact: true }).click()
+    await page.waitForURL(new RegExp(`etapa=${etapa}(?:&|$)`))
   }
   const offerBefore = await readOffer()
 
@@ -54,23 +54,23 @@ try {
     await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${course.courseId}`, exact: true }))
     await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).fill('1')
     const generation = page.waitForResponse((response) => response.url().endsWith('/propuestas') && response.request().method() === 'POST')
-    await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
+    await page.locator('#planning-tour-primary').click()
     const proposal = await json(await generation)
     assert.equal(proposal.status, 'complete')
     assert.ok(proposal.assignments.length)
     const title = `Revisión docente E1 sintética ${Date.now()}`
     await page.getByLabel('Nombre de la propuesta', { exact: true }).fill(title)
     const save = page.waitForResponse((response) => response.url().endsWith('/borradores/guardar') && response.request().method() === 'POST')
-    await page.getByRole('button', { name: 'Guardar propuesta', exact: true }).click()
+    await page.locator('#planning-tour-save').click()
     const saveResponse = await save
     const saved = await json(saveResponse)
     assert.equal(saved.state, 'draft')
     assert.equal(Object.hasOwn(saveResponse.request().postDataJSON(), 'review'), false)
 
     await stage('Revisión docente', 'revision')
-    await page.locator('.academic-teacher-review > summary').click()
+    await page.locator('.academic-teacher-review').waitFor()
     const submit = page.waitForResponse((response) => response.url().endsWith(`/borradores/${saved.id}/revision/enviar`))
-    await page.getByRole('button', { name: 'Enviar a revisión', exact: true }).click()
+    await page.getByRole('button', { name: /^(Enviar a revisión|Enviar a revisión docente)$/ }).click()
     const submitted = (await json(await submit)).draft
     assert.equal(submitted.state, 'in-review')
     assert.ok(submitted.review.teachers.length)
@@ -97,7 +97,8 @@ try {
     assert.ok(selectedTeacher?.availability.some((item) => item.day === original.day && item.startMinute <= nextStart && item.endMinute >= nextStart + duration))
     assert.ok(selectedRoom?.availability.some((item) => item.day === original.day && item.startMinute <= nextStart && item.endMinute >= nextStart + duration))
     await stage('Horario', 'horario')
-    await page.locator('.academic-scheduling__sections-table').getByRole('button', { name: 'Editar horario', exact: true }).first().click()
+    await page.locator('.academic-scheduling__sections-table').getByRole('button', { name: /^Inspeccionar sección/ }).first().click()
+  await page.locator('.planning-inspector').getByRole('button', { name: 'Editar horario', exact: true }).first().click()
     await page.getByLabel(`Inicio revisión ${sectionId}`, { exact: true }).fill(`${String(Math.floor(nextStart / 60)).padStart(2, '0')}:${String(nextStart % 60).padStart(2, '0')}`)
     const adjustment = page.waitForResponse((response) => response.url().endsWith('/ajustes') && response.request().method() === 'POST')
     await page.getByRole('button', { name: 'Aplicar ajuste', exact: true }).click()
@@ -107,12 +108,12 @@ try {
     assert.equal(await page.getByRole('status').filter({ hasText: 'Revisión guardada, cambios locales pendientes' }).count(), 1)
 
     const saveAdjustment = page.waitForResponse((response) => response.url().endsWith('/borradores/guardar') && response.request().method() === 'POST')
-    await page.getByRole('button', { name: 'Guardar propuesta', exact: true }).click()
+    await page.locator('#planning-tour-save').click()
     const adjustedDraft = await json(await saveAdjustment)
     assert.equal(adjustedDraft.version, observed.version + 1)
     assert.equal(adjustedDraft.review.teachers[0].status, 'outdated')
     const resubmit = page.waitForResponse((response) => response.url().endsWith(`/borradores/${saved.id}/revision/enviar`))
-    await page.getByRole('button', { name: 'Enviar a revisión', exact: true }).click()
+    await page.getByRole('button', { name: /^(Enviar a revisión|Enviar a revisión docente)$/ }).click()
     const resubmitted = (await json(await resubmit)).draft
     assert.equal(resubmitted.review.round, submitted.review.round + 1)
     await page.getByLabel('Rol simulado de revisión', { exact: true }).selectOption('teacher')
@@ -130,7 +131,7 @@ try {
   } else {
     const saved = JSON.parse(await readFile(statePath, 'utf8'))
     const list = page.waitForResponse((response) => response.url().endsWith('/borradores') && response.request().method() === 'GET')
-    await page.getByRole('button', { name: 'Mis propuestas', exact: true }).click()
+    await page.locator('#planning-tour-proposals').click()
     await json(await list)
     const row = page.locator('.academic-scheduling__saved-row').filter({ hasText: saved.title })
     const resume = page.waitForResponse((response) => response.url().endsWith(`/borradores/${saved.id}/continuar`))

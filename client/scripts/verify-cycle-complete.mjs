@@ -73,7 +73,7 @@ async function publish() {
 async function planningControls() {
   const catalog = await json(`${e1}/catalogo`)
   await page.goto(`${base}/local/programacion-academica`)
-  await page.getByRole('heading', { name: 'Programación académica asistida', exact: true }).waitFor()
+  await page.locator('#planning-page-title').waitFor()
   for (const course of catalog.courses) {
     assert.equal(await page.getByLabel(`Demanda ${course.courseId}`, { exact: true }).inputValue(), String(course.cycle % 2 ? 180 : 90))
     assert.equal(await page.getByLabel(`Capacidad ${course.courseId}`, { exact: true }).inputValue(), '45')
@@ -143,7 +143,7 @@ try {
     const legacy = await readContext('SYN-SIS-A')
     const catalog = await json(`${e3}/ofertas`)
     await page.goto(`${base}/local/programacion-academica`)
-    await page.locator('.academic-publication > summary').click()
+    await page.locator('.academic-publication').waitFor()
     await page.getByRole('button', { name: 'Actualizar publicaciones', exact: true }).click()
     await page.getByLabel('Consultar publicación', { exact: true }).selectOption(publication.id)
     await page.getByRole('button', { name: 'Actualizar vista previa', exact: true }).click()

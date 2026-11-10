@@ -49,7 +49,7 @@ try {
   }
   const generate = async () => {
     const pending = page.waitForResponse((response) => response.url().endsWith('/propuestas') && response.request().method() === 'POST')
-    await page.getByRole('button', { name: 'Generar horarios', exact: true }).click()
+    await page.locator('#planning-tour-primary').click()
     const response = await pending
     assert.equal(response.status(), 200, await response.text())
     const value = await response.json()
