@@ -1,0 +1,458 @@
+{
+  "revision": "PA-NORMATIVE-1",
+  "coverage": "partial",
+  "documents": [
+    {
+      "id": "rr-001380-2026",
+      "url": "https://medicina.unmsm.edu.pe/wp-content/uploads/2026/03/RESOLUCION-RECTORAL-001380-2026-R.pdf",
+      "sha256": "69ae1f51eb240b8149490e3444381b6b62b70fabf39c28c95155b7024e276ee6",
+      "reviewedAt": "2026-11-08",
+      "publishedAt": "2026-02-06",
+      "approvalExcerpt": "Aprobar el REGLAMENTO GENERAL PARA LA ACTIVIDAD ACADÉMICA DOCENTE DE LA UNIVERSIDAD NACIONAL MAYOR DE SAN MARCOS",
+      "page": 2
+    }
+  ],
+  "chunks": [
+    {
+      "id": "art-1",
+      "article": "Artículo 1",
+      "page": 1,
+      "excerpt": "Artículo 1. Finalidad Establecer las normas y procedimientos para asignar y supervisar las actividades académicas de los docentes ordinarios de la Universidad Nacional Mayor de San Marcos (UNMSM).",
+      "related": [],
+      "documentId": "rr-001380-2026-anexo",
+      "title": "Reglamento general para la actividad académica docente UNMSM",
+      "url": "https://medicina.unmsm.edu.pe/wp-content/uploads/2026/03/RESOLUCION-RECTORAL-001380-2026-R-ANEXO.pdf",
+      "sourceClass": "normative",
+      "scope": "UNMSM",
+      "facultyIds": [
+        "FISI"
+      ],
+      "periods": [],
+      "teacherTypes": [
+        "ordinario",
+        "contratado",
+        "unknown"
+      ],
+      "reviewedAt": "2026-11-08",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "publishedAt": "2026-02-06",
+      "documentSha256": "fa14f9507b93287f8c05ae1af966abf57413ace5152414de3fd33a00c18157b7",
+      "excerptSha256": "a344877161d36376bfd5fa87e9fd82c9467634b171ef70027355c63c8502da48"
+    },
+    {
+      "id": "art-5",
+      "article": "Artículo 5",
+      "page": 1,
+      "excerpt": "Artículo 5. Régimen de dedicación de los docentes. Los docentes ordinarios por su régimen de dedicación pueden ser (Art. 85 Ley n.º 30220): 5.1. A Dedicación Exclusiva (DE). Es el docente que presta servicios cuarenta (40) horas semanales, de los cuales un mínimo de diez (10) horas corresponden a tareas lectivas y tiene como única remuneración la que percibe de la Universidad. 5.2. A Tiempo Completo (TC). Es el docente que presta servicios durante cuarenta (40) horas semanales, de los cuales un mínimo de diez (10) horas corresponden a tareas lectivas. Puede tener otra actividad remunerada a tiempo parcial solo en una universidad o institución pública o privada siempre fuera del horario asignado en la UNMSM. 5.3. A Tiempo Parcial (TP). Es el docente que presta servicios con una permanencia menor de cuarenta (40) horas semanales, de las cuales al menos el 40% corresponde a horas lectivas.",
+      "related": [
+        "final-tercera",
+        "comp-primera",
+        "comp-segunda"
+      ],
+      "documentId": "rr-001380-2026-anexo",
+      "title": "Reglamento general para la actividad académica docente UNMSM",
+      "url": "https://medicina.unmsm.edu.pe/wp-content/uploads/2026/03/RESOLUCION-RECTORAL-001380-2026-R-ANEXO.pdf",
+      "sourceClass": "normative",
+      "scope": "UNMSM",
+      "facultyIds": [
+        "FISI"
+      ],
+      "periods": [],
+      "teacherTypes": [
+        "ordinario"
+      ],
+      "reviewedAt": "2026-11-08",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "publishedAt": "2026-02-06",
+      "documentSha256": "fa14f9507b93287f8c05ae1af966abf57413ace5152414de3fd33a00c18157b7",
+      "excerptSha256": "3d2de856787fef3e0843758038f5a28f74d1e83ea90f33917b5bb1a1def87b2d"
+    },
+    {
+      "id": "art-6",
+      "article": "Artículo 6",
+      "page": 2,
+      "excerpt": "Artículo 6. Los docentes ordinarios cumplen sus actividades lectivas y no lectivas en la Facultad. La aprobación de las actividades lectivas y no lectivas son aprobadas por el Consejo de Facultad, se formaliza con la resolución respectiva. La carga académica en las unidades de posgrado o en otras dependencias de la UNMSM que sean autofinanciadas y que otorguen pago por el dictado de clases no se considerarán parte de la carga lectiva o no lectiva. Excepcionalmente, cuando no se reciba monto adicional alguno por labores académicas o dictar clases, las cargas académicas en las unidades de posgrado o en otras dependencias de la UNMSM sin derecho a retribución adicional se considerarán como carga lectiva del docente hasta un máximo del 50% del total de horas asignadas",
+      "related": [],
+      "documentId": "rr-001380-2026-anexo",
+      "title": "Reglamento general para la actividad académica docente UNMSM",
+      "url": "https://medicina.unmsm.edu.pe/wp-content/uploads/2026/03/RESOLUCION-RECTORAL-001380-2026-R-ANEXO.pdf",
+      "sourceClass": "normative",
+      "scope": "UNMSM",
+      "facultyIds": [
+        "FISI"
+      ],
+      "periods": [],
+      "teacherTypes": [
+        "ordinario"
+      ],
+      "reviewedAt": "2026-11-08",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "publishedAt": "2026-02-06",
+      "documentSha256": "fa14f9507b93287f8c05ae1af966abf57413ace5152414de3fd33a00c18157b7",
+      "excerptSha256": "70451ddece4ee7eddca499e59ced5f5a6f7eb6a5c137a5036b6a68274c1a0778"
+    },
+    {
+      "id": "art-7",
+      "article": "Artículo 7",
+      "page": 2,
+      "excerpt": "Artículo 7. Para el docente ordinario (TC, DE), la actividad lectiva tiene un máximo de 12 horas semanales. La actividad lectiva está constituida por las sesiones de aprendizaje que se realizan dentro del aula, taller, laboratorio u otro espacio formativo según el contenido de los sílabos, y durante el periodo académico (semestral o anual). Si el docente requiere asumir mayor carga lectiva al máximo estipulado, podrá solicitarlo al departamento académico al cual está adscrito, para ello suscribe una declaración jurada en la cual conste que lo hace voluntariamente y que no recibirá contraprestación adicional alguna. En este caso, el máximo es de 20 horas lectivas",
+      "related": [
+        "final-tercera",
+        "comp-primera",
+        "comp-segunda"
+      ],
+      "documentId": "rr-001380-2026-anexo",
+      "title": "Reglamento general para la actividad académica docente UNMSM",
+      "url": "https://medicina.unmsm.edu.pe/wp-content/uploads/2026/03/RESOLUCION-RECTORAL-001380-2026-R-ANEXO.pdf",
+      "sourceClass": "normative",
+      "scope": "UNMSM",
+      "facultyIds": [
+        "FISI"
+      ],
+      "periods": [],
+      "teacherTypes": [
+        "ordinario"
+      ],
+      "reviewedAt": "2026-11-08",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "publishedAt": "2026-02-06",
+      "documentSha256": "fa14f9507b93287f8c05ae1af966abf57413ace5152414de3fd33a00c18157b7",
+      "excerptSha256": "76bcac820553948272721cc2a69eb6ad89781e1f390d3246cd47691793afc2ce"
+    },
+    {
+      "id": "art-8",
+      "article": "Artículo 8",
+      "page": 2,
+      "excerpt": "Artículo 8. Una hora de actividad lectiva tiene una duración de cuarenta y cinco (45), cincuenta (50) o sesenta (60) minutos cronológicos. Cada Consejo de Facultad definirá la duración de la hora académica dentro de los rangos indicados. Para efectos del cómputo de horas lectivas, el SUM se encargará de establecer, en el sistema correspondiente, la equivalencia de la hora lectiva como hora cronológica",
+      "related": [],
+      "documentId": "rr-001380-2026-anexo",
+      "title": "Reglamento general para la actividad académica docente UNMSM",
+      "url": "https://medicina.unmsm.edu.pe/wp-content/uploads/2026/03/RESOLUCION-RECTORAL-001380-2026-R-ANEXO.pdf",
+      "sourceClass": "normative",
+      "scope": "UNMSM",
+      "facultyIds": [
+        "FISI"
+      ],
+      "periods": [],
+      "teacherTypes": [
+        "ordinario"
+      ],
+      "reviewedAt": "2026-11-08",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "publishedAt": "2026-02-06",
+      "documentSha256": "fa14f9507b93287f8c05ae1af966abf57413ace5152414de3fd33a00c18157b7",
+      "excerptSha256": "84d5250bd7ba077821cc657b3781f7c13fc8111bb1f45c684697793bbb3cdcf7"
+    },
+    {
+      "id": "art-9",
+      "article": "Artículo 9",
+      "page": 2,
+      "excerpt": "Artículo 9. La actividad lectiva se asigna considerando la naturaleza de la asignatura, teniendo en cuenta los siguientes criterios en orden de prelación:  Especialidad del docente.  Categoría y régimen de dedicación del docente. La prelación es la siguiente: 1. Principal a tiempo parcial 2. Principal a tiempo completo 3. Principal a dedicación exclusiva 4. Asociado a tiempo parcial 5. Asociado a tiempo completo 6. Asociado a dedicación exclusiva 7. Auxiliar a tiempo parcial 8. Auxiliar a tiempo completo 9. Auxiliar a dedicación exclusiva  Evaluación del desempeño docente en el semestre o año precedente.  Podrá asignarse carga lectiva a los docentes entre el primer y el décimo ciclo.  Se debe asignar carga lectiva primero a los docentes nombrados de la facultad, luego se solicita docentes interfacultativos. Únicamente si no hubiera se solicitará el contrato de docentes.",
+      "related": [],
+      "documentId": "rr-001380-2026-anexo",
+      "title": "Reglamento general para la actividad académica docente UNMSM",
+      "url": "https://medicina.unmsm.edu.pe/wp-content/uploads/2026/03/RESOLUCION-RECTORAL-001380-2026-R-ANEXO.pdf",
+      "sourceClass": "normative",
+      "scope": "UNMSM",
+      "facultyIds": [
+        "FISI"
+      ],
+      "periods": [],
+      "teacherTypes": [
+        "ordinario"
+      ],
+      "reviewedAt": "2026-11-08",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "publishedAt": "2026-02-06",
+      "documentSha256": "fa14f9507b93287f8c05ae1af966abf57413ace5152414de3fd33a00c18157b7",
+      "excerptSha256": "c25568acb299cf02279c79fc03bc04ab8a619ac3e9faa14690e6b5ee0f639ad5"
+    },
+    {
+      "id": "art-11",
+      "article": "Artículo 11",
+      "page": 3,
+      "excerpt": "Artículo 11. Los Decanos no están obligados a asumir actividad académica lectiva. No obstante, pueden hacerlo hasta por seis (6) horas semanales.",
+      "related": [
+        "final-tercera",
+        "comp-primera",
+        "comp-segunda"
+      ],
+      "documentId": "rr-001380-2026-anexo",
+      "title": "Reglamento general para la actividad académica docente UNMSM",
+      "url": "https://medicina.unmsm.edu.pe/wp-content/uploads/2026/03/RESOLUCION-RECTORAL-001380-2026-R-ANEXO.pdf",
+      "sourceClass": "normative",
+      "scope": "UNMSM",
+      "facultyIds": [
+        "FISI"
+      ],
+      "periods": [],
+      "teacherTypes": [
+        "ordinario"
+      ],
+      "reviewedAt": "2026-11-08",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "publishedAt": "2026-02-06",
+      "documentSha256": "fa14f9507b93287f8c05ae1af966abf57413ace5152414de3fd33a00c18157b7",
+      "excerptSha256": "d761f0e45c83788cab8729219b3bf7cd065d8c417a504515e3865950d10eb250"
+    },
+    {
+      "id": "art-18",
+      "article": "Artículo 18",
+      "page": 5,
+      "excerpt": "Artículo 18. El Plan de Actividades Académicas del docente registra la asignación de actividades lectivas y no lectivas en el horario de trabajo establecido en la Facultad (Anexo II).",
+      "related": [],
+      "documentId": "rr-001380-2026-anexo",
+      "title": "Reglamento general para la actividad académica docente UNMSM",
+      "url": "https://medicina.unmsm.edu.pe/wp-content/uploads/2026/03/RESOLUCION-RECTORAL-001380-2026-R-ANEXO.pdf",
+      "sourceClass": "normative",
+      "scope": "UNMSM",
+      "facultyIds": [
+        "FISI"
+      ],
+      "periods": [],
+      "teacherTypes": [
+        "ordinario"
+      ],
+      "reviewedAt": "2026-11-08",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "publishedAt": "2026-02-06",
+      "documentSha256": "fa14f9507b93287f8c05ae1af966abf57413ace5152414de3fd33a00c18157b7",
+      "excerptSha256": "7674d25eb9acb38588198f4ec66d34636c4b62a3e579fb9db19f5e1d9dbec025"
+    },
+    {
+      "id": "art-20",
+      "article": "Artículo 20",
+      "page": 5,
+      "excerpt": "Artículo 20. Es responsabilidad del Director del Departamento Académico aprobar, supervisar y evaluar el cumplimiento del plan de trabajo semestral o anual de los docentes, señalado en el Plan de Actividades Académicas (Anexo II), conforme lo establecido en el Estatuto de la UNMSM (Art. 32).",
+      "related": [],
+      "documentId": "rr-001380-2026-anexo",
+      "title": "Reglamento general para la actividad académica docente UNMSM",
+      "url": "https://medicina.unmsm.edu.pe/wp-content/uploads/2026/03/RESOLUCION-RECTORAL-001380-2026-R-ANEXO.pdf",
+      "sourceClass": "normative",
+      "scope": "UNMSM",
+      "facultyIds": [
+        "FISI"
+      ],
+      "periods": [],
+      "teacherTypes": [
+        "ordinario"
+      ],
+      "reviewedAt": "2026-11-08",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "publishedAt": "2026-02-06",
+      "documentSha256": "fa14f9507b93287f8c05ae1af966abf57413ace5152414de3fd33a00c18157b7",
+      "excerptSha256": "af1ab8bb35dfc19c10f4a4dc09c293a5c9ceabf36dbcce9a82cf3206ee54c436"
+    },
+    {
+      "id": "art-25",
+      "article": "Artículo 25",
+      "page": 6,
+      "excerpt": "Artículo 25. El Director del Departamento Académico es responsable de la coordinación y elaboración de la propuesta para la asignación de carga horaria de actividades académicas lectivas y no lectivas del docente (Anexo I). El Plan de Actividades Académicas de los docentes de los departamentos académicos (Anexo II) se eleva al decano un (1) mes antes de iniciar el período académico. El reporte de actividad académica o formato del cuadro general de actividades docentes (aplicativo) puede ser extraído del SUM por el director del Departamento Académico",
+      "related": [],
+      "documentId": "rr-001380-2026-anexo",
+      "title": "Reglamento general para la actividad académica docente UNMSM",
+      "url": "https://medicina.unmsm.edu.pe/wp-content/uploads/2026/03/RESOLUCION-RECTORAL-001380-2026-R-ANEXO.pdf",
+      "sourceClass": "normative",
+      "scope": "UNMSM",
+      "facultyIds": [
+        "FISI"
+      ],
+      "periods": [],
+      "teacherTypes": [
+        "ordinario"
+      ],
+      "reviewedAt": "2026-11-08",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "publishedAt": "2026-02-06",
+      "documentSha256": "fa14f9507b93287f8c05ae1af966abf57413ace5152414de3fd33a00c18157b7",
+      "excerptSha256": "7f0de11330a5312d29fccd2802a691765cb6c5ff438bc59e588107220c616304"
+    },
+    {
+      "id": "art-26",
+      "article": "Artículo 26",
+      "page": 6,
+      "excerpt": "Artículo 26. El decano presenta el Plan de Actividades Docentes (Anexo II) de los departamentos académicos al Consejo de Facultad para su aprobación, emisión y publicación de la respectiva resolución decanal.",
+      "related": [],
+      "documentId": "rr-001380-2026-anexo",
+      "title": "Reglamento general para la actividad académica docente UNMSM",
+      "url": "https://medicina.unmsm.edu.pe/wp-content/uploads/2026/03/RESOLUCION-RECTORAL-001380-2026-R-ANEXO.pdf",
+      "sourceClass": "normative",
+      "scope": "UNMSM",
+      "facultyIds": [
+        "FISI"
+      ],
+      "periods": [],
+      "teacherTypes": [
+        "ordinario"
+      ],
+      "reviewedAt": "2026-11-08",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "publishedAt": "2026-02-06",
+      "documentSha256": "fa14f9507b93287f8c05ae1af966abf57413ace5152414de3fd33a00c18157b7",
+      "excerptSha256": "e38719dffc502a1923cfce0b6cbfd8c876de876510401f75c993d5768700198e"
+    },
+    {
+      "id": "comp-primera",
+      "article": "Complementaria PRIMERA",
+      "page": 6,
+      "excerpt": "PRIMERA. A los docentes ordinarios que al 31 de diciembre del año precedente se encuentren en el “Registro Nacional de Investigadores en Ciencia y Tecnología” (RENACYT), en el régimen anual o semestral, se les asignará un curso por año académico o un mínimo de seis (6) horas lectivas semanales/ semestrales. Las horas no lectivas de estos docentes investigadores podrán ser cubiertas íntegramente dentro de las actividades de investigación señaladas en el Art. 15 del presente reglamento. Esta reducción depende de que el docente cuente con registro RENACYT vigente y con constancia vigente de Docente Investigador emitida por el VRIP, así como de los requerimientos de su participación en la actividad lectiva.",
+      "related": [],
+      "documentId": "rr-001380-2026-anexo",
+      "title": "Reglamento general para la actividad académica docente UNMSM",
+      "url": "https://medicina.unmsm.edu.pe/wp-content/uploads/2026/03/RESOLUCION-RECTORAL-001380-2026-R-ANEXO.pdf",
+      "sourceClass": "normative",
+      "scope": "UNMSM",
+      "facultyIds": [
+        "FISI"
+      ],
+      "periods": [],
+      "teacherTypes": [
+        "ordinario"
+      ],
+      "reviewedAt": "2026-11-08",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "publishedAt": "2026-02-06",
+      "documentSha256": "fa14f9507b93287f8c05ae1af966abf57413ace5152414de3fd33a00c18157b7",
+      "excerptSha256": "179bd2d118eef91c38da2b2f47fa207312b4f78404900bdad88e2a43d4fecb1e"
+    },
+    {
+      "id": "comp-segunda",
+      "article": "Complementaria SEGUNDA",
+      "page": 6,
+      "excerpt": "SEGUNDA. Los docentes ordinarios que se encuentren cursando estudios en un programa de maestría o doctorado en la UNMSM o en otra universidad local, sin licencia, se les podrá asignar una carga lectiva máxima de 10 horas lectivas semanales/semestrales durante el periodo académico de sus estudios de posgrado. Las horas no lectivas de estos docentes, adicionales a la preparación de clases, tutoría y asesoría de tesis o trabajo de suficiencia profesional, serán cubiertas íntegramente con su tesis para la obtención del respectivo grado académico.",
+      "related": [],
+      "documentId": "rr-001380-2026-anexo",
+      "title": "Reglamento general para la actividad académica docente UNMSM",
+      "url": "https://medicina.unmsm.edu.pe/wp-content/uploads/2026/03/RESOLUCION-RECTORAL-001380-2026-R-ANEXO.pdf",
+      "sourceClass": "normative",
+      "scope": "UNMSM",
+      "facultyIds": [
+        "FISI"
+      ],
+      "periods": [],
+      "teacherTypes": [
+        "ordinario"
+      ],
+      "reviewedAt": "2026-11-08",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "publishedAt": "2026-02-06",
+      "documentSha256": "fa14f9507b93287f8c05ae1af966abf57413ace5152414de3fd33a00c18157b7",
+      "excerptSha256": "5c9eb5ebeea5340e1be407da80c148906a8ec425dcbcdd04bcfe069becc27385"
+    },
+    {
+      "id": "comp-tercera",
+      "article": "Complementaria TERCERA",
+      "page": 6,
+      "excerpt": "TERCERA. El decano es responsable del cumplimiento de lo establecido en el presente reglamento. El incumplimiento da lugar a la aplicación de las sanciones señaladas en los artículos 172° al 179° del Estatuto de la UNMSM.",
+      "related": [],
+      "documentId": "rr-001380-2026-anexo",
+      "title": "Reglamento general para la actividad académica docente UNMSM",
+      "url": "https://medicina.unmsm.edu.pe/wp-content/uploads/2026/03/RESOLUCION-RECTORAL-001380-2026-R-ANEXO.pdf",
+      "sourceClass": "normative",
+      "scope": "UNMSM",
+      "facultyIds": [
+        "FISI"
+      ],
+      "periods": [],
+      "teacherTypes": [
+        "ordinario"
+      ],
+      "reviewedAt": "2026-11-08",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "publishedAt": "2026-02-06",
+      "documentSha256": "fa14f9507b93287f8c05ae1af966abf57413ace5152414de3fd33a00c18157b7",
+      "excerptSha256": "7ad96e7255b6072196d0fed0035a6b88dbd0266d649fd2cd34cd68cc6f128630"
+    },
+    {
+      "id": "comp-cuarta",
+      "article": "Complementaria CUARTA",
+      "page": 6,
+      "excerpt": "CUARTA. El cumplimiento de las disposiciones del presente reglamento está supeditado a normas especiales transitorias expedidas por el Vicerrectorado Académico de Pregrado-VRAP o el Vicerrectorado de Investigación y Posgrado-VRIP, según corresponda, para atender las disposiciones gubernamentales o de organismos universitarios de jerarquía nacional, durante periodos de emergencias sanitarias u otros desastres naturales.",
+      "related": [],
+      "documentId": "rr-001380-2026-anexo",
+      "title": "Reglamento general para la actividad académica docente UNMSM",
+      "url": "https://medicina.unmsm.edu.pe/wp-content/uploads/2026/03/RESOLUCION-RECTORAL-001380-2026-R-ANEXO.pdf",
+      "sourceClass": "normative",
+      "scope": "UNMSM",
+      "facultyIds": [
+        "FISI"
+      ],
+      "periods": [],
+      "teacherTypes": [
+        "ordinario"
+      ],
+      "reviewedAt": "2026-11-08",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "publishedAt": "2026-02-06",
+      "documentSha256": "fa14f9507b93287f8c05ae1af966abf57413ace5152414de3fd33a00c18157b7",
+      "excerptSha256": "a88a9095aa2b3016284aa624e1fbbe907a4a09e9e5b8a46b581d5aad33066dad"
+    },
+    {
+      "id": "comp-quinta",
+      "article": "Complementaria QUINTA",
+      "page": 6,
+      "excerpt": "QUINTA. El Sistema Único de Matrícula/UNMSM registrará en su aplicativo web a los docentes que se encuentran en la condición de licencia sin goce de haber, licencia con goce de haber o año sabático, previo informe de la Oficina General de Recursos Humanos/UNMSM.",
+      "related": [],
+      "documentId": "rr-001380-2026-anexo",
+      "title": "Reglamento general para la actividad académica docente UNMSM",
+      "url": "https://medicina.unmsm.edu.pe/wp-content/uploads/2026/03/RESOLUCION-RECTORAL-001380-2026-R-ANEXO.pdf",
+      "sourceClass": "normative",
+      "scope": "UNMSM",
+      "facultyIds": [
+        "FISI"
+      ],
+      "periods": [],
+      "teacherTypes": [
+        "ordinario"
+      ],
+      "reviewedAt": "2026-11-08",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "publishedAt": "2026-02-06",
+      "documentSha256": "fa14f9507b93287f8c05ae1af966abf57413ace5152414de3fd33a00c18157b7",
+      "excerptSha256": "97fd7bb55353e6ff2e251fe6cfd5f5a5ba25e5189cb9ad764b2dc7c50a3464fb"
+    },
+    {
+      "id": "final-tercera",
+      "article": "Final TERCERA",
+      "page": 7,
+      "excerpt": "TERCERA. Los casos especiales que conlleven a superar el límite máximo de carga lectiva de un docente podrán ser autorizados por el VRAP, previa solicitud del docente e informe del director del respectivo Departamento Académico ante el decano de la facultad.",
+      "related": [
+        "art-7"
+      ],
+      "documentId": "rr-001380-2026-anexo",
+      "title": "Reglamento general para la actividad académica docente UNMSM",
+      "url": "https://medicina.unmsm.edu.pe/wp-content/uploads/2026/03/RESOLUCION-RECTORAL-001380-2026-R-ANEXO.pdf",
+      "sourceClass": "normative",
+      "scope": "UNMSM",
+      "facultyIds": [
+        "FISI"
+      ],
+      "periods": [],
+      "teacherTypes": [
+        "ordinario"
+      ],
+      "reviewedAt": "2026-11-08",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "publishedAt": "2026-02-06",
+      "documentSha256": "fa14f9507b93287f8c05ae1af966abf57413ace5152414de3fd33a00c18157b7",
+      "excerptSha256": "ad38f0477473c851f8f31274255538aade5603c77aabd91a9fd259617650ad57"
+    }
+  ]
+}
