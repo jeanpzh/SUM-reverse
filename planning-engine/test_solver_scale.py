@@ -158,7 +158,13 @@ def test_deadline_during_construction_preserves_valid_incumbent(scale_request, m
         now[0] = 1.0
         return var
     monkeypatch.setattr(solver.cp_model.CpModel, 'new_bool_var', expire_after_first_candidate)
-    monkeypatch.setattr(solver.cp_model.CpSolver, 'solve', lambda *args: pytest.fail('Search must not start after deadline'))
+    # The capacity analysis may solve while the injected clock is still before the deadline.
+    real_solve = solver.cp_model.CpSolver.solve
+    def solve_before_deadline(self, *args):
+        if now[0] >= scale_request.maxTimeSeconds:
+            pytest.fail('Search must not start after deadline')
+        return real_solve(self, *args)
+    monkeypatch.setattr(solver.cp_model.CpSolver, 'solve', solve_before_deadline)
     result = solve_academic_schedule(scale_request)
     assert result.status == 'search-limit' and result.limitReason == 'time'
     assert result.assignments

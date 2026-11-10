@@ -286,3 +286,148 @@ The real FastAPI public-corpus response also passed the shared JavaScript
 validator with extractive generation and a null provider label. A final targeted
 pipeline recheck passed 9 tests after distinguishing provider-construction
 failures from invalid structured model output.
+
+## PA-ENGINE-2 — authorized capacity, decisions and teacher prelation
+
+This is an internal product contract, specified by ticket T2; it does not claim
+observed SUM behavior. No UI is changed; existing interfaces and the A/B/C design
+direction remain outside this change. The engine accepts resolved teacher caps
+and ranks, without resolving regulations, articles or implicit hour ceilings.
+
+`TeacherInput` adds optional `exceptionMaxWeeklyMinutes`, `exceptionKind`
+(`voluntary-declaration` / `vrap-authorization`), `appointmentTier` (0 faculty,
+1 interfaculty, 2 contract) and `categoryRank` (1–9, lower first). An exception
+cap, when supplied, must exceed `maxWeeklyMinutes`. Exception caps only enter
+capacity decision analysis: every timetable assignment still uses the authorized
+`maxWeeklyMinutes` and existing course-specific `sectionLimits`. The request's
+`maxTimeSeconds` accepts up to 120 seconds; its 3-second default is unchanged.
+
+The response always serializes these additional fields (old constructors and
+callers remain valid):
+
+- `coverageProof`, default `inconclusive`: `complete` witnesses every required
+  session; `shortfall-proven` means the actual complete-section schedule reaches
+  a proven capacity upper bound, optionally combined with existing proven
+  no-teacher/no-room/no-window exclusions. Only that case returns `impossible`.
+  Other partial results return `search-limit`. Candidate sampling/truncation
+  cannot establish impossibility. If a sampled schedule reaches an independently
+  proven capacity upper bound, sampling cannot hide additional coverage, so that
+  capacity proof remains valid. Exhaustive timetable infeasibility alone is not
+  classified as one of the contract's proven causes.
+- `capacityCertificate`, default `null`: an exact section-to-eligible-teacher
+  assignment relaxation using actual required section minutes, shared teacher
+  load and section limits, without rooms/calendars/cohort conflicts. `proven`
+  requires CP-SAT optimality; otherwise the returned covered count is only a
+  feasible lower bound. Course rows list deficits in one deterministic global
+  optimum, **not independent per-course maxima**: shared teachers can make
+  several equally optimal distributions possible. `requiredMinutes` is the
+  total required minutes for all sections of that course. Existing
+  `TEACHER_CAPACITY_SHORTFALL` codes and Spanish message shapes are retained;
+  these course diagnostics describe the joint allocation rather than freezing
+  excluded section IDs. The separate precheck codes are unchanged.
+- `decisions`, default `[]`: when authorized capacity is incomplete, an exact
+  relaxation maximizes exception-cap coverage, fixes that value, minimizes the
+  number of exception teachers, fixes that count, then minimizes extra minutes.
+  Each `teacher-load-exception` reports the teacher's actual minimal overload;
+  `courseIds` lists courses assigned to that teacher in the relaxation.
+  `sectionsUnlocked` is the marginal optimal coverage gain when enabling these
+  minimal concessions in teacher-ID order, allowing global reassignment at each
+  step. These gains sum to the overall capacity improvement; complementary
+  concessions can have a zero individual marginal gain. Remaining unassigned
+  sections produce one `additional-teacher` row per course with their total
+  minutes. IDs are `teacher-load-exception:<teacherId>` and
+  `additional-teacher:<courseId>`, in that order and sorted by resource ID.
+  Every decision has `basis: capacity-relaxation`: these are necessary capacity
+  concessions, not promises of feasible timetable placement. If any concession
+  optimization is unproven, no minimal decisions are claimed and diagnostic
+  `CAPACITY_ANALYSIS_LIMIT` is emitted. The authorized certificate may still be
+  proven. A construction timeout can return the default null certificate.
+- `prelation`, default `null`: applies only if all teachers eligible for any
+  requested section carry both priority fields. Otherwise diagnostic
+  `PRELATION_DATA_MISSING` explains the absence; no ranks are inferred. With
+  complete data, successive CP-SAT objectives maximize scheduled sessions,
+  minimize contract sections, minimize interfaculty sections, minimize summed
+  category rank per section, then maximize the existing preference/time bonus.
+  Achieved objective values become constraints; teacher assignments stay free.
+  Coverage receives the search budget first. The three reported levels give
+  their actual achieved values and `proven` flags. A time limit or candidate
+  sampling keeps affected priority proofs false, even with complete coverage.
+  Without priority data, existing preference assignment behavior is retained.
+
+Capacity analysis shares the request deadline and gets at most 20% of the request
+budget, capped at 1 s, after the existing cheap timetable incumbent is built. It
+counts sections per (course, required minutes, teacher) rather than choosing a
+teacher per section: with the per-section model the minimal-concession objectives
+stayed unproven after 60 s on the 166-section synthetic catalog; aggregated, the
+full analysis with exception caps is proven in 0.16–0.25 s (orchestrator
+measurement, 2026-11-10).
+This preserves a useful feasible schedule if candidate preparation later expires.
+It uses one CP-SAT worker; the existing timetable coverage search uses four.
+
+Synthetic acceptance is through `solve_academic_schedule`, without a running
+server or private fixtures. `test_capacity_prelation.py` covers criteria 1–9,
+joint deficits, section limits, minimal teacher-count/minute concessions, mixed
+precheck/capacity proof, honest candidate sampling, deterministic decisions,
+response defaults and request limits. Criterion 10 uses unchanged regression
+suites. Run the timing-sensitive scale suite once, after the focused checks:
+
+```sh
+nice uv run --directory planning-engine pytest test_capacity_prelation.py test_engine.py test_advisor_agent.py -q
+nice uv run --directory planning-engine pytest test_solver_scale.py -q
+```
+
+Consumer follow-up is outside T2: `advisor.py` still derives its legacy synthetic
+increase-load recommendations with its simulator ceiling; it does not consume
+these minimal decisions or proof fields. `advisor_agent.py` retains only legacy
+coverage counters and `solverStatus` from a dry run. NestJS's engine adapter and
+shared wire contracts must forward/validate resolved caps and priorities and
+retain the new response fields before the product can expose this analysis.
+`main.py` already serializes the extended Pydantic response; no change is needed.
+
+T2 execution record (2026-11-10), using independently constructed synthetic
+fixtures only:
+
+| Criterion | Public-interface test in `test_capacity_prelation.py` | Actual |
+| --- | --- | --- |
+| 1. Authorized 600 / four 360-minute sections | `test_authorized_capacity_shortfall_is_proven` | Pass: proven 1/4, one scheduled, impossible |
+| 2. Shared teacher deficit | `test_shared_teacher_capacity_is_joint` | Pass: two shared teachers cover 2/4 jointly |
+| 3. Exception analysis keeps timetable authorized | `test_exception_decision_and_remaining_teacher_gap` | Pass: +120 minutes unlock one section; timetable remains at one |
+| 4. Remaining teacher gap | same test | Pass: two missing sections / 720 minutes |
+| 5. Faculty before better contract preference | `test_faculty_precedes_contract_preference` | Pass |
+| 6. Global reassignment preserves coverage | `test_prelating_does_not_freeze_assignments_before_coverage` | Pass: A→Y, C→X; contract value 1 |
+| 7. Interfaculty and category priority | `test_interfaculty_precedes_contract`, `test_lower_category_rank_precedes_preferences` | Both pass; exhaustive rank fixture has proven levels |
+| 8. Missing priority fields | `test_missing_priority_data_disables_prelation`, `test_missing_rank_also_disables_prelation` | Both pass: null plus diagnostic |
+| 9. Authorized loads | Shared `solve` assertion in every scheduling fixture | Pass: every returned teacher load within authorized cap |
+| 10. Existing engine/advisor/scale regression | Commands below | Focused suites pass; all five scale cases pass after repair |
+
+Actual command results:
+
+- `nice uv run --directory planning-engine pytest test_capacity_prelation.py test_engine.py test_advisor_agent.py -q`: **36 passed, 1 warning in 1.18s**.
+- After strengthening the joint-capacity fixture to two teachers, targeted
+  `test_capacity_prelation.py -q -k shared_teacher_capacity_is_joint`:
+  **1 passed, 16 deselected, 1 warning in 0.56s**.
+- The full `test_solver_scale.py -q` ran once: **1 failed, 4 passed in 7.71s**.
+  Its existing injected-deadline test intercepted the new capacity solver before
+  its old timetable-candidate expiration point. Capacity assignment variables
+  now use Boolean variables, so the same injection correctly expires during
+  capacity preparation, returns an unproven certificate, and preserves the
+  already constructed feasible incumbent. No existing test assertions changed.
+- Necessary post-repair scale checks were split into targeted selections:
+  `-k 'scale_useful_within_advisor_budget or deadline_during_construction'`:
+  **2 passed, 3 deselected in 0.96s**; the complementary selection:
+  **3 passed, 2 deselected in 6.75s**. The full suite was not repeated. This
+  targeted retry is the only deviation from the requested one scale execution.
+- A temporary pytest timing observer outside the repository wrapped capacity
+  analysis, using `perf_counter` without changing its inputs or results. Final
+  166-section analysis measurements: **29.538, 29.278, 23.092, 24.773 and
+  25.484 ms**, all with proven certificates. The deadline-injection case took
+  8.022 ms and correctly returned `proven=false`. Timing instrumentation was
+  selected with `PYTHONPATH` / `PYTEST_PLUGINS`; its first setup attempt failed
+  before test collection because the engine import path was absent, then was
+  corrected. No scale scenario executed during that setup failure.
+- `git diff --check`: pass. The warning in focused suites is the existing
+  upstream `langchain-community` deprecation warning.
+
+No contract deviation or outstanding implementation blocker. Live services,
+cloud calls, private datasets, browser/visual validation and downstream consumer
+integration were not used to establish these results.
