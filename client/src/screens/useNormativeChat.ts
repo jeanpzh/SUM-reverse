@@ -27,15 +27,17 @@ export function useNormativeChat(academicPeriod: PlanningPeriod) {
     setTurns((items) => items.map((turn) => (!turn.answer && !turn.error ? { ...turn, cancelled: true } : turn)))
   }
 
-  const submit = async (customQuestion?: string, customTeacherType?: AcademicNormativeRequest['teacherType']) => {
+  const submit = async (customQuestion?: string, customTeacherType?: AcademicNormativeRequest['teacherType'], retryId?: string) => {
     const text = (customQuestion ?? question).trim()
     const targetType = customTeacherType ?? teacherType
     if (loading || !text) return
-    const id = String(++sequence.current)
+    const id = retryId ?? String(++sequence.current)
     const controller = new AbortController()
     pending.current = controller
-    setTurns((items) => [...items, { id, question: text }])
-    setQuestion('')
+    setTurns((items) => retryId
+      ? items.map((turn) => turn.id === retryId ? { id, question: text } : turn)
+      : [...items, { id, question: text }])
+    if (!retryId) setQuestion('')
     setLoading(true)
     try {
       const answer = await fetchAcademicNormativeAdvice(
@@ -64,6 +66,11 @@ export function useNormativeChat(academicPeriod: PlanningPeriod) {
     }
   }
 
+  const retry = (id: string) => {
+    const turn = turns.find((item) => item.id === id && item.error)
+    if (turn) void submit(turn.question, teacherType, id)
+  }
+
   const changeAsOf = (value: string) => {
     setAsOf(value)
     setTurns([])
@@ -73,7 +80,7 @@ export function useNormativeChat(academicPeriod: PlanningPeriod) {
     setTurns([])
   }
 
-  return { question, setQuestion, turns, loading, asOf, teacherType, cancel, submit, changeAsOf, changeTeacherType }
+  return { question, setQuestion, turns, loading, asOf, teacherType, cancel, submit, retry, changeAsOf, changeTeacherType }
 }
 
 export type NormativeChat = ReturnType<typeof useNormativeChat>

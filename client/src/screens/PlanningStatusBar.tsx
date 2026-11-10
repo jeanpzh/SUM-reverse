@@ -90,6 +90,7 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
   const [selectedRecIds, setSelectedRecIds] = useState<string[]>([])
   const [applying, setApplying] = useState(false)
   const requestRef = useRef<AbortController | null>(null)
+  const requestedSelection = useRef<string[] | undefined>(undefined)
   const editVersion = proposal.editVersion ?? 0
   useEffect(() => () => requestRef.current?.abort(), [proposal.proposalId, editVersion])
 
@@ -99,6 +100,7 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
   const impact = previewCurrent ? currentAdvice?.verifiedImpact : undefined
 
   const requestAdvice = async (ids?: string[]) => {
+    requestedSelection.current = ids === undefined ? undefined : [...ids]
     requestRef.current?.abort()
     const controller = new AbortController()
     requestRef.current = controller
@@ -269,7 +271,7 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
               <AlertDescription>{advisorError}</AlertDescription>
             </Alert>
           )}
-          {advisorError && !advisorLoading && <Button type="button" variant="outline" onClick={() => void requestAdvice()}>Reintentar consejero</Button>}
+          {advisorError && !advisorLoading && <Button type="button" variant="outline" onClick={() => void requestAdvice(requestedSelection.current)}>Reintentar consejero</Button>}
           {(advisorLoading || !currentAdvice) && <Button type="button" variant="outline" onClick={() => {
             requestRef.current?.abort(); setAdvisorLoading(false); setAdvisorOpen(false)
           }}>Volver al horario</Button>}
