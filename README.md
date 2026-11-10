@@ -7,6 +7,18 @@ Si ya tienes tus JSON y quieres ver la réplica con tus datos reales, usa
 [Usar los JSON locales del operador](#usar-los-json-locales-del-operador).
 Ese modo los carga directamente, sin generar fixtures derivados.
 
+## Programación académica con asistente
+
+Configura `AWS_BEARER_TOKEN_BEDROCK` en tu terminal y ejecuta:
+
+```sh
+docker compose -f compose.planning.yaml up --build -d --wait
+```
+
+Abre http://localhost:5180/local/programacion-academica.
+[Guía de instalación, clave y actualización](docs/deployment/planning.md).
+Incluye web, API, motor Python y borradores persistentes con datos sintéticos.
+
 ## Simulador PostgreSQL y Grafana: un comando
 
 Desde la raíz, con Docker Compose 2.24 o posterior:
