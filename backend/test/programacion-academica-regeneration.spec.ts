@@ -219,7 +219,8 @@ const pattern = manualCourse.planningPatterns!.find((candidate) => candidate.wee
 const workWindows = [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 }))
 const serviceWorkspace = (demand: Partial<AcademicWorkspace['request']['demands'][number]> = {}): AcademicWorkspace => ({
   schoolId: 'SISTEMAS', academicPeriod: '2027-I', demandSourceId: 'independent-120-v1', demandBaseRequest: null,
-  request: { revision: catalog.revision, allocationPolicy: 'preferences',
+  // Generation and regeneration must receive the same explicit normative period.
+  request: { revision: catalog.revision, academicPeriod: '2027-I', allocationPolicy: 'preferences',
     demands: [{ courseId: manualCourse.courseId, estimatedDemand: 90, targetCapacity: 45, patternId: pattern.id, ...demand }],
     resources: {
       teachers: ['A', 'B'].map((suffix) => ({ id: `SYN-TEACHER-${suffix}`, name: `Synthetic teacher ${suffix}`, courseIds: [manualCourse.courseId],

@@ -1,3 +1,4 @@
+import { resolvePlanningNormative, workspaceNormativeContext } from './normative-planning.js'
 import { createHash, randomUUID } from 'node:crypto'
 import { HttpException, Injectable } from '@nestjs/common'
 import { validateAcademicAdjustment, validateAcademicAdvisorRequest, validateAcademicCatalog, validateAcademicProposal, validateAcademicRequest, validateAcademicDemandRequest } from '../../../shared/programacion-academica-api.mjs'
@@ -17,6 +18,7 @@ import { buildLocalDeterministicAdvisor, analyzeProposalAdvisor, trySolveWithPyt
 import { THESIS_COURSE_IDS } from '../../../shared/academic-planning-policy.mjs'
 
 type RetainedProposal = {
+  normativeContext?: Pick<AcademicRequest, 'academicPeriod' | 'lectiveHourMinutes' | 'planningPolicy'>
   request: AcademicRequest
   input: GeneratorInput
   resources: AcademicPlanningResources
@@ -279,6 +281,9 @@ export class DemoProposalService {
       manuallyAdjustedSectionIds: [...new Set([...(current.manuallyAdjustedSectionIds ?? []), section.sectionId])],
       preferenceReport,
     }
+    changedView.normative = resolvePlanningNormative(retained.normativeContext ?? retained.request, retained.resources.teachers).report(assignments)
+    // Manual teacher changes do not retain the automatic solver's prelation proof.
+    delete changedView.prelation
     changedView.diagnostics = changedView.diagnostics.filter((diagnostic) => diagnostic.code !== 'PREFERENCES_NOT_MET')
     if (preferenceReport.outsidePreferenceSections > 0) {
       changedView.diagnostics.push({ code: 'PREFERENCES_NOT_MET', message: 'Hay secciones programadas fuera de sus preferencias. Las preferencias son orientativas; no se ha demostrado optimalidad global.', sessionIds: [] })
@@ -314,7 +319,7 @@ export class DemoProposalService {
       validateAcademicRequest(workspace.request)
       if (workspace.request.revision !== this.catalog.revision) throw this.httpError(409, 'CATALOG_MISMATCH', 'La revisión de catálogo ya no está vigente')
       const resources = this.resolveResources(workspace.request)
-      const input = this.toGeneratorInput(workspace.request, resources)
+      const input = this.toGeneratorInput({ ...workspace.request, ...workspaceNormativeContext(workspace) }, resources)
       const prepared = prepareGeneratorInput(input)
       const normalizedInput = prepared.input
       let demandBase: AcademicDemandEstimate | null = null
@@ -352,7 +357,7 @@ export class DemoProposalService {
     const trusted = this.validateDraftWorkspace(workspace)
     const authority = createCoverageAuthority(trusted.input)
     const result = generateAcademicSchedule(trusted.input, {}, seed)
-    const view = this.buildProposalView(workspace.request, trusted.input, trusted.resources, result, authority)
+    const view = this.buildProposalView({ ...workspace.request, ...workspaceNormativeContext(workspace) }, trusted.input, trusted.resources, result, authority)
     const diagnostics = result.diagnostics.map((diagnostic) => ({ ...diagnostic, sessionIds: [...diagnostic.sessionIds] }))
     const retention = result.status === 'complete' && view.coverageComplete
       ? { request: structuredClone(workspace.request), input: structuredClone(trusted.input), resources: structuredClone(trusted.resources),
@@ -371,9 +376,10 @@ export class DemoProposalService {
     view.proposalId = proposalId
     view.createdAt = now
     view.expiresAt = expiresAt
+    view.normative = resolvePlanningNormative(workspaceNormativeContext(workspace), snapshot.resources.teachers).report(view.assignments)
     const automaticView = structuredClone(snapshot.automaticView)
     const authority = createCoverageAuthority(prepared.input)
-    const retained: RetainedProposal = { request: structuredClone(snapshot.request), input: prepared.input, resources: structuredClone(snapshot.resources), requirements: prepared.requirements,
+    const retained: RetainedProposal = { normativeContext: workspaceNormativeContext(workspace), request: structuredClone(snapshot.request), input: prepared.input, resources: structuredClone(snapshot.resources), requirements: prepared.requirements,
       authority, automaticView, view: structuredClone(view) }
     this.proposals.set(proposalId, retained)
     return structuredClone(view)
@@ -407,6 +413,16 @@ export class DemoProposalService {
 
   getCatalogFingerprint(): string {
     return createHash('sha256').update(canonicalize(this.catalog)).digest('hex')
+  }
+
+  acceptsCatalogFingerprint(fingerprint: string): boolean {
+    if (fingerprint === this.getCatalogFingerprint()) return true
+    // Compatibility with the previous synthetic catalog defaults. Saved workspaces
+    // carry explicit resources and still pass all request/retention validations.
+    const legacyCatalog = { ...this.catalog, teachers: this.catalog.teachers.map(({ id, name, courseIds, availability }) => ({
+      id, name, courseIds, availability, maxWeeklyMinutes: 600, // Historical local demo parameter.
+    })) }
+    return fingerprint === createHash('sha256').update(canonicalize(legacyCatalog)).digest('hex')
   }
 
   private buildProposalView(request: AcademicRequest, input: GeneratorInput, resources: AcademicPlanningResources, result: GeneratorResult,
@@ -467,6 +483,12 @@ export class DemoProposalService {
         message: `La propuesta incluye ${exceptions.length} sesión(es) fuera del horario preferido; requiere aceptación explícita. No se afirma optimalidad ni necesidad de la excepción.`,
         sessionIds: exceptions.map((item) => item.sessionId) })
     }
+    const normative = resolvePlanningNormative(request, resources.teachers)
+    view.normative = normative.report(view.assignments)
+    for (const key of ['coverageProof', 'capacityCertificate', 'prelation'] as const) {
+      if (result[key] !== undefined) Object.assign(view, { [key]: structuredClone(result[key]) })
+    }
+    if (result.decisions !== undefined) view.decisions = normative.enrichDecisions(result.decisions)
     validateAcademicProposal(view)
     return view
   }
@@ -579,13 +601,7 @@ export class DemoProposalService {
           ...(demand.sectionCapacities !== undefined ? { sectionCapacities: demand.sectionCapacities.map((override) => ({ ...override })) } : {}),
         }
       }),
-      teachers: resources.teachers.filter((teacher) => teacher.courseIds.length > 0)
-        .map(({ id, courseIds, maxWeeklyMinutes, availability, preferences, sectionLimits, facultyId, category, qualificationSource }) => ({ id, courseIds: [...courseIds], maxWeeklyMinutes, availability: this.toIntervals(availability),
-          ...(preferences !== undefined ? { preferences: this.toIntervals(preferences) } : {}),
-          ...(sectionLimits !== undefined ? { sectionLimits: sectionLimits.map((limit) => ({ ...limit })) } : {}),
-          ...(facultyId !== undefined ? { facultyId } : {}), ...(category !== undefined ? { category } : {}),
-          ...(qualificationSource !== undefined ? { qualificationSource } : {}),
-        })),
+      teachers: resolvePlanningNormative(request, resources.teachers).teachers.filter((teacher) => teacher.courseIds.length > 0),
       rooms: resources.rooms.map(({ id, capacity, availability, kind }) => ({ id, capacity, availability: this.toIntervals(availability), ...(kind ? { kind } : {}) })),
       compatibleGroups: [],
       windows: [...this.toIntervals(this.catalog.windows), ...(request.planningPolicy?.allowSaturday

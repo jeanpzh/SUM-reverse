@@ -1,9 +1,14 @@
+import type { NormativeTeacher, LoadAuthorizationKind } from '../../../shared/academic-normative-profile.mjs'
 export type TimeInterval = {
   day: number
   startMinute: number
   endMinute: number
 }
-export type AcademicTeacher = {
+export type AcademicTeacher = NormativeTeacher & {
+  exceptionMaxWeeklyMinutes?: number
+  exceptionKind?: LoadAuthorizationKind
+  appointmentTier?: 0 | 1 | 2
+  categoryRank?: number
   id: string
   courseIds: string[]
   availability: TimeInterval[]

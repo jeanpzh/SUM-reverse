@@ -1,3 +1,4 @@
+import { resolvePlanningNormative, workspaceNormativeContext } from './normative-planning.js'
 import { randomUUID } from 'node:crypto'
 import { HttpException, Injectable } from '@nestjs/common'
 import { validateAcademicDraftList, validateAcademicDraftSaveRequest, validateAcademicPublication, validateAcademicPublicationList, validateAcademicPublicationRequest, validateAcademicReleasePreview, validateAcademicScheduleSnapshot, validateAcademicReviewDecision, validateAcademicReviewSubmission, validateAcademicSavedDraft } from '../../../shared/programacion-academica-api.mjs'
@@ -184,6 +185,11 @@ export class SavedDraftService {
         throw this.httpError(409, 'DRAFT_CORRUPT', error instanceof Error ? error.message : 'La propuesta aprobada no superó la validación')
       }
 
+      const blockers = resolvePlanningNormative(workspaceNormativeContext(draft.configuration), draft.configuration.request.resources.teachers)
+        .report(snapshot.assignments).blockers
+      if (blockers.length) throw new HttpException({ error: { code: 'LOAD_AUTHORIZATION_REQUIRED',
+        message: 'Falta registrar la autorización formal de carga docente o corregir las asignaciones antes de publicar.', blockers } }, 409)
+
       const now = new Date().toISOString()
       draft.version += 1
       draft.updatedAt = now
@@ -334,7 +340,7 @@ export class SavedDraftService {
   private isValidPayload(payload: PersistedDraft, id: string): boolean {
     try {
       if (!payload || typeof payload !== 'object' || Object.keys(payload).sort().join(',') !== 'catalogFingerprint,document,retained,schemaVersion'
-        || payload.schemaVersion !== 1 || payload.catalogFingerprint !== this.proposals.getCatalogFingerprint()) return false
+        || payload.schemaVersion !== 1 || !this.proposals.acceptsCatalogFingerprint(payload.catalogFingerprint)) return false
       const draft = payload.document as AcademicSavedDraft
       validateAcademicSavedDraft(draft)
       if (draft.id !== id) return false

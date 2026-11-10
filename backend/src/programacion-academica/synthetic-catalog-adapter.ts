@@ -1,3 +1,4 @@
+import { syntheticTeachingMetadata, syntheticTeacherMaxMinutes } from '../../../shared/academic-planning-policy.mjs'
 import { scenarioProgrammingRows } from '../matricula-regular/scenario-reference.seed.js'
 import type { ProgramacionRow } from '../programacion/programacion.types.js'
 import type { AcademicCatalog, AcademicHistory, AcademicWeeklySession } from '../../../shared/programacion-academica-api.d.mts'
@@ -227,11 +228,13 @@ export function adaptSyntheticCatalog(rows: readonly ProgramacionRow[] = scenari
     name,
     courseIds: [...(referenceCourses.get(id) ?? [])],
   }))
-  const teachers = referenceTeachers.slice(0, 8).map((teacher) => ({
-    ...teacher,
-    maxWeeklyMinutes: 600,
-    availability: plannerWindows,
-  }))
+  const teachers = referenceTeachers.slice(0, 8).map((teacher, index) => {
+    const metadata = syntheticTeachingMetadata(index, teacher.id)
+    // Explicit synthetic demo context; FISI's lective-hour duration remains unverified.
+    return { ...teacher, ...metadata,
+      maxWeeklyMinutes: syntheticTeacherMaxMinutes(metadata, { period: '2027-I', lectiveHourMinutes: 60 }),
+      availability: plannerWindows }
+  })
 
   return structuredClone({
     revision: 'PA-DEMO-1',
