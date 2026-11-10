@@ -27,3 +27,10 @@ datos-reales/
 
 # Generated simulator manifests, cookies and load-test runtime output
 /infra/simulator/runtime/
+
+# Python runtime and local design probes
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+/client/scripts/probe-*.png

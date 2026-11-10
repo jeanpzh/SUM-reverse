@@ -1,0 +1,48 @@
+name: sum-planning
+
+services:
+  backend:
+    extends:
+      file: compose.local.yaml
+      service: backend
+    environment:
+      SUM_PLANNING_ENGINE_URL: http://127.0.0.1:3220
+    restart: unless-stopped
+  engine:
+    build:
+      context: .
+      dockerfile: planning-engine/Dockerfile
+    # Preserve the engine client's loopback-only contract without exposing Python.
+    network_mode: service:backend
+    depends_on:
+      backend:
+        condition: service_healthy
+        restart: true
+    environment:
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_BEARER_TOKEN_BEDROCK_FILE: /run/secrets/bedrock_api_key
+      AWS_EC2_METADATA_DISABLED: 'true'
+      SUM_LLM_PROVIDER: ${SUM_LLM_PROVIDER:-bedrock_converse}
+      SUM_LLM_MODEL: ${SUM_LLM_MODEL:-us.amazon.nova-lite-v1:0}
+      SUM_RAG_SOURCE: local
+    secrets:
+      - bedrock_api_key
+    init: true
+    restart: unless-stopped
+  frontend:
+    extends:
+      file: compose.local.yaml
+      service: frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+      engine:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  academic-drafts:
+
+secrets:
+  bedrock_api_key:
+    environment: AWS_BEARER_TOKEN_BEDROCK

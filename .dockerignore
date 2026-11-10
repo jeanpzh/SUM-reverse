@@ -30,6 +30,12 @@
 !infra/
 !infra/simulator/
 !infra/simulator/**
+!planning-engine/
+!planning-engine/*.py
+!planning-engine/pyproject.toml
+!planning-engine/uv.lock
+!planning-engine/normative-corpus/
+!planning-engine/normative-corpus/*.json
 # These exclusions override every allow rule above.
 **/datos-reales/**
 datos-reales/
@@ -44,3 +50,7 @@ datos-reales/
 **/runtime/**
 **/dist/**
 **/coverage/**
+
+**/__pycache__/**
+**/.venv/**
+**/.pytest_cache/**

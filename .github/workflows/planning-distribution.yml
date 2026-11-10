@@ -1,0 +1,40 @@
+name: Planning distribution
+
+on:
+  pull_request:
+    paths: ['planning-engine/**', 'compose.planning.yaml', 'backend/Dockerfile', 'client/Dockerfile', '.dockerignore', 'scripts/*planning*', '.github/workflows/planning-distribution.yml']
+  push:
+    branches: [master]
+    paths: ['planning-engine/**', 'compose.planning.yaml', 'backend/Dockerfile', 'client/Dockerfile', '.dockerignore', 'scripts/*planning*', '.github/workflows/planning-distribution.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  planning-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      AWS_BEARER_TOKEN_BEDROCK: synthetic-ci-not-a-real-key
+      AWS_EC2_METADATA_DISABLED: 'true'
+      SUM_LLM_PROVIDER: disabled
+      SUM_PORT: '5680'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.11.15'
+      - run: uv sync --directory planning-engine --frozen
+      - run: uv run --directory planning-engine pytest -q
+      - run: node --test scripts/planning-compose-config.test.mjs scripts/academic-compose-config.test.mjs
+      - run: docker compose -p planning-ci -f compose.planning.yaml up --build -d --wait --wait-timeout 120
+      - run: node scripts/verify-planning-docker.mjs
+        env:
+          SUM_PLANNING_DOCKER_SYNTHETIC: '1'
+      - if: failure()
+        run: docker compose -p planning-ci -f compose.planning.yaml logs --tail 80
+      - if: always()
+        run: docker compose -p planning-ci -f compose.planning.yaml down -v
