@@ -1,0 +1,97 @@
+{
+  "source": "Fresh owned isolated synthetic React/Nest/Python stack, no cloud calls; explicit network delay/failure injections only",
+  "results": [
+    {
+      "name": "empty-workspace-six-destinations",
+      "passed": true,
+      "durationMs": 24346,
+      "details": [
+        {
+          "configurationOnlySaveEnabled": true
+        }
+      ],
+      "http": []
+    },
+    {
+      "name": "advisor-saving-state-explains-global-block",
+      "passed": true,
+      "durationMs": 22277,
+      "details": [
+        {
+          "disabledDuringSave": true,
+          "globalSaveLabel": "Guardando…",
+          "nearbyReason": "_r_2t_"
+        }
+      ],
+      "http": [
+        {
+          "path": "/api/local/programacion-academica/v1/propuestas",
+          "status": 200
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/borradores/guardar",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "name": "responsive-open-rail-does-not-silently-block-workspace",
+      "passed": true,
+      "durationMs": 11671,
+      "details": [
+        {
+          "resizeMatrix": [
+            {
+              "width": 1280,
+              "modalAfterResize": false,
+              "bodyPointerEvents": "",
+              "advisorAccessibleCount": 1
+            },
+            {
+              "width": 1100,
+              "modalAfterResize": false,
+              "bodyPointerEvents": "",
+              "advisorAccessibleCount": 1
+            },
+            {
+              "width": 1024,
+              "modalAfterResize": false,
+              "bodyPointerEvents": "",
+              "advisorAccessibleCount": 1
+            },
+            {
+              "width": 900,
+              "modalAfterResize": false,
+              "bodyPointerEvents": "",
+              "advisorAccessibleCount": 1
+            },
+            {
+              "width": 720,
+              "modalAfterResize": false,
+              "bodyPointerEvents": "",
+              "advisorAccessibleCount": 1
+            },
+            {
+              "width": 390,
+              "modalAfterResize": false,
+              "bodyPointerEvents": "",
+              "advisorAccessibleCount": 1
+            },
+            {
+              "width": 1440,
+              "modalAfterResize": false,
+              "bodyPointerEvents": "",
+              "advisorAccessibleCount": 1
+            }
+          ]
+        }
+      ],
+      "http": [
+        {
+          "path": "/api/local/programacion-academica/v1/propuestas",
+          "status": 200
+        }
+      ]
+    }
+  ]
+}

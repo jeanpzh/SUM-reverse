@@ -1,3 +1,5 @@
+import { AdvisorOutcome } from '../components/ai-elements/AdvisorOutcome'
+import { usePlanningAssistantDisplay } from './usePlanningAssistantDisplay'
 import { PlanningFetchLoading } from '../components/PlanningFetchLoading'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
@@ -68,7 +70,16 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
   const [tourStep, setTourStep] = useState(0)
   const [guideSteps, setGuideSteps] = useState<ReadonlyArray<readonly [string, string, string]>>([])
   const wideLayout = useMediaQuery('(min-width: 1024px)')
-  const [chatOpen, setChatOpen] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 1280px)').matches)
+  const railLayout = useMediaQuery('(min-width: 1280px)')
+  const { open: chatOpen, expanded: chatExpanded, setOpen: setChatOpen, setExpanded: setChatExpanded } = usePlanningAssistantDisplay(railLayout)
+  const previousAssistantDisplay = useRef({ railLayout, open: chatOpen })
+  useLayoutEffect(() => {
+    const previous = previousAssistantDisplay.current
+    if (previous.railLayout !== railLayout && previous.open) {
+      document.getElementById('planning-toggle-chat')?.focus({ preventScroll: true })
+    }
+    previousAssistantDisplay.current = { railLayout, open: chatOpen }
+  }, [railLayout, chatOpen])
   const scrollerRef = useRef<HTMLDivElement | null>(null)
   const [draftListOpen, setDraftListOpen] = useState(false)
   const viewScrollPositions = useRef<{ tabla: number; semana: number }>({ tabla: 0, semana: 0 })
@@ -92,7 +103,6 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
     selectedCourses, demandSourceId, demandEstimate, resources, allocationPolicy } = state
   const planningPeriod = state.period
   const chat = useNormativeChat(planningPeriod)
-  const [chatExpanded, setChatExpanded] = useState(false)
   const planningPolicy = state.policy
   const draftTitle = state.draft.title
   const draftId = state.draft.id
@@ -221,7 +231,6 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
 
   const inspectorOpen = currentStage === 'horario' && Boolean(proposal) && selectedSectionId !== null
   const inspectorDocked = wideLayout && inspectorOpen
-  const railLayout = useMediaQuery('(min-width: 1280px)')
   const chatInRail = railLayout && chatOpen && !chatExpanded
   const chatInSheet = chatOpen && !chatInRail
   const railOpen = chatInRail
@@ -534,7 +543,12 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
               }
             }}
             isLocked={lockedDraft || draftBusy}
+            advisorDisabledReason={draftBusy ? 'Esperando a que termine la operación con la propuesta.' : undefined}
           />
+
+          {state.advisorOutcome?.proposalId === proposal.proposalId
+            && state.advisorOutcome.editVersion === (proposal.editVersion ?? 0)
+            && <AdvisorOutcome outcome={state.advisorOutcome} />}
 
           <PlanningScheduleToolbar proposal={proposal} searchQuery={searchQuery} onSearchChange={setSearchQuery}
             teacherFilter={teacherFilter} onTeacherFilterChange={setTeacherFilter} viewMode={viewMode} onToggleView={handleToggleView} />

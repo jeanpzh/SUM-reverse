@@ -112,8 +112,21 @@ test('current advisor patches update the local policy and regenerate once with s
   assert.equal(calls, 1)
   assert.equal(session.getState().policy?.allowAfternoon, true)
   assert.equal(session.getState().proposal, nextProposal)
+  assert.equal(session.getState().advisorOutcome?.proposalId, nextProposal.proposalId)
+  assert.equal(session.getState().advisorOutcome?.recommendationCount, 1)
   assert.equal(session.getState().dirty, true)
+  const outcome = session.getState().advisorOutcome!
+  session.commands.edit({ type: 'updateResources', value: { teachers: [], rooms: [] } })
+  assert.equal(session.getState().advisorOutcome, null)
+  assert.equal(reducePlanningSession(session.getState(), { type: 'advisor/applied', outcome }).advisorOutcome, null)
   session.dispose()
+  const failed = createPlanningSession({ ...defaultPlanningSessionClient, createProposal: async () => { throw new Error('Synthetic regeneration failure') } }, initial)
+  assert.equal(await failed.commands.applyAdvisorPatchesAndRegenerate([advice.recommendations[0].patch],
+    { proposalId: advice.proposalId, editVersion: 2 }), false)
+  assert.equal(failed.getState().advisorOutcome, null)
+  assert.equal(failed.getState().proposal, null)
+  assert.match(failed.getState().errors.proposal ?? '', /Synthetic regeneration failure/)
+  failed.dispose()
 })
 
 test('non-policy advisor patches preserve an absent policy; explicit window patch creates one', () => {

@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright'
-if (process.env.SUM_CHAT_SYNTHETIC !== '1') throw new Error('Root-owned synthetic stack required')
+if (process.env.SUM_REDESIGN_SYNTHETIC !== '1') throw new Error('Own synthetic stack required')
+const base = new URL(process.env.SUM_REDESIGN_BASE || 'http://127.0.0.1:5746')
+if (base.protocol !== 'http:' || base.hostname !== '127.0.0.1' || base.pathname !== '/' || base.username || base.password || base.search || base.hash) throw new Error('Dedicated loopback origin required')
 const browser = await chromium.launch()
 const page = await browser.newPage({reducedMotion:'reduce'})
 const errors = []
@@ -9,8 +11,9 @@ try {
   let release
   const held = new Promise((resolve) => {release=resolve})
   await page.route('**/catalogo', async (route) => {await held; await route.continue()})
-  await page.goto('http://127.0.0.1:5436/local/programacion-academica?etapa=preparacion&vista=cursos')
-  const loader = page.locator('.planning-fetch-loading').first()
+  await page.goto(`${base.origin}/local/programacion-academica?etapa=preparacion&vista=cursos`)
+  // The route-level loader can precede the screen; select the catalog loader by its accessible label.
+  const loader = page.locator('.planning-fetch-loading').filter({ hasText: 'Consultando catálogo local…' }).first()
   await loader.waitFor()
   await page.waitForFunction(() => document.querySelector('.shimmer-measure-container')?.getBoundingClientRect().height > 100)
   assert.equal(await loader.getAttribute('aria-busy'),'true')

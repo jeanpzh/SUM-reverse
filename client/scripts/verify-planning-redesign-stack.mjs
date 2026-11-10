@@ -14,7 +14,7 @@ const ports = {
 }
 if (new Set(Object.values(ports)).size !== 3 || Object.values(ports).some(port => !Number.isInteger(port) || port < 1024 || port > 65535)) throw new Error('Three distinct valid unprivileged ports required')
 const testScript = process.env.SUM_REDESIGN_TEST_SCRIPT || process.argv[2] || 'verify-planning-redesign.mjs'
-if (!['verify-planning-redesign.mjs', 'verify-planning-normative.mjs', 'verify-planning-assistant.mjs', 'verify-planning-answer-quality.mjs'].includes(testScript)) throw new Error('Unknown synthetic acceptance script')
+if (!['verify-planning-redesign.mjs', 'verify-planning-normative.mjs', 'verify-planning-assistant.mjs', 'verify-planning-answer-quality.mjs', 'verify-planning-chat.mjs', 'verify-planning-shimmer.mjs', 'verify-planning-comprehensive.mjs', 'verify-planning-advisor-utility.mjs'].includes(testScript)) throw new Error('Unknown synthetic acceptance script')
 const evidence = resolve(process.env.SUM_REDESIGN_EVIDENCE || resolve(root, 'evidence/local/planning-redesign-2026-11-09'))
 for (const port of Object.values(ports)) await new Promise((accept, reject) => {
   const server = createServer()
