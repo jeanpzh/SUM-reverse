@@ -24,6 +24,14 @@ panel with a blocker fixture (blockers listed, explanation shown), and the teach
 decision group with a visible focus ring; no document overflow at 390 px and at 720 px (200 % zoom of 1440 px), light and
 dark; no external requests and no page errors.
 
+## Sanitization
+
+The screenshots show teacher names from the synthetic reference catalog (`REF-TEACHER-nnn`), unmasked. The already committed
+`evidence/local/planning-redesign-2026-11-10/capturas-finales/04-recursos.png` shows the same names from the same catalog,
+so this follows that precedent; whether the catalog derives them from a real offering is not known to this run and the
+operator should confirm before publishing the evidence outside the repository. `results.json` stores no teacher names.
+No credentials, cookies or private snapshot data are involved (no `*_SNAPSHOT_DIR` was set).
+
 ## Unverified / not covered here
 
 - Publication blockers against the real server: the engine never assigns beyond the authorized load, so no real blocker

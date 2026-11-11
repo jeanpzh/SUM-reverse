@@ -184,6 +184,8 @@ export type NormativeSummaryView = { profileRevision: string | null; lectiveHour
 function classifyGap(message: string): GapClass {
   if (/inferred|inferencia|interpretación/i.test(message)) return 'inference'
   if (/no está verificada|sin verificar|unverified/i.test(message)) return 'unverified'
+  // Missing data first: several of these texts also cite an article while saying that nothing was recorded.
+  if (/no se registr|no existe fuente/i.test(message)) return 'data'
   if (/reglamento|art\.|disposición|no regula|no establece|no existe un perfil/i.test(message)) return 'regulation'
   return 'data'
 }

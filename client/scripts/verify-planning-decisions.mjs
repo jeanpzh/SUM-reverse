@@ -274,7 +274,8 @@ try {
     assert.equal(await exceptions.count(), 1, 'load-exception group present after the afternoon regeneration')
     if (await exceptions.locator('.planning-decisions__list').count() === 0) await exceptions.locator('.planning-decisions__group-trigger').click()
     const item = exceptions.locator('.planning-decisions__item', { hasText: 'Declaración jurada del docente' }).first()
-    measured.exceptionItem = (await item.innerText()).replace(/\s+/g, ' ').trim().slice(0, 400)
+    // Item text carries a teacher name from the synthetic catalog; keep only the kind and the effect.
+    measured.exceptionItem = `${(await item.locator('.planning-decisions__item-heading .inline-flex').first().innerText()).trim()} · ${(await item.locator('.planning-decisions__effect').innerText()).trim()}`
     await item.locator('details > summary').first().click()
     assert.match(await item.innerText(), /Declaración jurada/)
     assert.match(await item.innerText(), /OF-02/)

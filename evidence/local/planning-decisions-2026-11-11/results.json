@@ -37,8 +37,8 @@
   "measured": {
     "selectAllLabel": "Seleccionar los 56 cursos del catálogo",
     "before": {
-      "text": "Búsqueda inconclusa\n120 de 166 secciones completas\n46 por completar\nCarga autorizada cubre 136 de 166\n0 cruces en lo asignado",
-      "complete": 120,
+      "text": "Búsqueda inconclusa\n119 de 166 secciones completas\n47 por completar\nCarga autorizada cubre 136 de 166\n0 cruces en lo asignado",
+      "complete": 119,
       "total": 166
     },
     "coverageLabel": "Búsqueda inconclusa",
@@ -59,7 +59,7 @@
     },
     "afterCoverage": "Faltante comprobado",
     "afterSummary": "20 decisiones cubren 30 secciones",
-    "exceptionItem": "CÉSAR LUZA MONTERO Declaración jurada del docente +480 min semanales · libera 2 secciones. Registrar la autorización no cambia por sí sola la carga semanal del docente: tras registrarla, ajusta su carga máxima hasta el tope autorizado. Condición necesaria; no garantiza que las secciones queden colocadas: el horario sigue sujeto a disponibilidad y cruces. Requisitos formales y fuente · OF-02 Regist",
+    "exceptionItem": "Declaración jurada del docente · +480 min semanales · libera 2 secciones.",
     "authorizedBefore": "Máximo autorizado 720 min (12 h lectivas)",
     "authorizedAfter": "Máximo autorizado 1200 min (20 h lectivas)",
     "afterAuthorization": {

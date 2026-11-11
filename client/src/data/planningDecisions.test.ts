@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { resolveNormativeProfile, teacherLoadLimits } from '../../../shared/academic-normative-profile.mjs'
 import { validateTeacherLoadFields } from '../../../shared/programacion-academica-api.mjs'
 import type { AcademicPlanningResources, AcademicProposal, AcademicTeacherResource } from '../../../shared/programacion-academica-api.mjs'
 import {
@@ -265,4 +266,17 @@ test('publication conflicts keep the blocker list at the data seam', async () =>
   })
   const malformed = (async () => new Response(JSON.stringify({ error: { code: 'LOAD_AUTHORIZATION_REQUIRED', message: 'wire', blockers: [{ teacherId: 1 }] } }), { status: 409 })) as typeof fetch
   await assert.rejects(publishAcademicDraft('00000000-0000-4000-8000-000000000001', { expectedVersion: 1, expectedCurrentId: null }, malformed), /formato inválido/)
+})
+
+test('gap classes follow the real shared messages, with missing data ahead of cited articles', () => {
+  const profile = resolveNormativeProfile({ facultyId: 'FISI', period: '2027-I' })
+  const missing = teacherLoadLimits(profile, {}, { lectiveHourMinutes: 60 }).gaps
+  const gaps = [...profile.gaps, ...missing].map((gap) => ({ code: gap.code, message: gap.message }))
+  const summary = describeNormativeSummary(withAnalysis({ normative: { profileRevision: profile.revision, lectiveHourMinutes: 60, blockers: [], gaps } }), '2027-I')!
+  const byCode = Object.fromEntries(summary.gaps.map((gap) => [gap.code, gap.classification]))
+  assert.deepEqual(byCode, {
+    APPOINTMENT_RANK_INFERRED: 'inference', CONTRACT_LOAD_NOT_REGULATED: 'regulation', FISI_LECTIVE_HOUR_UNVERIFIED: 'unverified',
+    PERFORMANCE_EVALUATION_NO_SOURCE: 'data', SOURCE_OF07_URL_NOT_RECORDED: 'data', TP_MINIMUM_BASIS_UNSPECIFIED: 'inference',
+    TP_MAXIMUM_NOT_REGULATED: 'regulation', APPOINTMENT_MISSING: 'data', REGIME_MISSING: 'data',
+  })
 })
