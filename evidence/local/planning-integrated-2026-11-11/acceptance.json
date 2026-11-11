@@ -1,0 +1,3053 @@
+{
+  "startedAt": "2026-11-11T23:28:41.701Z",
+  "provenance": "Pure demo catalog plus independently constructed SYN teachers/rooms; no exports or snapshots. Fresh owned store and services only.",
+  "runtime": "/tmp/planning-integrated-independent-xCXHOW",
+  "results": [
+    {
+      "name": "jobs-cancel",
+      "startedAt": "2026-11-11T23:28:44.407Z",
+      "errors": [],
+      "consoleErrors": [],
+      "requestFailures": [
+        {
+          "path": "/api/local/programacion-academica/v1/catalogo",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/publicaciones",
+          "error": "net::ERR_ABORTED"
+        }
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/catalogo"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/catalogo"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/borradores"
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/borradores/3f5b4784-ad3b-4c02-b990-fcf894873cbd/continuar",
+          "body": {
+            "expectedVersion": 1
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/busquedas",
+          "body": {
+            "request": {
+              "revision": "PA-DEMO-1",
+              "academicPeriod": "2027-I",
+              "lectiveHourMinutes": 60,
+              "demands": [
+                {
+                  "courseId": "INE002",
+                  "estimatedDemand": 40,
+                  "targetCapacity": 1,
+                  "patternId": "pattern-1",
+                  "deliveryMode": "continuous"
+                }
+              ],
+              "allocationPolicy": "preferences",
+              "resources": {
+                "teachers": [
+                  {
+                    "id": "SYN-L0",
+                    "name": "Synthetic large 0",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 10,
+                    "appointment": "contract"
+                  },
+                  {
+                    "id": "SYN-L1",
+                    "name": "Synthetic large 1",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 10,
+                    "appointment": "contract"
+                  },
+                  {
+                    "id": "SYN-L2",
+                    "name": "Synthetic large 2",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 10,
+                    "appointment": "contract"
+                  },
+                  {
+                    "id": "SYN-L3",
+                    "name": "Synthetic large 3",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 10,
+                    "appointment": "contract"
+                  },
+                  {
+                    "id": "SYN-L4",
+                    "name": "Synthetic large 4",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 10,
+                    "appointment": "contract"
+                  },
+                  {
+                    "id": "SYN-L5",
+                    "name": "Synthetic large 5",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 10,
+                    "appointment": "contract"
+                  },
+                  {
+                    "id": "SYN-L6",
+                    "name": "Synthetic large 6",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 10,
+                    "appointment": "contract"
+                  },
+                  {
+                    "id": "SYN-L7",
+                    "name": "Synthetic large 7",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 10,
+                    "appointment": "contract"
+                  },
+                  {
+                    "id": "SYN-L8",
+                    "name": "Synthetic large 8",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 10,
+                    "appointment": "contract"
+                  },
+                  {
+                    "id": "SYN-L9",
+                    "name": "Synthetic large 9",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 10,
+                    "appointment": "contract"
+                  },
+                  {
+                    "id": "SYN-L10",
+                    "name": "Synthetic large 10",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 10,
+                    "appointment": "contract"
+                  },
+                  {
+                    "id": "SYN-L11",
+                    "name": "Synthetic large 11",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 10,
+                    "appointment": "contract"
+                  },
+                  {
+                    "id": "SYN-L12",
+                    "name": "Synthetic large 12",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 10,
+                    "appointment": "contract"
+                  },
+                  {
+                    "id": "SYN-L13",
+                    "name": "Synthetic large 13",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 10,
+                    "appointment": "contract"
+                  },
+                  {
+                    "id": "SYN-L14",
+                    "name": "Synthetic large 14",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 10,
+                    "appointment": "contract"
+                  },
+                  {
+                    "id": "SYN-L15",
+                    "name": "Synthetic large 15",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 10,
+                    "appointment": "contract"
+                  },
+                  {
+                    "id": "SYN-L16",
+                    "name": "Synthetic large 16",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 10,
+                    "appointment": "contract"
+                  },
+                  {
+                    "id": "SYN-L17",
+                    "name": "Synthetic large 17",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 10,
+                    "appointment": "contract"
+                  },
+                  {
+                    "id": "SYN-L18",
+                    "name": "Synthetic large 18",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 10,
+                    "appointment": "contract"
+                  },
+                  {
+                    "id": "SYN-L19",
+                    "name": "Synthetic large 19",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 10,
+                    "appointment": "contract"
+                  }
+                ],
+                "rooms": [
+                  {
+                    "id": "SYN-R0",
+                    "name": "Synthetic room",
+                    "capacity": 45,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SYN-R1",
+                    "name": "Synthetic room",
+                    "capacity": 45,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SYN-R2",
+                    "name": "Synthetic room",
+                    "capacity": 45,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SYN-R3",
+                    "name": "Synthetic room",
+                    "capacity": 45,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SYN-R4",
+                    "name": "Synthetic room",
+                    "capacity": 45,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SYN-R5",
+                    "name": "Synthetic room",
+                    "capacity": 45,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SYN-R6",
+                    "name": "Synthetic room",
+                    "capacity": 45,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SYN-R7",
+                    "name": "Synthetic room",
+                    "capacity": 45,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SYN-R8",
+                    "name": "Synthetic room",
+                    "capacity": 45,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SYN-R9",
+                    "name": "Synthetic room",
+                    "capacity": 45,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SYN-R10",
+                    "name": "Synthetic room",
+                    "capacity": 45,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SYN-R11",
+                    "name": "Synthetic room",
+                    "capacity": 45,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SYN-R12",
+                    "name": "Synthetic room",
+                    "capacity": 45,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SYN-R13",
+                    "name": "Synthetic room",
+                    "capacity": 45,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SYN-R14",
+                    "name": "Synthetic room",
+                    "capacity": 45,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SYN-R15",
+                    "name": "Synthetic room",
+                    "capacity": 45,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SYN-R16",
+                    "name": "Synthetic room",
+                    "capacity": 45,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SYN-R17",
+                    "name": "Synthetic room",
+                    "capacity": 45,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SYN-R18",
+                    "name": "Synthetic room",
+                    "capacity": 45,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ]
+                  },
+                  {
+                    "id": "SYN-R19",
+                    "name": "Synthetic room",
+                    "capacity": 45,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            "budgetSeconds": 30,
+            "requestId": "517d70e0-c03a-440e-8f13-587b0c0b6808"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/busquedas/517d70e0-c03a-440e-8f13-587b0c0b6808"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/busquedas/517d70e0-c03a-440e-8f13-587b0c0b6808"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/busquedas/517d70e0-c03a-440e-8f13-587b0c0b6808"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/busquedas/517d70e0-c03a-440e-8f13-587b0c0b6808"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/busquedas/517d70e0-c03a-440e-8f13-587b0c0b6808"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/busquedas/517d70e0-c03a-440e-8f13-587b0c0b6808"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/busquedas/517d70e0-c03a-440e-8f13-587b0c0b6808"
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/busquedas/517d70e0-c03a-440e-8f13-587b0c0b6808/cancelar",
+          "body": {}
+        }
+      ],
+      "httpErrors": [],
+      "details": [
+        {
+          "liveJob": "running",
+          "progress": {
+            "requiredSessions": 80,
+            "scheduledSessions": 80,
+            "requiredSections": 40,
+            "scheduledSections": 40,
+            "improvements": 40
+          },
+          "proposalId": "4ea90a99-20a1-41ef-b134-8b6466718cd5",
+          "saveDisabled": true
+        },
+        {
+          "cancelFocus": {
+            "focusVisible": true,
+            "outline": "rgb(16, 16, 16) none 1px",
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgb(255, 255, 255) 0px 0px 0px 2px, rgb(0, 108, 224) 0px 0px 0px 4px, rgba(0, 0, 0, 0) 0px 0px 0px 0px"
+          }
+        },
+        {
+          "editControlGap": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n  - waiting for getByRole('button', { name: /Editar horario/ }).first() to be visible\n"
+        }
+      ],
+      "screenshots": [
+        "jobs-cancel-running.png",
+        "jobs-cancel-cancelled.png"
+      ],
+      "status": "passed",
+      "finishedAt": "2026-11-11T23:29:12.717Z"
+    },
+    {
+      "name": "teacher-isolation",
+      "startedAt": "2026-11-11T23:29:12.779Z",
+      "errors": [],
+      "consoleErrors": [],
+      "requestFailures": [
+        {
+          "path": "/api/local/programacion-academica/v1/catalogo",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/publicaciones",
+          "error": "net::ERR_ABORTED"
+        }
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/catalogo"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/catalogo"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/borradores"
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/borradores/b19dc2a4-529f-4897-ba2d-d9aeacdc50c2/continuar",
+          "body": {
+            "expectedVersion": 1
+          }
+        }
+      ],
+      "httpErrors": [],
+      "details": [
+        {
+          "sameTeacherTypingPreserved": true,
+          "BReference": "",
+          "BHours": "",
+          "BServiceHours": "20"
+        }
+      ],
+      "screenshots": [
+        "teacher-isolation-A-draft.png",
+        "teacher-isolation-B-clean.png"
+      ],
+      "status": "passed",
+      "finishedAt": "2026-11-11T23:29:17.885Z"
+    },
+    {
+      "name": "advisor-explicit-regenerate",
+      "startedAt": "2026-11-11T23:29:17.941Z",
+      "errors": [],
+      "consoleErrors": [],
+      "requestFailures": [
+        {
+          "path": "/api/local/programacion-academica/v1/catalogo",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/publicaciones",
+          "error": "net::ERR_ABORTED"
+        }
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/catalogo"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/catalogo"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/borradores"
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/borradores/649bbd06-3d50-46cf-a63d-4ab25fe9db4c/continuar",
+          "body": {
+            "expectedVersion": 1
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/busquedas",
+          "body": {
+            "request": {
+              "revision": "PA-DEMO-1",
+              "academicPeriod": "2027-I",
+              "lectiveHourMinutes": 60,
+              "demands": [
+                {
+                  "courseId": "INE002",
+                  "estimatedDemand": 1,
+                  "targetCapacity": 1,
+                  "patternId": "pattern-1",
+                  "deliveryMode": "continuous"
+                }
+              ],
+              "allocationPolicy": "preferences",
+              "resources": {
+                "teachers": [],
+                "rooms": []
+              }
+            },
+            "budgetSeconds": 30,
+            "requestId": "b846621b-5f05-43e9-b7da-e0df033a548f"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/busquedas/b846621b-5f05-43e9-b7da-e0df033a548f"
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/propuestas/4708ff06-94ed-4bed-bff7-4cdb6fb2b2cd/consejero",
+          "body": {
+            "expectedEditVersion": 0
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/busquedas",
+          "body": {
+            "request": {
+              "revision": "PA-DEMO-1",
+              "academicPeriod": "2027-I",
+              "lectiveHourMinutes": 60,
+              "demands": [
+                {
+                  "courseId": "INE002",
+                  "estimatedDemand": 1,
+                  "targetCapacity": 1,
+                  "patternId": "pattern-1",
+                  "deliveryMode": "continuous"
+                }
+              ],
+              "allocationPolicy": "preferences",
+              "resources": {
+                "teachers": [
+                  {
+                    "id": "REF-TEACHER-001",
+                    "name": "PABLO JESUS ROMERO NAUPARI",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 0,
+                    "availability": []
+                  }
+                ],
+                "rooms": []
+              }
+            },
+            "budgetSeconds": 30,
+            "requestId": "46b2785f-7208-4b80-bba8-41c089e53f0d"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/busquedas/46b2785f-7208-4b80-bba8-41c089e53f0d"
+        }
+      ],
+      "httpErrors": [],
+      "details": [
+        {
+          "advice": {
+            "proposalId": "4708ff06-94ed-4bed-bff7-4cdb6fb2b2cd",
+            "editVersion": 0,
+            "source": {
+              "mode": "engine-decisions",
+              "providerLabel": null
+            },
+            "summary": "Faltante comprobado en la propuesta retenida. Condición necesaria; no garantiza horario ni cobertura. El impacto real se mide después de aplicar y regenerar. Certificado de capacidad: 0 de 1 secciones (probado); no acredita colocación horaria.",
+            "bottlenecks": [
+              {
+                "category": "missing_resource",
+                "title": "Docente adicional · INE002",
+                "detail": "Condición necesaria; no garantiza horario ni cobertura. El impacto real se mide después de aplicar y regenerar. Referencias sintéticas: faltan disponibilidad, carga configurada, régimen, categoría y autorización; completa los datos en Recursos. Incorporarlas no confirma capacidad.",
+                "affectedSessionCount": 0
+              },
+              {
+                "category": "other",
+                "title": "APPOINTMENT_RANK_INFERRED",
+                "detail": "El orden nombrado de la facultad, interfacultativo y contrato sobre la categoría es una interpretación (`inferred`) pendiente de confirmación.",
+                "affectedSessionCount": 0
+              },
+              {
+                "category": "other",
+                "title": "CONTRACT_LOAD_NOT_REGULATED",
+                "detail": "El reglamento (art. 1) alcanza a docentes ordinarios; no regula la carga lectiva de docentes contratados.",
+                "affectedSessionCount": 0
+              },
+              {
+                "category": "other",
+                "title": "FISI_LECTIVE_HOUR_UNVERIFIED",
+                "detail": "El art. 8 deja a cada Consejo de Facultad la duración de la hora lectiva (45, 50 o 60 minutos); la de FISI no está verificada y debe indicarse explícitamente.",
+                "affectedSessionCount": 0
+              },
+              {
+                "category": "other",
+                "title": "PERFORMANCE_EVALUATION_NO_SOURCE",
+                "detail": "La evaluación del desempeño docente (art. 9, criterio 3) está en el perfil pero inactiva: no existe fuente de datos.",
+                "affectedSessionCount": 0
+              },
+              {
+                "category": "other",
+                "title": "SOURCE_OF07_URL_NOT_RECORDED",
+                "detail": "R.R. 005348-2026-R: PDF aportado por el operador el 2026-11-10 y publicado en la Plataforma del Estado Peruano; la URL exacta no se registró.",
+                "affectedSessionCount": 0
+              },
+              {
+                "category": "other",
+                "title": "TP_MINIMUM_BASIS_UNSPECIFIED",
+                "detail": "El art. 5.3 exige al menos 40 % de horas lectivas; no precisa si se mide sobre horas de servicio cronológicas. Se aplica 40 % de las horas semanales de servicio como horas lectivas (`inferred`).",
+                "affectedSessionCount": 0
+              },
+              {
+                "category": "other",
+                "title": "TP_MAXIMUM_NOT_REGULATED",
+                "detail": "El art. 7 no establece un máximo de carga lectiva para tiempo parcial.",
+                "affectedSessionCount": 0
+              }
+            ],
+            "recommendations": [
+              {
+                "id": "decision:additional-teacher:INE002",
+                "decisionIds": [
+                  "additional-teacher:INE002"
+                ],
+                "title": "Docente adicional · INE002",
+                "rationale": "Condición necesaria; no garantiza horario ni cobertura. El impacto real se mide después de aplicar y regenerar. Referencias sintéticas: faltan disponibilidad, carga configurada, régimen, categoría y autorización; completa los datos en Recursos. Incorporarlas no confirma capacidad.",
+                "impactSummary": "1 secciones en el análisis de capacity-relaxation. Condición necesaria; no garantiza horario ni cobertura. El impacto real se mide después de aplicar y regenerar.",
+                "recommendedByDefault": false,
+                "patch": {
+                  "kind": "incorporate_reference_resource",
+                  "teacherIds": [
+                    "REF-TEACHER-001"
+                  ],
+                  "roomIds": []
+                }
+              }
+            ]
+          }
+        },
+        {
+          "checkboxCount": 1,
+          "dialog": "Consejero de planificación\n\nDiagnóstico asistido y recomendaciones aplicables para destrabar secciones pendientes.\nDecisiones del motor retenidas\n\nSin vista previa vigente para esta selección.\n\nQué limita la cobertura\nDocente adicional · INE002\n0 componentes afectados\nVer detalle: Docente adicional · INE002\nAPPOINTMENT_RANK_INFERRED\n0 componentes afectados\nVer detalle: APPOINTMENT_RANK_INFERRED\nCONTRACT_LOAD_NOT_REGULATED\n0 componentes afectados\nVer detalle: CONTRACT_LOAD_NOT_REGULATED\nFISI_LECTIVE_HOUR_UNVERIFIED\n0 componentes afectados\nVer detalle: FISI_LECTIVE_HOUR_UNVERIFIED\nPERFORMANCE_EVALUATION_NO_SOURCE\n0 componentes afectados\nVer detalle: PERFORMANCE_EVALUATION_NO_SOURCE\nSOURCE_OF07_URL_NOT_RECORDED\n0 componentes afectados\nVer detalle: SOURCE_OF07_URL_NOT_RECORDED\nTP_MINIMUM_BASIS_UNSPECIFIED\n0 componentes afectados\nVer detalle: TP_MINIMUM_BASIS_UNSPECIFIED\nTP_MAXIMUM_NOT_REGULATED\n0 componentes afectados\nVer detalle: TP_MAXIMUM_NOT_REGULATED\nVer explicación completa\nRecomendaciones aplicables\n\nLas decisiones describen condiciones necesarias, sin garantizar horario. Aplica explícitamente y regenera para medir el resultado real.\n\nDocente adicional · INE002\nAlcance estimado: 1 secciones en el análisis de capacity-relaxation. Condición necesaria; no garantiza horario ni cobertura. El impacto real se mide después de aplicar y regenerar.\nPor qué se recomienda\nVer cambios exactos (1)\n\nMarca al menos una recomendación para continuar.\n\nVolver al horario\nActualizar análisis\nAplicar seleccionadas y regenerar\nCerrar"
+        }
+      ],
+      "screenshots": [
+        "advisor-explicit-regenerate-advice.png",
+        "advisor-explicit-regenerate-regenerated.png"
+      ],
+      "status": "passed",
+      "finishedAt": "2026-11-11T23:29:23.727Z"
+    },
+    {
+      "name": "lifecycle-success",
+      "startedAt": "2026-11-11T23:29:23.784Z",
+      "errors": [],
+      "consoleErrors": [],
+      "requestFailures": [
+        {
+          "path": "/api/local/programacion-academica/v1/catalogo",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/publicaciones",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/catalogo",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/publicaciones",
+          "error": "net::ERR_ABORTED"
+        }
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/catalogo"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/catalogo"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/borradores"
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/borradores/098aab60-54d8-4721-b4cd-5e3515ad554c/continuar",
+          "body": {
+            "expectedVersion": 1
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/busquedas",
+          "body": {
+            "request": {
+              "revision": "PA-DEMO-1",
+              "academicPeriod": "2027-I",
+              "lectiveHourMinutes": 60,
+              "demands": [
+                {
+                  "courseId": "INE002",
+                  "estimatedDemand": 1,
+                  "targetCapacity": 1,
+                  "patternId": "pattern-1",
+                  "deliveryMode": "continuous"
+                }
+              ],
+              "allocationPolicy": "preferences",
+              "resources": {
+                "teachers": [
+                  {
+                    "id": "SYN-A",
+                    "name": "Synthetic A",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 10,
+                    "appointment": "contract"
+                  },
+                  {
+                    "id": "SYN-B",
+                    "name": "Synthetic B",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 20,
+                    "appointment": "contract"
+                  }
+                ],
+                "rooms": [
+                  {
+                    "id": "SYN-ROOM",
+                    "name": "Synthetic room",
+                    "capacity": 45,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            "budgetSeconds": 30,
+            "requestId": "3ff9b483-7b4e-41f2-a7cd-cf5b634b2fca"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/busquedas/3ff9b483-7b4e-41f2-a7cd-cf5b634b2fca"
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/borradores/guardar",
+          "body": {
+            "id": "098aab60-54d8-4721-b4cd-5e3515ad554c",
+            "expectedVersion": 1,
+            "title": "SYN DOM publication",
+            "state": "draft",
+            "configuration": {
+              "lectiveHourMinutes": 60,
+              "schoolId": "SISTEMAS",
+              "academicPeriod": "2027-I",
+              "request": {
+                "revision": "PA-DEMO-1",
+                "academicPeriod": "2027-I",
+                "lectiveHourMinutes": 60,
+                "demands": [
+                  {
+                    "courseId": "INE002",
+                    "estimatedDemand": 1,
+                    "targetCapacity": 1,
+                    "patternId": "pattern-1",
+                    "deliveryMode": "continuous"
+                  }
+                ],
+                "allocationPolicy": "preferences",
+                "resources": {
+                  "teachers": [
+                    {
+                      "id": "SYN-A",
+                      "name": "Synthetic A",
+                      "courseIds": [
+                        "INE002"
+                      ],
+                      "maxWeeklyMinutes": 2400,
+                      "availability": [
+                        {
+                          "day": 1,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 2,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 3,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 4,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 5,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        }
+                      ],
+                      "regime": "tiempo-parcial",
+                      "weeklyServiceHours": 10,
+                      "appointment": "contract"
+                    },
+                    {
+                      "id": "SYN-B",
+                      "name": "Synthetic B",
+                      "courseIds": [
+                        "INE002"
+                      ],
+                      "maxWeeklyMinutes": 2400,
+                      "availability": [
+                        {
+                          "day": 1,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 2,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 3,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 4,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 5,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        }
+                      ],
+                      "regime": "tiempo-parcial",
+                      "weeklyServiceHours": 20,
+                      "appointment": "contract"
+                    }
+                  ],
+                  "rooms": [
+                    {
+                      "id": "SYN-ROOM",
+                      "name": "Synthetic room",
+                      "capacity": 45,
+                      "availability": [
+                        {
+                          "day": 1,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 2,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 3,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 4,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 5,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              "demandSourceId": "independent-120-v1",
+              "demandBaseRequest": null
+            },
+            "proposalId": "cb789464-0f07-4c2b-bcf0-4948015d7f9e",
+            "proposalEditVersion": 0
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/borradores"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/catalogo"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/catalogo"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/borradores"
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/borradores/098aab60-54d8-4721-b4cd-5e3515ad554c/continuar",
+          "body": {
+            "expectedVersion": 2
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/borradores/098aab60-54d8-4721-b4cd-5e3515ad554c/revision/enviar",
+          "body": {
+            "expectedVersion": 2
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/borradores"
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/borradores/098aab60-54d8-4721-b4cd-5e3515ad554c/revision/responder",
+          "body": {
+            "expectedVersion": 3,
+            "round": 1,
+            "teacherId": "SYN-A",
+            "decision": "conformity",
+            "observation": ""
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/borradores"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/borradores/098aab60-54d8-4721-b4cd-5e3515ad554c/vista-previa"
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/borradores/098aab60-54d8-4721-b4cd-5e3515ad554c/aprobar",
+          "body": {
+            "expectedVersion": 4
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/borradores"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/borradores/098aab60-54d8-4721-b4cd-5e3515ad554c/vista-previa"
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/borradores/098aab60-54d8-4721-b4cd-5e3515ad554c/publicar",
+          "body": {
+            "expectedVersion": 5,
+            "expectedCurrentId": null
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/borradores"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/borradores/098aab60-54d8-4721-b4cd-5e3515ad554c/vista-previa"
+        }
+      ],
+      "httpErrors": [],
+      "details": [
+        {
+          "saveReload": true,
+          "draftId": "098aab60-54d8-4721-b4cd-5e3515ad554c"
+        },
+        {
+          "states": [
+            "draft",
+            "in-review",
+            "ready-for-approval",
+            "approved",
+            "published"
+          ]
+        }
+      ],
+      "screenshots": [
+        "lifecycle-success-publication.png"
+      ],
+      "status": "passed",
+      "finishedAt": "2026-11-11T23:29:33.975Z"
+    },
+    {
+      "name": "normative-blocker",
+      "startedAt": "2026-11-11T23:29:34.059Z",
+      "errors": [],
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 409 (Conflict)"
+      ],
+      "requestFailures": [
+        {
+          "path": "/api/local/programacion-academica/v1/catalogo",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/publicaciones",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/catalogo",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/publicaciones",
+          "error": "net::ERR_ABORTED"
+        }
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/catalogo"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/catalogo"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/borradores"
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/borradores/52809123-ec44-4b2b-aeb8-b350f1a2668b/continuar",
+          "body": {
+            "expectedVersion": 1
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/busquedas",
+          "body": {
+            "request": {
+              "revision": "PA-DEMO-1",
+              "demands": [
+                {
+                  "courseId": "INE002",
+                  "estimatedDemand": 1,
+                  "targetCapacity": 1,
+                  "patternId": "pattern-1",
+                  "deliveryMode": "continuous"
+                }
+              ],
+              "allocationPolicy": "preferences",
+              "resources": {
+                "teachers": [
+                  {
+                    "id": "SYN-A",
+                    "name": "Synthetic A",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 10,
+                    "appointment": "contract"
+                  },
+                  {
+                    "id": "SYN-B",
+                    "name": "Synthetic B",
+                    "courseIds": [
+                      "INE002"
+                    ],
+                    "maxWeeklyMinutes": 2400,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ],
+                    "regime": "tiempo-parcial",
+                    "weeklyServiceHours": 20,
+                    "appointment": "contract"
+                  }
+                ],
+                "rooms": [
+                  {
+                    "id": "SYN-ROOM",
+                    "name": "Synthetic room",
+                    "capacity": 45,
+                    "availability": [
+                      {
+                        "day": 1,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 2,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 3,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 4,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      },
+                      {
+                        "day": 5,
+                        "startMinute": 480,
+                        "endMinute": 1320
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            "budgetSeconds": 30,
+            "requestId": "6782e68f-a73e-43c8-b790-6f65adaeddac"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/busquedas/6782e68f-a73e-43c8-b790-6f65adaeddac"
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/borradores/guardar",
+          "body": {
+            "id": "52809123-ec44-4b2b-aeb8-b350f1a2668b",
+            "expectedVersion": 1,
+            "title": "SYN DOM normative blocker",
+            "state": "draft",
+            "configuration": {
+              "schoolId": "SISTEMAS",
+              "academicPeriod": "2027-I",
+              "request": {
+                "revision": "PA-DEMO-1",
+                "demands": [
+                  {
+                    "courseId": "INE002",
+                    "estimatedDemand": 1,
+                    "targetCapacity": 1,
+                    "patternId": "pattern-1",
+                    "deliveryMode": "continuous"
+                  }
+                ],
+                "allocationPolicy": "preferences",
+                "resources": {
+                  "teachers": [
+                    {
+                      "id": "SYN-A",
+                      "name": "Synthetic A",
+                      "courseIds": [
+                        "INE002"
+                      ],
+                      "maxWeeklyMinutes": 2400,
+                      "availability": [
+                        {
+                          "day": 1,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 2,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 3,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 4,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 5,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        }
+                      ],
+                      "regime": "tiempo-parcial",
+                      "weeklyServiceHours": 10,
+                      "appointment": "contract"
+                    },
+                    {
+                      "id": "SYN-B",
+                      "name": "Synthetic B",
+                      "courseIds": [
+                        "INE002"
+                      ],
+                      "maxWeeklyMinutes": 2400,
+                      "availability": [
+                        {
+                          "day": 1,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 2,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 3,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 4,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 5,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        }
+                      ],
+                      "regime": "tiempo-parcial",
+                      "weeklyServiceHours": 20,
+                      "appointment": "contract"
+                    }
+                  ],
+                  "rooms": [
+                    {
+                      "id": "SYN-ROOM",
+                      "name": "Synthetic room",
+                      "capacity": 45,
+                      "availability": [
+                        {
+                          "day": 1,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 2,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 3,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 4,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        },
+                        {
+                          "day": 5,
+                          "startMinute": 480,
+                          "endMinute": 1320
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              "demandSourceId": "independent-120-v1",
+              "demandBaseRequest": null
+            },
+            "proposalId": "02e64be0-e160-4609-8b6d-536325657a10",
+            "proposalEditVersion": 0
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/borradores"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/catalogo"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/catalogo"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/borradores"
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/borradores/52809123-ec44-4b2b-aeb8-b350f1a2668b/continuar",
+          "body": {
+            "expectedVersion": 2
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/borradores/52809123-ec44-4b2b-aeb8-b350f1a2668b/revision/enviar",
+          "body": {
+            "expectedVersion": 2
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/borradores"
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/borradores/52809123-ec44-4b2b-aeb8-b350f1a2668b/revision/responder",
+          "body": {
+            "expectedVersion": 3,
+            "round": 1,
+            "teacherId": "SYN-A",
+            "decision": "conformity",
+            "observation": ""
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/borradores"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/borradores/52809123-ec44-4b2b-aeb8-b350f1a2668b/vista-previa"
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/borradores/52809123-ec44-4b2b-aeb8-b350f1a2668b/aprobar",
+          "body": {
+            "expectedVersion": 4
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/borradores"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/borradores/52809123-ec44-4b2b-aeb8-b350f1a2668b/vista-previa"
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/borradores/52809123-ec44-4b2b-aeb8-b350f1a2668b/publicar",
+          "body": {
+            "expectedVersion": 5,
+            "expectedCurrentId": "098aab60-54d8-4721-b4cd-5e3515ad554c"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        }
+      ],
+      "httpErrors": [
+        {
+          "path": "/api/local/programacion-academica/v1/borradores/52809123-ec44-4b2b-aeb8-b350f1a2668b/publicar",
+          "status": 409
+        }
+      ],
+      "details": [
+        {
+          "saveReload": true,
+          "draftId": "52809123-ec44-4b2b-aeb8-b350f1a2668b"
+        },
+        {
+          "normativeRejection": {
+            "error": {
+              "code": "NORMATIVE_VALIDATION_REQUIRED",
+              "message": "No se puede acreditar la carga reglamentaria antes de publicar: No se registró la duración de la hora lectiva; se conservan los topes declarados.",
+              "gaps": [
+                {
+                  "code": "LECTIVE_HOUR_MINUTES_MISSING",
+                  "message": "No se registró la duración de la hora lectiva; se conservan los topes declarados.",
+                  "blocking": true
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "screenshots": [
+        "normative-blocker-publication.png"
+      ],
+      "status": "passed",
+      "finishedAt": "2026-11-11T23:29:44.540Z"
+    },
+    {
+      "name": "responsive-keyboard",
+      "startedAt": "2026-11-11T23:29:44.596Z",
+      "errors": [],
+      "consoleErrors": [],
+      "requestFailures": [
+        {
+          "path": "/api/local/programacion-academica/v1/catalogo",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/api/local/programacion-academica/v1/publicaciones",
+          "error": "net::ERR_ABORTED"
+        }
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/catalogo"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/catalogo"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/publicaciones"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/borradores"
+        },
+        {
+          "method": "POST",
+          "path": "/api/local/programacion-academica/v1/borradores/6a16284c-e86f-45c2-bcd1-8f9bfa4d87b7/continuar",
+          "body": {
+            "expectedVersion": 1
+          }
+        }
+      ],
+      "httpErrors": [],
+      "details": [
+        {
+          "viewport": 360,
+          "width": 360,
+          "scroll": 360
+        },
+        {
+          "viewport": 390,
+          "width": 390,
+          "scroll": 390
+        },
+        {
+          "viewport": 720,
+          "width": 720,
+          "scroll": 720
+        },
+        {
+          "viewport": 800,
+          "width": 800,
+          "scroll": 800
+        },
+        {
+          "viewport": 1100,
+          "width": 1100,
+          "scroll": 1100
+        },
+        {
+          "viewport": 1440,
+          "width": 1440,
+          "scroll": 1440
+        },
+        {
+          "tabFocus": {
+            "tag": "A",
+            "text": "Resumen",
+            "focusVisible": true
+          }
+        },
+        {
+          "cssZoomSimulation": "200%",
+          "actualBrowserZoom": "not supported by this headless platform",
+          "width": 1440,
+          "scroll": 1440
+        }
+      ],
+      "screenshots": [
+        "responsive-keyboard-390.png",
+        "responsive-keyboard-css-zoom-200.png"
+      ],
+      "status": "passed",
+      "finishedAt": "2026-11-11T23:29:48.183Z"
+    }
+  ],
+  "engineRequests": [
+    {
+      "method": "POST",
+      "path": "/v1/solve-jobs"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/solve-jobs"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/solve-jobs/0d1e4bac85cc49138231b181779d3dd0"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/solve-jobs"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/solve-jobs/f87f8599fcc143a0ae81768081aa3739"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/solve-jobs"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/solve-jobs/ca85c375d1ea4dd6bf5f92294dc53954"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/solve-jobs"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/solve-jobs/4504f486cb2d4598a76154a2eca896c1"
+    }
+  ],
+  "env": {
+    "engine": {
+      "PATH": "/home/ubuntu/.local/bin:/home/ubuntu/.opencode/bin:/home/ubuntu/.nvm/versions/node/v24.22.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",
+      "LANG": "C.UTF-8",
+      "HOME": "/tmp/planning-integrated-independent-xCXHOW",
+      "SUM_LLM_PROVIDER": "disabled",
+      "SUM_RAG_GENERATION_MODE": "extractive",
+      "AWS_EC2_METADATA_DISABLED": "true",
+      "HF_HUB_OFFLINE": "1",
+      "HF_HUB_DISABLE_TELEMETRY": "1"
+    },
+    "backend": {
+      "PATH": "/home/ubuntu/.local/bin:/home/ubuntu/.opencode/bin:/home/ubuntu/.nvm/versions/node/v24.22.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",
+      "LANG": "C.UTF-8",
+      "HOME": "/tmp/planning-integrated-independent-xCXHOW",
+      "PORT": "37553",
+      "SUM_ACADEMIC_SCHEDULING": "1",
+      "SIMULATOR_DEPLOYMENT": "local",
+      "SUM_LOCAL_SCENARIOS": "0",
+      "SUM_ACADEMIC_DRAFT_DIR": "/tmp/planning-integrated-independent-xCXHOW",
+      "SUM_PLANNING_ENGINE_URL": "http://127.0.0.1:33467"
+    },
+    "web": {
+      "PATH": "/home/ubuntu/.local/bin:/home/ubuntu/.opencode/bin:/home/ubuntu/.nvm/versions/node/v24.22.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",
+      "LANG": "C.UTF-8",
+      "HOME": "/tmp/planning-integrated-independent-xCXHOW",
+      "VITE_SUM_DATA_MODE": "local",
+      "VITE_SUM_API_BASE_URL": "/api",
+      "VITE_SUM_API_PROXY_TARGET": "http://127.0.0.1:37553",
+      "VITE_SUM_PLANNING_API_PROXY_TARGET": "http://127.0.0.1:37553",
+      "VITE_SUM_ACADEMIC_SCHEDULING": "1",
+      "VITE_SUM_SIMULATOR": "0",
+      "VITE_SUM_LOCAL_PROFILE": "synthetic-actors"
+    }
+  },
+  "source": {
+    "client/src/data/planningSession.ts": "8668965db1d6f935bfffac4b31f014de77c5ec07009ae44fd1fe4643ca22732e",
+    "client/src/components/ai-elements/SuggestionCard.tsx": "050ac3fdebfda4c5baccf3f509dc78d61adaf3e19c49890713249fc561190ff0",
+    "client/src/screens/PlanningStatusBar.tsx": "86aba678e75572c5bc8ee0c6677273d3add92725e57d4053ae3dcb809ad179af",
+    "backend/dist/programacion-academica/demo-proposal.service.js": "f2de13d9a301a49963d5be3ac3d5529924a14486cadaa2034e1e3cee311f71fd",
+    "planning-engine/solver.py": "1587a77af723a553b925cbdc5558b4d5dd655c42b32c8ee22d01a0a2e8e52e8f"
+  },
+  "ports": {
+    "enginePort": 43553,
+    "apiPort": 37553,
+    "webPort": 45861,
+    "proxyPort": 33467
+  },
+  "cleanup": {
+    "browserClosed": true,
+    "services": [
+      {
+        "pid": 21809,
+        "code": 143,
+        "signal": null
+      },
+      {
+        "pid": 21764,
+        "code": null,
+        "signal": "SIGTERM"
+      },
+      {
+        "pid": 21757,
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    ],
+    "ownTemporaryStateRemoved": true
+  },
+  "finishedAt": "2026-11-11T23:29:48.458Z"
+}
