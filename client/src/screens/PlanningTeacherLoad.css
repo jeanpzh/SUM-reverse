@@ -1,0 +1,18 @@
+@reference '../styles/theme.css';
+
+/* Teacher regulatory data (resource editor inspector). */
+.planning-teacher-load { display: grid; gap: 12px; }
+.planning-teacher-load__limits, .planning-teacher-load__authorizations { display: grid; gap: 4px; border-top: 1px solid var(--planning-border); padding-top: 8px; }
+.planning-teacher-load__limit-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 8px; margin: 0; }
+.planning-teacher-load__limit-list > div { border: 1px solid var(--planning-border); border-radius: 8px; padding: 4px 8px; }
+.planning-teacher-load__limit-list dt { color: var(--planning-muted); font-size: var(--planning-text-xs); line-height: 16px; }
+.planning-teacher-load__limit-list dd { margin: 0; font-size: var(--planning-text-sm); font-weight: 600; font-variant-numeric: tabular-nums; }
+.planning-teacher-load__authorization-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.planning-teacher-load__authorization-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: var(--planning-text-sm); }
+.planning-teacher-load__add { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); align-items: end; gap: 8px; }
+.planning-teacher-load__lective { display: grid; gap: 4px; max-width: 24rem; }
+.planning-teacher-load__conditions { display: grid; gap: 4px; }
+
+/* Shared helper text styles used by the teacher load fields. */
+.planning-root .planning-teacher-load .planning-decisions__provenance { margin: 2px 0 0; color: var(--planning-muted); font-size: var(--planning-text-xs); line-height: 16px; }
+.planning-teacher-load .planning-decisions__gaps { display: grid; gap: 4px; margin: 0; padding-inline-start: 16px; font-size: var(--planning-text-xs); line-height: 16px; }

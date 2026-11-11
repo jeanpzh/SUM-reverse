@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CircleCheck, CircleAlert, CircleMinus } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs'
 import type { AcademicCatalog } from '../data/academicScheduling.ts'
@@ -37,6 +37,8 @@ import { Input } from '../components/ui/Input'
 import { Label } from '../components/ui/Label'
 import { NativeSelect } from '../components/ui/NativeSelect'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table'
+import { LectiveHourSelect, TeacherLoadFields } from './PlanningTeacherLoad'
+import type { LectiveHourMinutes } from '../../../shared/academic-normative-profile.mjs'
 import './AcademicResourceEditor.css'
 
 export type AcademicResourceEditorProps = {
@@ -45,6 +47,11 @@ export type AcademicResourceEditorProps = {
   onChange: (resources: AcademicPlanningResources) => void
   isLocked?: boolean
   proposal?: AcademicProposal | null
+  academicPeriod?: string
+  lectiveHourMinutes?: LectiveHourMinutes
+  onLectiveHourMinutesChange?: (value: LectiveHourMinutes | undefined) => void
+  // Opens a teacher's inspector at the authorizations, or filters the teachers eligible for the given courses (decision queue actions).
+  focus?: { token: number; teacherId?: string; courseIds?: string[] } | null
 }
 
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
@@ -91,6 +98,10 @@ export function AcademicResourceEditor({
   onChange,
   isLocked = false,
   proposal,
+  academicPeriod = '2027-I',
+  lectiveHourMinutes,
+  onLectiveHourMinutesChange,
+  focus,
 }: AcademicResourceEditorProps) {
   const [activeTab, setActiveTab] = useState<'teachers' | 'rooms'>('teachers')
 
@@ -100,6 +111,7 @@ export function AcademicResourceEditor({
 
   // Filters & Search
   const [teacherSearch, setTeacherSearch] = useState('')
+  const [courseFilter, setCourseFilter] = useState<string[]>([])
   const [roomSearch, setRoomSearch] = useState('')
   const [teacherInclusionFilter, setTeacherInclusionFilter] = useState<'all' | 'included' | 'reference'>('all')
   const [roomInclusionFilter, setRoomInclusionFilter] = useState<'all' | 'included' | 'reference'>('all')
@@ -137,6 +149,28 @@ export function AcademicResourceEditor({
     ),
   )
 
+  // Decision queue actions: open a teacher's authorizations, or list the teachers eligible for a course.
+  const focusToken = focus?.token
+  const [appliedFocusToken, setAppliedFocusToken] = useState<number | undefined>(undefined)
+  if (focus && focusToken !== appliedFocusToken) {
+    setAppliedFocusToken(focusToken)
+    setActiveTab('teachers')
+    if (focus.teacherId) {
+      setCourseFilter([])
+      setInspectedTeacherId(focus.teacherId)
+    } else {
+      setCourseFilter(focus.courseIds ?? [])
+      setTeacherInclusionFilter('all')
+      setTeacherSearch('')
+    }
+  }
+  const focusTeacherId = focus?.teacherId
+  useEffect(() => {
+    if (focusToken === undefined || !focusTeacherId) return
+    const timer = window.setTimeout(() => document.getElementById('teacher-load-reference')?.focus(), 250)
+    return () => window.clearTimeout(timer)
+  }, [focusToken, focusTeacherId])
+
   // Build unified lists
   const unifiedTeachers = useMemo(
     () => buildUnifiedTeachers(catalog.referenceTeachers, resources.teachers, teacherReferenceIds),
@@ -149,8 +183,9 @@ export function AcademicResourceEditor({
 
   // Filtered lists
   const filteredTeachers = useMemo(
-    () => filterUnifiedTeachers(unifiedTeachers, teacherSearch, teacherInclusionFilter),
-    [unifiedTeachers, teacherSearch, teacherInclusionFilter],
+    () => filterUnifiedTeachers(unifiedTeachers, teacherSearch, teacherInclusionFilter)
+      .filter((teacher) => courseFilter.length === 0 || courseFilter.some((courseId) => teacher.courseIds.includes(courseId))),
+    [unifiedTeachers, teacherSearch, teacherInclusionFilter, courseFilter],
   )
   const filteredRooms = useMemo(
     () => filterUnifiedRooms(unifiedRooms, roomSearch, roomKindFilter, roomInclusionFilter),
@@ -243,6 +278,14 @@ export function AcademicResourceEditor({
 
     commit((draft) => {
       draft.teachers = draft.teachers.map((t) => (t.id === oldId ? { ...t, ...patch } : t))
+    })
+  }
+
+  // Replaces the whole teacher (not a merge): the regulatory helpers delete optional keys instead of leaving undefined values.
+  const replaceTeacher = (next: AcademicTeacherResource) => {
+    if (isLocked || !inspectedTeacherId) return
+    commit((draft) => {
+      draft.teachers = draft.teachers.map((t) => (t.id === inspectedTeacherId ? next : t))
     })
   }
 
@@ -590,6 +633,11 @@ export function AcademicResourceEditor({
       </TabsList>
       <TabsContent value={activeTab} className="academic-resource-workbench__tab-content">
       {/* Heading */}
+      {activeTab === 'teachers' && onLectiveHourMinutesChange && <LectiveHourSelect value={lectiveHourMinutes} disabled={isLocked} onChange={onLectiveHourMinutesChange} />}
+      {activeTab === 'teachers' && courseFilter.length > 0 && <p className="academic-resource-workbench__resource-note" role="status">
+        Docentes habilitados para {courseFilter.join(', ')}: la cola de decisiones indica que faltan horas docentes en esos cursos. Incorpora un docente de referencia o habilita a uno existente.{' '}
+        <Button type="button" size="sm" variant="outline" onClick={() => setCourseFilter([])}>Quitar filtro de curso</Button>
+      </p>}
       <div className="academic-resource-workbench__header">
         <p className="academic-resource-workbench__subtitle">
           {activeTab === 'teachers'
@@ -1170,6 +1218,9 @@ export function AcademicResourceEditor({
                           />
                         </Label>
                       </fieldset>
+
+                      <TeacherLoadFields teacher={currentTeacher} period={academicPeriod} lectiveHourMinutes={lectiveHourMinutes} disabled={isLocked}
+                        onChange={replaceTeacher} />
 
                       {currentTeacher.qualificationSource === 'synthetic' && (
                         <p className="academic-resource-workbench__resource-note">
