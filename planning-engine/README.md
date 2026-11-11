@@ -362,7 +362,7 @@ stayed unproven after 60 s on the 166-section synthetic catalog; aggregated, the
 full analysis with exception caps is proven in 0.16–0.25 s (orchestrator
 measurement, 2026-11-10).
 This preserves a useful feasible schedule if candidate preparation later expires.
-It uses one CP-SAT worker; the existing timetable coverage search uses four.
+It uses one CP-SAT worker; the timetable coverage search uses `min(4, usable cores)` (see PA-ENGINE-JOBS-1).
 
 Synthetic acceptance is through `solve_academic_schedule`, without a running
 server or private fixtures. `test_capacity_prelation.py` covers criteria 1–9,
@@ -519,3 +519,79 @@ no insufficient-relaxation diagnostic. The measured window analysis took
 **0.387 ms** against the 800 ms request budget. The options concern the same
 18 sections and do not constitute 36 unlocked sections. Disk free space stayed
 above 1.8 GB during execution; no additional repository copy was created.
+
+## PA-ENGINE-JOBS-1 — background search jobs (ticket T4a, 2026-11-11)
+
+Internal product contract; no UI and no SUM behavior is claimed. It lets the backend
+show a first feasible timetable quickly, watch it improve and cancel, without new
+infrastructure: one in-memory job inside the engine, polled over HTTP. `POST /v1/solve`
+is unchanged. Engine restarts lose all jobs (nothing is written to disk).
+
+| Call | Response |
+| --- | --- |
+| `POST /v1/solve-jobs` with a `SolveScheduleRequest` (`maxTimeSeconds`, up to 120, is the search budget) | `202 { jobId, state: 'running', budgetSeconds }`. Only one search runs: starting a job cancels the running one (it becomes `cancelled`) |
+| `GET /v1/solve-jobs/{jobId}` | `200 { jobId, state, phase, elapsedSeconds, budgetSeconds, progress, result, error }`; unknown or expired id: `404` |
+| `DELETE /v1/solve-jobs/{jobId}` | Cancels a running job and returns the same body as GET in its terminal state; on a terminal job it is a no-op returning that state; `404` if unknown |
+
+- `state`: `running` / `completed` / `cancelled` / `failed`. `phase`: `preparing`
+  (prechecks, cheap incumbent, model build) → `capacity` → `coverage` (first CP-SAT
+  solve) → `prelation` (contract, interfaculty, category stages) → `preferences` →
+  `done`. `done` is reported only when `completed`; a `cancelled` or `failed` job keeps
+  the phase it stopped in. `prelation` and `preferences` appear only with complete
+  priority data (PA-ENGINE-2).
+- `elapsedSeconds` counts from the moment the search worker starts solving, the same
+  clock as `budgetSeconds`; it is `0` while the worker is still booting and stops at the
+  terminal state.
+- `progress`: `requiredSessions` / `requiredSections` come from the request.
+  `scheduledSessions` / `scheduledSections` describe the best valid schedule seen so far
+  and never decrease. `improvements` counts strictly better schedules. "Better" means
+  more scheduled sessions or, with equal sessions and complete priority data, a
+  lexicographically better (contract, interfaculty, category-rank) value. Improvements
+  that only raise the legacy preference bonus are not counted. No percentage or time
+  estimate is produced.
+- `result` is `null` while running. `completed`: the final `SolveScheduleResponse`, the
+  same as `POST /v1/solve` for that request and budget (status, `coverageProof`,
+  certificate, decisions, prelation, diagnostics). `cancelled`: the best valid schedule
+  found so far if there is one, else `null`; `status` is `complete` only if every session
+  is placed, otherwise `search-limit` with `coverageProof: 'inconclusive'`,
+  `limitReason: null`, no certificate/decisions/prelation and a `SEARCH_CANCELLED`
+  diagnostic listing the unscheduled sessions. `failed`: always `null`.
+- `error` codes (messages are fixed Spanish texts that never echo input): `SEARCH_FAILED`
+  (exception inside the search), `SEARCH_PROCESS_LOST` (the worker died without a result),
+  `SEARCH_OVERRUN` (no result after `1.5 × budget + 20 s`; the worker is killed).
+- Retention: terminal jobs are kept 15 minutes and at most 20 of them, oldest dropped
+  first. A running job is never dropped. Teacher names and ids are never logged; only job
+  ids and exception class names.
+
+Isolation: each job runs `solve_academic_schedule` in a child process (`forkserver`
+start, `solver` preloaded, `spawn` where unavailable) niced by 5 so `/health` and the job
+endpoints stay responsive. The child streams `phase` and `best` messages over a pipe to a
+supervisor thread in the server process, which owns the job state. Cancellation sends
+`SIGKILL` to the child, so the CPU work ends with the process (the test asserts the child
+is no longer alive within one second of the `DELETE` response, which itself took about 6 ms
+in the measured run), and the best schedule received so far is returned. The supervisor reaps the child on every
+outcome; children are daemonic, so an engine exit takes them down.
+
+`solve_academic_schedule(req, hooks=None)` keeps its signature for direct callers. The
+optional `SearchHooks` (`on_phase`, `on_improvement`, `should_cancel`) attach a CP-SAT
+solution callback only when supplied; without hooks the solve call is the plain one.
+`should_cancel` is cooperative (polled between stages and on each solution); hard
+stopping is the job manager's process kill.
+
+CP-SAT worker count: the timetable coverage solve now uses `search_workers()` =
+`min(4, usable cores)`, taking the smaller of the CPU affinity and the cgroup quota
+(previously a fixed 4). This setting is shared by `POST /v1/solve`. The capacity analysis
+and the lexicographic stages still use one worker.
+
+Backend integration notes: poll `GET` at roughly 250–500 ms; stop polling at any state
+other than `running`; treat `404` as "lost" (expired or engine restarted) and re-run.
+`budgetSeconds` is the search budget only; wall time can exceed it by the final window
+analysis and, for the first job after an engine start, by the worker bootstrap (about 1 s).
+A `cancelled` result with `status: 'complete'` is a valid full schedule.
+
+Prelation proofs and budget (measured 2026-11-11, synthetic 56-course catalog with
+invented tiers/ranks, 30 s job): the contract, interfaculty and category stages all ended
+`OPTIMAL` (the job reached `preferences`), yet every level stayed `proven: false`. The
+proof flag also requires `not candidates_truncated`, and candidate sampling truncates on
+this catalog, so a longer budget improves coverage and time to a first schedule but does
+not by itself yield prelation proofs while sampling truncates candidates.
