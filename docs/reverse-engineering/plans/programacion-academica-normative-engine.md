@@ -67,7 +67,7 @@ de cada nivel, no las asignaciones.
 | T3 | Backend: perfil → entrada del motor, resultado en la Propuesta, datos sintéticos con régimen y procedencia, retiro del tope de demo de 10 h, bloqueo de publicación, unificación con los perfiles sintéticos del chat normativo | T1, T2 | Codex GPT-6.1 Sol | verificado e integrado 2026-11-11 (rama `feat/planning-normative-engine`) |
 | T4a | Motor: búsqueda en segundo plano como trabajo en memoria (`PA-ENGINE-JOBS-1`: iniciar, consultar, cancelar; progreso real) | T2 | Claude Sonnet 5.5 (Codex sin cuota) | verificado e integrado 2026-11-11 (`7a4e183`) |
 | T4b | Backend e interfaz consumen los trabajos del motor: primer horario rápido, progreso y cancelación | T4a, T5 | por asignar | pendiente |
-| T5 | Interfaz: estado de cobertura, cola de decisiones, vacíos normativos, datos reglamentarios del docente con registro de autorizaciones, bloqueos en la publicación | T3 | Claude Sonnet 5.5 (Codex sin cuota) | despachado 2026-11-11 |
+| T5 | Interfaz: estado de cobertura, cola de decisiones, vacíos normativos, datos reglamentarios del docente con registro de autorizaciones, bloqueos en la publicación | T3 | Claude Sonnet 5.5 (Codex sin cuota) | verificado e integrado 2026-11-11 |
 | T6a | Motor: decisiones de franja y de modalidad para las secciones sin franja (`planning-window`, `delivery-mode-split`, base `window-precheck`) | T2 | Codex GPT-6.1 Sol | verificado e integrado 2026-11-10 (`1ca4df2`) |
 | T6b | El consejero consume las decisiones del motor en lugar de proponer y simular; recursos de referencia | T3, T6a | por asignar | pendiente |
 | T8 | Motor: generar candidatos sin recorte (o con recorte demostrablemente inocuo) para que la prelación y la cobertura puedan quedar probadas | T4a | por asignar | pendiente |
@@ -185,6 +185,33 @@ primer horario a 0,96 s (108 secciones), 109 a los 2,5 s, 110 al final con falta
 Hallazgo: más tiempo no prueba la prelación. Las tres etapas terminan óptimas, pero la marca
 queda en falso porque el motor recorta los candidatos de horario por docente y sección, no
 por el plazo. Probarla requiere T8.
+
+### Resultado de T5
+
+Verificación del orquestador tras integrar: 329 pruebas de datos del cliente, lint y build
+pasan. Revisé dos capturas (cola de decisiones en oscuro, editor de carga docente en claro).
+Corrección del orquestador: la sigla VRAP salía en minúsculas en dos textos.
+
+Escenario real del agente en navegador (React → NestJS → motor, 56 cursos sintéticos):
+propuesta inicial «Búsqueda inconclusa», 120 de 166 completas, «Carga autorizada cubre 136
+de 166», «20 decisiones cubren 30 secciones»; tras habilitar la tarde desde la cola,
+«Faltante comprobado» con 136 de 166; tras registrar una declaración jurada en un docente
+e igualar su carga semanal, 138 de 166.
+
+Pendiente o no probado:
+
+- El bloqueo de publicación no se ejerció contra el servidor real (el motor nunca asigna
+  por encima de lo autorizado); lo cubren pruebas con respuestas simuladas.
+- Registrar la autorización no basta: el tope efectivo es el menor entre la carga semanal
+  declarada y el máximo autorizado, así que hay que pulsar «Igualar la carga semanal al
+  máximo autorizado». Conviene que la decisión lleve el tope objetivo.
+- No hay validador compartido para los bloqueos; el cliente repite la comprobación de forma.
+- La tarjeta de resultado tras una acción de la cola conserva el texto del consejero
+  («Resultado de aplicar 1 recomendación»); corresponde a T6b.
+- Las pruebas de componentes viven en el script de verificación, no en `test:data`.
+- Las capturas muestran nombres del catálogo sintético de referencia sin enmascarar, igual
+  que la evidencia anterior; confirmar su procedencia antes de compartirlas fuera del repo.
+- No se probó con lector de pantalla.
 
 ## Criterios de aceptación
 
