@@ -5,7 +5,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/Dialog'
 import './PlanningStatusBar.css'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../components/ui/Sheet'
-import { CalendarCheck2, CircleAlert } from 'lucide-react'
+import { CalendarCheck2, CircleAlert, CircleCheck, SearchX } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { AdvisorFindings } from '../components/ai-elements/AdvisorFindings'
@@ -15,6 +15,7 @@ import { Reasoning } from '../components/ai-elements/Reasoning'
 import { SuggestionCard } from '../components/ai-elements/SuggestionCard'
 import { Alert, AlertDescription } from '../components/ui/Alert'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../components/ui/Collapsible'
+import { describeCapacity, describeCoverage } from '../data/planningDecisions'
 
 const diagnosticLabels: Record<string, string> = {
   PARTIAL_PROPOSAL: 'Propuesta parcial',
@@ -77,6 +78,13 @@ function resultWording(proposal: AcademicProposal) {
     badgeText = 'Entrada inválida'
     headline = 'Demanda fuera de los límites del generador'
     subtext = 'Corrige la configuración de demanda o capacidades para continuar.'
+  }
+
+  // Proposals with a coverage proof say what the proof established; those without one keep the wording above unchanged.
+  const coverage = describeCoverage(proposal)
+  if (coverage && coverage.kind !== 'complete' && proposal.status !== 'invalid-input') {
+    subtext = coverage.detail
+    diagnosisText = coverage.detail
   }
 
   return { badgeText, headline, subtext, diagnosisText }
@@ -164,6 +172,8 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
   const conflicts = countAssignedConflicts(proposal.assignments)
 
   const { badgeText, headline, subtext, diagnosisText } = resultWording(proposal)
+  const coverageView = describeCoverage(proposal)
+  const capacityView = describeCapacity(proposal)
 
   return (
     <section className="planning-status-bar" aria-labelledby="academic-scheduling-result" data-status={proposal.status}>
@@ -172,8 +182,13 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
           {proposal.status === 'complete' ? <CalendarCheck2 size={16} aria-hidden="true" /> : <CircleAlert size={16} aria-hidden="true" />}
           {proposal.status === 'complete' ? headline : badgeText}
         </strong>
-        <div className="planning-status-bar__facts"><span className="planning-status-bar__fact">{coverage.complete} de {totalSections} secciones completas</span>
+        <div className="planning-status-bar__facts">
+        {coverageView && <span className="planning-status-bar__fact planning-status-bar__coverage" data-coverage={coverageView.kind}>
+          {coverageView.kind === 'complete' ? <CircleCheck size={14} aria-hidden="true" /> : coverageView.kind === 'shortfall-proven' ? <CircleAlert size={14} aria-hidden="true" /> : <SearchX size={14} aria-hidden="true" />}
+          {coverageView.label}</span>}
+        <span className="planning-status-bar__fact">{coverage.complete} de {totalSections} secciones completas</span>
         <span className="planning-status-bar__fact">{coverage.partial + coverage.pending} por completar</span>
+        {capacityView && <span className="planning-status-bar__fact">Carga autorizada cubre {capacityView.coverable} de {capacityView.required}{capacityView.proven ? '' : ' (no probado)'}</span>}
         <span className="planning-status-bar__fact">{conflicts} cruces en lo asignado</span></div>
         <div className="planning-status-bar__actions">
           {proposal.diagnostics.length > 0 && <Button type="button" variant="link" size="sm" aria-haspopup="dialog" onClick={() => setDiagnosticsOpen(true)}>Ver avisos ({proposal.diagnostics.length})</Button>}
@@ -342,6 +357,7 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
 
 export function PlanningSearchDetails({ proposal }: { proposal: AcademicProposal }) {
   const coverage = academicSectionCoverage(proposal)
+  const capacityView = describeCapacity(proposal)
   const scheduled = proposal.counts.scheduledSessions
   const required = proposal.counts.requiredSessions
   const { diagnosisText } = resultWording(proposal)
@@ -361,6 +377,7 @@ export function PlanningSearchDetails({ proposal }: { proposal: AcademicProposal
             <div><dt>Completas</dt><dd>{coverage.complete}</dd></div>
             <div><dt>Parciales</dt><dd>{coverage.partial}</dd></div>
             <div><dt>Pendientes</dt><dd>{coverage.pending}</dd></div>
+            {capacityView && <div><dt>Cubribles por carga docente</dt><dd>{capacityView.coverable} de {capacityView.required}{capacityView.proven ? '' : ' (no probado)'}</dd></div>}
             <div><dt>Componentes asignados</dt><dd>{scheduled}</dd></div>
             <div><dt>Componentes requeridos</dt><dd>{required}</dd></div>
           </dl>

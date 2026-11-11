@@ -1,0 +1,38 @@
+@reference '../styles/theme.css';
+
+/* Decision queue, regulatory basis and blocker list of the planning schedule (internal product; --planning-* tokens only). */
+.planning-decisions { display: grid; gap: 8px; min-width: 0; margin-top: 8px; color: var(--planning-text); overflow-wrap: anywhere; }
+.planning-decisions__queue, .planning-decisions__basis { min-width: 0; border: 1px solid var(--planning-border); border-radius: 8px; background: var(--planning-surface-subtle); padding: 8px 12px; }
+.planning-decisions__header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.planning-root .planning-decisions__title { display: flex; align-items: center; gap: 8px; margin: 0; font-size: var(--planning-text-sm); font-weight: 700; line-height: 20px; }
+.planning-root .planning-decisions__summary { margin: 2px 0 0; font-size: var(--planning-text-lg, 16px); font-weight: 600; line-height: 24px; font-variant-numeric: tabular-nums; }
+.planning-root .planning-decisions__summary-secondary, .planning-root .planning-decisions__note, .planning-root .planning-decisions__group-description,
+.planning-root .planning-decisions__provenance, .planning-root .planning-decisions__necessity, .planning-root .planning-decisions__gap-count { margin: 2px 0 0; color: var(--planning-muted); font-size: var(--planning-text-xs); line-height: 16px; }
+.planning-decisions__content { display: grid; gap: 8px; margin-top: 8px; }
+.planning-decisions__group { min-width: 0; border-top: 1px solid var(--planning-border); padding-top: 4px; }
+.planning-decisions__group-trigger { display: flex; width: 100%; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; padding-inline: 4px; text-align: left; font-weight: 600; white-space: normal; height: auto; min-height: 36px; }
+.planning-decisions__group-count { display: inline-flex; align-items: center; gap: 8px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.planning-decisions__list { display: grid; gap: 8px; margin: 8px 0 0; padding: 0; list-style: none; }
+.planning-decisions__item { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 16px; border: 1px solid var(--planning-border); border-radius: 8px; background: var(--planning-surface); padding: 8px 12px; }
+.planning-decisions__item-main { flex: 1 1 22rem; min-width: 0; }
+.planning-decisions__item-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.planning-root .planning-decisions__effect { margin: 2px 0 0; font-size: var(--planning-text-sm); line-height: 20px; }
+.planning-decisions__details { margin-top: 4px; font-size: var(--planning-text-xs); line-height: 16px; }
+.planning-decisions__details > summary { cursor: pointer; color: var(--planning-muted); }
+.planning-decisions__details ol, .planning-decisions__details ul { margin: 4px 0 0; padding-inline-start: 20px; }
+.planning-decisions__basis-trigger { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+.planning-decisions__basis-content { display: grid; gap: 8px; margin-top: 8px; }
+.planning-root .planning-decisions__basis-line { margin: 0; font-size: var(--planning-text-xs); line-height: 16px; }
+.planning-decisions__gaps { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; font-size: var(--planning-text-xs); line-height: 16px; }
+.planning-decisions__prelation { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 8px; margin: 0; }
+.planning-decisions__prelation > div { border: 1px solid var(--planning-border); border-radius: 8px; background: var(--planning-surface); padding: 8px 12px; }
+.planning-decisions__prelation dt { color: var(--planning-muted); font-size: var(--planning-text-xs); line-height: 16px; }
+.planning-decisions__prelation dd { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 2px 0 0; font-size: var(--planning-text-sm); font-weight: 600; }
+.planning-blockers { display: grid; gap: 4px; margin: 4px 0 0; padding-inline-start: 20px; font-size: var(--planning-text-sm); line-height: 20px; }
+.planning-blockers__requirement, .planning-blockers__sources { display: block; color: var(--planning-muted); font-size: var(--planning-text-xs); line-height: 16px; }
+.planning-status-bar__coverage { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+@media (max-width: 639px) {
+  .planning-decisions__queue, .planning-decisions__basis { padding: 8px; }
+  .planning-decisions__item { padding: 8px; }
+}
+

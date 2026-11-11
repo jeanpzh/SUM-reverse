@@ -5,8 +5,9 @@ import type {
   AcademicCatalog, AcademicDraftSaveRequest, AcademicProposal, AcademicSavedDraft, AcademicTeacherReview,
 } from '../../../shared/programacion-academica-api.mjs'
 import {
-  createPlanningSession, derivePlanningProgress, derivePlanningView, derivePlanningDraftLabel, derivePlanningPrimaryAction, initialPlanningSessionState, reducePlanningSession,
+  buildPlanningWorkspace, createPlanningSession, derivePlanningProgress, derivePlanningView, derivePlanningDraftLabel, derivePlanningPrimaryAction, initialPlanningSessionState, reducePlanningSession,
 } from './planningSession.ts'
+import { AcademicLoadAuthorizationError } from './academicScheduling.ts'
 import type { PlanningBlock, PlanningSessionClient, PlanningSessionState } from './planningSession.ts'
 
 // Synthetic fixtures only.
@@ -445,4 +446,57 @@ test('generation and saving carry the same explicit demo lective context', async
   assert.equal(generatedRequest?.academicPeriod, '2027-I')
   assert.equal(savedRequest?.configuration.lectiveHourMinutes, 60)
   assert.deepEqual(savedRequest?.configuration.request, generatedRequest)
+})
+
+test('lective hour choice invalidates the proposal, is saved with the workspace and can be unset', async () => {
+  const memory = memoryClient()
+  const session = createPlanningSession(memory.client)
+  await session.commands.loadCatalog()
+  session.commands.edit({ type: 'toggleCourse', courseId: 'CS101', checked: true })
+  await session.commands.generate()
+  assert.ok(session.getState().proposal)
+  session.commands.edit({ type: 'updateLectiveHourMinutes', value: 50 })
+  assert.equal(session.getState().proposal, null)
+  assert.equal(session.getState().lectiveHourMinutes, 50)
+  assert.equal(session.getState().dirty, true)
+  session.commands.edit({ type: 'updateLectiveHourMinutes', value: undefined })
+  assert.equal(session.getState().lectiveHourMinutes, undefined)
+  assert.equal(buildPlanningWorkspace(session.getState()).lectiveHourMinutes, undefined)
+})
+
+test('the decisions of an outdated proposal stay visible until the next generation', async () => {
+  const decisions = [{ id: 'D1', kind: 'planning-window' as const, teacherId: null, courseIds: [], exceptionKind: null, additionalMinutes: 0,
+    sectionsUnlocked: 2, basis: 'window-precheck' as const, policyChange: { allowAfternoon: true as const } }]
+  const memory = memoryClient({ createProposal: async () => makeProposal({ decisions }) })
+  const session = createPlanningSession(memory.client)
+  await session.commands.loadCatalog()
+  session.commands.edit({ type: 'toggleCourse', courseId: 'CS101', checked: true })
+  await session.commands.generate()
+  assert.equal(session.getState().staleDecisions, null)
+  session.commands.edit({ type: 'updateResources', value: { teachers: [], rooms: [] } })
+  assert.equal(session.getState().proposal, null)
+  assert.deepEqual(session.getState().staleDecisions?.decisions, decisions)
+  session.commands.edit({ type: 'updatePlanningException', key: 'allowSaturday', checked: true })
+  assert.deepEqual(session.getState().staleDecisions?.decisions, decisions, 'a second edit keeps the snapshot')
+  await session.commands.generate()
+  assert.equal(session.getState().staleDecisions, null)
+})
+
+test('a publication refused for missing load authorization keeps the blocker list until the draft changes', async () => {
+  const blockers = [{ teacherId: 'T1', assignedMinutes: 960, authorizedMaxMinutes: 720, reason: 'over-authorized-load' as const,
+    requiredAuthorization: 'voluntary-declaration' as const, sourceIds: ['OF-02'] }]
+  const memory = memoryClient({ publishDraft: async () => { throw new AcademicLoadAuthorizationError('Falta registrar la autorización formal.', blockers) } })
+  const session = createPlanningSession(memory.client)
+  await session.commands.loadCatalog()
+  session.commands.edit({ type: 'toggleCourse', courseId: 'CS101', checked: true })
+  await session.commands.save()
+  memory.drafts.set(draftId, { ...memory.drafts.get(draftId)!, state: 'ready-for-approval' })
+  await session.commands.resume(draftId, 1)
+  await session.commands.approve()
+  assert.equal(session.getState().draft.savedState, 'approved')
+  await session.commands.publish(null)
+  assert.deepEqual(session.getState().releaseBlockers, blockers)
+  assert.match(session.getState().errors.draft ?? '', /autorización formal/)
+  session.commands.edit({ type: 'setTitle', title: 'Otro nombre' })
+  assert.equal(session.getState().releaseBlockers, null)
 })
