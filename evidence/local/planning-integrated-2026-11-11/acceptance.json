@@ -1,11 +1,11 @@
 {
-  "startedAt": "2026-11-11T23:28:41.701Z",
+  "startedAt": "2026-11-11T23:45:13.249Z",
   "provenance": "Pure demo catalog plus independently constructed SYN teachers/rooms; no exports or snapshots. Fresh owned store and services only.",
-  "runtime": "/tmp/planning-integrated-independent-xCXHOW",
+  "runtime": "/tmp/planning-integrated-independent-l471RM",
   "results": [
     {
       "name": "jobs-cancel",
-      "startedAt": "2026-11-11T23:28:44.407Z",
+      "startedAt": "2026-11-11T23:45:16.102Z",
       "errors": [],
       "consoleErrors": [],
       "requestFailures": [
@@ -45,7 +45,7 @@
         },
         {
           "method": "POST",
-          "path": "/api/local/programacion-academica/v1/borradores/3f5b4784-ad3b-4c02-b990-fcf894873cbd/continuar",
+          "path": "/api/local/programacion-academica/v1/borradores/31ce666d-7e0f-456f-a162-d8627aa38b97/continuar",
           "body": {
             "expectedVersion": 1
           }
@@ -1476,40 +1476,44 @@
               }
             },
             "budgetSeconds": 30,
-            "requestId": "517d70e0-c03a-440e-8f13-587b0c0b6808"
+            "requestId": "6e97eb64-080d-441f-98b3-eb410ee0c3e9"
           }
         },
         {
           "method": "GET",
-          "path": "/api/local/programacion-academica/v1/busquedas/517d70e0-c03a-440e-8f13-587b0c0b6808"
+          "path": "/api/local/programacion-academica/v1/busquedas/6e97eb64-080d-441f-98b3-eb410ee0c3e9"
         },
         {
           "method": "GET",
-          "path": "/api/local/programacion-academica/v1/busquedas/517d70e0-c03a-440e-8f13-587b0c0b6808"
+          "path": "/api/local/programacion-academica/v1/busquedas/6e97eb64-080d-441f-98b3-eb410ee0c3e9"
         },
         {
           "method": "GET",
-          "path": "/api/local/programacion-academica/v1/busquedas/517d70e0-c03a-440e-8f13-587b0c0b6808"
+          "path": "/api/local/programacion-academica/v1/busquedas/6e97eb64-080d-441f-98b3-eb410ee0c3e9"
         },
         {
           "method": "GET",
-          "path": "/api/local/programacion-academica/v1/busquedas/517d70e0-c03a-440e-8f13-587b0c0b6808"
+          "path": "/api/local/programacion-academica/v1/busquedas/6e97eb64-080d-441f-98b3-eb410ee0c3e9"
         },
         {
           "method": "GET",
-          "path": "/api/local/programacion-academica/v1/busquedas/517d70e0-c03a-440e-8f13-587b0c0b6808"
+          "path": "/api/local/programacion-academica/v1/busquedas/6e97eb64-080d-441f-98b3-eb410ee0c3e9"
         },
         {
           "method": "GET",
-          "path": "/api/local/programacion-academica/v1/busquedas/517d70e0-c03a-440e-8f13-587b0c0b6808"
+          "path": "/api/local/programacion-academica/v1/busquedas/6e97eb64-080d-441f-98b3-eb410ee0c3e9"
         },
         {
           "method": "GET",
-          "path": "/api/local/programacion-academica/v1/busquedas/517d70e0-c03a-440e-8f13-587b0c0b6808"
+          "path": "/api/local/programacion-academica/v1/busquedas/6e97eb64-080d-441f-98b3-eb410ee0c3e9"
+        },
+        {
+          "method": "GET",
+          "path": "/api/local/programacion-academica/v1/busquedas/6e97eb64-080d-441f-98b3-eb410ee0c3e9"
         },
         {
           "method": "POST",
-          "path": "/api/local/programacion-academica/v1/busquedas/517d70e0-c03a-440e-8f13-587b0c0b6808/cancelar",
+          "path": "/api/local/programacion-academica/v1/busquedas/6e97eb64-080d-441f-98b3-eb410ee0c3e9/cancelar",
           "body": {}
         }
       ],
@@ -1524,7 +1528,7 @@
             "scheduledSections": 40,
             "improvements": 40
           },
-          "proposalId": "4ea90a99-20a1-41ef-b134-8b6466718cd5",
+          "proposalId": "ff7fd624-ff89-42a5-9fa2-ee11ae7f224e",
           "saveDisabled": true
         },
         {
@@ -1543,11 +1547,11 @@
         "jobs-cancel-cancelled.png"
       ],
       "status": "passed",
-      "finishedAt": "2026-11-11T23:29:12.717Z"
+      "finishedAt": "2026-11-11T23:45:45.049Z"
     },
     {
       "name": "teacher-isolation",
-      "startedAt": "2026-11-11T23:29:12.779Z",
+      "startedAt": "2026-11-11T23:45:45.109Z",
       "errors": [],
       "consoleErrors": [],
       "requestFailures": [
@@ -1587,7 +1591,7 @@
         },
         {
           "method": "POST",
-          "path": "/api/local/programacion-academica/v1/borradores/b19dc2a4-529f-4897-ba2d-d9aeacdc50c2/continuar",
+          "path": "/api/local/programacion-academica/v1/borradores/d5768b76-7a37-4403-9351-006a2ea47831/continuar",
           "body": {
             "expectedVersion": 1
           }
@@ -1607,11 +1611,11 @@
         "teacher-isolation-B-clean.png"
       ],
       "status": "passed",
-      "finishedAt": "2026-11-11T23:29:17.885Z"
+      "finishedAt": "2026-11-11T23:45:50.045Z"
     },
     {
       "name": "advisor-explicit-regenerate",
-      "startedAt": "2026-11-11T23:29:17.941Z",
+      "startedAt": "2026-11-11T23:45:50.099Z",
       "errors": [],
       "consoleErrors": [],
       "requestFailures": [
@@ -1651,7 +1655,7 @@
         },
         {
           "method": "POST",
-          "path": "/api/local/programacion-academica/v1/borradores/649bbd06-3d50-46cf-a63d-4ab25fe9db4c/continuar",
+          "path": "/api/local/programacion-academica/v1/borradores/d7de3c29-db22-40a2-ab12-5db2cb90ba19/continuar",
           "body": {
             "expectedVersion": 1
           }
@@ -1680,16 +1684,16 @@
               }
             },
             "budgetSeconds": 30,
-            "requestId": "b846621b-5f05-43e9-b7da-e0df033a548f"
+            "requestId": "99c965ce-132f-4ee8-bbd8-761841d337a3"
           }
         },
         {
           "method": "GET",
-          "path": "/api/local/programacion-academica/v1/busquedas/b846621b-5f05-43e9-b7da-e0df033a548f"
+          "path": "/api/local/programacion-academica/v1/busquedas/99c965ce-132f-4ee8-bbd8-761841d337a3"
         },
         {
           "method": "POST",
-          "path": "/api/local/programacion-academica/v1/propuestas/4708ff06-94ed-4bed-bff7-4cdb6fb2b2cd/consejero",
+          "path": "/api/local/programacion-academica/v1/propuestas/14edec80-3013-4292-9647-7339ec70c526/consejero",
           "body": {
             "expectedEditVersion": 0
           }
@@ -1728,19 +1732,19 @@
               }
             },
             "budgetSeconds": 30,
-            "requestId": "46b2785f-7208-4b80-bba8-41c089e53f0d"
+            "requestId": "42dadef4-f316-48b8-9e79-415753d1ab6f"
           }
         },
         {
           "method": "GET",
-          "path": "/api/local/programacion-academica/v1/busquedas/46b2785f-7208-4b80-bba8-41c089e53f0d"
+          "path": "/api/local/programacion-academica/v1/busquedas/42dadef4-f316-48b8-9e79-415753d1ab6f"
         }
       ],
       "httpErrors": [],
       "details": [
         {
           "advice": {
-            "proposalId": "4708ff06-94ed-4bed-bff7-4cdb6fb2b2cd",
+            "proposalId": "14edec80-3013-4292-9647-7339ec70c526",
             "editVersion": 0,
             "source": {
               "mode": "engine-decisions",
@@ -1828,11 +1832,11 @@
         "advisor-explicit-regenerate-regenerated.png"
       ],
       "status": "passed",
-      "finishedAt": "2026-11-11T23:29:23.727Z"
+      "finishedAt": "2026-11-11T23:45:55.552Z"
     },
     {
       "name": "lifecycle-success",
-      "startedAt": "2026-11-11T23:29:23.784Z",
+      "startedAt": "2026-11-11T23:45:55.605Z",
       "errors": [],
       "consoleErrors": [],
       "requestFailures": [
@@ -1880,7 +1884,7 @@
         },
         {
           "method": "POST",
-          "path": "/api/local/programacion-academica/v1/borradores/098aab60-54d8-4721-b4cd-5e3515ad554c/continuar",
+          "path": "/api/local/programacion-academica/v1/borradores/3313d025-f139-4a5c-a1c0-68187b42116b/continuar",
           "body": {
             "expectedVersion": 1
           }
@@ -2019,18 +2023,18 @@
               }
             },
             "budgetSeconds": 30,
-            "requestId": "3ff9b483-7b4e-41f2-a7cd-cf5b634b2fca"
+            "requestId": "adbfff13-411f-42b7-af61-48f7690430cf"
           }
         },
         {
           "method": "GET",
-          "path": "/api/local/programacion-academica/v1/busquedas/3ff9b483-7b4e-41f2-a7cd-cf5b634b2fca"
+          "path": "/api/local/programacion-academica/v1/busquedas/adbfff13-411f-42b7-af61-48f7690430cf"
         },
         {
           "method": "POST",
           "path": "/api/local/programacion-academica/v1/borradores/guardar",
           "body": {
-            "id": "098aab60-54d8-4721-b4cd-5e3515ad554c",
+            "id": "3313d025-f139-4a5c-a1c0-68187b42116b",
             "expectedVersion": 1,
             "title": "SYN DOM publication",
             "state": "draft",
@@ -2170,7 +2174,7 @@
               "demandSourceId": "independent-120-v1",
               "demandBaseRequest": null
             },
-            "proposalId": "cb789464-0f07-4c2b-bcf0-4948015d7f9e",
+            "proposalId": "d1d285a9-ce37-4633-93bb-af3c956b019b",
             "proposalEditVersion": 0
           }
         },
@@ -2204,14 +2208,14 @@
         },
         {
           "method": "POST",
-          "path": "/api/local/programacion-academica/v1/borradores/098aab60-54d8-4721-b4cd-5e3515ad554c/continuar",
+          "path": "/api/local/programacion-academica/v1/borradores/3313d025-f139-4a5c-a1c0-68187b42116b/continuar",
           "body": {
             "expectedVersion": 2
           }
         },
         {
           "method": "POST",
-          "path": "/api/local/programacion-academica/v1/borradores/098aab60-54d8-4721-b4cd-5e3515ad554c/revision/enviar",
+          "path": "/api/local/programacion-academica/v1/borradores/3313d025-f139-4a5c-a1c0-68187b42116b/revision/enviar",
           "body": {
             "expectedVersion": 2
           }
@@ -2222,7 +2226,7 @@
         },
         {
           "method": "POST",
-          "path": "/api/local/programacion-academica/v1/borradores/098aab60-54d8-4721-b4cd-5e3515ad554c/revision/responder",
+          "path": "/api/local/programacion-academica/v1/borradores/3313d025-f139-4a5c-a1c0-68187b42116b/revision/responder",
           "body": {
             "expectedVersion": 3,
             "round": 1,
@@ -2237,11 +2241,11 @@
         },
         {
           "method": "GET",
-          "path": "/api/local/programacion-academica/v1/borradores/098aab60-54d8-4721-b4cd-5e3515ad554c/vista-previa"
+          "path": "/api/local/programacion-academica/v1/borradores/3313d025-f139-4a5c-a1c0-68187b42116b/vista-previa"
         },
         {
           "method": "POST",
-          "path": "/api/local/programacion-academica/v1/borradores/098aab60-54d8-4721-b4cd-5e3515ad554c/aprobar",
+          "path": "/api/local/programacion-academica/v1/borradores/3313d025-f139-4a5c-a1c0-68187b42116b/aprobar",
           "body": {
             "expectedVersion": 4
           }
@@ -2256,11 +2260,11 @@
         },
         {
           "method": "GET",
-          "path": "/api/local/programacion-academica/v1/borradores/098aab60-54d8-4721-b4cd-5e3515ad554c/vista-previa"
+          "path": "/api/local/programacion-academica/v1/borradores/3313d025-f139-4a5c-a1c0-68187b42116b/vista-previa"
         },
         {
           "method": "POST",
-          "path": "/api/local/programacion-academica/v1/borradores/098aab60-54d8-4721-b4cd-5e3515ad554c/publicar",
+          "path": "/api/local/programacion-academica/v1/borradores/3313d025-f139-4a5c-a1c0-68187b42116b/publicar",
           "body": {
             "expectedVersion": 5,
             "expectedCurrentId": null
@@ -2276,14 +2280,14 @@
         },
         {
           "method": "GET",
-          "path": "/api/local/programacion-academica/v1/borradores/098aab60-54d8-4721-b4cd-5e3515ad554c/vista-previa"
+          "path": "/api/local/programacion-academica/v1/borradores/3313d025-f139-4a5c-a1c0-68187b42116b/vista-previa"
         }
       ],
       "httpErrors": [],
       "details": [
         {
           "saveReload": true,
-          "draftId": "098aab60-54d8-4721-b4cd-5e3515ad554c"
+          "draftId": "3313d025-f139-4a5c-a1c0-68187b42116b"
         },
         {
           "states": [
@@ -2299,11 +2303,11 @@
         "lifecycle-success-publication.png"
       ],
       "status": "passed",
-      "finishedAt": "2026-11-11T23:29:33.975Z"
+      "finishedAt": "2026-11-11T23:46:05.764Z"
     },
     {
       "name": "normative-blocker",
-      "startedAt": "2026-11-11T23:29:34.059Z",
+      "startedAt": "2026-11-11T23:46:05.811Z",
       "errors": [],
       "consoleErrors": [
         "Failed to load resource: the server responded with a status of 409 (Conflict)"
@@ -2353,7 +2357,7 @@
         },
         {
           "method": "POST",
-          "path": "/api/local/programacion-academica/v1/borradores/52809123-ec44-4b2b-aeb8-b350f1a2668b/continuar",
+          "path": "/api/local/programacion-academica/v1/borradores/95cc07b9-5cb6-40d2-8f23-fcaa6216a4ed/continuar",
           "body": {
             "expectedVersion": 1
           }
@@ -2490,18 +2494,18 @@
               }
             },
             "budgetSeconds": 30,
-            "requestId": "6782e68f-a73e-43c8-b790-6f65adaeddac"
+            "requestId": "6415d96a-4eff-4f8e-b4a3-7f063b1bb52d"
           }
         },
         {
           "method": "GET",
-          "path": "/api/local/programacion-academica/v1/busquedas/6782e68f-a73e-43c8-b790-6f65adaeddac"
+          "path": "/api/local/programacion-academica/v1/busquedas/6415d96a-4eff-4f8e-b4a3-7f063b1bb52d"
         },
         {
           "method": "POST",
           "path": "/api/local/programacion-academica/v1/borradores/guardar",
           "body": {
-            "id": "52809123-ec44-4b2b-aeb8-b350f1a2668b",
+            "id": "95cc07b9-5cb6-40d2-8f23-fcaa6216a4ed",
             "expectedVersion": 1,
             "title": "SYN DOM normative blocker",
             "state": "draft",
@@ -2638,7 +2642,7 @@
               "demandSourceId": "independent-120-v1",
               "demandBaseRequest": null
             },
-            "proposalId": "02e64be0-e160-4609-8b6d-536325657a10",
+            "proposalId": "c608b17d-24b1-4d17-93ac-49c175d5764a",
             "proposalEditVersion": 0
           }
         },
@@ -2672,14 +2676,14 @@
         },
         {
           "method": "POST",
-          "path": "/api/local/programacion-academica/v1/borradores/52809123-ec44-4b2b-aeb8-b350f1a2668b/continuar",
+          "path": "/api/local/programacion-academica/v1/borradores/95cc07b9-5cb6-40d2-8f23-fcaa6216a4ed/continuar",
           "body": {
             "expectedVersion": 2
           }
         },
         {
           "method": "POST",
-          "path": "/api/local/programacion-academica/v1/borradores/52809123-ec44-4b2b-aeb8-b350f1a2668b/revision/enviar",
+          "path": "/api/local/programacion-academica/v1/borradores/95cc07b9-5cb6-40d2-8f23-fcaa6216a4ed/revision/enviar",
           "body": {
             "expectedVersion": 2
           }
@@ -2690,7 +2694,7 @@
         },
         {
           "method": "POST",
-          "path": "/api/local/programacion-academica/v1/borradores/52809123-ec44-4b2b-aeb8-b350f1a2668b/revision/responder",
+          "path": "/api/local/programacion-academica/v1/borradores/95cc07b9-5cb6-40d2-8f23-fcaa6216a4ed/revision/responder",
           "body": {
             "expectedVersion": 3,
             "round": 1,
@@ -2705,11 +2709,11 @@
         },
         {
           "method": "GET",
-          "path": "/api/local/programacion-academica/v1/borradores/52809123-ec44-4b2b-aeb8-b350f1a2668b/vista-previa"
+          "path": "/api/local/programacion-academica/v1/borradores/95cc07b9-5cb6-40d2-8f23-fcaa6216a4ed/vista-previa"
         },
         {
           "method": "POST",
-          "path": "/api/local/programacion-academica/v1/borradores/52809123-ec44-4b2b-aeb8-b350f1a2668b/aprobar",
+          "path": "/api/local/programacion-academica/v1/borradores/95cc07b9-5cb6-40d2-8f23-fcaa6216a4ed/aprobar",
           "body": {
             "expectedVersion": 4
           }
@@ -2724,14 +2728,14 @@
         },
         {
           "method": "GET",
-          "path": "/api/local/programacion-academica/v1/borradores/52809123-ec44-4b2b-aeb8-b350f1a2668b/vista-previa"
+          "path": "/api/local/programacion-academica/v1/borradores/95cc07b9-5cb6-40d2-8f23-fcaa6216a4ed/vista-previa"
         },
         {
           "method": "POST",
-          "path": "/api/local/programacion-academica/v1/borradores/52809123-ec44-4b2b-aeb8-b350f1a2668b/publicar",
+          "path": "/api/local/programacion-academica/v1/borradores/95cc07b9-5cb6-40d2-8f23-fcaa6216a4ed/publicar",
           "body": {
             "expectedVersion": 5,
-            "expectedCurrentId": "098aab60-54d8-4721-b4cd-5e3515ad554c"
+            "expectedCurrentId": "3313d025-f139-4a5c-a1c0-68187b42116b"
           }
         },
         {
@@ -2741,14 +2745,14 @@
       ],
       "httpErrors": [
         {
-          "path": "/api/local/programacion-academica/v1/borradores/52809123-ec44-4b2b-aeb8-b350f1a2668b/publicar",
+          "path": "/api/local/programacion-academica/v1/borradores/95cc07b9-5cb6-40d2-8f23-fcaa6216a4ed/publicar",
           "status": 409
         }
       ],
       "details": [
         {
           "saveReload": true,
-          "draftId": "52809123-ec44-4b2b-aeb8-b350f1a2668b"
+          "draftId": "95cc07b9-5cb6-40d2-8f23-fcaa6216a4ed"
         },
         {
           "normativeRejection": {
@@ -2770,11 +2774,11 @@
         "normative-blocker-publication.png"
       ],
       "status": "passed",
-      "finishedAt": "2026-11-11T23:29:44.540Z"
+      "finishedAt": "2026-11-11T23:46:15.432Z"
     },
     {
       "name": "responsive-keyboard",
-      "startedAt": "2026-11-11T23:29:44.596Z",
+      "startedAt": "2026-11-11T23:46:15.487Z",
       "errors": [],
       "consoleErrors": [],
       "requestFailures": [
@@ -2814,7 +2818,7 @@
         },
         {
           "method": "POST",
-          "path": "/api/local/programacion-academica/v1/borradores/6a16284c-e86f-45c2-bcd1-8f9bfa4d87b7/continuar",
+          "path": "/api/local/programacion-academica/v1/borradores/1b1d82ab-c503-47ef-a31d-e43248660cb2/continuar",
           "body": {
             "expectedVersion": 1
           }
@@ -2871,7 +2875,7 @@
         "responsive-keyboard-css-zoom-200.png"
       ],
       "status": "passed",
-      "finishedAt": "2026-11-11T23:29:48.183Z"
+      "finishedAt": "2026-11-11T23:46:19.649Z"
     }
   ],
   "engineRequests": [
@@ -2881,71 +2885,79 @@
     },
     {
       "method": "GET",
-      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+      "path": "/v1/solve-jobs/f1620c786163443099a06a01e07f7f48"
     },
     {
       "method": "GET",
-      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+      "path": "/v1/solve-jobs/f1620c786163443099a06a01e07f7f48"
     },
     {
       "method": "GET",
-      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+      "path": "/v1/solve-jobs/f1620c786163443099a06a01e07f7f48"
     },
     {
       "method": "GET",
-      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+      "path": "/v1/solve-jobs/f1620c786163443099a06a01e07f7f48"
     },
     {
       "method": "GET",
-      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+      "path": "/v1/solve-jobs/f1620c786163443099a06a01e07f7f48"
     },
     {
       "method": "GET",
-      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+      "path": "/v1/solve-jobs/f1620c786163443099a06a01e07f7f48"
     },
     {
       "method": "GET",
-      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+      "path": "/v1/solve-jobs/f1620c786163443099a06a01e07f7f48"
     },
     {
       "method": "GET",
-      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+      "path": "/v1/solve-jobs/f1620c786163443099a06a01e07f7f48"
     },
     {
       "method": "GET",
-      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+      "path": "/v1/solve-jobs/f1620c786163443099a06a01e07f7f48"
     },
     {
       "method": "GET",
-      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+      "path": "/v1/solve-jobs/f1620c786163443099a06a01e07f7f48"
     },
     {
       "method": "GET",
-      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+      "path": "/v1/solve-jobs/f1620c786163443099a06a01e07f7f48"
     },
     {
       "method": "GET",
-      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+      "path": "/v1/solve-jobs/f1620c786163443099a06a01e07f7f48"
     },
     {
       "method": "GET",
-      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+      "path": "/v1/solve-jobs/f1620c786163443099a06a01e07f7f48"
     },
     {
       "method": "GET",
-      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+      "path": "/v1/solve-jobs/f1620c786163443099a06a01e07f7f48"
     },
     {
       "method": "GET",
-      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+      "path": "/v1/solve-jobs/f1620c786163443099a06a01e07f7f48"
     },
     {
       "method": "GET",
-      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+      "path": "/v1/solve-jobs/f1620c786163443099a06a01e07f7f48"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/solve-jobs/f1620c786163443099a06a01e07f7f48"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/solve-jobs/f1620c786163443099a06a01e07f7f48"
     },
     {
       "method": "DELETE",
-      "path": "/v1/solve-jobs/d356e1ec926f4e47aa43187c845a3551"
+      "path": "/v1/solve-jobs/f1620c786163443099a06a01e07f7f48"
     },
     {
       "method": "POST",
@@ -2953,7 +2965,7 @@
     },
     {
       "method": "GET",
-      "path": "/v1/solve-jobs/0d1e4bac85cc49138231b181779d3dd0"
+      "path": "/v1/solve-jobs/6ffb072afdfc4d7f843fbc2d253c525b"
     },
     {
       "method": "POST",
@@ -2961,7 +2973,7 @@
     },
     {
       "method": "GET",
-      "path": "/v1/solve-jobs/f87f8599fcc143a0ae81768081aa3739"
+      "path": "/v1/solve-jobs/9b7c15578cb24526b54e8d429700a977"
     },
     {
       "method": "POST",
@@ -2969,7 +2981,7 @@
     },
     {
       "method": "GET",
-      "path": "/v1/solve-jobs/ca85c375d1ea4dd6bf5f92294dc53954"
+      "path": "/v1/solve-jobs/629f0de949264319959c74bfcac715a6"
     },
     {
       "method": "POST",
@@ -2977,14 +2989,14 @@
     },
     {
       "method": "GET",
-      "path": "/v1/solve-jobs/4504f486cb2d4598a76154a2eca896c1"
+      "path": "/v1/solve-jobs/8e4c8fdb386a4461813d538555d2ff77"
     }
   ],
   "env": {
     "engine": {
       "PATH": "/home/ubuntu/.local/bin:/home/ubuntu/.opencode/bin:/home/ubuntu/.nvm/versions/node/v24.22.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",
       "LANG": "C.UTF-8",
-      "HOME": "/tmp/planning-integrated-independent-xCXHOW",
+      "HOME": "/tmp/planning-integrated-independent-l471RM",
       "SUM_LLM_PROVIDER": "disabled",
       "SUM_RAG_GENERATION_MODE": "extractive",
       "AWS_EC2_METADATA_DISABLED": "true",
@@ -2994,60 +3006,60 @@
     "backend": {
       "PATH": "/home/ubuntu/.local/bin:/home/ubuntu/.opencode/bin:/home/ubuntu/.nvm/versions/node/v24.22.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",
       "LANG": "C.UTF-8",
-      "HOME": "/tmp/planning-integrated-independent-xCXHOW",
-      "PORT": "37553",
+      "HOME": "/tmp/planning-integrated-independent-l471RM",
+      "PORT": "41281",
       "SUM_ACADEMIC_SCHEDULING": "1",
       "SIMULATOR_DEPLOYMENT": "local",
       "SUM_LOCAL_SCENARIOS": "0",
-      "SUM_ACADEMIC_DRAFT_DIR": "/tmp/planning-integrated-independent-xCXHOW",
-      "SUM_PLANNING_ENGINE_URL": "http://127.0.0.1:33467"
+      "SUM_ACADEMIC_DRAFT_DIR": "/tmp/planning-integrated-independent-l471RM",
+      "SUM_PLANNING_ENGINE_URL": "http://127.0.0.1:37975"
     },
     "web": {
       "PATH": "/home/ubuntu/.local/bin:/home/ubuntu/.opencode/bin:/home/ubuntu/.nvm/versions/node/v24.22.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",
       "LANG": "C.UTF-8",
-      "HOME": "/tmp/planning-integrated-independent-xCXHOW",
+      "HOME": "/tmp/planning-integrated-independent-l471RM",
       "VITE_SUM_DATA_MODE": "local",
       "VITE_SUM_API_BASE_URL": "/api",
-      "VITE_SUM_API_PROXY_TARGET": "http://127.0.0.1:37553",
-      "VITE_SUM_PLANNING_API_PROXY_TARGET": "http://127.0.0.1:37553",
+      "VITE_SUM_API_PROXY_TARGET": "http://127.0.0.1:41281",
+      "VITE_SUM_PLANNING_API_PROXY_TARGET": "http://127.0.0.1:41281",
       "VITE_SUM_ACADEMIC_SCHEDULING": "1",
       "VITE_SUM_SIMULATOR": "0",
       "VITE_SUM_LOCAL_PROFILE": "synthetic-actors"
     }
   },
   "source": {
-    "client/src/data/planningSession.ts": "8668965db1d6f935bfffac4b31f014de77c5ec07009ae44fd1fe4643ca22732e",
+    "client/src/data/planningSession.ts": "ef24bc02c55f4ab424bdd250fdc8458900a90d5112e4a2c83acd4056d2104992",
     "client/src/components/ai-elements/SuggestionCard.tsx": "050ac3fdebfda4c5baccf3f509dc78d61adaf3e19c49890713249fc561190ff0",
     "client/src/screens/PlanningStatusBar.tsx": "86aba678e75572c5bc8ee0c6677273d3add92725e57d4053ae3dcb809ad179af",
     "backend/dist/programacion-academica/demo-proposal.service.js": "f2de13d9a301a49963d5be3ac3d5529924a14486cadaa2034e1e3cee311f71fd",
-    "planning-engine/solver.py": "1587a77af723a553b925cbdc5558b4d5dd655c42b32c8ee22d01a0a2e8e52e8f"
+    "planning-engine/solver.py": "c86da01e509059362793812f799b7913995d3c43a07bbb5d59c2b6d7d273b4bc"
   },
   "ports": {
-    "enginePort": 43553,
-    "apiPort": 37553,
-    "webPort": 45861,
-    "proxyPort": 33467
+    "enginePort": 46877,
+    "apiPort": 41281,
+    "webPort": 36797,
+    "proxyPort": 37975
   },
   "cleanup": {
     "browserClosed": true,
     "services": [
       {
-        "pid": 21809,
+        "pid": 43027,
         "code": 143,
         "signal": null
       },
       {
-        "pid": 21764,
+        "pid": 43019,
         "code": null,
         "signal": "SIGTERM"
       },
       {
-        "pid": 21757,
+        "pid": 43012,
         "code": null,
         "signal": "SIGTERM"
       }
     ],
     "ownTemporaryStateRemoved": true
   },
-  "finishedAt": "2026-11-11T23:29:48.458Z"
+  "finishedAt": "2026-11-11T23:46:19.946Z"
 }

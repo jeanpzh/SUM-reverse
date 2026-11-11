@@ -71,7 +71,7 @@ de cada nivel, no las asignaciones.
 | T6a | Motor: decisiones de franja y de modalidad para las secciones sin franja (`planning-window`, `delivery-mode-split`, base `window-precheck`) | T2 | Codex GPT-6.1 Sol | verificado e integrado 2026-11-10 (`1ca4df2`) |
 | T6b | El consejero consume las decisiones del motor en lugar de proponer y simular; recursos de referencia | T3, T6a | Codex GPT-6.1 Sol | implementado y auditado; dos P2 corregidos por el principal; aceptación DOM 6/6 |
 | T8 | Motor: generar candidatos sin recorte (o con recorte demostrablemente inocuo) para que la prelación y la cobertura puedan quedar probadas | T4a | Codex GPT-6.1 Sol | implementado y revisado sin defectos materiales; aceptación limitada a los casos sintéticos documentados |
-| T7 | Auditoría del resultado integrado | T3–T6 | por asignar | pendiente |
+| T7 | Auditoría del resultado integrado | T3–T6 | Codex GPT-6.1 Sol | auditado 2026-11-11: P1 y P2 reparados y verificados por el principal; sin re-auditoría independiente de la reparación |
 
 T1 y T2 no comparten archivos: el contrato del motor está fijado arriba. T3 y T6a tampoco:
 T3 trabaja en `shared/`, `backend/` y `client/src/data/`; T6a solo en `planning-engine/`.
@@ -725,3 +725,20 @@ correcciones solo del script (ruta, navegador instalado, tres selectores); sin c
 aplicación. Resultado: 6/6 escenarios aprobados sobre stack sintético propio. Observaciones
 abiertas: 422 de vista-previa al reanudar borradores, control «Editar horario» ausente tras
 cancelar, zoom real y paridad visual sin verificar. Detalle en el informe T6b. Sin commit.
+
+
+### T7: auditoría integrada y reparaciones (2026-11-11)
+
+Auditor independiente (solo lectura) sobre `12f5e2d..1a0d05c`: resultado no aceptado por un P1
+y un P2; sin vía hallada para eludir el bloqueo de publicación.
+
+- P1 (decisión combinada perdía la separación de componentes): reparado en `b92e2d3` por un
+  worker Codex. Contrato: `requiresSplit?: true` en la decisión y `splitCourseIds?` en el patch
+  de franja existente; aplicación atómica en la sesión. Verificación del principal: pytest de
+  decisiones de franja 16/16, `nest build`, y aceptación DOM integrada 6/6 sobre el árbol reparado.
+- P2 (texto de faltante comprobado afirmaba un máximo de secciones no demostrado): corregido por
+  el principal en `4cd977e`; datos cliente 342/342 entonces, 344/344 según el worker tras P1.
+
+No verificado: escenario combinado en navegador, y re-auditoría independiente de `b92e2d3`.
+Siguen abiertas las observaciones del informe T6b (Editar horario tras cancelar, zoom real,
+paridad visual).
