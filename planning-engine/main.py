@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import os
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 import uvicorn
 
 from advisor import analyze_proposal_with_advisor
+from jobs import JobManager, get_manager
 from normative import NormativeRequest, NormativeResponse, default_retriever
 from models import (
     AcademicAdvisorResponse,
     AdvisorAnalyzeRequest,
+    SolveJobStarted,
+    SolveJobStatus,
     SolveScheduleRequest,
     SolveScheduleResponse,
 )
@@ -33,6 +36,30 @@ def normative_endpoint(request: NormativeRequest) -> NormativeResponse:
 @app.post("/v1/solve", response_model=SolveScheduleResponse)
 def solve_endpoint(request: SolveScheduleRequest) -> SolveScheduleResponse:
     return solve_academic_schedule(request)
+
+
+@app.post("/v1/solve-jobs", response_model=SolveJobStarted, status_code=202)
+def start_solve_job(
+    request: SolveScheduleRequest, manager: JobManager = Depends(get_manager)
+) -> SolveJobStarted:
+    job = manager.start(request)
+    return SolveJobStarted(jobId=job.id, state="running", budgetSeconds=job.budget)
+
+
+@app.get("/v1/solve-jobs/{job_id}", response_model=SolveJobStatus)
+def get_solve_job(job_id: str, manager: JobManager = Depends(get_manager)) -> SolveJobStatus:
+    status = manager.status(job_id)
+    if status is None:
+        raise HTTPException(status_code=404, detail="Unknown or expired solve job")
+    return status
+
+
+@app.delete("/v1/solve-jobs/{job_id}", response_model=SolveJobStatus)
+def cancel_solve_job(job_id: str, manager: JobManager = Depends(get_manager)) -> SolveJobStatus:
+    status = manager.cancel(job_id)
+    if status is None:
+        raise HTTPException(status_code=404, detail="Unknown or expired solve job")
+    return status
 
 
 @app.post(

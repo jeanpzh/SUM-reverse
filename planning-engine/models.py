@@ -176,6 +176,36 @@ class SolveScheduleResponse(BaseModel):
     prelation: PrelationOutput | None = None
 
 
+class SolveJobStarted(BaseModel):
+    jobId: str
+    state: Literal['running']
+    budgetSeconds: float
+
+
+class SolveJobProgress(BaseModel):
+    requiredSessions: int
+    scheduledSessions: int
+    requiredSections: int
+    scheduledSections: int
+    improvements: int
+
+
+class SolveJobError(BaseModel):
+    code: Literal['SEARCH_FAILED', 'SEARCH_PROCESS_LOST', 'SEARCH_OVERRUN']
+    message: str
+
+
+class SolveJobStatus(BaseModel):
+    jobId: str
+    state: Literal['running', 'completed', 'cancelled', 'failed']
+    phase: Literal['preparing', 'capacity', 'coverage', 'prelation', 'preferences', 'done']
+    elapsedSeconds: float
+    budgetSeconds: float
+    progress: SolveJobProgress
+    result: SolveScheduleResponse | None = None
+    error: SolveJobError | None = None
+
+
 class ReferenceTeacherInput(BaseModel):
     id: str
     name: str

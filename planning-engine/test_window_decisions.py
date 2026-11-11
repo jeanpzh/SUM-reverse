@@ -148,6 +148,9 @@ def test_expired_budget_keeps_schedule_and_does_not_claim_options(monkeypatch):
     import solver
     now = [0.0]
     monkeypatch.setattr(solver.time, 'monotonic', lambda: now[0])
+    # The timetable solve is the only one with several workers; pin the count so the
+    # marker does not depend on this machine's cores (capacity and stages use one).
+    monkeypatch.setattr(solver, 'search_workers', lambda: 4)
     real_solve = solver.cp_model.CpSolver.solve
 
     def expire_after_timetable(self, *args):

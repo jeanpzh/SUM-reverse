@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-import time
 import math
+import os
+import time
+from dataclasses import dataclass
 from functools import lru_cache
+from typing import Callable
 
 from collections import defaultdict
 from ortools.sat.python import cp_model
@@ -25,6 +28,50 @@ from models import (
     TeacherInput,
     TimeInterval,
 )
+
+def search_workers() -> int:
+    """CP-SAT search workers for the timetable solve: at most 4, never above the usable cores."""
+    try:
+        cores = len(os.sched_getaffinity(0))
+    except AttributeError:
+        cores = os.cpu_count() or 1
+    try:  # A container CPU quota can be lower than the visible core count.
+        quota, period = open('/sys/fs/cgroup/cpu.max').read().split()[:2]
+        if quota != 'max':
+            cores = min(cores, max(1, int(int(quota) / int(period))))
+    except (OSError, ValueError):
+        pass
+    return max(1, min(4, cores))
+
+
+@dataclass
+class SearchHooks:
+    """Optional observers for a running search; all are called from the solving thread.
+
+    `on_phase(name)` follows the solver's stages (`preparing`, `capacity`, `coverage`,
+    `prelation`, `preferences`). `on_improvement(assignments)` receives each strictly
+    better valid schedule: more scheduled sessions, or equal sessions with a
+    lexicographically better (contract, interfaculty, category) prelation value.
+    `should_cancel()` is polled between stages and on every solution; hard stopping of a
+    search that has no solution to report is the caller's job (the job manager kills its
+    worker process).
+    """
+    on_phase: Callable[[str], None] | None = None
+    on_improvement: Callable[[list[AssignmentOutput]], None] | None = None
+    should_cancel: Callable[[], bool] | None = None
+
+
+class _SolutionCallback(cp_model.CpSolverSolutionCallback):
+    def __init__(self, on_solution, should_cancel):
+        super().__init__()
+        self._on_solution = on_solution
+        self._should_cancel = should_cancel
+
+    def on_solution_callback(self):
+        self._on_solution(self.boolean_value)
+        if self._should_cancel is not None and self._should_cancel():
+            self.stop_search()
+
 
 THESIS_COURSE_IDS = {
     "20118081",
@@ -97,9 +144,9 @@ def intervals_overlap(
     return day_a == day_b and start_a < end_b and start_b < end_a
 
 
-def solve_academic_schedule(req: SolveScheduleRequest) -> SolveScheduleResponse:
+def solve_academic_schedule(req: SolveScheduleRequest, hooks: SearchHooks | None = None) -> SolveScheduleResponse:
     deadline = time.monotonic() + req.maxTimeSeconds
-    result = _solve_academic_schedule(req, deadline)
+    result = _solve_academic_schedule(req, deadline, hooks or SearchHooks())
     # Explain the existing precheck only after scheduling. Counterfactual options
     # never enter capacity optimization, the incumbent, or the timetable model.
     excluded_ids = {sid for d in result.diagnostics if d.code == 'NO_SCHEDULING_WINDOW'
@@ -191,7 +238,15 @@ def _window_options(
     return decisions, diagnostics
 
 
-def _solve_academic_schedule(req: SolveScheduleRequest, deadline: float) -> SolveScheduleResponse:
+def _solve_academic_schedule(req: SolveScheduleRequest, deadline: float, hooks: SearchHooks) -> SolveScheduleResponse:
+    def phase(name: str) -> None:
+        if hooks.on_phase is not None:
+            hooks.on_phase(name)
+
+    def cancelled() -> bool:
+        return hooks.should_cancel is not None and hooks.should_cancel()
+
+    phase('preparing')
     capacity_certificate = None
     decisions = []
     incumbent = []
@@ -239,6 +294,23 @@ def _solve_academic_schedule(req: SolveScheduleRequest, deadline: float) -> Solv
             sum(teachers[tid].categoryRank for _, tid in assigned)]
         return PrelationOutput(levels=[PrelationLevel(id=key, value=value, proven=proof)
             for key, value, proof in zip(['contract-sections', 'interfaculty-sections', 'category-rank'], values, prelation_proofs)])
+
+    best_key: tuple | None = None
+
+    def publish(sessions: int, pairs: set[tuple[str, str]], build) -> None:
+        # Report only strictly better schedules; the key never lowers scheduled sessions.
+        nonlocal best_key
+        if hooks.on_improvement is None:
+            return
+        key: tuple = (sessions,)
+        if prelation_enabled:
+            tiers = {t.id: t for t in req.teachers}
+            key += (-sum(tiers[tid].appointmentTier == 2 for _, tid in pairs),
+                    -sum(tiers[tid].appointmentTier == 1 for _, tid in pairs),
+                    -sum(tiers[tid].categoryRank for _, tid in pairs))
+        if best_key is None or key > best_key:
+            best_key = key
+            hooks.on_improvement(build())
 
     precheck_diagnostics: list[DiagnosticOutput] = []
     excluded_sections: set[str] = set()
@@ -456,6 +528,9 @@ def _solve_academic_schedule(req: SolveScheduleRequest, deadline: float) -> Solv
                         occupied[key] |= mask
                     break
 
+    if incumbent:
+        publish(len(incumbent), {(a.sectionId, a.teacherId) for a in incumbent}, lambda: list(incumbent))
+    phase('capacity')
     capacity_certificate, decisions, decisions_proven, capacity_upper_bound = analyze_capacity(req, teachers_by_course,
         min(deadline, time.monotonic() + min(1.0, req.maxTimeSeconds * 0.2)), excluded_sections)
     if not decisions_proven:
@@ -697,49 +772,13 @@ def _solve_academic_schedule(req: SolveScheduleRequest, deadline: float) -> Solv
     # Legacy requests retain their preference behavior; complete priority data
     # activates PA-ENGINE-2's strict sequence, never freezing teacher assignments.
     model.maximize(coverage if prelation_enabled else coverage * 1000 + preference)
-    solver = cp_model.CpSolver()
-    if time.monotonic() >= deadline:
-        return generation_timeout()
-    reserve = min(0.05, req.maxTimeSeconds * 0.1)
-    solver.parameters.max_time_in_seconds = max(0.001, deadline - time.monotonic() - reserve)
-    solver.parameters.num_search_workers = 4
-    status_code = solver.solve(model)
-    if status_code == cp_model.MODEL_INVALID:
-        raise ValueError('Invalid CP-SAT model')
-
-    if prelation_enabled and status_code == cp_model.OPTIMAL:
-        model.add(coverage == int(solver.value(coverage)))
-        objectives = [
-            sum(var for tid, opts in teacher_options.items() if teachers_by_id[tid].appointmentTier == 2 for var, *_ in opts),
-            sum(var for tid, opts in teacher_options.items() if teachers_by_id[tid].appointmentTier == 1 for var, *_ in opts),
-            sum(var * teachers_by_id[tid].categoryRank for tid, opts in teacher_options.items() for var, *_ in opts),
-            -preference,
-        ]
-        for index, objective in enumerate(objectives):
-            remaining = deadline - time.monotonic() - reserve
-            if remaining <= 0:
-                break
-            model.minimize(objective)
-            next_solver = cp_model.CpSolver()
-            next_solver.parameters.max_time_in_seconds = remaining
-            next_solver.parameters.num_search_workers = 1
-            next_status = next_solver.solve(model)
-            if next_status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-                break  # Keep the preceding feasible solution.
-            solver = next_solver
-            if index < 3:
-                prelation_proofs[index] = next_status == cp_model.OPTIMAL and not candidates_truncated
-            if next_status != cp_model.OPTIMAL:
-                break
-            model.add(objective == int(solver.value(objective)))
-
-    assignments: list[AssignmentOutput] = []
-    if status_code in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+    def extract(value) -> list[AssignmentOutput]:
+        found: list[AssignmentOutput] = []
         for sec_id, opts in section_options.items():
             for var, _sid, t_id, placements, _pref, _dur in opts:
-                if solver.value(var) == 1:
+                if value(var) == 1:
                     for req_id, c_day, c_start, c_end, rm_id, stype in placements:
-                        assignments.append(
+                        found.append(
                             AssignmentOutput(
                                 id=req_id,
                                 sectionId=sec_id,
@@ -754,13 +793,69 @@ def _solve_academic_schedule(req: SolveScheduleRequest, deadline: float) -> Solv
                             )
                         )
                     break
-
-    if status_code in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         for var, sec_id, t_id, placement in split_components:
-            if solver.value(var):
+            if value(var):
                 req_id, day, start, end, room_id, stype = placement
-                assignments.append(AssignmentOutput(id=req_id, sectionId=sec_id, teacherId=t_id, roomId=room_id,
+                found.append(AssignmentOutput(id=req_id, sectionId=sec_id, teacherId=t_id, roomId=room_id,
                     interval=TimeInterval(day=day, startMinute=start, endMinute=end), sessionType=stype))
+        return found
+
+    option_rows = [(var, sid, tid, len(reqs_by_section[sid]))
+        for sid, opts in section_options.items() for var, _s, tid, *_ in opts]
+
+    def on_solution(value) -> None:
+        # Option variables are all-or-nothing per section, so sessions come from the
+        # selected options; extraction only runs when the schedule is strictly better.
+        selected = [(sid, tid, count) for var, sid, tid, count in option_rows if value(var)]
+        publish(sum(count for _, _, count in selected), {(sid, tid) for sid, tid, _ in selected}, lambda: extract(value))
+
+    def search(cp_solver):
+        # Without observers keep the plain call, so the synchronous path is unchanged.
+        if hooks.on_improvement is None and hooks.should_cancel is None:
+            return cp_solver.solve(model)
+        return cp_solver.solve(model, _SolutionCallback(on_solution, hooks.should_cancel))
+
+    solver = cp_model.CpSolver()
+    if time.monotonic() >= deadline:
+        return generation_timeout()
+    reserve = min(0.05, req.maxTimeSeconds * 0.1)
+    solver.parameters.max_time_in_seconds = max(0.001, deadline - time.monotonic() - reserve)
+    solver.parameters.num_search_workers = search_workers()
+    phase('coverage')
+    status_code = search(solver)
+    if status_code == cp_model.MODEL_INVALID:
+        raise ValueError('Invalid CP-SAT model')
+
+    if prelation_enabled and status_code == cp_model.OPTIMAL:
+        model.add(coverage == int(solver.value(coverage)))
+        objectives = [
+            sum(var for tid, opts in teacher_options.items() if teachers_by_id[tid].appointmentTier == 2 for var, *_ in opts),
+            sum(var for tid, opts in teacher_options.items() if teachers_by_id[tid].appointmentTier == 1 for var, *_ in opts),
+            sum(var * teachers_by_id[tid].categoryRank for tid, opts in teacher_options.items() for var, *_ in opts),
+            -preference,
+        ]
+        for index, objective in enumerate(objectives):
+            remaining = deadline - time.monotonic() - reserve
+            if remaining <= 0 or cancelled():
+                break
+            phase('prelation' if index < 3 else 'preferences')
+            model.minimize(objective)
+            next_solver = cp_model.CpSolver()
+            next_solver.parameters.max_time_in_seconds = remaining
+            next_solver.parameters.num_search_workers = 1
+            next_status = search(next_solver)
+            if next_status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+                break  # Keep the preceding feasible solution.
+            solver = next_solver
+            if index < 3:
+                prelation_proofs[index] = next_status == cp_model.OPTIMAL and not candidates_truncated
+            if next_status != cp_model.OPTIMAL:
+                break
+            model.add(objective == int(solver.value(objective)))
+
+    assignments: list[AssignmentOutput] = []
+    if status_code in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+        assignments = extract(solver.value)
 
     used_incumbent = len(incumbent) > len(assignments)
     if used_incumbent:
