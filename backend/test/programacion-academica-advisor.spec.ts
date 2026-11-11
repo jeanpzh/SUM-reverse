@@ -79,3 +79,24 @@ it('advisor refuses running and unresolved-cleanup jobs using the existing lifec
   }
   searches.clear()
 })
+it('retains combined requirements in one versioned action and rejects malformed halves without mutation', async () => {
+  const { service, catalog, resources, proposal, input, decision } = fixture()
+  proposal.decisions = [decision('combined', { kind: 'planning-window', policyChange: { allowSaturday: true }, requiresSplit: true })]
+  const before = structuredClone(proposal)
+  const result = analyzeProposalAdvisor(proposal, input, resources, catalog)
+  expect(result.editVersion).toBe(proposal.editVersion ?? 0)
+  expect(result.recommendations[0].patch).toEqual({ kind: 'enable_planning_window', allowSaturday: true,
+    splitCourseIds: proposal.decisions[0].courseIds })
+  expect(result.recommendations[0].title).toContain('separación de componentes')
+  const retained = (service as unknown as { proposals: Map<string, { view: AcademicProposal }> }).proposals.get(proposal.proposalId)!
+  retained.view = structuredClone(proposal)
+  expect((await service.adviseProposal(proposal.proposalId, { expectedEditVersion: 0 })).recommendations[0].patch)
+    .toEqual(result.recommendations[0].patch)
+  for (const fields of [{ courseIds: [] }, { policyChange: { allowSaturday: false } }]) {
+    const invalid = { ...proposal, decisions: [{ ...proposal.decisions[0], ...fields }] } as unknown as AcademicProposal
+    expect(() => analyzeProposalAdvisor(invalid, input, resources, catalog)).toThrow()
+    expect(proposal).toEqual(before)
+  }
+  await expect(service.adviseProposal(proposal.proposalId, { expectedEditVersion: 1 })).rejects.toMatchObject({ status: 409 })
+  expect(proposal).toEqual(before)
+})

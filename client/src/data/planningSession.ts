@@ -335,7 +335,12 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
       let nextResources = cloneResources(state.resources)
       let nextPolicy: PlanningPolicy | null = state.policy ? { ...state.policy } : null
       const nextDeliveryModes = { ...state.deliveryModes }
-      for (const patch of event.patches) {
+      // Validate the entire atomic action before reusing the existing delivery-mode patch.
+      event.patches.forEach(validateAcademicAdvisorPatch)
+      const patches: AcademicAdvisorPatch[] = event.patches.flatMap((patch): AcademicAdvisorPatch[] =>
+        patch.kind === 'enable_planning_window' && patch.splitCourseIds
+          ? [patch, { kind: 'change_delivery_mode', courseIds: patch.splitCourseIds, deliveryMode: 'split' }] : [patch])
+      for (const patch of patches) {
         validateAcademicAdvisorPatch(patch)
         if (patch.kind === 'increase_teacher_load') {
           const profile = resolveNormativeProfile({ facultyId: 'FISI', period: state.period })
@@ -352,7 +357,7 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
           || patch.roomIds.some(id => !state.catalog?.referenceRooms?.some(r => r.id === id)))) throw new Error('Referencia desconocida')
       }
 
-      for (const patch of event.patches) {
+      for (const patch of patches) {
         if (patch.kind === 'increase_teacher_load') {
           const loadMap = new Map(patch.adjustments.map((item) => [item.teacherId, item.nextMaxWeeklyMinutes]))
           nextResources = {

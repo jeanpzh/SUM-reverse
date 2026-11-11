@@ -186,6 +186,12 @@ test('optional proposal proofs, window decisions and normative blockers have str
       blockers: [{ teacherId: 'SYN-T', assignedMinutes: 960, authorizedMaxMinutes: 720, reason: 'over-authorized-load', requiredAuthorization: 'voluntary-declaration', sourceIds: ['OF-02'] }] } }
   assert.doesNotThrow(() => validateAcademicProposal(proposal))
   assert.doesNotThrow(() => validateAcademicProposal({ ...proposal, ...metadata }))
+  const combined = { ...metadata.decisions[0], courseIds: ['SYN-C'], requiresSplit: true }
+  assert.doesNotThrow(() => validateAcademicProposal({ ...proposal, decisions: [combined] }))
+  for (const fields of [{ requiresSplit: false }, { requiresSplit: null }, { requiresSplit: 'split' },
+    { courseIds: [] }, { kind: 'delivery-mode-split' }, { policyChange: undefined }]) {
+    assert.throws(() => validateAcademicProposal({ ...proposal, decisions: [{ ...combined, ...fields }] }))
+  }
   for (const coverageProof of ['inconclusive', 'shortfall-proven']) assert.throws(() => validateAcademicProposal({ ...proposal, ...metadata, coverageProof }))
   // The engine lists only courses with a shortfall: rows explain the uncovered sections, not the totals.
   assert.doesNotThrow(() => validateAcademicProposal({ ...proposal, ...metadata, capacityCertificate: { proven: true, requiredSectionsTotal: 10,

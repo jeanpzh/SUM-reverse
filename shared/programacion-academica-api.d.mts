@@ -26,7 +26,7 @@ export type AcademicCatalog = {
 export type AcademicProposal = {
   coverageProof?: 'complete' | 'shortfall-proven' | 'inconclusive'
   capacityCertificate?: { proven: boolean; requiredSectionsTotal: number; coverableSectionsTotal: number; courses: Array<{ courseId: string; requiredSections: number; coverableSections: number; requiredMinutes: number }> }
-  decisions?: Array<{ id: string; kind: 'teacher-load-exception' | 'additional-teacher' | 'planning-window' | 'delivery-mode-split'; teacherId: string | null; courseIds: string[]; exceptionKind: 'voluntary-declaration' | 'vrap-authorization' | 'configuration-adjustment' | null; additionalMinutes: number; sectionsUnlocked: number; basis: 'capacity-relaxation' | 'window-precheck'; policyChange?: { allowAfternoon?: true; allowSaturday?: true }; requires?: string[]; sourceIds?: string[] }>
+  decisions?: Array<{ id: string; kind: 'teacher-load-exception' | 'additional-teacher' | 'planning-window' | 'delivery-mode-split'; teacherId: string | null; courseIds: string[]; exceptionKind: 'voluntary-declaration' | 'vrap-authorization' | 'configuration-adjustment' | null; additionalMinutes: number; sectionsUnlocked: number; basis: 'capacity-relaxation' | 'window-precheck'; requiresSplit?: true; policyChange?: { allowAfternoon?: true; allowSaturday?: true }; requires?: string[]; sourceIds?: string[] }>
   prelation?: { levels: Array<{ id: 'contract-sections' | 'interfaculty-sections' | 'category-rank'; value: number; proven: boolean }> }
   normative?: { profileRevision: string | null; lectiveHourMinutes: number | null; gaps: Array<{ code: string; message: string; teacherIds?: string[]; blocking?: boolean; assignedMinutes?: number; minimumMinutes?: number; shortfallMinutes?: number }>; blockers: LoadAuthorizationBlocker[] }
   editVersion?: number
@@ -90,7 +90,7 @@ export function validateAcademicDraftList(value: unknown): asserts value is Acad
 export function validateAcademicDraftResume(value: unknown): asserts value is AcademicDraftResume
 export type AcademicAdvisorPatch =
   | { kind: 'increase_teacher_load'; adjustments: Array<{ teacherId: string; previousMaxWeeklyMinutes: number; nextMaxWeeklyMinutes: number }> }
-  | { kind: 'enable_planning_window'; allowAfternoon?: true; allowSaturday?: true }
+  | { kind: 'enable_planning_window'; allowAfternoon?: true; allowSaturday?: true; splitCourseIds?: string[] }
   | { kind: 'change_delivery_mode'; courseIds: string[]; deliveryMode: 'split' }
   | { kind: 'incorporate_reference_resource'; teacherIds: string[]; roomIds: string[] }
 export type AcademicAdvisorRequest = { expectedEditVersion: number; selectedRecommendationIds?: string[] }

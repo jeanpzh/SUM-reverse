@@ -154,6 +154,7 @@ class CapacityDecision(BaseModel):
     additionalMinutes: int
     sectionsUnlocked: int
     basis: Literal['capacity-relaxation', 'window-precheck'] = 'capacity-relaxation'
+    requiresSplit: Literal[True] | None = Field(default=None, exclude_if=lambda value: value is None)
     policyChange: PlanningWindowChange | None = Field(default=None, exclude_if=lambda value: value is None)
 
 

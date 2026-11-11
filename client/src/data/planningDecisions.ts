@@ -145,10 +145,12 @@ export function buildDecisionQueue(decisions: AcademicProposal['decisions'] | un
     if (decision.kind === 'planning-window') {
       const change = decision.policyChange ?? {}
       const applied = (!change.allowAfternoon || Boolean(context.policy?.allowAfternoon)) && (!change.allowSaturday || Boolean(context.policy?.allowSaturday))
-      return { ...base, title: windowTitle(change), applied, provenance: WINDOW_PROVENANCE, kindLabel: 'Franja del horario',
+        && (!decision.requiresSplit || (decision.courseIds.length > 0 && decision.courseIds.every(id => context.deliveryModes?.[id] === 'split')))
+      return { ...base, title: windowTitle(change) + (decision.requiresSplit ? ' y separar componentes' : ''), applied, provenance: WINDOW_PROVENANCE, kindLabel: 'Franja del horario',
         action: { kind: 'apply-patches', patches: [{ kind: 'enable_planning_window', ...(change.allowAfternoon ? { allowAfternoon: true as const } : {}),
-          ...(change.allowSaturday ? { allowSaturday: true as const } : {}) }] }, actionLabel: 'Habilitar y regenerar',
-        effect: `${sections(decision.sectionsUnlocked)} ganarían una franja.` }
+          ...(change.allowSaturday ? { allowSaturday: true as const } : {}),
+          ...(decision.requiresSplit ? { splitCourseIds: [...decision.courseIds] } : {}) }] }, actionLabel: decision.requiresSplit ? 'Habilitar, partir y regenerar' : 'Habilitar y regenerar',
+        effect: `${sections(decision.sectionsUnlocked)} ganarían una franja${decision.requiresSplit ? ' al habilitarla y separar sus componentes' : ''}.` }
     }
     const applied = decision.courseIds.length > 0 && decision.courseIds.every((courseId) => context.deliveryModes?.[courseId] === 'split')
     return { ...base, title: coursesTitle, applied, kindLabel: 'Modalidad de dictado',

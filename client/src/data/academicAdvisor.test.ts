@@ -70,7 +70,7 @@ test('advisor preview respects abort signal and does not turn transport failure 
 test('stale advisor application is rejected before mutating workspace or invoking generation', async () => {
   const session = createPlanningSession()
   const before = session.getState()
-  await assert.rejects(session.commands.applyAdvisorPatchesAndRegenerate([advice.recommendations[0].patch],
+  await assert.rejects(session.commands.applyAdvisorPatchesAndRegenerate([{ kind: 'enable_planning_window', allowSaturday: true, splitCourseIds: ['SYN1'] }],
     { proposalId: advice.proposalId, editVersion: 2 }), /propuesta cambió/)
   assert.equal(session.getState(), before)
   session.dispose()
@@ -195,4 +195,18 @@ test('reference incorporation validates composed resource limits before changing
   assert.equal(atLimit.resources.teachers.length, PLANNING_LIMITS.teachers)
   assert.equal(atLimit.resources.rooms.length, PLANNING_LIMITS.rooms)
   session.dispose()
+})
+
+test('combined window action commits both parts atomically and rejects either invalid part', () => {
+  const before = { ...initialPlanningSessionState(), policy: null }
+  const patch = { kind: 'enable_planning_window' as const, allowSaturday: true as const, splitCourseIds: ['SYN1'] }
+  const snapshot = structuredClone(before)
+  const next = reducePlanningSession(before, { type: 'applyAdvisorPatches', patches: [patch] })
+  assert.equal(next.policy?.allowSaturday, true)
+  assert.equal(next.deliveryModes.SYN1, 'split')
+  for (const invalid of [{ ...patch, allowSaturday: false }, { ...patch, splitCourseIds: [] },
+    { ...patch, splitCourseIds: [null] }, { ...patch, splitCourseIds: ['SYN1', 'SYN1'] }]) {
+    assert.throws(() => reducePlanningSession(before, { type: 'applyAdvisorPatches', patches: [invalid as unknown as typeof patch] }))
+    assert.deepEqual(before, snapshot)
+  }
 })

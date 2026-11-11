@@ -292,3 +292,18 @@ test('configuration decisions require an explicit cap edit and no paperwork', ()
   assert.deepEqual(item.requires, [])
   assert.equal(item.actionLabel, 'Ajustar carga configurada')
 })
+
+test('combined window decision applies both changes and is applied only when both hold', () => {
+  const decision = { ...allKindsDecisions[4], courseIds: ['C2'], requiresSplit: true as const }
+  const item = (allowSaturday: boolean, split: boolean) => buildDecisionQueue([decision], {
+    period: '2027-I', policy: { allowAfternoon: true, allowSaturday },
+    deliveryModes: { C2: split ? 'split' : 'continuous' },
+  })!.groups[0].items[0]
+  assert.equal(item(true, false).applied, false)
+  assert.equal(item(false, true).applied, false)
+  assert.equal(item(true, true).applied, true)
+  assert.match(item(false, false).title, /separar componentes/)
+  assert.deepEqual(item(false, false).action, { kind: 'apply-patches', patches: [{
+    kind: 'enable_planning_window', allowAfternoon: true, allowSaturday: true, splitCourseIds: ['C2'],
+  }] })
+})

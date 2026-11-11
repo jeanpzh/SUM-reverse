@@ -590,17 +590,18 @@ export function validateAcademicAdvisorPatch(value) {
     return
   }
   if (value.kind === 'enable_planning_window') {
-    object(value, ['kind'], 'patch', ['allowAfternoon', 'allowSaturday'])
+    object(value, ['kind'], 'patch', ['allowAfternoon', 'allowSaturday', 'splitCourseIds'])
     if (value.allowAfternoon !== undefined && value.allowAfternoon !== true) throw new TypeError('allowAfternoon inválido')
     if (value.allowSaturday !== undefined && value.allowSaturday !== true) throw new TypeError('allowSaturday inválido')
     if (!value.allowAfternoon && !value.allowSaturday) throw new TypeError('enable_planning_window requiere al menos una ventana')
+    if (Object.hasOwn(value, 'splitCourseIds')) validateAcademicAdvisorPatch({ kind: 'change_delivery_mode', courseIds: value.splitCourseIds, deliveryMode: 'split' })
     return
   }
   if (value.kind === 'change_delivery_mode') {
     object(value, ['kind', 'courseIds', 'deliveryMode'], 'patch')
     if (value.deliveryMode !== 'split') throw new TypeError('deliveryMode debe ser split')
     strings(value.courseIds, 'courseIds')
-    if (!value.courseIds.length) throw new TypeError('courseIds vacío')
+    if (!value.courseIds.length || new Set(value.courseIds).size !== value.courseIds.length || value.courseIds.some(id => !id.trim())) throw new TypeError('courseIds vacío')
     return
   }
   if (value.kind === 'incorporate_reference_resource') {
@@ -756,7 +757,7 @@ function validateProposalNormativeResult(value) {
   if (Object.hasOwn(value, 'decisions')) {
     const ids = new Set()
     array(value.decisions, 'decisions', PLANNING_LIMITS.sessions).forEach((decision) => {
-      object(decision, ['id', 'kind', 'teacherId', 'courseIds', 'exceptionKind', 'additionalMinutes', 'sectionsUnlocked', 'basis'], 'decision', ['policyChange', 'requires', 'sourceIds'])
+      object(decision, ['id', 'kind', 'teacherId', 'courseIds', 'exceptionKind', 'additionalMinutes', 'sectionsUnlocked', 'basis'], 'decision', ['policyChange', 'requires', 'sourceIds', 'requiresSplit'])
       string(decision.id, 'decision.id')
       if (ids.has(decision.id)) throw new TypeError('Decisión repetida')
       ids.add(decision.id)
@@ -769,6 +770,9 @@ function validateProposalNormativeResult(value) {
       number(decision.sectionsUnlocked, 'sectionsUnlocked')
       if (decision.kind === 'teacher-load-exception' && (decision.teacherId === null || decision.exceptionKind === null)) throw new TypeError('Excepción sin docente o autorización')
       for (const key of ['requires', 'sourceIds']) if (Object.hasOwn(decision, key)) strings(decision[key], key)
+      if (Object.hasOwn(decision, 'requiresSplit') && (decision.requiresSplit !== true || decision.kind !== 'planning-window'
+        || !decision.policyChange || !decision.courseIds.length || new Set(decision.courseIds).size !== decision.courseIds.length
+        || decision.courseIds.some(id => !id.trim()))) throw new TypeError('Requisito de separación inválido')
       if (Object.hasOwn(decision, 'policyChange')) {
         object(decision.policyChange, [], 'policyChange', ['allowAfternoon', 'allowSaturday'])
         if (!Object.keys(decision.policyChange).length || Object.values(decision.policyChange).some((item) => item !== true)) throw new TypeError('Cambio de política inválido')

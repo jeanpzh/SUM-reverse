@@ -1,7 +1,7 @@
 // Independently constructed synthetic contract envelopes.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { validateAcademicAdvisorRequest, validateAcademicAdvisorResponse } from './programacion-academica-api.mjs'
+import { validateAcademicAdvisorPatch, validateAcademicAdvisorRequest, validateAcademicAdvisorResponse } from './programacion-academica-api.mjs'
 const response = () => ({
   proposalId: 'synthetic', editVersion: 2,
   source: { mode: 'deterministic-fallback', providerLabel: null, fallbackReason: 'not_configured' },
@@ -42,4 +42,14 @@ test('engine source and decision traces reject invalid, duplicate and stale iden
   for (const extra of [{ verifiedImpact: {} }, { reasoningSteps: [] }, { source: { mode: 'engine-decisions', providerLabel: 'LLM' } }, { source: { mode: 'engine-decisions', providerLabel: null, fallbackReason: 'timeout' } }]) assert.throws(() => validateAcademicAdvisorResponse({ ...fixture(), ...extra }))
   const legacy = fixture(); legacy.source = { mode: 'deterministic-fallback', providerLabel: null }; delete legacy.recommendations[0].decisionIds
   validateAcademicAdvisorResponse(legacy)
+})
+
+test('combined window patches validate both parts while old patches remain readable', () => {
+  const old = { kind: 'enable_planning_window', allowSaturday: true }
+  assert.doesNotThrow(() => validateAcademicAdvisorPatch(old))
+  assert.doesNotThrow(() => validateAcademicAdvisorPatch({ ...old, splitCourseIds: ['SYN-C'] }))
+  for (const fields of [{ allowSaturday: false }, { splitCourseIds: [] }, { splitCourseIds: null },
+    { splitCourseIds: [1] }, { splitCourseIds: [''] }, { splitCourseIds: ['SYN-C', 'SYN-C'] }]) {
+    assert.throws(() => validateAcademicAdvisorPatch({ ...old, splitCourseIds: ['SYN-C'], ...fields }))
+  }
 })

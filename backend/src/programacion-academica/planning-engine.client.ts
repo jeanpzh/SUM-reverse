@@ -103,7 +103,7 @@ export function analyzeProposalAdvisor(
     let patch: AcademicAdvisorRecommendation['patch'] | undefined
     let detail = necessary
     if (decision.kind === 'planning-window' && decision.policyChange && Object.keys(decision.policyChange).length) {
-      patch = { kind: 'enable_planning_window', ...decision.policyChange }
+      patch = { kind: 'enable_planning_window', ...decision.policyChange, ...(decision.requiresSplit ? { splitCourseIds: [...decision.courseIds] } : {}) }
     } else if (decision.kind === 'delivery-mode-split' && decision.courseIds.length) {
       patch = { kind: 'change_delivery_mode', courseIds: [...decision.courseIds], deliveryMode: 'split' }
     } else if (decision.kind === 'teacher-load-exception') {
@@ -127,7 +127,7 @@ export function analyzeProposalAdvisor(
       } else detail += ' Se necesita un recurso docente adicional; no hay referencia compatible disponible.'
     }
     const labels = { 'teacher-load-exception': 'Carga docente', 'additional-teacher': 'Docente adicional', 'planning-window': 'Ampliación de franjas', 'delivery-mode-split': 'Dictado partido' }
-    const title = `${labels[decision.kind]} · ${decision.teacherId ?? decision.courseIds.join(', ')}`
+    const title = `${labels[decision.kind]}${decision.requiresSplit ? ' y separación de componentes' : ''} · ${decision.teacherId ?? decision.courseIds.join(', ')}`
     bottlenecks.push({ category: decision.kind === 'teacher-load-exception' ? 'teacher_load'
       : decision.kind === 'additional-teacher' ? 'missing_resource' : decision.kind === 'planning-window' ? 'planning_window' : 'delivery_mode',
       title, detail, affectedSessionCount: 0 })

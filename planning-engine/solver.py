@@ -188,7 +188,8 @@ def _window_options(
     options = [('planning-window:afternoon', {'allowAfternoon': True}, False),
         ('planning-window:saturday', {'allowSaturday': True}, False),
         ('delivery-mode-split', {}, True),
-        ('planning-window:combined', flags, True)]
+        ('planning-window:combined', flags, False),
+        ('planning-window:combined-split', flags, True)]
     unlocked = defaultdict(set)
     insufficient = []
 
@@ -218,7 +219,7 @@ def _window_options(
         course = courses[items[0].courseId]
         single_unlocked = False
         for key, changes, split in options:
-            if key.endswith(':combined'):
+            if key.startswith('planning-window:combined'):
                 if single_unlocked:
                     break
             elif changes and not all(flag in flags for flag in changes):
@@ -232,14 +233,15 @@ def _window_options(
                     changes.get('allowSaturday', policy.allowSaturday if policy else False)):
                 unlocked[key].add(sid)
                 single_unlocked = True
-            elif key.endswith(':combined'):
+            elif key == 'planning-window:combined-split':
                 insufficient.extend(r.id for r in items)
 
     decisions = [CapacityDecision(id=key,
         kind='delivery-mode-split' if key == 'delivery-mode-split' else 'planning-window',
         courseIds=sorted({by_section[sid][0].courseId for sid in unlocked[key]}),
         additionalMinutes=0, sectionsUnlocked=len(unlocked[key]), basis='window-precheck',
-        policyChange=changes or None) for key, changes, _ in options if unlocked[key]]
+        policyChange=changes or None,
+        requiresSplit=True if key == 'planning-window:combined-split' else None) for key, changes, _ in options if unlocked[key]]
     diagnostics = [DiagnosticOutput(code='WINDOW_RELAXATION_INSUFFICIENT',
         message='Ni tarde, sábado y componentes separados dan franja a estas sesiones',
         sessionIds=sorted(insufficient))] if insufficient else []

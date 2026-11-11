@@ -138,3 +138,52 @@ Fix: new optional `active` prop (default `true`); `AcademicScheduling` passes
 stage is shown. No visual or contract change. Client `tsc -b` and `eslint` on both files PASS.
 Acceptance rerun: **6/6 PASS**; the only remaining HTTP error is the expected 409 of
 `normative-blocker`, and no scenario logs the 422 any more. The other open observations above stand.
+
+## Reparación T7 P1: franja combinada y componentes separados (2026-11-11)
+
+Base `4cd977e`, rama `feat/planning-normative-engine`, checkout de integración asignado. Trabajo directo sin delegación. Fuentes: defecto auditado del encargo, ADR 0003, secciones T6a/T6b del plan y código vigente; clasificación `local-only`, con pruebas construidas independientemente y sintéticas. No es evidencia observada de SUM ni garantía reglamentaria. Se respetó `docs/design-direction.md`: solo datos/textos de tarjetas y cola existentes en `/local/programacion-academica`, sin cambios de componentes, diseño, estilos, navegación, alumno, selector ni tokens.
+
+### Defecto, representación y compatibilidad
+
+El prechequeo probaba `planning-window:combined` separando componentes pero descartaba esa condición al emitir la decisión. Ahora prueba primero las ventanas combinadas con la modalidad actual y después con separación. Agrupa por separado `planning-window:combined` y `planning-window:combined-split`; solo la segunda añade `requiresSplit: true`, referido a todos sus `courseIds`. El diagnóstico de insuficiencia se emite únicamente tras fallar ambas pruebas. La agrupación mixta tiene una prueba aislada del prechequeo con una política sintética instrumentada: no atribuye esa política al producto.
+
+Extensión mínima de los contratos existentes:
+
+- `CapacityDecision` Python y `AcademicProposal.decisions[]`: `requiresSplit?: true`, omitido cuando no corresponde. El validador compartido exige decisión de franja, cambio de política y cursos no vacíos/únicos para ese requisito; rechaza false, null y valores malformados.
+- Patch existente `enable_planning_window`: `splitCourseIds?: string[]`. Si está presente, una sola acción contiene ambas modificaciones. Su validación reutiliza `change_delivery_mode`; la sesión expande internamente ese mismo patch existente y valida toda la acción antes de modificar una copia del estado. El commit de estado es único; un fallo en cualquiera de las partes conserva el estado anterior.
+- Adaptador del consejero conserva el requisito desde la propuesta retenida, devuelve ambos cambios en un solo patch y mantiene `editVersion`/CAS del servicio. El backend entrega la recomendación; la aplicación de configuración pertenece a la sesión cliente existente, no a un nuevo endpoint mutador. Cola y consejero pasan por ese mismo reductor. La cola solo marca aplicada la decisión cuando tanto las ventanas como la modalidad están activas.
+- Los textos de la cola y el título del consejero nombran la ampliación de franjas y la separación de componentes. Conservan los avisos de condición necesaria y regeneración explícita.
+
+Propuestas almacenadas antes del cambio siguen validando y renderizando: los campos nuevos son opcionales y no hay migración ni contratos paralelos. No se adivina una separación ausente en decisiones históricas; una búsqueda nueva obtiene la prueba corregida. La retención existente copia la decisión completa sin seleccionar campos, por lo que no requirió cambios. La prueba del servicio usa la propuesta retenida y comprueba que conserva el patch combinado.
+
+### Aceptación y resultados reales
+
+| Criterio | Escenario sintético/check | Esperado y resultado |
+| --- | --- | --- |
+| Requisito completo | Sábado 08:00–13:00, curso continuo 180+180 | Emite `requiresSplit: true` y ambos flags; PASS |
+| No exigir separación sin prueba | Alternativa continua y agrupación mixta del prechequeo | Sin marcador para quienes caben con modalidad actual; grupos separados; PASS |
+| Compatibilidad y frontera | Propuestas/patches antiguos, nuevos y campos inválidos | Antiguos/nuevos válidos aceptados, malformados rechazados; PASS |
+| Retención y versión | Servicio consejero, versión vigente y obsoleta | Ambos cambios preservados; versión obsoleta 409; PASS |
+| Acción atómica | Ambos cambios válidos; flag inválido; cursos vacíos/null/duplicados | Ambos aplicados o estado original intacto; PASS |
+| Estado aplicado | Solo ventana, solo separación, ambos | Solo ambos cuenta como aplicado; PASS |
+| Re-solve real en motor | Dos componentes 180, sábado 300 más lunes tarde 180 | Ventanas solas no colocan; ventanas más separación colocan los dos componentes; PASS |
+
+Precisión para el principal: una única ventana semanal de 300 minutos con un docente/ambiente común no permite colocar 360 minutos, incluso separados. El caso exacto auditado acredita la condición necesaria por componente, no suficiencia global. Por eso el re-solve completo usa una segunda ventana sintética en otro día; no se alteró el significado del prechequeo ni se prometió cobertura.
+
+Comandos ejecutados desde el checkout indicado (backend/client con sus respectivos cwd):
+
+- `planning-engine/.venv/bin/python -m pytest -p no:cacheprovider planning-engine/test_window_decisions.py` — **16/16 PASS**, aviso preexistente de deprecación langchain-community.
+- `node --test shared/programacion-academica-api.test.mjs shared/programacion-academica-advisor.test.mjs` — **15/15 PASS**.
+- Backend `SUM_PLANNING_ENGINE_URL=off ./node_modules/.bin/vitest run test/programacion-academica-advisor.spec.ts` — **6/6 PASS**. Advisory preexistente de vite-tsconfig-paths.
+- Backend `./node_modules/.bin/nest build` — **PASS**.
+- Backend `./node_modules/.bin/oxlint --type-aware src/ test/` — **PASS**, únicamente los cuatro warnings conocidos `unbound-method` en `test/local-profile-session.spec.ts`.
+- Client `./node_modules/.bin/tsc -p tsconfig.data-tests.json` — **PASS**.
+- Client `node --experimental-strip-types --test --test-isolation=none src/data/*.test.ts` — **344/344 PASS**.
+- Client `node --test scripts/test-normative-components.mjs` — **15/15 PASS**. Se ejecutó el runner SSR existente; sin navegador ni servidor frontend escuchando.
+- Client `./node_modules/.bin/tsc -b` — **PASS**.
+- Client `./node_modules/.bin/eslint .` — **PASS**.
+- `git diff --check` — **PASS**.
+
+Regresiones rojas comprobadas: inicialmente pytest dio 3 fallos/13 éxitos; al probar las nuevas pruebas contra las fuentes de `HEAD`, shared dio 2 fallos, backend 1 y cliente 2. Las fuentes modificadas se restauraron automáticamente en finally antes de las verificaciones finales verdes. Durante el desarrollo se corrigieron el diagnóstico prematuro tras el primer intento combinado y dos fixtures de prueba (capacidad global y aislamiento de la política); una primera compilación cliente detectó propiedades sobrantes del contexto de prueba y se corrigió. No quedan fallos pendientes.
+
+No se ejecutaron navegador, suites visuales, Vite de desarrollo, Docker, benchmarks, HTTP de motor ni servicios ajenos. No se accedió a producción, snapshots ni `datos-reales/`. El re-solve ejecuta el solver real en proceso; no acredita una nueva prueba integrada React DOM→HTTP→NestJS→Python. Skills aplicadas: diagnosing-bugs, nestjs-best-practices (validación de frontera adaptada al contrato existente) y oxlint. Decisión a confirmar por el principal: nombres aditivos `requiresSplit`/`splitCourseIds` y tratamiento histórico sin inferir requisitos ausentes; implementación y checks completos sin necesitar esa confirmación para el arreglo.

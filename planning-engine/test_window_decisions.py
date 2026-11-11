@@ -71,10 +71,10 @@ def test_combination_and_insufficient_options_report_only_their_sections():
         'id': 'Y-1-0', 'sectionId': 'Y-1', 'courseId': 'Y', 'durationMinutes': 360}))
     req.teachers[0].courseIds.append('Y')
     result = solve_academic_schedule(req)
-    assert window_decisions(result) == [dict(id='planning-window:combined', kind='planning-window',
+    assert window_decisions(result) == [dict(id='planning-window:combined-split', kind='planning-window',
         teacherId=None, exceptionKind=None, courseIds=['X'], additionalMinutes=0,
         sectionsUnlocked=1, basis='window-precheck',
-        policyChange=dict(allowAfternoon=True, allowSaturday=True))]
+        policyChange=dict(allowAfternoon=True, allowSaturday=True), requiresSplit=True)]
     assert [d.sessionIds for d in result.diagnostics if d.code == 'WINDOW_RELAXATION_INSUFFICIENT'] == [['Y-1-0']]
     assert result.assignments == []
 
@@ -167,3 +167,35 @@ def test_expired_budget_keeps_schedule_and_does_not_claim_options(monkeypatch):
     assert window_decisions(result) == []
     assert [d.sessionIds for d in result.diagnostics if d.code == 'WINDOW_ANALYSIS_LIMIT'] == [['X-1-0']]
     assert not any(d.code == 'WINDOW_RELAXATION_INSUFFICIENT' for d in result.diagnostics)
+
+
+def test_combined_decision_applies_both_requirements_and_resolves_section():
+    # Two days provide actual non-overlapping resource capacity after relaxation.
+    req = request(durations=(180, 180), windows=[dict(day=6, startMinute=480, endMinute=780),
+        dict(day=1, startMinute=840, endMinute=1020)])
+    decision = window_decisions(solve_academic_schedule(req))[0]
+    assert decision['requiresSplit'] is True
+    req.planningPolicy = req.planningPolicy.model_copy(update=decision['policyChange'])
+    assert solve_academic_schedule(req).assignments == []
+    req.courses[0].deliveryMode = 'split'
+    result = solve_academic_schedule(req)
+    assert result.status == 'complete'
+    assert len(result.assignments) == 2
+
+
+def test_combined_windows_without_split_do_not_require_split_in_mixed_result(monkeypatch):
+    import solver
+    # Isolate the combined-only branch: a synthetic policy requiring both flags.
+    monkeypatch.setattr(solver, 'planning_time_rank', lambda cycle, start, day, duration, policy:
+        0 if policy.allowAfternoon and policy.allowSaturday else None)
+    req = request(durations=(180, 180), windows=[dict(day=6, startMinute=480, endMinute=780)])
+    # X requires split, Z fits continuously only after both window flags change.
+    req.courses.append(req.courses[0].model_copy(update={'courseId': 'Z',
+        'weeklySessions': [req.courses[0].weeklySessions[0].model_copy(update={'durationMinutes': 60})]}))
+    req.sections.append(req.sections[0].model_copy(update={'id': 'Z-1', 'courseId': 'Z'}))
+    req.requirements.append(req.requirements[0].model_copy(update={
+        'id': 'Z-1-0', 'sectionId': 'Z-1', 'courseId': 'Z', 'durationMinutes': 60}))
+    import time
+    decisions = [d.model_dump() for d in solver._window_options(req,
+        {r.id for r in req.requirements}, time.monotonic() + 1)[0]]
+    assert [(d['courseIds'], d.get('requiresSplit')) for d in decisions] == [(['Z'], None), (['X'], True)]
