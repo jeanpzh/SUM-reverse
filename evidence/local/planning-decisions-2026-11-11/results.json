@@ -1,0 +1,72 @@
+{
+  "date": "2026-11-11",
+  "results": [
+    {
+      "id": "components-render-states-queue-teacher-limits-and-blockers",
+      "passed": true
+    },
+    {
+      "id": "generate-default-56-course-proposal",
+      "passed": true
+    },
+    {
+      "id": "coverage-state-capacity-and-queue-visible",
+      "passed": true
+    },
+    {
+      "id": "layout-light-and-dark-narrow-and-zoomed",
+      "passed": true
+    },
+    {
+      "id": "keyboard-reaches-decision-actions-with-visible-focus",
+      "passed": true
+    },
+    {
+      "id": "enable-afternoon-through-queue-action-and-regenerate",
+      "passed": true
+    },
+    {
+      "id": "record-authorization-on-teacher-then-regenerate",
+      "passed": true
+    },
+    {
+      "id": "no-external-requests-and-no-page-errors",
+      "passed": true
+    }
+  ],
+  "measured": {
+    "selectAllLabel": "Seleccionar los 56 cursos del catálogo",
+    "before": {
+      "text": "Búsqueda inconclusa\n120 de 166 secciones completas\n46 por completar\nCarga autorizada cubre 136 de 166\n0 cruces en lo asignado",
+      "complete": 120,
+      "total": 166
+    },
+    "coverageLabel": "Búsqueda inconclusa",
+    "capacityFact": "Carga autorizada cubre 136 de 166",
+    "summary": "20 decisiones cubren 30 secciones",
+    "groups": [
+      "Dictado partido 1 decisión hasta 18 sec.",
+      "Ampliación de franjas 1 decisión hasta 18 sec.",
+      "Excepciones de carga docente 12 decisiones libera 16 sec.",
+      "Docentes adicionales 8 decisiones libera 14 sec."
+    ],
+    "reachableActions": 1,
+    "windowActionItem": "Habilitar tardes (lunes a viernes)",
+    "after": {
+      "text": "Faltante comprobado\n136 de 166 secciones completas\n30 por completar\nCarga autorizada cubre 136 de 166\n0 cruces en lo asignado",
+      "complete": 136,
+      "total": 166
+    },
+    "afterCoverage": "Faltante comprobado",
+    "afterSummary": "20 decisiones cubren 30 secciones",
+    "exceptionItem": "CÉSAR LUZA MONTERO Declaración jurada del docente +480 min semanales · libera 2 secciones. Registrar la autorización no cambia por sí sola la carga semanal del docente: tras registrarla, ajusta su carga máxima hasta el tope autorizado. Condición necesaria; no garantiza que las secciones queden colocadas: el horario sigue sujeto a disponibilidad y cruces. Requisitos formales y fuente · OF-02 Regist",
+    "authorizedBefore": "Máximo autorizado 720 min (12 h lectivas)",
+    "authorizedAfter": "Máximo autorizado 1200 min (20 h lectivas)",
+    "afterAuthorization": {
+      "text": "Faltante comprobado\n138 de 166 secciones completas\n28 por completar\nCarga autorizada cubre 138 de 166\n0 cruces en lo asignado",
+      "complete": 138,
+      "total": 166
+    },
+    "afterAuthorizationCoverage": "Faltante comprobado"
+  }
+}
