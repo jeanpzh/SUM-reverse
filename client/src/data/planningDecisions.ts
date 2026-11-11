@@ -37,8 +37,10 @@ const COVERAGE_TEXT: Record<CoverageKind, { label: string; detail: string }> = {
 }
 
 // Proposals stored earlier or produced by the fallback generator carry no proof: null keeps their rendering unchanged.
-export function describeCoverage(proposal: Pick<AcademicProposal, 'coverageProof'>): CoverageView | null {
+export function describeCoverage(proposal: Pick<AcademicProposal, 'coverageProof'> & Partial<Pick<AcademicProposal, 'stats'>>): CoverageView | null {
   const kind = proposal.coverageProof
+  if (kind === 'inconclusive' && proposal.stats?.limitReason === 'running') return { kind, label: 'Búsqueda en curso', detail: 'El motor sigue buscando mejoras. Este horario es provisional; no prueba que falten recursos.' }
+  if (kind === 'inconclusive' && proposal.stats?.limitReason === 'cancelled') return { kind, label: 'Búsqueda cancelada', detail: 'Se conserva el mejor horario encontrado; no se ha demostrado que falten recursos.' }
   return kind ? { kind, ...COVERAGE_TEXT[kind] } : null
 }
 
@@ -55,7 +57,7 @@ export function describeCapacity(proposal: Pick<AcademicProposal, 'capacityCerti
 
 // ───────────── B. Decision queue ─────────────
 
-export type DecisionGroupId = 'load-exception' | 'additional-teacher' | 'planning-window' | 'delivery-mode-split'
+export type DecisionGroupId = 'load-adjustment' | 'load-exception' | 'additional-teacher' | 'planning-window' | 'delivery-mode-split'
 export type DecisionAction =
   | { kind: 'record-authorization'; teacherId: string }
   | { kind: 'add-teacher'; courseIds: string[] }
@@ -89,6 +91,7 @@ export type DecisionContext = {
 }
 
 const GROUP_META: Record<DecisionGroupId, { label: string; description: string }> = {
+  'load-adjustment': { label: 'Ajustes de carga configurada', description: 'El tope configurado es menor que el ya autorizado. Revisa y ajusta la carga explícitamente; no requiere un trámite formal nuevo.' },
   'load-exception': { label: 'Excepciones de carga docente',
     description: 'Ampliar la carga de un docente requiere una autorización formal fuera de este sistema; aquí solo se registra que existe.' },
   'additional-teacher': { label: 'Docentes adicionales',
@@ -103,7 +106,7 @@ const NECESSITY = 'Condición necesaria; no garantiza que las secciones queden c
 const sections = (count: number) => `${count} ${count === 1 ? 'sección' : 'secciones'}`
 
 function groupOf(decision: Decision): DecisionGroupId {
-  return decision.kind === 'teacher-load-exception' ? 'load-exception' : decision.kind
+  return decision.kind === 'teacher-load-exception' ? decision.exceptionKind === 'configuration-adjustment' ? 'load-adjustment' : 'load-exception' : decision.kind
 }
 
 function windowTitle(change: Decision['policyChange']) {
@@ -125,6 +128,10 @@ export function buildDecisionQueue(decisions: AcademicProposal['decisions'] | un
     const coursesTitle = decision.courseIds.length > 1 ? `${decision.courseIds.length} cursos` : decision.courseIds.map(courseName).join('')
     if (decision.kind === 'teacher-load-exception') {
       const teacherId = decision.teacherId ?? ''
+      if (decision.exceptionKind === 'configuration-adjustment') return { ...base, title: teacherName(teacherId), applied: false,
+        action: { kind: 'record-authorization', teacherId }, actionLabel: 'Ajustar carga configurada', kindLabel: 'Ajuste dentro del tope autorizado',
+        effect: `+${decision.additionalMinutes} min semanales · libera ${sections(decision.sectionsUnlocked)}. No requiere una nueva autorización formal.`,
+        provenance: 'Ajusta explícitamente la carga máxima del docente y regenera la propuesta.' }
       const recorded = teachers.find((teacher) => teacher.id === teacherId)?.loadAuthorizations?.some((item) => item.kind === decision.exceptionKind) ?? false
       return { ...base, title: teacherName(teacherId), applied: recorded, action: { kind: 'record-authorization', teacherId }, actionLabel: 'Registrar autorización',
         kindLabel: decision.exceptionKind === 'vrap-authorization' ? 'Autorización del VRAP' : 'Declaración jurada del docente',

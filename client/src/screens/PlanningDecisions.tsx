@@ -43,7 +43,7 @@ function ItemRow({ item, disabled, onAction }: { item: DecisionItem; disabled: b
       </div>
       <p className="planning-decisions__effect">{item.effect}</p>
       {item.provenance && <p className="planning-decisions__provenance">{item.provenance}</p>}
-      {item.action.kind === 'record-authorization' && <p className="planning-decisions__provenance">
+      {item.action.kind === 'record-authorization' && item.kindLabel !== 'Ajuste dentro del tope autorizado' && <p className="planning-decisions__provenance">
         Registrar la autorización no cambia por sí sola la carga semanal del docente: tras registrarla, ajusta su carga máxima hasta el tope autorizado.</p>}
       <p className="planning-decisions__necessity">{item.necessity}</p>
       {item.courseNames.length > 0 && <details className="planning-decisions__details">
@@ -119,6 +119,10 @@ export function PlanningDecisions(props: PlanningDecisionsProps) {
         {queue.groups.map((group, index) => <Group key={group.id} group={group} defaultOpen={index === 0} isDisabled={disabledFor} onAction={act} />)}
       </CollapsibleContent>
     </Collapsible>}
+    {proposal?.normative?.gaps.some((gap) => gap.blocking) && <Alert><AlertDescription>
+      No se puede acreditar la carga reglamentaria para publicar. El horario permanece provisional.
+      <ul>{proposal.normative.gaps.filter((gap) => gap.blocking).map((gap, index) => <li key={`${gap.code}-${index}`}>{gap.message}</li>)}</ul>
+    </AlertDescription></Alert>}
     {(normative || prelation) && <Collapsible className="planning-decisions__basis">
       <CollapsibleTrigger asChild>
         <Button type="button" variant="ghost" size="sm" className="planning-decisions__basis-trigger"><Scale size={14} aria-hidden="true" /> Base normativa{normative && normative.gaps.length > 0 ? ` y vacíos (${normative.gaps.length})` : ''}</Button>
@@ -129,7 +133,7 @@ export function PlanningDecisions(props: PlanningDecisionsProps) {
             Perfil normativo {normative.profileRevision ?? 'no resuelto'} · hora lectiva {normative.lectiveHourMinutes === null ? 'sin indicar' : `${normative.lectiveHourMinutes} min`}.
             {normative.lectiveHourNote && <> <span className="planning-decisions__provenance">{normative.lectiveHourNote}</span></>}
           </p>
-          {normative.gaps.length > 0 ? <ul className="planning-decisions__gaps" aria-label="Vacíos normativos">{normative.gaps.map((gap) => <li key={gap.code}>
+          {normative.gaps.length > 0 ? <ul className="planning-decisions__gaps" aria-label="Vacíos normativos">{normative.gaps.map((gap) => <li key={`${gap.code}-${gap.message}`}>
             <Badge variant="outline">{GAP_CLASS_LABEL[gap.classification]}</Badge>{' '}
             <span>{gap.message}</span>{gap.teacherCount > 0 && <span className="planning-decisions__gap-count"> · {gap.teacherCount} {gap.teacherCount === 1 ? 'docente' : 'docentes'}</span>}
           </li>)}</ul> : <p className="planning-decisions__basis-line">Sin vacíos normativos informados.</p>}

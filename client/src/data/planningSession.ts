@@ -1,3 +1,6 @@
+import { startAcademicSearch, pollAcademicSearch, cancelAcademicSearch } from './academicScheduling.ts'
+import type { AcademicSearch } from '../../../shared/programacion-academica-api.mjs'
+import { resolveNormativeProfile, teacherLoadLimits } from '../../../shared/academic-normative-profile.mjs'
 import { measureAdvisorOutcome, type AdvisorOutcome } from './advisorOutcome.ts'
 import type { LectiveHourMinutes, LoadAuthorizationBlocker } from '../../../shared/academic-normative-profile.mjs'
 // Sesión de programación: owns the internal planning workflow (Preparación → Horario → Revisión docente
@@ -27,7 +30,7 @@ import type { LectiveHourMinutes, LoadAuthorizationBlocker } from '../../../shar
 // Confirmations for discarding unsaved changes (resume, fork, period defaults) stay in the view: commands never
 // open dialogs.
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
-import { validateAcademicRequest, validateAcademicResources, validateAcademicWorkspace } from '../../../shared/programacion-academica-api.mjs'
+import { validateAcademicAdvisorPatch, validateAcademicRequest, validateAcademicResources, validateAcademicWorkspace } from '../../../shared/programacion-academica-api.mjs'
 import type {
   AcademicAdjustment, AcademicAdvisorPatch, AcademicAllocationPolicy, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest,
   AcademicDemandSourceId, AcademicDraftList, AcademicDraftResume, AcademicDraftSaveRequest, AcademicDraftState,
@@ -38,7 +41,7 @@ import {
   AcademicLoadAuthorizationError, PLANNING_LIMITS, academicPlanningErrorMessage, academicSectionCoverage, adjustAcademicProposal, aggregateAcademicBlocks, approveAcademicDraft,
   buildAcademicPlanningRequest, createAcademicPlanningDefaults, createAcademicProposal, estimateAcademicDemand,
   fetchAcademicCatalog, fetchAcademicDrafts, forkAcademicDraft, publishAcademicDraft, respondAcademicTeacherReview,
-  resumeAcademicDraft, saveAcademicDraft, submitAcademicTeacherReview, syntheticTeachingMetadata,
+  resumeAcademicDraft, saveAcademicDraft, submitAcademicTeacherReview,
 } from './academicScheduling.ts'
 import type { PlanningPeriod, PlanningPolicy } from './academicScheduling.ts'
 
@@ -54,6 +57,9 @@ export type PlanningBlock = ReturnType<typeof aggregateAcademicBlocks>[number]
 
 // Client seam: the production adapter wraps the existing data functions; tests inject an in-memory one.
 export interface PlanningSessionClient {
+  startSearch?(request: AcademicRequest, requestId?: string): Promise<AcademicSearch>
+  pollSearch?(jobId: string, signal?: AbortSignal): Promise<AcademicSearch>
+  cancelSearch?(jobId: string): Promise<AcademicSearch>
   fetchCatalog(signal?: AbortSignal): Promise<AcademicCatalog>
   estimateDemand(request: AcademicDemandRequest, signal?: AbortSignal): Promise<AcademicDemandEstimate>
   createProposal(request: AcademicRequest, signal?: AbortSignal): Promise<AcademicProposal>
@@ -69,6 +75,9 @@ export interface PlanningSessionClient {
 }
 
 export const defaultPlanningSessionClient: PlanningSessionClient = {
+  startSearch: (request, requestId) => startAcademicSearch(request, 30, globalThis.fetch, requestId),
+  pollSearch: (id, signal) => pollAcademicSearch(id, globalThis.fetch, signal),
+  cancelSearch: (id) => cancelAcademicSearch(id),
   fetchCatalog: (signal) => fetchAcademicCatalog(globalThis.fetch, signal),
   estimateDemand: (request, signal) => estimateAcademicDemand(request, globalThis.fetch, signal),
   createProposal: (request, signal) => createAcademicProposal(request, globalThis.fetch, signal),
@@ -89,6 +98,7 @@ type Errors = { catalog: string | null; demand: string | null; proposal: string 
 type Intents = { proposal: number; demand: number; draftList: number; draftSave: number; draftResume: number }
 
 export interface PlanningSessionState {
+  search: AcademicSearch | null
   catalog: AcademicCatalog | null
   period: PlanningPeriod
   lectiveHourMinutes?: AcademicWorkspace['lectiveHourMinutes']
@@ -125,7 +135,7 @@ export interface PlanningSessionState {
 
 export function initialPlanningSessionState(): PlanningSessionState {
   return {
-    catalog: null, period: '2027-I', policy: null, allocationPolicy: 'preferences', selectedCourses: [],
+    search: null, catalog: null, period: '2027-I', policy: null, allocationPolicy: 'preferences', selectedCourses: [],
     demands: {}, capacities: {}, patterns: {}, deliveryModes: {}, resources: { teachers: [], rooms: [] },
     demandSourceId: 'existing-regular-v1', demandEstimate: null, demandBaseRequest: null,
     proposal: null, advisorOutcome: null, proposalResources: null, editingBlock: null,
@@ -168,6 +178,8 @@ export type PlanningSessionEvent =
   | { type: 'demand/started' }
   | { type: 'demand/succeeded'; token: number; estimate: AcademicDemandEstimate; baseRequest: AcademicDemandRequest }
   | { type: 'demand/failed'; token: number; message: string | null }
+  | { type: 'search/uncertain'; token: number; message: string }
+  | { type: 'search/progress'; token: number; search: AcademicSearch; resources: AcademicPlanningResources }
   | { type: 'generate/started' }
   | { type: 'generate/succeeded'; token: number; proposal: AcademicProposal; resources: AcademicPlanningResources }
   | { type: 'generate/failed'; token: number; message: string }
@@ -210,7 +222,7 @@ function markDirty(state: PlanningSessionState, configurationChanged = false): P
 function invalidateProposal(state: PlanningSessionState): PlanningSessionState {
   const staleDecisions = state.proposal?.decisions?.length
     ? { proposalId: state.proposal.proposalId, decisions: structuredClone(state.proposal.decisions) } : state.staleDecisions
-  return { ...state, intents: { ...state.intents, proposal: state.intents.proposal + 1 }, proposal: null, staleDecisions,
+  return { ...state, intents: { ...state.intents, proposal: state.intents.proposal + 1 }, proposal: null, search: null, staleDecisions,
     advisorOutcome: null, proposalResources: null, editingBlock: null, busy: { ...state.busy, adjust: false, generate: false },
     errors: { ...state.errors, proposal: null, adjustment: null } }
 }
@@ -323,11 +335,26 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
       let nextResources = cloneResources(state.resources)
       let nextPolicy: PlanningPolicy | null = state.policy ? { ...state.policy } : null
       const nextDeliveryModes = { ...state.deliveryModes }
-      const defaultWindows = [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 }))
+      for (const patch of event.patches) {
+        validateAcademicAdvisorPatch(patch)
+        if (patch.kind === 'increase_teacher_load') {
+          const profile = resolveNormativeProfile({ facultyId: 'FISI', period: state.period })
+          if (state.proposal?.normative?.profileRevision && state.proposal.normative.profileRevision !== profile.revision) throw new Error('El perfil normativo cambió; ejecuta una nueva búsqueda.')
+          for (const adjustment of patch.adjustments) {
+            const teacher = state.resources.teachers.find(t => t.id === adjustment.teacherId)
+            const limit = teacher && state.lectiveHourMinutes !== undefined
+              ? teacherLoadLimits(profile, teacher, { lectiveHourMinutes: state.lectiveHourMinutes }).authorizedMaxMinutes : null
+            if (!teacher || teacher.maxWeeklyMinutes !== adjustment.previousMaxWeeklyMinutes || limit === null || adjustment.nextMaxWeeklyMinutes > limit) throw new Error('Carga obsoleta o no autorizada; revisa el docente y su perfil.')
+          }
+        }
+        if (patch.kind === 'incorporate_reference_resource' && (!state.catalog
+          || patch.teacherIds.some(id => !state.catalog?.referenceTeachers?.some(t => t.id === id))
+          || patch.roomIds.some(id => !state.catalog?.referenceRooms?.some(r => r.id === id)))) throw new Error('Referencia desconocida')
+      }
 
       for (const patch of event.patches) {
         if (patch.kind === 'increase_teacher_load') {
-          const loadMap = new Map(patch.adjustments.map((item) => [item.teacherId, Math.min(2400, item.nextMaxWeeklyMinutes)]))
+          const loadMap = new Map(patch.adjustments.map((item) => [item.teacherId, item.nextMaxWeeklyMinutes]))
           nextResources = {
             ...nextResources,
             teachers: nextResources.teachers.map((teacher) => {
@@ -357,9 +384,8 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
               return [{
                 ...ref,
                 courseIds: [...ref.courseIds],
-                maxWeeklyMinutes: 600,
-                ...syntheticTeachingMetadata(refIndex),
-                availability: defaultWindows.map((w) => ({ ...w })),
+                maxWeeklyMinutes: 0,
+                availability: [],
               }]
             })
           const existingRoomIds = new Set(nextResources.rooms.map((r) => r.id))
@@ -374,7 +400,7 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
                 name: ref.name,
                 capacity: ref.capacity,
                 kind: ref.kind,
-                availability: defaultWindows.map((w) => ({ ...w })),
+                availability: [],
               }]
             })
           nextResources = {
@@ -383,6 +409,7 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
           }
         }
       }
+      validateAcademicResources(nextResources)
       return {
         ...markDirty(invalidateProposal(state), true),
         resources: nextResources,
@@ -403,7 +430,7 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
       return { ...markDirty(state), draft: { ...state.draft, state: event.state } }
 
     case 'startBlockReview': {
-      if (!state.proposal || isPlanningDraftLocked(state) || state.busy.draft) return state
+      if (!state.proposal || state.busy.generate || isPlanningDraftLocked(state) || state.busy.draft) return state
       const block = event.block
       const assignments = state.proposal.assignments.filter((assignment) => block.sessionIds.includes(assignment.sessionId))
         .sort((left, right) => left.startMinute - right.startMinute || left.sessionId.localeCompare(right.sessionId))
@@ -433,10 +460,19 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
       return { ...state, busy: { ...state.busy, demand: false },
         errors: { ...state.errors, demand: event.message ?? state.errors.demand } }
 
+    case 'search/uncertain':
+      if (event.token !== state.intents.proposal) return state
+      return { ...state, busy: { ...state.busy, generate: true }, errors: { ...state.errors, proposal: event.message } }
+    case 'search/progress':
+      if (event.token !== state.intents.proposal) return state
+      return { ...state, search: event.search, proposal: event.search.proposal ?? state.proposal,
+        proposalResources: event.search.proposal ? event.resources : state.proposalResources,
+        busy: { ...state.busy, generate: event.search.state === 'running' },
+        errors: { ...state.errors, proposal: event.search.error?.message ?? null } }
     case 'generate/started': {
       const next = markDirty(state, true)
-      return { ...next, advisorOutcome: null, intents: { ...next.intents, proposal: next.intents.proposal + 1 }, proposal: null,
-        proposalResources: null, editingBlock: null, busy: { ...next.busy, adjust: false, generate: true },
+      return { ...next, advisorOutcome: null, intents: { ...next.intents, proposal: next.intents.proposal + 1 }, search: null,
+        editingBlock: null, busy: { ...next.busy, adjust: false, generate: true },
         errors: { ...next.errors, proposal: null, adjustment: null } }
     }
     case 'generate/succeeded':
@@ -667,7 +703,7 @@ export function derivePlanningView(state: PlanningSessionState) {
     offerValid,
     invalidCourses,
     proposalComplete: proposalComplete(state.proposal),
-    canSave: Boolean(state.catalog) && !state.busy.draft && !locked && offerValid,
+    canSave: Boolean(state.catalog) && !state.busy.generate && !state.busy.draft && !locked && offerValid,
     disabledSaveReason: !state.catalog ? state.busy.catalog ? 'Cargando catálogo local…' : 'Catálogo local no disponible'
       : locked ? 'Versión congelada de solo lectura'
         : !offerValid ? 'Demanda y capacidad requeridas' : null,
@@ -684,11 +720,43 @@ type Channel = 'catalog' | 'demand' | 'draft' | 'draftList'
 export function createPlanningSession(client: PlanningSessionClient = defaultPlanningSessionClient,
   initial: PlanningSessionState = initialPlanningSessionState()) {
   let state = initial
+  let disposed = false
+  type ActiveSearch = { token: number; id: string; stopped: boolean; settled: boolean; cleanup?: Promise<boolean>; controller: AbortController }
+  let active: ActiveSearch | null = null
+  const pendingCleanup = new Set<ActiveSearch>()
+  const performReconcile = async (run: ActiveSearch) => {
+    run.stopped = true
+    run.controller.abort()
+    pendingCleanup.add(run)
+    try {
+      const search = await client.cancelSearch!(run.id)
+      if (search.state === 'running') throw new Error('El motor sigue activo')
+      run.settled = true
+      pendingCleanup.delete(run)
+      if (!disposed && !pendingCleanup.size && run.token !== state.intents.proposal && (!active || active.token !== state.intents.proposal)) {
+        dispatch({ type: 'generate/failed', token: state.intents.proposal, message: '' })
+      }
+      if (!disposed && run.token === state.intents.proposal) dispatch({ type: 'search/progress', token: run.token, search, resources: state.resources })
+      return true
+    } catch {
+      if (run.settled) { pendingCleanup.delete(run); return true }
+      if (!disposed) dispatch({ type: 'search/uncertain', token: state.intents.proposal,
+        message: 'No se confirmó la detención. Reintenta Cancelar antes de editar o guardar.' })
+      return false
+    }
+  }
+  const reconcile = (run: ActiveSearch): Promise<boolean> => {
+    run.cleanup ??= performReconcile(run).finally(() => { run.cleanup = undefined })
+    return run.cleanup
+  }
+  const stop = (run: ActiveSearch) => { void reconcile(run) }
   const listeners = new Set<() => void>()
   const controllers: Partial<Record<Channel, AbortController>> = {}
   const getState = () => state
   const dispatch = (event: PlanningSessionEvent) => {
     state = reducePlanningSession(state, event)
+    if (active && active.token !== state.intents.proposal) { stop(active); active = null }
+    if (pendingCleanup.size) state = { ...state, busy: { ...state.busy, generate: true } }
     for (const listener of listeners) listener()
   }
   const subscribe = (listener: () => void) => {
@@ -720,13 +788,13 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
       | 'updateCapacity' | 'changeDemandSource' | 'updatePattern' | 'updateDeliveryMode' | 'updateResources'
       | 'updateAllocationPolicy' | 'updatePlanningException' | 'updateLectiveHourMinutes' | 'applyAdvisorPatches' | 'applyPeriodDefaults' | 'setTitle' | 'setDraftState'
       | 'startBlockReview' | 'changeEditingBlock' | 'cancelBlockReview' | 'setDraftError'
-      | 'setDraftMessage' }>) => dispatch(event),
+      | 'setDraftMessage' }>) => { if (pendingCleanup.size) return; dispatch(event) },
 
     async applyAdvisorPatchesAndRegenerate(patches: AcademicAdvisorPatch[], expected?: { proposalId: string; editVersion: number }) {
-      if (!patches.length || isPlanningDraftLocked(state) || state.busy.generate || state.busy.draft || state.busy.adjust) return false
+      if (pendingCleanup.size || !patches.length || isPlanningDraftLocked(state) || state.busy.generate || state.busy.draft || state.busy.adjust) return false
       if (expected && (state.proposal?.proposalId !== expected.proposalId
         || (state.proposal.editVersion ?? 0) !== expected.editVersion)) {
-        throw new Error('La propuesta cambió. Consulta y simula de nuevo antes de aplicar recomendaciones.')
+        throw new Error('La propuesta cambió. Consulta de nuevo antes de aplicar recomendaciones.')
       }
       const before = state.proposal
       dispatch({ type: 'applyAdvisorPatches', patches })
@@ -738,6 +806,7 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
     },
 
     async loadCatalog() {
+      disposed = false // React StrictMode remounts effects on the same session.
       dispatch({ type: 'catalog/started' })
       const controller = open('catalog')
       try {
@@ -771,7 +840,20 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
       }
     },
 
+    async cancelSearch() {
+      const runs = new Set(pendingCleanup)
+      if (active) runs.add(active)
+      for (const run of runs) await reconcile(run)
+    },
+
     async generate() {
+      if (disposed || isPlanningDraftLocked(state) || state.busy.draft || state.busy.adjust) return false
+      if (pendingCleanup.size) {
+        for (const run of [...pendingCleanup]) if (!await reconcile(run)) return false
+      }
+      if (active && !active.settled) {
+        if (!await reconcile(active)) return false
+      }
       const catalog = state.catalog
       if (!catalog) return false
       dispatch({ type: 'generate/started' })
@@ -780,6 +862,47 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
       try {
         const request = state.policy ? buildAcademicPlanningRequest(base, state.policy) : base
         validateAcademicResources(request.resources)
+        // Preserve the legacy test seam when only createProposal overrides the default client.
+        // The actual default application and explicit job adapters always use jobs.
+        if (client.startSearch && (client.createProposal === defaultPlanningSessionClient.createProposal
+          || client.startSearch !== defaultPlanningSessionClient.startSearch)) {
+          if (!client.pollSearch || !client.cancelSearch) throw new Error('Adaptador de búsquedas incompleto')
+          const run: ActiveSearch = { token, id: crypto.randomUUID(), stopped: false, settled: false, controller: new AbortController() }
+          active = run
+          try {
+            let search = await client.startSearch(request, run.id)
+            // Legacy injected adapters may assign an ID instead of honoring requestId.
+            // Finish any cancellation of the caller key before cleaning that late ID.
+            if (run.id !== search.jobId) {
+              await run.cleanup
+              run.settled = false
+              run.id = search.jobId
+            }
+            if (disposed || run.stopped || token !== state.intents.proposal) {
+              await reconcile(run)
+              return false
+            }
+            const deadline = Date.now() + (search.budgetSeconds * 1.5 + 30) * 1000
+            while (!run.stopped && !disposed && token === state.intents.proposal) {
+              dispatch({ type: 'search/progress', token, search, resources: request.resources })
+              if (search.state !== 'running') { run.settled = true; return search.state === 'completed' && search.proposal !== null }
+              if (Date.now() > deadline) throw new Error('La búsqueda no respondió dentro del plazo')
+              await new Promise<void>(resolve => {
+                const finish = () => { clearTimeout(timer); run.controller.signal.removeEventListener('abort', finish); resolve() }
+                const timer = setTimeout(finish, 250)
+                run.controller.signal.addEventListener('abort', finish, { once: true })
+              })
+              if (run.stopped || disposed) return false
+              search = await client.pollSearch(run.id, run.controller.signal)
+            }
+            return false
+          } catch (error) {
+            const wasStopped = run.stopped
+            if (!run.settled && !await reconcile(run)) return false
+            if (wasStopped || disposed) return false
+            throw error
+          } finally { if (active === run && run.settled) active = null }
+        }
         const proposal = await client.createProposal(request)
         dispatch({ type: 'generate/succeeded', token, proposal, resources: request.resources })
         return token === state.intents.proposal && state.proposal === proposal && proposal.status !== 'invalid-input'
@@ -792,7 +915,7 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
 
     async adjust() {
       const { proposal, editingBlock } = state
-      if (!proposal || !editingBlock || state.busy.adjust || isPlanningDraftLocked(state) || state.busy.draft) return
+      if (!proposal || !editingBlock || state.busy.generate || state.busy.adjust || isPlanningDraftLocked(state) || state.busy.draft) return
       dispatch({ type: 'adjust/started' })
       const token = state.intents.proposal
       try {
@@ -806,7 +929,7 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
     refreshDrafts,
 
     async save() {
-      if (state.busy.draft || isPlanningDraftLocked(state)) return
+      if (state.busy.generate || state.busy.draft || isPlanningDraftLocked(state)) return
       if (invalidPlanningCourses(state).length > 0 || !state.catalog || state.selectedCourses.length > PLANNING_LIMITS.courses) {
         dispatch({ type: 'draft/rejected', message: 'Completa demandas y capacidades válidas para todos los cursos seleccionados antes de guardar.' })
         return
@@ -932,6 +1055,8 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
   }
 
   const dispose = () => {
+    disposed = true
+    if (active) stop(active)
     for (const controller of Object.values(controllers)) controller?.abort()
   }
 

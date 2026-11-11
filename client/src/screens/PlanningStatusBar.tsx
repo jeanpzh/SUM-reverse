@@ -63,6 +63,11 @@ function resultWording(proposal: AcademicProposal) {
     headline = 'La programación aún tiene secciones por completar'
     subtext = 'La búsqueda se detuvo antes de completar la programación. Revisa las secciones pendientes o ajusta las restricciones.'
     diagnosisText = 'La búsqueda alcanzó su límite computacional. No prueba que no exista solución en el dominio configurado.'
+    if (proposal.stats.limitReason === 'running' || proposal.stats.limitReason === 'cancelled') {
+      badgeText = proposal.stats.limitReason === 'running' ? 'Búsqueda en curso' : 'Búsqueda cancelada'
+      subtext = 'Se muestra el mejor horario validado hasta ahora.'
+      diagnosisText = 'No se ha demostrado optimalidad ni falta de recursos.'
+    }
   } else if (proposal.status === 'impossible') {
     const partial = proposal.diagnostics.some((d) => d.code === 'PARTIAL_PROPOSAL')
     const notices = proposal.diagnostics.length
@@ -107,8 +112,9 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
 
   const currentAdvice = advisorData?.proposalId === proposal.proposalId && advisorData.editVersion === editVersion
     ? advisorData : null
-  const previewCurrent = hasCurrentAdvisorImpact(currentAdvice, proposal.proposalId, editVersion, selectedRecIds)
-  const impact = previewCurrent ? currentAdvice?.verifiedImpact : undefined
+  const engineDecisions = currentAdvice?.source.mode === 'engine-decisions'
+  const previewCurrent = engineDecisions || hasCurrentAdvisorImpact(currentAdvice, proposal.proposalId, editVersion, selectedRecIds)
+  const impact = !engineDecisions && previewCurrent ? currentAdvice?.verifiedImpact : undefined
   const applyDisabledReason = !onApplyAdvisorPatches || currentAdvice?.recommendations.length === 0 ? null
     : isLocked ? advisorDisabledReason ?? 'La propuesta está bloqueada para cambios.'
     : selectedRecIds.length === 0 ? 'Marca al menos una recomendación para continuar.'
@@ -287,7 +293,7 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
                 <Badge variant={currentAdvice.source.mode === 'llm-assisted' ? 'default' : 'secondary'}>
                   {currentAdvice.source.mode === 'llm-assisted'
                     ? `IA asistida · ${currentAdvice.source.providerLabel ?? 'LLM'}`
-                    : 'Análisis determinista local'}
+                    : currentAdvice.source.mode === 'engine-decisions' ? 'Decisiones del motor retenidas' : 'Análisis determinista local'}
                 </Badge>
               )}
             </SheetDescription>
@@ -311,9 +317,9 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
               {currentAdvice.recommendations.length > 0 ? (
                 <div className="grid min-w-0 gap-2.5">
                   <h4 className="m-0 text-sm font-semibold text-foreground">Recomendaciones aplicables</h4>
-                  <p className="m-0 text-sm text-muted-foreground">Los alcances individuales pueden solaparse. Simula la combinación para conocer su cobertura; no sumes las cifras de cada recomendación.</p>
+                  <p className="m-0 text-sm text-muted-foreground">Las decisiones describen condiciones necesarias, sin garantizar horario. Aplica explícitamente y regenera para medir el resultado real.</p>
                   {currentAdvice.recommendations.map((rec) => <SuggestionCard key={rec.id}
-                    recommendation={rec} checked={selectedRecIds.includes(rec.id)} disabled={applying || isLocked}
+                    recommendation={rec} sourceMode={currentAdvice.source.mode} checked={selectedRecIds.includes(rec.id)} disabled={applying || isLocked}
                     onCheckedChange={(checked) => toggleRecommendation(rec.id, checked)}
                     teacherNames={teacherNames} courseNames={courseNames} roomNames={roomNames} />)}
                 </div>
@@ -334,7 +340,7 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
                   Volver al horario
                 </Button>
                 <Button type="button" variant="outline" disabled={applying || isLocked}
-                  onClick={() => void requestAdvice([...selectedRecIds])}>Simular selección actual</Button>
+                  onClick={() => void requestAdvice([...selectedRecIds])}>Actualizar análisis</Button>
                 {onApplyAdvisorPatches && currentAdvice.recommendations.length > 0 && (
                   <Button
                     type="button"

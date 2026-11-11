@@ -1,3 +1,5 @@
+import { validateAcademicSearch, validateAcademicSearchRequest } from '../../../shared/programacion-academica-api.mjs'
+import type { AcademicSearch } from '../../../shared/programacion-academica-api.mjs'
 import { validateAcademicNormativeRequest, validateAcademicNormativeResponse } from '../../../shared/programacion-academica-api.mjs'
 import type { AcademicNormativeRequest, AcademicNormativeResponse } from '../../../shared/programacion-academica-api.mjs'
 import { ACADEMIC_API, ACADEMIC_REVISION, ACADEMIC_ROUTE, validateAcademicAdjustment, validateAcademicAdvisorRequest, validateAcademicAdvisorResponse, validateAcademicCatalog, validateAcademicDemandEstimate, validateAcademicDemandRequest, validateAcademicProposal, validateAcademicRequest, validateAcademicDraftList, validateAcademicDraftResume, validateAcademicDraftSaveRequest, validateAcademicSavedDraft, validateAcademicReviewSubmission, validateAcademicReviewDecision, validateAcademicPublicationRequest, validateAcademicReleasePreview, validateAcademicPublication, validateAcademicPublicationList } from '../../../shared/programacion-academica-api.mjs'
@@ -127,7 +129,7 @@ async function readJson(response: Response) {
       ? body as Record<string, unknown> : null
     const error = envelope?.error && typeof envelope.error === 'object' && !Array.isArray(envelope.error)
       ? envelope.error as Record<string, unknown> : null
-    if (!envelope || Object.keys(envelope).length !== 1 || !error || Object.keys(error).some((key) => !['code', 'message', 'blockers'].includes(key))
+    if (!envelope || Object.keys(envelope).length !== 1 || !error || Object.keys(error).some((key) => !['code', 'message', 'blockers', 'gaps'].includes(key))
       || typeof error.code !== 'string' || !error.code || typeof error.message !== 'string' || !error.message) {
       throw new Error('La API local devolvió un error con formato inválido.')
     }
@@ -533,4 +535,33 @@ export async function fetchAcademicNormativeAdvice(request: AcademicNormativeReq
 export function defaultAcademicAdvisorSelection(advice: AcademicAdvisorResponse): string[] {
   return advice.recommendations.filter((item) => item.recommendedByDefault
     && item.patch.kind !== 'increase_teacher_load').map((item) => item.id)
+}
+
+export async function startAcademicSearch(request: AcademicRequest, budgetSeconds = 30,
+  fetchImpl: typeof fetch = globalThis.fetch, requestId?: string): Promise<AcademicSearch> {
+  const input = { request, budgetSeconds, ...(requestId ? { requestId } : {}) }
+  validateAcademicSearchRequest(input)
+  const result = await readJson(await fetchImpl(`${ACADEMIC_API}/busquedas`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    credentials: 'omit', body: JSON.stringify(input), signal: AbortSignal.timeout(10000),
+  }))
+  validateAcademicSearch(result)
+  if (requestId && result.jobId !== requestId) throw new TypeError('Respuesta de otra búsqueda')
+  return result
+}
+export async function pollAcademicSearch(jobId: string, fetchImpl: typeof fetch = globalThis.fetch, signal?: AbortSignal): Promise<AcademicSearch> {
+  const result = await readJson(await fetchImpl(`${ACADEMIC_API}/busquedas/${encodeURIComponent(jobId)}`, {
+    credentials: 'omit', headers: { Accept: 'application/json' }, signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(10000)]) : AbortSignal.timeout(10000),
+  }))
+  validateAcademicSearch(result)
+  if (result.jobId !== jobId) throw new TypeError('Respuesta de otra búsqueda')
+  return result
+}
+export async function cancelAcademicSearch(jobId: string, fetchImpl: typeof fetch = globalThis.fetch): Promise<AcademicSearch> {
+  const result = await readJson(await fetchImpl(`${ACADEMIC_API}/busquedas/${encodeURIComponent(jobId)}/cancelar`, {
+    method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: '{}', signal: AbortSignal.timeout(10000),
+  }))
+  validateAcademicSearch(result)
+  if (result.jobId !== jobId) throw new TypeError('Respuesta de otra búsqueda')
+  return result
 }

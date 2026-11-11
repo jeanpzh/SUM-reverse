@@ -35,17 +35,23 @@ export function LectiveHourSelect({ value, disabled, onChange }: { value: Lectiv
       <option value="">Sin indicar</option>
       {LECTIVE_HOUR_MINUTES.map((minutes) => <option key={minutes} value={minutes}>{minutes} minutos</option>)}
     </NativeSelect>
-    <p className="planning-decisions__provenance">El reglamento permite 45, 50 o 60 minutos y la de FISI no está verificada. Sin indicarla no se calculan los topes por docente y se conserva la carga semanal declarada.</p>
+    <p className="planning-decisions__provenance">El reglamento permite 45, 50 o 60 minutos y la de FISI no está verificada. Sin indicarla no se calculan los topes por docente y se conserva la carga semanal declarada como provisional y se bloquea la publicación.</p>
   </div>
 }
 
-export function TeacherLoadFields({ teacher, period, lectiveHourMinutes, disabled, onChange }: {
+export function TeacherLoadFields(props: TeacherLoadFieldsProps) {
+  return <TeacherLoadFieldsDraft key={`${props.period}:${props.teacher.id}`} {...props} />
+}
+
+type TeacherLoadFieldsProps = {
   teacher: AcademicTeacherResource
   period: string
   lectiveHourMinutes: LectiveHourMinutes | undefined
   disabled: boolean
   onChange: (teacher: AcademicTeacherResource) => void
-}) {
+}
+
+function TeacherLoadFieldsDraft({ teacher, period, lectiveHourMinutes, disabled, onChange }: TeacherLoadFieldsProps) {
   const [serviceText, setServiceText] = useState(teacher.weeklyServiceHours === undefined ? '' : String(teacher.weeklyServiceHours))
   const [serviceError, setServiceError] = useState('')
   const [kind, setKind] = useState<LoadAuthorizationKind>('voluntary-declaration')

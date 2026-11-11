@@ -125,7 +125,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
   const draftError = state.errors.draft
   const reviewError = state.errors.review
   const draftMessage = state.message
-  const lockedDraft = view.locked
+  const lockedDraft = view.locked || generating
   const validDemands = view.offerValid
   const canSave = view.canSave
   const disabledSaveReason = view.disabledSaveReason
@@ -185,6 +185,14 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       await navigate({ to: '/local/programacion-academica', search: { etapa: 'horario' } })
     }
   }
+  const revealedSearch = useRef<string | null>(null)
+  useEffect(() => {
+    const search = state.search
+    if (search?.state === 'running' && search.proposal && revealedSearch.current !== search.jobId) {
+      revealedSearch.current = search.jobId
+      void navigate({ to: '/local/programacion-academica', search: { etapa: 'horario' } })
+    }
+  }, [state.search, navigate])
   const submitBlockReview = () => commands.adjust()
   const approveDraft = () => commands.approve()
   const publishDraft = (expectedCurrentId: string | null) => commands.publish(expectedCurrentId)
@@ -549,6 +557,12 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       </div>
     </section>
 
+    {generating && <div role="status" aria-live="polite">
+      {proposalError ? 'Detención pendiente de confirmar' : state.search ? `Búsqueda · ${state.search.phase} · ${state.search.progress.scheduledSessions}/${state.search.progress.requiredSessions} componentes · ${state.search.progress.improvements} mejoras` : 'Iniciando búsqueda…'}
+      <Button variant="outline" onClick={() => void commands.cancelSearch()}>{proposalError ? 'Reintentar cancelación' : 'Cancelar'}</Button>
+      {proposalError && <p role="alert">{proposalError}</p>}
+    </div>}
+    {state.search?.state === 'cancelled' && <p role="status">Búsqueda cancelada. {state.search.proposal ? 'Se conserva el mejor horario encontrado.' : 'Sin horario nuevo; se conserva el borrador anterior.'}</p>}
     {/* Stage 2: Horario */}
     <section
       className="planning-stage-panel planning-stage-panel--horario"
@@ -678,7 +692,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       hidden={currentStage !== 'aprobacion'}
       aria-label="Etapa de aprobación"
     >
-      <AcademicPublicationPanel loadBlockers={proposal?.normative?.blockers ?? []} teacherNames={teacherNames} period={planningPeriod} primaryActionId={approvalAction?.id} draftId={draftId} draftVersion={draftVersion} draftTitle={draftTitle}
+      <AcademicPublicationPanel active={currentStage === 'aprobacion'} loadBlockers={proposal?.normative?.blockers ?? []} teacherNames={teacherNames} period={planningPeriod} primaryActionId={approvalAction?.id} draftId={draftId} draftVersion={draftVersion} draftTitle={draftTitle}
         draftState={savedDraftState} dirty={workspaceDirty} busy={draftBusy || generating || adjusting || demandLoading} onApprove={approveDraft}
         onPublish={publishDraft} onFork={forkDraft}
         onError={(message) => commands.edit({ type: 'setDraftError', message })}

@@ -1,12 +1,13 @@
 import { useId } from 'react'
-import type { AcademicAdvisorRecommendation } from '../../data/academicScheduling'
+import type { AcademicAdvisorRecommendation, AcademicAdvisorResponse } from '../../data/academicScheduling'
 import { Badge } from '../ui/Badge'
 import { Checkbox } from '../ui/Checkbox'
 import { MessageResponse } from './MessageResponse'
 import { AdviceDisclosure } from './AdviceDisclosure'
 
-export function SuggestionCard({ recommendation, checked, disabled, onCheckedChange, teacherNames, courseNames, roomNames }: {
+export function SuggestionCard({ recommendation, checked, disabled, onCheckedChange, teacherNames, courseNames, roomNames, sourceMode }: {
   recommendation: AcademicAdvisorRecommendation
+  sourceMode?: AcademicAdvisorResponse['source']['mode']
   checked: boolean
   disabled: boolean
   onCheckedChange: (checked: boolean) => void
@@ -30,7 +31,9 @@ export function SuggestionCard({ recommendation, checked, disabled, onCheckedCha
       <div className="min-w-0 flex-1">
         <label htmlFor={id} className="cursor-pointer font-semibold">{recommendation.title}</label>
         <div className="my-2"><Badge variant="outline" className="whitespace-normal [overflow-wrap:anywhere]">Alcance estimado: {recommendation.impactSummary}</Badge></div>
-        {patch.kind === 'increase_teacher_load' && <p className="my-2 font-medium">Escenario de simulación: requiere autorización externa para aumentar la carga docente. La consulta normativa no concede esa autorización.</p>}
+        {patch.kind === 'increase_teacher_load' && <p className="my-2 font-medium">{sourceMode === 'engine-decisions'
+          ? 'Ajuste dentro del máximo ya autorizado. No requiere una nueva autorización formal.'
+          : 'Escenario de simulación: requiere autorización externa para aumentar la carga docente. La consulta normativa no concede esa autorización.'}</p>}
         <AdviceDisclosure label="Por qué se recomienda"><MessageResponse>{recommendation.rationale}</MessageResponse></AdviceDisclosure>
         <details className="mt-2">
           <summary className="cursor-pointer focus-visible:outline-2 focus-visible:outline-ring">Ver cambios exactos ({details.length})</summary>

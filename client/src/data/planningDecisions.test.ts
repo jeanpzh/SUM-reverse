@@ -280,3 +280,14 @@ test('gap classes follow the real shared messages, with missing data ahead of ci
     TP_MAXIMUM_NOT_REGULATED: 'regulation', APPOINTMENT_MISSING: 'data', REGIME_MISSING: 'data',
   })
 })
+
+
+test('configuration decisions require an explicit cap edit and no paperwork', () => {
+  const queue = buildDecisionQueue([{ id: 'SYN-adjust', kind: 'teacher-load-exception', teacherId: 'T1', courseIds: [],
+    exceptionKind: 'configuration-adjustment', additionalMinutes: 60, sectionsUnlocked: 1, basis: 'capacity-relaxation', requires: [], sourceIds: [] }], { period: '2027-I' })!
+  const item = queue.groups[0].items[0]
+  assert.match(item.kindLabel, /Ajuste dentro/)
+  assert.match(item.effect, /No requiere una nueva autorización/)
+  assert.deepEqual(item.requires, [])
+  assert.equal(item.actionLabel, 'Ajustar carga configurada')
+})

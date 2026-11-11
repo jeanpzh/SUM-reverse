@@ -38,6 +38,8 @@ type Props = {
   onFork: (id: string, version: number) => Promise<void>
   onError: (message: string | null) => void
   onMessage: (message: string | null) => void
+  /** False while the stage is hidden: the draft preview is not requested until the panel is shown. */
+  active?: boolean
 }
 
 const days = ['—', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
@@ -51,7 +53,7 @@ function dateLabel(value: string) {
 }
 
 export function AcademicPublicationPanel({ loadBlockers = [], teacherNames = {}, period = '2027-I', primaryActionId, draftId, draftVersion, draftTitle, draftState, dirty, busy,
-  onApprove, onPublish, onFork, onError, onMessage }: Props) {
+  onApprove, onPublish, onFork, onError, onMessage, active = true }: Props) {
   const [confirmElement, confirm] = useConfirm()
   const [publicationList, setPublicationList] = useState<AcademicPublicationList | null>(null)
   const [listError, setListError] = useState<string | null>(null)
@@ -162,7 +164,7 @@ export function AcademicPublicationPanel({ loadBlockers = [], teacherNames = {},
 
   useEffect(() => {
     let timer: number | undefined
-    if (selectedSummary || (draftId && draftVersion && !dirty)) {
+    if (active && (selectedSummary || (draftId && draftVersion && !dirty))) {
       timer = window.setTimeout(() => { void refreshPreview() }, 0)
     }
     return () => {
@@ -171,7 +173,7 @@ export function AcademicPublicationPanel({ loadBlockers = [], teacherNames = {},
     }
     // Reload on source/version changes; cleanup invalidates late responses from the previous source.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draftId, draftVersion, draftState, dirty, selectedPublicationId, selectedSummary?.id, selectedSummary?.publicationVersion])
+  }, [active, draftId, draftVersion, draftState, dirty, selectedPublicationId, selectedSummary?.id, selectedSummary?.publicationVersion])
 
   const approve = () => {
     if (!canApprove || !draftId || !draftVersion) return
