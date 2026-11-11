@@ -148,3 +148,38 @@ test('teacher teaching-load fields are optional and validated one by one', () =>
     assert.throws(() => validateAcademicResources(resources), TypeError, `${field}: ${JSON.stringify(value)}`)
   }
 })
+
+test('generation transports an explicit lective duration and period without changing legacy requests', () => {
+  const request = { revision: ACADEMIC_REVISION, demands: [] }
+  assert.doesNotThrow(() => validateAcademicRequest(request))
+  assert.doesNotThrow(() => validateAcademicRequest({ ...request, academicPeriod: '2027-I', lectiveHourMinutes: 60 }))
+  for (const lectiveHourMinutes of [0, 55, null, '60']) {
+    assert.throws(() => validateAcademicRequest({ ...request, lectiveHourMinutes }))
+  }
+})
+
+test('optional proposal proofs, window decisions and normative blockers have strict runtime shapes', () => {
+  const proposal = { proposalId: 'SYN-P', createdAt: '2026-11-10T00:00:00Z', expiresAt: '2026-11-10T00:15:00Z',
+    status: 'complete', sections: [], assignments: [], pending: [], diagnostics: [], coverageComplete: true,
+    counts: { sections: 0, requiredSessions: 0, scheduledSessions: 0 },
+    stats: { exploredCandidates: 0, candidateVisits: 0, backtracks: 0, limitReason: null } }
+  const metadata = { coverageProof: 'complete', capacityCertificate: { proven: true, requiredSectionsTotal: 0, coverableSectionsTotal: 0, courses: [] },
+    decisions: [{ id: 'window', kind: 'planning-window', teacherId: null, courseIds: [], exceptionKind: null, additionalMinutes: 0,
+      sectionsUnlocked: 1, basis: 'window-precheck', policyChange: { allowSaturday: true } }],
+    prelation: { levels: [{ id: 'category-rank', value: 0, proven: false }] },
+    normative: { profileRevision: null, lectiveHourMinutes: 60, gaps: [{ code: 'REGIME_MISSING', message: 'Synthetic gap', teacherIds: ['SYN-T'] }],
+      blockers: [{ teacherId: 'SYN-T', assignedMinutes: 960, authorizedMaxMinutes: 720, reason: 'over-authorized-load', requiredAuthorization: 'voluntary-declaration', sourceIds: ['OF-02'] }] } }
+  assert.doesNotThrow(() => validateAcademicProposal(proposal))
+  assert.doesNotThrow(() => validateAcademicProposal({ ...proposal, ...metadata }))
+  for (const patch of [
+    { coverageProof: 'optimal' }, { coverageProof: null }, { capacityCertificate: null },
+    { capacityCertificate: { ...metadata.capacityCertificate, coverableSectionsTotal: 1 } },
+    { decisions: [{ ...metadata.decisions[0], policyChange: { allowSaturday: false } }] },
+    { decisions: [{ ...metadata.decisions[0], kind: 'unknown' }] },
+    { decisions: [{ ...metadata.decisions[0], additionalMinutes: -1 }] },
+    { prelation: { levels: [{ id: 'unknown', value: 0, proven: true }] } },
+    { normative: { ...metadata.normative, blockers: [{ ...metadata.normative.blockers[0], reason: 'approved-in-ui' }] } },
+    { normative: { ...metadata.normative, lectiveHourMinutes: 55 } },
+    { normative: { ...metadata.normative, gaps: [{ code: 'SYN', message: 'Synthetic gap', teacherIds: [4] }] } },
+  ]) assert.throws(() => validateAcademicProposal({ ...proposal, ...metadata, ...patch }))
+})

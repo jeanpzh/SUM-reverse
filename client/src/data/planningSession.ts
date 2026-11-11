@@ -89,6 +89,7 @@ type Intents = { proposal: number; demand: number; draftList: number; draftSave:
 export interface PlanningSessionState {
   catalog: AcademicCatalog | null
   period: PlanningPeriod
+  lectiveHourMinutes?: AcademicWorkspace['lectiveHourMinutes']
   policy: PlanningPolicy | null
   allocationPolicy: AcademicAllocationPolicy
   selectedCourses: string[]
@@ -186,7 +187,7 @@ export type PlanningSessionEvent =
 
 function cloneResources(resources: AcademicPlanningResources): AcademicPlanningResources {
   return {
-    teachers: resources.teachers.map((teacher) => ({ ...teacher, courseIds: [...teacher.courseIds],
+    teachers: resources.teachers.map((teacher) => ({ ...structuredClone(teacher), courseIds: [...teacher.courseIds],
       availability: teacher.availability.map((interval) => ({ ...interval })),
       ...(teacher.preferences ? { preferences: teacher.preferences.map((interval) => ({ ...interval })) } : {}),
       ...(teacher.sectionLimits ? { sectionLimits: teacher.sectionLimits.map((limit) => ({ ...limit })) } : {}) })),
@@ -225,6 +226,7 @@ function hydrate(state: PlanningSessionState, draft: AcademicSavedDraft, message
     dirty: false,
     mutation: state.mutation + 1,
     period: config.academicPeriod,
+    lectiveHourMinutes: config.lectiveHourMinutes,
     policy: config.request.planningPolicy ? { ...config.request.planningPolicy } : null,
     allocationPolicy: config.request.allocationPolicy ?? 'preferences',
     selectedCourses: demands.map((item) => item.courseId),
@@ -263,7 +265,7 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
         next = { ...next, demands: defaults.demands, capacities: defaults.capacities,
           patterns: Object.fromEntries(catalog.courses.flatMap((course) => course.planningPatterns?.length
             ? [[course.courseId, course.planningPatterns[0].id]] : [])),
-          selectedCourses: [], resources: defaults.resources, policy: defaults.planningPolicy }
+          selectedCourses: [], resources: defaults.resources, lectiveHourMinutes: defaults.lectiveHourMinutes, policy: defaults.planningPolicy }
       }
       next = invalidateDemand(next, false)
       return { ...next, busy: { ...next.busy, catalog: false } }
@@ -381,7 +383,7 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
       if (!state.catalog || (event.period === state.period && !event.force)) return state
       const defaults = createAcademicPlanningDefaults(state.catalog, event.period)
       const next = markDirty(invalidateProposal(invalidateDemand(state)), true)
-      return { ...next, period: event.period, policy: { ...(state.policy ?? defaults.planningPolicy), period: event.period },
+      return { ...next, lectiveHourMinutes: defaults.lectiveHourMinutes, period: event.period, policy: { ...(state.policy ?? defaults.planningPolicy), period: event.period },
         demands: defaults.demands, capacities: defaults.capacities }
     }
     case 'setTitle':
@@ -527,6 +529,7 @@ function requestBase(state: PlanningSessionState, catalog: AcademicCatalog, blan
   const toNumber = (value: string | undefined) => blankAsNaN && value === '' ? Number.NaN : Number(value)
   return {
     revision: catalog.revision,
+    ...(state.lectiveHourMinutes !== undefined ? { academicPeriod: state.period, lectiveHourMinutes: state.lectiveHourMinutes } : {}),
     demands: catalog.courses.filter((course) => state.selectedCourses.includes(course.courseId)).map((course) => ({
       courseId: course.courseId,
       estimatedDemand: toNumber(state.demands[course.courseId]),
@@ -548,7 +551,7 @@ export function buildPlanningWorkspace(state: PlanningSessionState): AcademicWor
   validateAcademicResources(request.resources)
   const baseRequest = state.period === '2027-I' && state.demandBaseRequest && state.demandEstimate ? { ...state.demandBaseRequest,
     courses: state.demandEstimate.rows.map((row) => ({ courseId: row.courseId, targetCapacity: row.targetCapacity })) } : null
-  const workspace: AcademicWorkspace = { schoolId: 'SISTEMAS', academicPeriod: state.period, request,
+  const workspace: AcademicWorkspace = { ...(state.lectiveHourMinutes !== undefined ? { lectiveHourMinutes: state.lectiveHourMinutes } : {}), schoolId: 'SISTEMAS', academicPeriod: state.period, request,
     demandSourceId: state.demandSourceId, demandBaseRequest: baseRequest }
   validateAcademicWorkspace(workspace)
   return workspace

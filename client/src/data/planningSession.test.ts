@@ -94,6 +94,7 @@ test('catalog load applies period defaults without marking the workspace dirty',
   assert.equal(state.busy.catalog, false)
   assert.equal(state.dirty, false)
   assert.equal(state.capacities.CS101, '45')
+  assert.equal(state.lectiveHourMinutes, 60)
   assert.equal(state.resources.teachers.length, 1)
   assert.deepEqual(state.selectedCourses, [])
 })
@@ -268,6 +269,7 @@ test('resume hydrates the saved workspace and proposal', async () => {
   const state = reader.getState()
   assert.deepEqual(state.selectedCourses, ['CS101'])
   assert.equal(state.demands.CS101, '33')
+  assert.equal(state.lectiveHourMinutes, 60)
   assert.equal(state.draft.version, 1)
   assert.equal(state.dirty, false)
   assert.equal(state.proposal?.proposalId, 'proposal-synthetic')
@@ -425,4 +427,22 @@ test('planning progress marks every step done after publication', () => {
   const state = initialPlanningSessionState()
   assert.deepEqual(derivePlanningProgress({ ...state, draft: { ...state.draft, savedState: 'published' } }),
     { preparacion: 'done', horario: 'done', revision: 'done', aprobacion: 'done' })
+})
+
+
+test('generation and saving carry the same explicit demo lective context', async () => {
+  let generatedRequest: Parameters<PlanningSessionClient['createProposal']>[0] | undefined
+  let savedRequest: AcademicDraftSaveRequest | undefined
+  const memory = memoryClient({ createProposal: async (request) => { generatedRequest = request; return makeProposal() } })
+  const saveDraft = memory.client.saveDraft
+  memory.client.saveDraft = async (request) => { savedRequest = request; return saveDraft(request) }
+  const session = createPlanningSession(memory.client)
+  await session.commands.loadCatalog()
+  session.commands.edit({ type: 'toggleCourse', courseId: 'CS101', checked: true })
+  await session.commands.generate()
+  await session.commands.save()
+  assert.equal(generatedRequest?.lectiveHourMinutes, 60)
+  assert.equal(generatedRequest?.academicPeriod, '2027-I')
+  assert.equal(savedRequest?.configuration.lectiveHourMinutes, 60)
+  assert.deepEqual(savedRequest?.configuration.request, generatedRequest)
 })

@@ -2,7 +2,7 @@ import { validateAcademicNormativeRequest, validateAcademicNormativeResponse } f
 import type { AcademicNormativeRequest, AcademicNormativeResponse } from '../../../shared/programacion-academica-api.mjs'
 import { ACADEMIC_API, ACADEMIC_REVISION, ACADEMIC_ROUTE, validateAcademicAdjustment, validateAcademicAdvisorRequest, validateAcademicAdvisorResponse, validateAcademicCatalog, validateAcademicDemandEstimate, validateAcademicDemandRequest, validateAcademicProposal, validateAcademicRequest, validateAcademicDraftList, validateAcademicDraftResume, validateAcademicDraftSaveRequest, validateAcademicSavedDraft, validateAcademicReviewSubmission, validateAcademicReviewDecision, validateAcademicPublicationRequest, validateAcademicReleasePreview, validateAcademicPublication, validateAcademicPublicationList } from '../../../shared/programacion-academica-api.mjs'
 import type { AcademicAdjustment, AcademicAdvisorRequest, AcademicAdvisorResponse, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest, AcademicProposal, AcademicRequest, AcademicInterval, AcademicDraftList, AcademicDraftResume, AcademicDraftSaveRequest, AcademicSavedDraft, AcademicReviewSubmission, AcademicReviewDecision, AcademicReleasePreview, AcademicPublication, AcademicPublicationList, AcademicPublicationRequest } from '../../../shared/programacion-academica-api.mjs'
-import { planningDefaults as getPlanningDefaults, PLANNING_LIMITS, syntheticTeachingMetadata, validatePlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
+import { planningDefaults as getPlanningDefaults, PLANNING_LIMITS, syntheticTeachingMetadata, syntheticTeacherMaxMinutes, validatePlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
 import type { PlanningPeriod, PlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
 
 export type { AcademicAdvisorBottleneck, AcademicAdvisorPatch, AcademicAdvisorRecommendation, AcademicAdvisorResponse, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest, AcademicProposal, AcademicRequest } from '../../../shared/programacion-academica-api.mjs'
@@ -23,15 +23,19 @@ export function createAcademicPlanningDefaults(catalog: AcademicCatalog, period:
   const demands = Object.fromEntries(catalog.courses.map((course) => [course.courseId,
     String(course.cycle === undefined ? course.estimatedDemand : getPlanningDefaults(course.cycle, period).estimatedDemand)]))
   const capacities = Object.fromEntries(catalog.courses.map((course) => [course.courseId, '45']))
+  // Explicit local demo parameter: synthetic sessions are multiples of 60; FISI duration is unverified.
+  const lectiveHourMinutes = 60 as const
   const resources = {
-    teachers: (catalog.referenceTeachers ?? []).map((teacher, index) => ({ ...teacher,
-      maxWeeklyMinutes: 600, ...syntheticTeachingMetadata(index),
-      availability: [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 })) })),
+    teachers: (catalog.referenceTeachers ?? []).map((teacher, index) => {
+      const metadata = syntheticTeachingMetadata(index, teacher.id)
+      return { ...teacher, ...metadata, maxWeeklyMinutes: syntheticTeacherMaxMinutes(metadata, { period, lectiveHourMinutes }),
+        availability: [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 })) }
+    }),
     rooms: (catalog.referenceRooms ?? []).map((room) => ({ id: room.id, name: room.name,
       capacity: room.capacity, kind: room.kind,
       availability: [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 })) })),
   }
-  return { demands, capacities, resources, planningPolicy: {
+  return { demands, capacities, resources, lectiveHourMinutes, planningPolicy: {
     revision: 'FISI-PLANNING-1' as const, period, allowAfternoon: false, allowSaturday: false,
   } }
 }
@@ -68,6 +72,7 @@ export function isLocalAcademicArea(pathname: string,
 // Human messages at the planning data seam; wire field names never become UI labels.
 export function academicPlanningErrorMessage(error: unknown): string {
   if (!(error instanceof Error)) return 'No se pudo completar la acción. Inténtalo de nuevo.'
+  if ('code' in error && error.code === 'LOAD_AUTHORIZATION_REQUIRED') return 'Falta registrar la autorización formal de carga docente o corregir las asignaciones antes de publicar.'
   const message = error.message
   if (/^title:/.test(message)) return 'Escribe un nombre para la propuesta.'
   if (/^Nombre de propuesta:/.test(message)) return 'El nombre de la propuesta debe tener entre 1 y 100 caracteres, sin espacios al inicio ni al final.'
@@ -106,11 +111,11 @@ async function readJson(response: Response) {
       ? body as Record<string, unknown> : null
     const error = envelope?.error && typeof envelope.error === 'object' && !Array.isArray(envelope.error)
       ? envelope.error as Record<string, unknown> : null
-    if (!envelope || Object.keys(envelope).length !== 1 || !error || Object.keys(error).length !== 2
+    if (!envelope || Object.keys(envelope).length !== 1 || !error || Object.keys(error).some((key) => !['code', 'message', 'blockers'].includes(key))
       || typeof error.code !== 'string' || !error.code || typeof error.message !== 'string' || !error.message) {
       throw new Error('La API local devolvió un error con formato inválido.')
     }
-    throw new Error(academicPlanningErrorMessage(new Error(error.message)))
+    throw new Error(academicPlanningErrorMessage(Object.assign(new Error(error.message), { code: error.code })))
   }
   return body
 }

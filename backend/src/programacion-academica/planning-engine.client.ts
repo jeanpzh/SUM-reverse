@@ -93,7 +93,7 @@ export async function trySolveWithPythonEngine(
       backtracks: number
       limitReason: 'explorations' | 'work' | 'time' | null
       diagnostics: Array<{ code: string; message: string; sessionIds: string[] }>
-    }
+    } & Pick<AcademicProposal, 'coverageProof' | 'capacityCertificate' | 'decisions' | 'prelation'>
     const candidateSchedule: AcademicSchedule = {
       ...schedule,
       assignments: body.assignments,
@@ -116,6 +116,10 @@ export async function trySolveWithPythonEngine(
       limitReason: body.limitReason,
       rejectionCounts: {},
       diagnostics: body.diagnostics,
+      ...(body.coverageProof != null ? { coverageProof: body.coverageProof } : {}),
+      ...(body.capacityCertificate != null ? { capacityCertificate: body.capacityCertificate } : {}),
+      ...(body.decisions != null ? { decisions: body.decisions } : {}),
+      ...(body.prelation != null ? { prelation: body.prelation } : {}),
     }
   } catch {
     return null
