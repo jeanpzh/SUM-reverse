@@ -132,7 +132,8 @@ def _analyze_capacity(req, eligible, deadline):
         teacher = next(t for t in req.teachers if t.id == tid)
         decisions.append(CapacityDecision(id=f'teacher-load-exception:{tid}', kind='teacher-load-exception',
             teacherId=tid, courseIds=sorted(courses_by_teacher[tid]),
-            exceptionKind=teacher.exceptionKind, additionalMinutes=extra, sectionsUnlocked=total - previous_total))
+            exceptionKind=('configuration-adjustment' if teacher.configurationMaxWeeklyMinutes is not None
+                and teacher.maxWeeklyMinutes + extra <= teacher.configurationMaxWeeklyMinutes else teacher.exceptionKind), additionalMinutes=extra, sectionsUnlocked=total - previous_total))
         previous_total = total
     missing_sections = Counter()
     missing_minutes = Counter()

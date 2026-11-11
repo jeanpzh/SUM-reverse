@@ -78,6 +78,8 @@ def _mp_context():
 class Job:
     id: str
     budget: float
+    fingerprint: str
+    correlated: bool
     requirement_ids: list[str]
     required_sections: int
     request_json: str | None
@@ -103,15 +105,29 @@ class JobManager:
         self.retention_seconds = TERMINAL_RETENTION_SECONDS
         self._jobs: dict[str, Job] = {}
         self._lock = threading.RLock()
+        self._fences: dict[str, float] = {}
+        self._closed = False
 
     # -- public interface -------------------------------------------------------------
-    def start(self, request: SolveScheduleRequest) -> Job:
+    def start(self, request: SolveScheduleRequest, job_id: str | None = None) -> Job:
         with self._lock:
             self._prune()
+            if self._closed:
+                raise RuntimeError('Manager closed')
+            fingerprint = request.model_dump_json()
+            if job_id in self._jobs:
+                existing = self._jobs[job_id]
+                if existing.fingerprint != fingerprint:
+                    raise ValueError('Correlation payload conflict')
+                return existing
+            if job_id in self._fences:
+                raise ValueError('Correlation cancelled before start')
+            if len(self._fences) + len(self._jobs) >= 256:
+                raise OverflowError('Correlation capacity')
             for job in self._jobs.values():
                 if job.state == 'running':
                     self._cancel(job)
-            job = Job(id=uuid.uuid4().hex, budget=request.maxTimeSeconds,
+            job = Job(id=job_id or uuid.uuid4().hex, budget=request.maxTimeSeconds, fingerprint=fingerprint, correlated=job_id is not None,
                       requirement_ids=[r.id for r in request.requirements],
                       required_sections=len({r.sectionId for r in request.requirements}),
                       request_json=request.model_dump_json(), created=self.clock())
@@ -131,6 +147,10 @@ class JobManager:
             self._prune()
             job = self._jobs.get(job_id)
             if job is None:
+                if job_id not in self._fences:
+                    if len(self._fences) + len(self._jobs) >= 256:
+                        raise OverflowError('Correlation capacity')
+                    self._fences[job_id] = self.clock()
                 return None
             if job.state == 'running':
                 self._cancel(job)
@@ -142,6 +162,7 @@ class JobManager:
 
     def shutdown(self) -> None:
         with self._lock:
+            self._closed = True
             for job in self._jobs.values():
                 if job.state == 'running':
                     self._cancel(job)
@@ -175,19 +196,22 @@ class JobManager:
         complete = not missing
         return SolveScheduleResponse(
             status='complete' if complete else 'search-limit', assignments=assignments,
-            exploredCandidates=0, candidateVisits=0, backtracks=0, limitReason=None,
+            exploredCandidates=0, candidateVisits=0, backtracks=0, limitReason=None if complete else job.state,
             coverageProof='complete' if complete else 'inconclusive',
-            diagnostics=[DiagnosticOutput(code='SEARCH_CANCELLED', sessionIds=missing,
-                message='Búsqueda cancelada; se conserva el mejor horario factible encontrado hasta ese momento')])
+            diagnostics=[DiagnosticOutput(code='SEARCH_CANCELLED' if job.state == 'cancelled' else 'SEARCH_RUNNING', sessionIds=missing,
+                message='Se conserva el mejor horario factible; la búsqueda ' + ('fue cancelada' if job.state == 'cancelled' else 'continúa'))])
 
     def _prune(self) -> None:
         now = self.clock()
+        self._fences = {key: at for key, at in self._fences.items() if now - at <= self.retention_seconds}
         terminal = sorted((j for j in self._jobs.values() if j.state != 'running'), key=lambda j: j.ended or 0)
         for job in terminal:
             if now - (job.ended or now) > self.retention_seconds:
+                self._fences[job.id] = now
                 del self._jobs[job.id]
         terminal = [j for j in terminal if j.id in self._jobs]
-        for job in terminal[:max(0, len(terminal) - self.max_terminal_jobs)]:
+        for job in [j for j in terminal if not j.correlated][:max(0, len(terminal) - self.max_terminal_jobs)]:
+            self._fences[job.id] = now
             del self._jobs[job.id]
 
     def _snapshot(self, job: Job) -> SolveJobStatus:
@@ -201,7 +225,7 @@ class JobManager:
             elapsedSeconds=round(max(0.0, elapsed), 3), budgetSeconds=job.budget,
             progress=SolveJobProgress(requiredSessions=len(job.requirement_ids), scheduledSessions=sessions,
                 requiredSections=job.required_sections, scheduledSections=sections, improvements=job.improvements),
-            result=job.result, error=job.error)
+            result=self._partial_result(job) if job.state == 'running' else job.result, error=job.error)
 
     # -- worker supervision ------------------------------------------------------------------
     def _monitor(self, job: Job) -> None:

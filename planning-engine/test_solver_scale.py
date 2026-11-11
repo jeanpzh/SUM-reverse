@@ -193,19 +193,20 @@ def test_split_honors_fifteen_minute_start_step():
     assert_hard_constraints(solve, result)
 
 
-def test_restricted_candidates_never_claim_impossible():
+def test_exhaustive_split_candidates_prove_shared_teacher_conflict():
     from test_advisor_agent import sample
     req = sample()
     req.courses[0].deliveryMode = 'split'
     req.teachers[0].maxWeeklyMinutes = 600
     # Every day/start/room combination is otherwise valid, but the shared
-    # teacher cannot cover both components. Multiple rooms trigger sampling.
+    # teacher cannot cover both components. Enumerating both rooms proves the gap.
     req.windows = req.windows[:1]
     req.teachers[0].availability = req.windows
     req.rooms[0].availability = req.windows
     req.rooms.append(req.rooms[0].model_copy(update={'id': 'R2'}))
     solve = SolveScheduleRequest(**{k: v for k, v in req.model_dump().items() if k in SolveScheduleRequest.model_fields})
     result = solve_academic_schedule(solve)
-    assert result.status == 'search-limit'
-    assert result.limitReason == 'explorations'
+    assert result.status == 'impossible'
+    assert result.coverageProof == 'shortfall-proven'
+    assert result.limitReason is None
     assert not result.assignments

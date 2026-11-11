@@ -103,7 +103,12 @@ def test_progress_is_monotonic_and_health_stays_responsive(client, scale_request
         last = current
         if body['state'] != 'running':
             break
-        assert body['result'] is None
+        if body['progress']['scheduledSessions']:
+            assert body['result'] is not None
+            result = SolveScheduleResponse.model_validate(body['result'])
+            assert_hard_constraints(req, result)
+            assert result.limitReason == ('running' if result.status != 'complete' else None)
+            assert result.coverageProof in ('inconclusive', 'complete')
         time.sleep(0.1)
     print(f'scale job: phases={sorted(seen_phases)} progress={last} worst /health={worst_health * 1000:.0f} ms')
     assert body['state'] == 'completed' and body['phase'] == 'done'
@@ -200,3 +205,40 @@ def test_invalid_budget_is_rejected(client):
     body = small_request().model_dump()
     body['maxTimeSeconds'] = 121
     assert client.post('/v1/solve-jobs', json=body).status_code == 422
+
+
+def test_correlated_start_idempotence_conflict_and_cancel_fence(client):
+    key = 'a' * 32
+    request = small_request()
+    headers = {'X-Job-Id': key, 'Content-Type': 'application/json'}
+    first = client.post('/v1/solve-jobs', content=request.model_dump_json(), headers=headers)
+    assert first.status_code == 202
+    assert first.json()['jobId'] == key
+    again = client.post('/v1/solve-jobs', content=request.model_dump_json(), headers=headers)
+    assert again.status_code == 202
+    assert again.json()['jobId'] == key
+    different = request.model_copy(update={'maxTimeSeconds': 3.0})
+    assert client.post('/v1/solve-jobs', content=different.model_dump_json(), headers=headers).status_code == 409
+    assert client.delete(f'/v1/solve-jobs/{key}').json()['state'] in {'completed', 'cancelled'}
+    delayed = 'b' * 32
+    assert client.delete(f'/v1/solve-jobs/{delayed}').status_code == 404
+    headers['X-Job-Id'] = delayed
+    assert client.post('/v1/solve-jobs', content=request.model_dump_json(), headers=headers).status_code == 409
+    assert client.get(f'/v1/solve-jobs/{delayed}').status_code == 404
+
+
+def test_fence_retention_capacity_and_no_eviction(monkeypatch):
+    now = [100.0]
+    manager = jobs.JobManager(clock=lambda: now[0])
+    monkeypatch.setattr(manager, '_monitor', lambda job: None)
+    for i in range(256):
+        assert manager.cancel(f'{i:032x}') is None
+    with pytest.raises(OverflowError):
+        manager.start(small_request(), 'f' * 32)
+    with pytest.raises(ValueError):
+        manager.start(small_request(), '0' * 32)
+    assert len(manager._fences) == 256
+    now[0] += manager.retention_seconds + 1
+    job = manager.start(small_request(), '0' * 32)
+    assert job.id == '0' * 32
+    manager.shutdown()

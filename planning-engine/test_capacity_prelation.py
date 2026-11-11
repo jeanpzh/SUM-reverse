@@ -148,7 +148,7 @@ def test_capacity_and_proven_precheck_gaps_can_be_combined():
     assert result.limitReason is None
 
 
-def test_truncated_time_search_cannot_prove_a_capacity_feasible_gap():
+def test_exhaustive_time_search_proves_gap_even_when_capacity_is_feasible():
     req = request(count=2, duration=60, teachers=[dict(id='A', courseIds=['X'], maxWeeklyMinutes=600)])
     req.windows = [req.windows[0].model_copy(update={'endMinute': 540})]
     req.rooms.append(req.rooms[0].model_copy(update={'id': 'R2'}))
@@ -156,9 +156,9 @@ def test_truncated_time_search_cannot_prove_a_capacity_feasible_gap():
     assert result.capacityCertificate.proven
     assert result.capacityCertificate.coverableSectionsTotal == 2
     assert len(result.assignments) == 1
-    assert result.coverageProof == 'inconclusive'
-    assert result.status == 'search-limit'
-    assert result.limitReason == 'explorations'
+    assert result.coverageProof == 'shortfall-proven'
+    assert result.status == 'impossible'
+    assert result.limitReason is None
 
 
 def test_new_wire_defaults_and_time_limit_validation():
@@ -187,12 +187,12 @@ def test_missing_rank_also_disables_prelation():
     assert any(d.code == 'PRELATION_DATA_MISSING' for d in result.diagnostics)
 
 
-def test_sampled_candidates_do_not_claim_prelating_optimality():
+def test_exhaustive_candidates_prove_prelating_optimality():
     result = solve(request(count=1, duration=60, teachers=[
         dict(id='A', courseIds=['X'], maxWeeklyMinutes=60, appointmentTier=0, categoryRank=1)]))
     assert result.status == 'complete'
     assert result.coverageProof == 'complete'
-    assert all(not level.proven for level in result.prelation.levels)
+    assert all(level.proven for level in result.prelation.levels)
 
 
 def test_decision_ids_and_order_are_deterministic():
@@ -204,3 +204,46 @@ def test_decision_ids_and_order_are_deterministic():
     second = solve(req)
     assert [d.model_dump() for d in first.decisions] == [d.model_dump() for d in second.decisions]
     assert [d.id for d in first.decisions] == ['teacher-load-exception:A', 'additional-teacher:Y']
+
+
+def test_t7_exception_pairs():
+    import pytest
+    from pydantic import ValidationError
+    for fields in [dict(exceptionMaxWeeklyMinutes=120), dict(exceptionKind='voluntary-declaration')]:
+        with pytest.raises(ValidationError):
+            request(teachers=[dict(id='A', courseIds=['X'], maxWeeklyMinutes=60, **fields)])
+
+
+def test_t7_configuration_adjustment_requires_no_declaration():
+    result = solve(request(count=2, duration=60, teachers=[dict(id='A', courseIds=['X'],
+        maxWeeklyMinutes=60, exceptionMaxWeeklyMinutes=720, exceptionKind='configuration-adjustment')]))
+    assert result.decisions[0].exceptionKind == 'configuration-adjustment'
+    assert result.decisions[0].additionalMinutes == 60
+    assert len(result.assignments) == 1
+
+
+def test_t7_adjustment_and_formal_exception_tiers_remain_available():
+    for count, expected in [(2, 'configuration-adjustment'), (13, 'voluntary-declaration')]:
+        result = solve(request(count=count, duration=60, teachers=[dict(id='A', courseIds=['X'],
+            maxWeeklyMinutes=60, configurationMaxWeeklyMinutes=720,
+            exceptionMaxWeeklyMinutes=1200, exceptionKind='voluntary-declaration')]))
+        assert result.decisions[0].exceptionKind == expected
+        assert result.decisions[0].additionalMinutes == count * 60 - 60
+    import pytest
+    from pydantic import ValidationError
+    for fields in [dict(exceptionMaxWeeklyMinutes=60, exceptionKind='voluntary-declaration'),
+                   dict(exceptionMaxWeeklyMinutes=120, exceptionKind='vrap-authorization', configurationMaxWeeklyMinutes=121)]:
+        with pytest.raises(ValidationError):
+            request(teachers=[dict(id='A', courseIds=['X'], maxWeeklyMinutes=60, **fields)])
+
+
+def test_exhaustive_room_shortfall_has_a_valid_proof_and_termination():
+    req = request(count=2, duration=60, teachers=[dict(id='A', courseIds=['X'], maxWeeklyMinutes=120)])
+    req.windows = req.windows[:1]
+    req.windows[0].endMinute = 540
+    result = solve(req)
+    assert len(result.assignments) == 1
+    assert result.capacityCertificate.coverableSectionsTotal == 2
+    assert result.coverageProof == 'shortfall-proven'
+    assert result.status == 'impossible'
+    assert result.limitReason is None

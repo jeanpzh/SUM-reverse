@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Header
 import uvicorn
 
 from advisor import analyze_proposal_with_advisor
@@ -40,9 +40,15 @@ def solve_endpoint(request: SolveScheduleRequest) -> SolveScheduleResponse:
 
 @app.post("/v1/solve-jobs", response_model=SolveJobStarted, status_code=202)
 def start_solve_job(
-    request: SolveScheduleRequest, manager: JobManager = Depends(get_manager)
+    request: SolveScheduleRequest, manager: JobManager = Depends(get_manager),
+    x_job_id: str | None = Header(default=None, pattern=r'^[a-f0-9]{32}$')
 ) -> SolveJobStarted:
-    job = manager.start(request)
+    try:
+        job = manager.start(request, x_job_id)
+    except ValueError:
+        raise HTTPException(status_code=409, detail="Correlation conflict")
+    except OverflowError:
+        raise HTTPException(status_code=429, detail="Correlation capacity")
     return SolveJobStarted(jobId=job.id, state="running", budgetSeconds=job.budget)
 
 
@@ -56,7 +62,10 @@ def get_solve_job(job_id: str, manager: JobManager = Depends(get_manager)) -> So
 
 @app.delete("/v1/solve-jobs/{job_id}", response_model=SolveJobStatus)
 def cancel_solve_job(job_id: str, manager: JobManager = Depends(get_manager)) -> SolveJobStatus:
-    status = manager.cancel(job_id)
+    try:
+        status = manager.cancel(job_id)
+    except OverflowError:
+        raise HTTPException(status_code=429, detail="Correlation capacity")
     if status is None:
         raise HTTPException(status_code=404, detail="Unknown or expired solve job")
     return status

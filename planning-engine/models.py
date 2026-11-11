@@ -27,15 +27,20 @@ class TeacherInput(BaseModel):
     facultyId: str | None = None
     category: Literal["principal", "asociado", "auxiliar"] | None = None
     qualificationSource: Literal["synthetic"] | None = None
+    configurationMaxWeeklyMinutes: int | None = Field(default=None, ge=0)
     exceptionMaxWeeklyMinutes: int | None = Field(default=None, ge=0)
-    exceptionKind: Literal['voluntary-declaration', 'vrap-authorization'] | None = None
+    exceptionKind: Literal['voluntary-declaration', 'vrap-authorization', 'configuration-adjustment'] | None = None
     appointmentTier: Literal[0, 1, 2] | None = None
     categoryRank: int | None = Field(default=None, ge=1, le=9)
 
     @model_validator(mode='after')
     def validate_exception(self):
+        if (self.exceptionMaxWeeklyMinutes is None) != (self.exceptionKind is None):
+            raise ValueError('exception cap and kind must be provided together')
         if self.exceptionMaxWeeklyMinutes is not None and self.exceptionMaxWeeklyMinutes <= self.maxWeeklyMinutes:
             raise ValueError('exceptionMaxWeeklyMinutes must exceed maxWeeklyMinutes')
+        if self.configurationMaxWeeklyMinutes is not None and not (self.exceptionMaxWeeklyMinutes is not None and self.maxWeeklyMinutes < self.configurationMaxWeeklyMinutes <= self.exceptionMaxWeeklyMinutes):
+            raise ValueError('configuration cap must be above current and within the reachable cap')
         return self
 
 
@@ -145,7 +150,7 @@ class CapacityDecision(BaseModel):
     kind: Literal['teacher-load-exception', 'additional-teacher', 'planning-window', 'delivery-mode-split']
     teacherId: str | None = None
     courseIds: list[str]
-    exceptionKind: Literal['voluntary-declaration', 'vrap-authorization'] | None = None
+    exceptionKind: Literal['voluntary-declaration', 'vrap-authorization', 'configuration-adjustment'] | None = None
     additionalMinutes: int
     sectionsUnlocked: int
     basis: Literal['capacity-relaxation', 'window-precheck'] = 'capacity-relaxation'
@@ -168,7 +173,7 @@ class SolveScheduleResponse(BaseModel):
     exploredCandidates: int
     candidateVisits: int
     backtracks: int
-    limitReason: Literal["explorations", "work", "time"] | None = None
+    limitReason: Literal["explorations", "work", "time", "running", "cancelled"] | None = None
     diagnostics: list[DiagnosticOutput]
     coverageProof: Literal['complete', 'shortfall-proven', 'inconclusive'] = 'inconclusive'
     capacityCertificate: CapacityCertificate | None = None
