@@ -65,8 +65,9 @@ de cada nivel, no las asignaciones.
 | T1 | Perfil normativo, campos reglamentarios del docente en el contrato y registro en el dossier | — | Claude Sonnet 5.5 | verificado 2026-11-10 en la rama `t3/academic-normative-profile` (`9267ac0`), sin integrar |
 | T2 | Motor: certificado de capacidad, tramos de carga, decisiones mínimas, prelación lexicográfica, prueba de cobertura | — | Codex GPT-6.1 Sol | verificado 2026-11-10 (`333a50f`); integrado con T1 en la rama `feat/planning-normative-engine` (`79b3da3`) |
 | T3 | Backend: perfil → entrada del motor, resultado en la Propuesta, datos sintéticos con régimen y procedencia, retiro del tope de demo de 10 h, bloqueo de publicación, unificación con los perfiles sintéticos del chat normativo | T1, T2 | Codex GPT-6.1 Sol | verificado e integrado 2026-11-11 (rama `feat/planning-normative-engine`) |
-| T4 | Búsqueda en segundo plano con progreso y tope de candidatos adaptativo | T3 | por asignar | pendiente |
-| T5 | Interfaz: cola de decisiones, registro de evidencias, etiquetas de procedencia de cada regla | T3 | por asignar | pendiente |
+| T4a | Motor: búsqueda en segundo plano como trabajo en memoria (`PA-ENGINE-JOBS-1`: iniciar, consultar, cancelar; progreso real) | T2 | Codex GPT-6.1 Sol | despachado 2026-11-11 |
+| T4b | Backend e interfaz consumen los trabajos del motor: primer horario rápido, progreso y cancelación | T4a, T5 | por asignar | pendiente |
+| T5 | Interfaz: estado de cobertura, cola de decisiones, vacíos normativos, datos reglamentarios del docente con registro de autorizaciones, bloqueos en la publicación | T3 | Codex GPT-6.1 Sol | despachado 2026-11-11 |
 | T6a | Motor: decisiones de franja y de modalidad para las secciones sin franja (`planning-window`, `delivery-mode-split`, base `window-precheck`) | T2 | Codex GPT-6.1 Sol | verificado e integrado 2026-11-10 (`1ca4df2`) |
 | T6b | El consejero consume las decisiones del motor en lugar de proponer y simular; recursos de referencia | T3, T6a | por asignar | pendiente |
 | T7 | Auditoría del resultado integrado | T3–T6 | por asignar | pendiente |
