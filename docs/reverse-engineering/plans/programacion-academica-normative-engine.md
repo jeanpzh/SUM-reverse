@@ -64,7 +64,7 @@ de cada nivel, no las asignaciones.
 | --- | --- | --- | --- | --- |
 | T1 | Perfil normativo, campos reglamentarios del docente en el contrato y registro en el dossier | — | Claude Sonnet 5.5 | verificado 2026-11-10 en la rama `t3/academic-normative-profile` (`9267ac0`), sin integrar |
 | T2 | Motor: certificado de capacidad, tramos de carga, decisiones mínimas, prelación lexicográfica, prueba de cobertura | — | Codex GPT-6.1 Sol | verificado 2026-11-10 (`333a50f`); integrado con T1 en la rama `feat/planning-normative-engine` (`79b3da3`) |
-| T3 | Backend: perfil → entrada del motor, resultado en la Propuesta, datos sintéticos con régimen y procedencia, retiro del tope de demo de 10 h, bloqueo de publicación, unificación con los perfiles sintéticos del chat normativo | T1, T2 | Codex GPT-6.1 Sol | despachado 2026-11-10 |
+| T3 | Backend: perfil → entrada del motor, resultado en la Propuesta, datos sintéticos con régimen y procedencia, retiro del tope de demo de 10 h, bloqueo de publicación, unificación con los perfiles sintéticos del chat normativo | T1, T2 | Codex GPT-6.1 Sol | verificado e integrado 2026-11-11 (rama `feat/planning-normative-engine`) |
 | T4 | Búsqueda en segundo plano con progreso y tope de candidatos adaptativo | T3 | por asignar | pendiente |
 | T5 | Interfaz: cola de decisiones, registro de evidencias, etiquetas de procedencia de cada regla | T3 | por asignar | pendiente |
 | T6a | Motor: decisiones de franja y de modalidad para las secciones sin franja (`planning-window`, `delivery-mode-split`, base `window-precheck`) | T2 | Codex GPT-6.1 Sol | verificado e integrado 2026-11-10 (`1ca4df2`) |
@@ -141,6 +141,31 @@ Medición del orquestador sobre el catálogo sintético (tope de 720 min, 2,5 s 
 Habilitar la tarde o partir los cursos da franja a las 18 secciones; el sábado, a ninguna.
 Las 25 secciones restantes son de capacidad docente: 15 excepciones de carga liberan 21 y
 4 cursos requieren docente adicional.
+
+### Resultado de T3 e integración real
+
+Verificación del orquestador: 28 pruebas compartidas y 53 del backend pasan tras integrar.
+
+Defecto hallado al probar con el motor real y corregido por el orquestador: el validador de
+la Propuesta exigía que el certificado de capacidad listara todos los cursos, pero el motor
+lista solo los que tienen faltante; toda generación real respondía 500. Las pruebas del
+agente usaban una respuesta simulada del motor y no lo detectaban. Se añadió una prueba con
+la forma real.
+
+Escenario de punta a punta (capa de datos del cliente → API NestJS → motor Python, catálogo
+sintético de 56 cursos y 166 secciones, 61 docentes ordinarios con 12 h y 30 contratados
+con 10 h de demo, hora lectiva de 60 min, 2,5 s de búsqueda), ejecutado el 2026-11-11:
+
+| Política | Programadas | Cubribles por capacidad | Prueba |
+| --- | --- | --- | --- |
+| Sin tarde ni sábado | 120 de 166 | 136 | inconclusa; el motor informa que la tarde o partir cursos da franja a 18 secciones |
+| Con tarde y cursos partidos | 136 de 166 | 136 | faltante probado |
+
+En ambos casos: 12 excepciones de carga liberan 16 secciones, cada una con sus requisitos y
+su fuente (`OF-02`); 8 cursos requieren docente adicional (14 secciones); ningún docente
+supera su tope; 0 bloqueos de publicación. Los niveles de prelación se calculan pero no
+quedan probados en 2,5 s. No se probó el flujo en navegador ni el bloqueo de publicación
+contra el servidor real (cubierto por 5 pruebas del backend).
 
 ## Criterios de aceptación
 
