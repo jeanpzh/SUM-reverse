@@ -65,11 +65,12 @@ de cada nivel, no las asignaciones.
 | T1 | Perfil normativo, campos reglamentarios del docente en el contrato y registro en el dossier | — | Claude Sonnet 5.5 | verificado 2026-11-10 en la rama `t3/academic-normative-profile` (`9267ac0`), sin integrar |
 | T2 | Motor: certificado de capacidad, tramos de carga, decisiones mínimas, prelación lexicográfica, prueba de cobertura | — | Codex GPT-6.1 Sol | verificado 2026-11-10 (`333a50f`); integrado con T1 en la rama `feat/planning-normative-engine` (`79b3da3`) |
 | T3 | Backend: perfil → entrada del motor, resultado en la Propuesta, datos sintéticos con régimen y procedencia, retiro del tope de demo de 10 h, bloqueo de publicación, unificación con los perfiles sintéticos del chat normativo | T1, T2 | Codex GPT-6.1 Sol | verificado e integrado 2026-11-11 (rama `feat/planning-normative-engine`) |
-| T4a | Motor: búsqueda en segundo plano como trabajo en memoria (`PA-ENGINE-JOBS-1`: iniciar, consultar, cancelar; progreso real) | T2 | Codex GPT-6.1 Sol | despachado 2026-11-11 |
+| T4a | Motor: búsqueda en segundo plano como trabajo en memoria (`PA-ENGINE-JOBS-1`: iniciar, consultar, cancelar; progreso real) | T2 | Claude Sonnet 5.5 (Codex sin cuota) | verificado e integrado 2026-11-11 (`7a4e183`) |
 | T4b | Backend e interfaz consumen los trabajos del motor: primer horario rápido, progreso y cancelación | T4a, T5 | por asignar | pendiente |
-| T5 | Interfaz: estado de cobertura, cola de decisiones, vacíos normativos, datos reglamentarios del docente con registro de autorizaciones, bloqueos en la publicación | T3 | Codex GPT-6.1 Sol | despachado 2026-11-11 |
+| T5 | Interfaz: estado de cobertura, cola de decisiones, vacíos normativos, datos reglamentarios del docente con registro de autorizaciones, bloqueos en la publicación | T3 | Claude Sonnet 5.5 (Codex sin cuota) | despachado 2026-11-11 |
 | T6a | Motor: decisiones de franja y de modalidad para las secciones sin franja (`planning-window`, `delivery-mode-split`, base `window-precheck`) | T2 | Codex GPT-6.1 Sol | verificado e integrado 2026-11-10 (`1ca4df2`) |
 | T6b | El consejero consume las decisiones del motor en lugar de proponer y simular; recursos de referencia | T3, T6a | por asignar | pendiente |
+| T8 | Motor: generar candidatos sin recorte (o con recorte demostrablemente inocuo) para que la prelación y la cobertura puedan quedar probadas | T4a | por asignar | pendiente |
 | T7 | Auditoría del resultado integrado | T3–T6 | por asignar | pendiente |
 
 T1 y T2 no comparten archivos: el contrato del motor está fijado arriba. T3 y T6a tampoco:
@@ -167,6 +168,23 @@ su fuente (`OF-02`); 8 cursos requieren docente adicional (14 secciones); ningú
 supera su tope; 0 bloqueos de publicación. Los niveles de prelación se calculan pero no
 quedan probados en 2,5 s. No se probó el flujo en navegador ni el bloqueo de publicación
 contra el servidor real (cubierto por 5 pruebas del backend).
+
+### Resultado de T4a
+
+Verificación del orquestador tras integrar: 59 pruebas del motor y las 5 de escala pasan; no
+quedan procesos de búsqueda vivos tras las pruebas.
+
+Cada trabajo corre en un proceso hijo; cancelar lo termina de inmediato y devuelve el mejor
+horario válido recibido. Los trabajos viven en memoria (15 minutos, máximo 20) y se pierden
+al reiniciar el motor. El número de hilos de búsqueda ahora se limita a los núcleos
+disponibles, también en la ruta síncrona (2 en este servidor en lugar de 4).
+
+Medición del agente sobre el catálogo sintético con prelación inventada, 30 s y 2 núcleos:
+primer horario a 0,96 s (108 secciones), 109 a los 2,5 s, 110 al final con faltante probado.
+
+Hallazgo: más tiempo no prueba la prelación. Las tres etapas terminan óptimas, pero la marca
+queda en falso porque el motor recorta los candidatos de horario por docente y sección, no
+por el plazo. Probarla requiere T8.
 
 ## Criterios de aceptación
 
