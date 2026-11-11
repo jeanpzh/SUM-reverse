@@ -49,10 +49,10 @@ La prematrícula se deriva del historial y los prerrequisitos del plan. C13 depe
 | deuda | SYN-SIS-B | C07, C08, C09, C10 | rejected | DEBT_REQUIREMENT_UNMET; gaps: — |
 | deuda | SYN-SOFT-A | C09, C10, C11, C12 | accepted | —; gaps: — |
 | deuda | SYN-SOFT-B | C07, C08, C09, C10 | rejected | DEBT_REQUIREMENT_UNMET; gaps: — |
-| gap-horario | SYN-SIS-A | C09, C10, C11, C12 | configuration-pending | —; gaps: SCHEDULE_UNKNOWN (C09) |
-| gap-horario | SYN-SIS-B | C07, C08, C09, C10 | configuration-pending | —; gaps: SCHEDULE_UNKNOWN (C09) |
-| gap-horario | SYN-SOFT-A | C09, C10, C11, C12 | configuration-pending | —; gaps: SCHEDULE_UNKNOWN (C09) |
-| gap-horario | SYN-SOFT-B | C07, C08, C09, C10 | configuration-pending | —; gaps: SCHEDULE_UNKNOWN (C09) |
+| docente-no-asignado | SYN-SIS-A | C09, C10, C11, C12 | accepted | —; gaps: — |
+| docente-no-asignado | SYN-SIS-B | C07, C08, C09, C10 | accepted | —; gaps: — |
+| docente-no-asignado | SYN-SOFT-A | C09, C10, C11, C12 | accepted | —; gaps: — |
+| docente-no-asignado | SYN-SOFT-B | C07, C08, C09, C10 | accepted | —; gaps: — |
 | prioridad | SYN-SIS-A | C09, C10, C11, C12 | accepted | —; gaps: — |
 | prioridad | SYN-SIS-B | C08, C09, C10, C14 | rejected | RETAKE_PRIORITY (C07); gaps: — |
 | prioridad | SYN-SOFT-A | C09, C10, C11, C12 | accepted | —; gaps: — |
