@@ -122,7 +122,7 @@ export function TeacherLoadFields({ teacher, period, lectiveHourMinutes, disable
         <p className="planning-decisions__provenance">Fuentes: {view.sources.map((source) => `${source.id}`).join(', ')}{view.articles.length ? ` · referencias ${view.articles.join(', ')}` : ''}.</p>
         {view.gaps.length > 0 && <ul className="planning-decisions__gaps" aria-label="Vacíos normativos de este docente">{view.gaps.map((gap) => <li key={gap.code}>{gap.message}</li>)}</ul>}
         {view.nextException && <p className="planning-decisions__provenance">
-          Siguiente paso regulado: {AUTHORIZATION_LABEL[view.nextException.kind].toLowerCase()}{view.nextException.maxMinutes !== null ? ` (hasta ${minutesText(view.nextException.maxMinutes, lectiveHourMinutes)})` : ''}.
+          Siguiente paso regulado: {AUTHORIZATION_LABEL[view.nextException.kind].replace(/^[AD]/, (first) => first.toLowerCase())}{view.nextException.maxMinutes !== null ? ` (hasta ${minutesText(view.nextException.maxMinutes, lectiveHourMinutes)})` : ''}.
         </p>}
         {authorized !== null && teacher.regime && teacher.maxWeeklyMinutes !== authorized && (Number.isFinite(teacher.maxWeeklyMinutes)) && <p className="planning-decisions__provenance">
           {teacher.maxWeeklyMinutes < authorized
@@ -142,7 +142,7 @@ export function TeacherLoadFields({ teacher, period, lectiveHourMinutes, disable
         : <ul className="planning-teacher-load__authorization-list">{teacher.loadAuthorizations!.map((item, index) => <li key={`${item.kind}-${index}`}>
           <Badge variant="outline">{AUTHORIZATION_LABEL[item.kind]}</Badge>
           <span>Ref. {item.reference}{item.maxLectiveHours !== undefined ? ` · hasta ${item.maxLectiveHours} h lectivas` : ''}</span>
-          <Button type="button" size="sm" variant="ghost" disabled={disabled} aria-label={`Quitar ${AUTHORIZATION_LABEL[item.kind].toLowerCase()} ${item.reference}`}
+          <Button type="button" size="sm" variant="ghost" disabled={disabled} aria-label={`Quitar ${AUTHORIZATION_LABEL[item.kind].replace(/^[AD]/, (first) => first.toLowerCase())} ${item.reference}`}
             onClick={() => onChange(removeLoadAuthorization(teacher, index))}>Quitar</Button>
         </li>)}</ul>}
       <div className="planning-teacher-load__add">
