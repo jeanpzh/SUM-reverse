@@ -43,7 +43,8 @@ test('coverage state renders three distinct states and nothing for proposals wit
   assert.deepEqual(states.map((state) => state.kind), ['complete', 'shortfall-proven', 'inconclusive'])
   assert.equal(new Set(states.map((state) => state.label)).size, 3)
   assert.match(states[1].label, /Faltante comprobado/)
-  assert.match(states[1].detail, /ninguna búsqueda/)
+  assert.match(states[1].detail, /no es posible programar todas las secciones/)
+  assert.doesNotMatch(states[1].detail, /más secciones/) // the proof bounds components, not the section count
   assert.match(states[2].detail, /podrían caber más/i)
   assert.doesNotMatch(states[2].detail, /imposible/i)
   assert.equal(describeCoverage(baseProposal), null)

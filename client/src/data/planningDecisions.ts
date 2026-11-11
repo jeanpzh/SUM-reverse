@@ -31,7 +31,7 @@ export type CoverageView = { kind: CoverageKind; label: string; detail: string }
 const COVERAGE_TEXT: Record<CoverageKind, { label: string; detail: string }> = {
   complete: { label: 'Cobertura completa', detail: 'Todas las secciones quedaron programadas dentro de los recursos y topes autorizados.' },
   'shortfall-proven': { label: 'Faltante comprobado',
-    detail: 'Con estos recursos ninguna búsqueda programará más secciones. Completar el horario requiere decisiones sobre los recursos o el horario.' },
+    detail: 'Con estos recursos quedó comprobado que no es posible programar todas las secciones. Completar el horario requiere decisiones sobre los recursos o el horario.' },
   inconclusive: { label: 'Búsqueda inconclusa',
     detail: 'Podrían caber más secciones: la búsqueda se detuvo antes de decidirlo. No prueba que falten recursos.' },
 }
