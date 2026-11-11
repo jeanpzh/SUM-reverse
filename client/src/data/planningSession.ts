@@ -1,4 +1,5 @@
 import { measureAdvisorOutcome, type AdvisorOutcome } from './advisorOutcome.ts'
+import type { LectiveHourMinutes, LoadAuthorizationBlocker } from '../../../shared/academic-normative-profile.mjs'
 // Sesión de programación: owns the internal planning workflow (Preparación → Horario → Revisión docente
 // → Aprobación) behind a small interface. Plan: docs/reverse-engineering/plans/planning-session-ui-kit.md (D1–D3, D7).
 //
@@ -19,6 +20,7 @@ import { measureAdvisorOutcome, type AdvisorOutcome } from './advisorOutcome.ts'
 // | updateResources          | yes                  | no                          | no                 | yes   | yes                      |
 // | updateAllocationPolicy   | yes                  | no                          | no                 | yes   | yes                      |
 // | updatePlanningException  | yes                  | no                          | no                 | yes   | yes                      |
+// | updateLectiveHourMinutes | yes                  | no                          | no                 | yes   | yes                      |
 // | applyPeriodDefaults      | yes                  | yes                         | yes                | yes   | yes                      |
 // | setTitle, setDraftState  | no                   | no                          | no                 | yes   | no                       |
 //
@@ -33,7 +35,7 @@ import type {
   AcademicReviewSubmission, AcademicSavedDraft, AcademicTeacherReview, AcademicWorkspace,
 } from '../../../shared/programacion-academica-api.mjs'
 import {
-  PLANNING_LIMITS, academicPlanningErrorMessage, academicSectionCoverage, adjustAcademicProposal, aggregateAcademicBlocks, approveAcademicDraft,
+  AcademicLoadAuthorizationError, PLANNING_LIMITS, academicPlanningErrorMessage, academicSectionCoverage, adjustAcademicProposal, aggregateAcademicBlocks, approveAcademicDraft,
   buildAcademicPlanningRequest, createAcademicPlanningDefaults, createAcademicProposal, estimateAcademicDemand,
   fetchAcademicCatalog, fetchAcademicDrafts, forkAcademicDraft, publishAcademicDraft, respondAcademicTeacherReview,
   resumeAcademicDraft, saveAcademicDraft, submitAcademicTeacherReview, syntheticTeachingMetadata,
@@ -115,6 +117,10 @@ export interface PlanningSessionState {
   intents: Intents
   mutation: number
   hydratedFromDraft: boolean
+  // Server refusal to publish (LOAD_AUTHORIZATION_REQUIRED): the blocker list, shown through the draft error surface.
+  releaseBlockers: LoadAuthorizationBlocker[] | null
+  // Decisions of the last proposal while a configuration change has made it outdated; cleared by the next generation.
+  staleDecisions: { proposalId: string; decisions: NonNullable<AcademicProposal['decisions']> } | null
 }
 
 export function initialPlanningSessionState(): PlanningSessionState {
@@ -128,7 +134,7 @@ export function initialPlanningSessionState(): PlanningSessionState {
     busy: { catalog: true, demand: false, generate: false, adjust: false, draft: false },
     errors: { catalog: null, demand: null, proposal: null, adjustment: null, draft: null, review: null },
     intents: { proposal: 0, demand: 0, draftList: 0, draftSave: 0, draftResume: 0 },
-    mutation: 0, hydratedFromDraft: false,
+    mutation: 0, hydratedFromDraft: false, releaseBlockers: null, staleDecisions: null,
   }
 }
 
@@ -148,6 +154,7 @@ export type PlanningSessionEvent =
   | { type: 'updateResources'; value: AcademicPlanningResources }
   | { type: 'updateAllocationPolicy'; value: AcademicAllocationPolicy }
   | { type: 'updatePlanningException'; key: 'allowAfternoon' | 'allowSaturday'; checked: boolean }
+  | { type: 'updateLectiveHourMinutes'; value: LectiveHourMinutes | undefined }
   | { type: 'applyAdvisorPatches'; patches: AcademicAdvisorPatch[] }
   | { type: 'applyPeriodDefaults'; period: PlanningPeriod; force?: boolean }
   | { type: 'setTitle'; title: string }
@@ -179,7 +186,7 @@ export type PlanningSessionEvent =
   | { type: 'resume/failed'; token: number; message: string | null }
   | { type: 'release/started' }
   | { type: 'release/succeeded'; saved: AcademicSavedDraft; message: string }
-  | { type: 'release/failed'; message: string }
+  | { type: 'release/failed'; message: string; blockers?: LoadAuthorizationBlocker[] }
   | { type: 'fork/succeeded'; mutation: number; draft: AcademicSavedDraft; sourceId: string }
   | { type: 'review/started' }
   | { type: 'review/succeeded'; mutation: number; saved: AcademicSavedDraft; message: string; staleMessage: string }
@@ -196,12 +203,14 @@ function cloneResources(resources: AcademicPlanningResources): AcademicPlanningR
 }
 
 function markDirty(state: PlanningSessionState, configurationChanged = false): PlanningSessionState {
-  return { ...state, mutation: state.mutation + 1, dirty: true, message: null,
+  return { ...state, mutation: state.mutation + 1, dirty: true, message: null, releaseBlockers: null,
     draft: configurationChanged && state.draft.state === 'ready-for-review' ? { ...state.draft, state: 'draft' } : state.draft }
 }
 
 function invalidateProposal(state: PlanningSessionState): PlanningSessionState {
-  return { ...state, intents: { ...state.intents, proposal: state.intents.proposal + 1 }, proposal: null,
+  const staleDecisions = state.proposal?.decisions?.length
+    ? { proposalId: state.proposal.proposalId, decisions: structuredClone(state.proposal.decisions) } : state.staleDecisions
+  return { ...state, intents: { ...state.intents, proposal: state.intents.proposal + 1 }, proposal: null, staleDecisions,
     advisorOutcome: null, proposalResources: null, editingBlock: null, busy: { ...state.busy, adjust: false, generate: false },
     errors: { ...state.errors, proposal: null, adjustment: null } }
 }
@@ -221,7 +230,7 @@ function hydrate(state: PlanningSessionState, draft: AcademicSavedDraft, message
   const demands = config.request.demands
   return {
     ...state,
-    hydratedFromDraft: true, advisorOutcome: null,
+    hydratedFromDraft: true, advisorOutcome: null, releaseBlockers: null, staleDecisions: null,
     draft: { id: draft.id, version: draft.version, title: draft.title, state: draft.state, savedState: draft.state, review: draft.review },
     dirty: false,
     mutation: state.mutation + 1,
@@ -307,6 +316,8 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
         [event.key]: event.checked }
       return { ...markDirty(invalidateProposal(state), true), policy }
     }
+    case 'updateLectiveHourMinutes':
+      return { ...markDirty(invalidateProposal(state), true), lectiveHourMinutes: event.value }
     case 'applyAdvisorPatches': {
       if (!event.patches.length) return state
       let nextResources = cloneResources(state.resources)
@@ -430,7 +441,7 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
     }
     case 'generate/succeeded':
       if (event.token !== state.intents.proposal) return state
-      return { ...markDirty(state), proposal: event.proposal, proposalResources: event.resources,
+      return { ...markDirty(state), proposal: event.proposal, proposalResources: event.resources, staleDecisions: null,
         busy: { ...state.busy, generate: false } }
     case 'generate/failed':
       if (event.token !== state.intents.proposal) return state
@@ -493,13 +504,13 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
         errors: { ...state.errors, draft: event.message ?? state.errors.draft } }
 
     case 'release/started':
-      return { ...state, busy: { ...state.busy, draft: true }, errors: { ...state.errors, draft: null }, message: null }
+      return { ...state, busy: { ...state.busy, draft: true }, errors: { ...state.errors, draft: null }, message: null, releaseBlockers: null }
     case 'release/succeeded': {
       const next = applySaved(state, event.saved, true)
-      return { ...next, busy: { ...next.busy, draft: false }, message: event.message }
+      return { ...next, busy: { ...next.busy, draft: false }, message: event.message, releaseBlockers: null }
     }
     case 'release/failed':
-      return { ...state, busy: { ...state.busy, draft: false }, errors: { ...state.errors, draft: event.message } }
+      return { ...state, busy: { ...state.busy, draft: false }, errors: { ...state.errors, draft: event.message }, releaseBlockers: event.blockers ?? null }
     case 'fork/succeeded': {
       const settled = { ...state, busy: { ...state.busy, draft: false } }
       if (event.mutation !== state.mutation) {
@@ -707,7 +718,7 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
   const commands = {
     edit: (event: Extract<PlanningSessionEvent, { type: 'toggleCourse' | 'selectCourses' | 'applyBulkChanges' | 'updateDemand'
       | 'updateCapacity' | 'changeDemandSource' | 'updatePattern' | 'updateDeliveryMode' | 'updateResources'
-      | 'updateAllocationPolicy' | 'updatePlanningException' | 'applyAdvisorPatches' | 'applyPeriodDefaults' | 'setTitle' | 'setDraftState'
+      | 'updateAllocationPolicy' | 'updatePlanningException' | 'updateLectiveHourMinutes' | 'applyAdvisorPatches' | 'applyPeriodDefaults' | 'setTitle' | 'setDraftState'
       | 'startBlockReview' | 'changeEditingBlock' | 'cancelBlockReview' | 'setDraftError'
       | 'setDraftMessage' }>) => dispatch(event),
 
@@ -868,7 +879,8 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
           message: `Publicada (simulada) · publicación ${saved.publication?.publicationVersion ?? '—'} · versión ${saved.version}.` })
         void refreshDrafts()
       } catch (error) {
-        dispatch({ type: 'release/failed', message: errorText(error, 'No se publicó la propuesta. ', 'No se publicó la propuesta.') })
+        dispatch({ type: 'release/failed', message: errorText(error, 'No se publicó la propuesta. ', 'No se publicó la propuesta.'),
+          ...(error instanceof AcademicLoadAuthorizationError ? { blockers: error.blockers } : {}) })
       }
     },
 

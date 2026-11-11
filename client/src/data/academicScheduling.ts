@@ -4,6 +4,8 @@ import { ACADEMIC_API, ACADEMIC_REVISION, ACADEMIC_ROUTE, validateAcademicAdjust
 import type { AcademicAdjustment, AcademicAdvisorRequest, AcademicAdvisorResponse, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest, AcademicProposal, AcademicRequest, AcademicInterval, AcademicDraftList, AcademicDraftResume, AcademicDraftSaveRequest, AcademicSavedDraft, AcademicReviewSubmission, AcademicReviewDecision, AcademicReleasePreview, AcademicPublication, AcademicPublicationList, AcademicPublicationRequest } from '../../../shared/programacion-academica-api.mjs'
 import { planningDefaults as getPlanningDefaults, PLANNING_LIMITS, syntheticTeachingMetadata, syntheticTeacherMaxMinutes, validatePlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
 import type { PlanningPeriod, PlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
+import type { LoadAuthorizationBlocker } from '../../../shared/academic-normative-profile.mjs'
+import { parseLoadAuthorizationBlockers } from './planningDecisions.ts'
 
 export type { AcademicAdvisorBottleneck, AcademicAdvisorPatch, AcademicAdvisorRecommendation, AcademicAdvisorResponse, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest, AcademicProposal, AcademicRequest } from '../../../shared/programacion-academica-api.mjs'
 export { PLANNING_LIMITS, syntheticTeachingMetadata }
@@ -87,6 +89,9 @@ export function academicPlanningErrorMessage(error: unknown): string {
       demands: 'la demanda de los cursos', resources: 'los recursos disponibles',
       teachers: 'los docentes', rooms: 'los ambientes', windows: 'la disponibilidad',
       academicPeriod: 'el periodo académico', patternId: 'el patrón de sesiones',
+      weeklyServiceHours: 'las horas semanales de servicio', maxLectiveHours: 'las horas lectivas máximas de la autorización',
+      reference: 'la referencia de la autorización', loadAuthorization: 'la autorización de carga', loadAuthorizations: 'las autorizaciones de carga',
+      loadConditions: 'las condiciones de carga', regime: 'el régimen de dedicación', appointment: 'el nombramiento', lectiveHourMinutes: 'la duración de la hora lectiva',
     }
     const name = field.split(/[.[\]]/u).filter(Boolean).reverse().find((part) => labels[part])
     return name ? `Revisa ${labels[name]}; el valor no es válido.`
@@ -96,6 +101,17 @@ export function academicPlanningErrorMessage(error: unknown): string {
     return 'No se pudo conectar con el servicio local. Revisa la conexión e inténtalo de nuevo.'
   }
   return message
+}
+
+// Publication refused because teaching load exceeds what is authorized; keeps the server's blocker list for display.
+export class AcademicLoadAuthorizationError extends Error {
+  readonly code = 'LOAD_AUTHORIZATION_REQUIRED'
+  readonly blockers: LoadAuthorizationBlocker[]
+  constructor(message: string, blockers: LoadAuthorizationBlocker[]) {
+    super(message)
+    this.name = 'AcademicLoadAuthorizationError'
+    this.blockers = blockers
+  }
 }
 
 async function readJson(response: Response) {
@@ -115,7 +131,13 @@ async function readJson(response: Response) {
       || typeof error.code !== 'string' || !error.code || typeof error.message !== 'string' || !error.message) {
       throw new Error('La API local devolvió un error con formato inválido.')
     }
-    throw new Error(academicPlanningErrorMessage(Object.assign(new Error(error.message), { code: error.code })))
+    const message = academicPlanningErrorMessage(Object.assign(new Error(error.message), { code: error.code }))
+    if (error.code === 'LOAD_AUTHORIZATION_REQUIRED') {
+      const blockers = parseLoadAuthorizationBlockers(error.blockers)
+      if (!blockers) throw new Error('La API local devolvió un error con formato inválido.')
+      throw new AcademicLoadAuthorizationError(message, blockers)
+    }
+    throw new Error(message)
   }
   return body
 }
