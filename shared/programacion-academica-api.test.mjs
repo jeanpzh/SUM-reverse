@@ -171,6 +171,9 @@ test('optional proposal proofs, window decisions and normative blockers have str
       blockers: [{ teacherId: 'SYN-T', assignedMinutes: 960, authorizedMaxMinutes: 720, reason: 'over-authorized-load', requiredAuthorization: 'voluntary-declaration', sourceIds: ['OF-02'] }] } }
   assert.doesNotThrow(() => validateAcademicProposal(proposal))
   assert.doesNotThrow(() => validateAcademicProposal({ ...proposal, ...metadata }))
+  // The engine lists only courses with a shortfall: rows explain the uncovered sections, not the totals.
+  assert.doesNotThrow(() => validateAcademicProposal({ ...proposal, ...metadata, capacityCertificate: { proven: true, requiredSectionsTotal: 10,
+    coverableSectionsTotal: 8, courses: [{ courseId: 'SYN-C', requiredSections: 4, coverableSections: 2, requiredMinutes: 960 }] } }))
   for (const patch of [
     { coverageProof: 'optimal' }, { coverageProof: null }, { capacityCertificate: null },
     { capacityCertificate: { ...metadata.capacityCertificate, coverableSectionsTotal: 1 } },

@@ -739,8 +739,9 @@ function validateProposalNormativeResult(value) {
       number(course.coverableSections, 'coverableSections', 0, course.requiredSections)
       number(course.requiredMinutes, 'requiredMinutes')
     })
-    if (certificate.courses.reduce((sum, c) => sum + c.requiredSections, 0) !== certificate.requiredSectionsTotal
-      || certificate.courses.reduce((sum, c) => sum + c.coverableSections, 0) !== certificate.coverableSectionsTotal) throw new TypeError('Totales de capacidad inconsistentes')
+    // The engine lists only the courses with a shortfall, so the rows account for the uncovered sections, not the totals.
+    if (certificate.courses.reduce((sum, c) => sum + c.requiredSections - c.coverableSections, 0)
+      !== certificate.requiredSectionsTotal - certificate.coverableSectionsTotal) throw new TypeError('Totales de capacidad inconsistentes')
   }
   if (Object.hasOwn(value, 'decisions')) {
     const ids = new Set()
