@@ -158,7 +158,13 @@ def test_deadline_during_construction_preserves_valid_incumbent(scale_request, m
         now[0] = 1.0
         return var
     monkeypatch.setattr(solver.cp_model.CpModel, 'new_bool_var', expire_after_first_candidate)
-    monkeypatch.setattr(solver.cp_model.CpSolver, 'solve', lambda *args: pytest.fail('Search must not start after deadline'))
+    # The capacity analysis may solve while the injected clock is still before the deadline.
+    real_solve = solver.cp_model.CpSolver.solve
+    def solve_before_deadline(self, *args):
+        if now[0] >= scale_request.maxTimeSeconds:
+            pytest.fail('Search must not start after deadline')
+        return real_solve(self, *args)
+    monkeypatch.setattr(solver.cp_model.CpSolver, 'solve', solve_before_deadline)
     result = solve_academic_schedule(scale_request)
     assert result.status == 'search-limit' and result.limitReason == 'time'
     assert result.assignments
@@ -187,19 +193,20 @@ def test_split_honors_fifteen_minute_start_step():
     assert_hard_constraints(solve, result)
 
 
-def test_restricted_candidates_never_claim_impossible():
+def test_exhaustive_split_candidates_prove_shared_teacher_conflict():
     from test_advisor_agent import sample
     req = sample()
     req.courses[0].deliveryMode = 'split'
     req.teachers[0].maxWeeklyMinutes = 600
     # Every day/start/room combination is otherwise valid, but the shared
-    # teacher cannot cover both components. Multiple rooms trigger sampling.
+    # teacher cannot cover both components. Enumerating both rooms proves the gap.
     req.windows = req.windows[:1]
     req.teachers[0].availability = req.windows
     req.rooms[0].availability = req.windows
     req.rooms.append(req.rooms[0].model_copy(update={'id': 'R2'}))
     solve = SolveScheduleRequest(**{k: v for k, v in req.model_dump().items() if k in SolveScheduleRequest.model_fields})
     result = solve_academic_schedule(solve)
-    assert result.status == 'search-limit'
-    assert result.limitReason == 'explorations'
+    assert result.status == 'impossible'
+    assert result.coverageProof == 'shortfall-proven'
+    assert result.limitReason is None
     assert not result.assignments

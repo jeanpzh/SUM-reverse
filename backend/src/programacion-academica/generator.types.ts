@@ -1,3 +1,4 @@
+import type { AcademicProposal } from '../../../shared/programacion-academica-api.mjs'
 import type { CourseDemand } from './programacion-academica.types.js'
 import type { AcademicAssignment, AcademicSchedule, AcademicTeacher, AcademicRoom, CompatibleCourseGroup, ScheduleIssueCode, TimeInterval } from './schedule.types.js'
 import type { PlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
@@ -47,7 +48,7 @@ export type GeneratorDiagnostic = {
   message: string
   sessionIds: string[]
 }
-export type GeneratorResult = {
+export type GeneratorResult = Pick<AcademicProposal, 'coverageProof' | 'capacityCertificate' | 'decisions' | 'prelation'> & {
   status: 'complete' | 'impossible' | 'search-limit' | 'invalid-input'
   schedule: AcademicSchedule | null
   requirements: RequiredSession[]
@@ -55,7 +56,7 @@ export type GeneratorResult = {
   exploredCandidates: number
   backtracks: number
   candidateVisits: number
-  limitReason: 'explorations' | 'work' | 'time' | null
+  limitReason: 'explorations' | 'work' | 'time' | 'running' | 'cancelled' | null
   rejectionCounts: Partial<Record<ScheduleIssueCode, number>>
   diagnostics: GeneratorDiagnostic[]
 }

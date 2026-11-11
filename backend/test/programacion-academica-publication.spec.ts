@@ -50,17 +50,20 @@ describe('academic approval and publication', () => {
   const requestWorkspace = (): AcademicWorkspace => ({
     schoolId: 'SISTEMAS',
     academicPeriod: '2027-I',
+    lectiveHourMinutes: 60,
     demandSourceId: 'independent-120-v1',
     demandBaseRequest: null,
     request: {
       revision: catalog.revision,
+      academicPeriod: '2027-I',
+      lectiveHourMinutes: 60,
       demands: [{ courseId: course.courseId, estimatedDemand: 1 }],
-      resources: structuredClone({ teachers: catalog.teachers, rooms: catalog.rooms }),
+      // Lifecycle/CAS fixture uses independently synthetic contract teachers: ordinary minima are tested separately.
+      resources: structuredClone({ teachers: catalog.teachers.map((teacher) => ({ ...teacher, appointment: 'contract' as const })), rooms: catalog.rooms }),
     },
   })
 
-  const createApproved = async (title = 'Synthetic release', conformityObservation = '') => {
-    const configuration = requestWorkspace()
+  const createApproved = async (title = 'Synthetic release', conformityObservation = '', configuration = requestWorkspace()) => {
     const generated = await supertest(app.getHttpServer()).post(`${api}/propuestas`).send(configuration.request).expect(200)
     expect(generated.body.status).toBe('complete')
     const created = await supertest(app.getHttpServer()).post(`${api}/borradores/guardar`).send({
@@ -84,6 +87,26 @@ describe('academic approval and publication', () => {
 
   const approve = async (draft: { id: string, version: number }) => (await supertest(app.getHttpServer())
     .post(`${api}/borradores/${draft.id}/aprobar`).send({ expectedVersion: draft.version }).expect(200)).body.draft
+
+  it('T7 client data adapter publishes through a fresh synthetic HTTP application', async () => {
+    // Runtime acceptance seam crosses project roots; each project type-checks its own sources.
+    const clientModule = new URL('../../client/src/data/academicScheduling.ts', import.meta.url).href
+    const { publishAcademicDraft } = await import(clientModule)
+    const approved = await approve(await createApproved('Synthetic HTTP integration'))
+    await app.listen(0, '127.0.0.1')
+    const address = app.getHttpServer().address() as { port: number }
+    const fetchImpl = ((path: string | URL | Request, init?: RequestInit) => {
+      const target = typeof path === 'string' ? path : path instanceof URL ? path.href : path.url
+      return fetch(`http://127.0.0.1:${address.port}${target.replace(/^\/api/, '')}`, init)
+    }) as typeof fetch
+    const result = await publishAcademicDraft(approved.id, { expectedVersion: approved.version, expectedCurrentId: null }, fetchImpl)
+    expect(result.state).toBe('published')
+    await expect(publishAcademicDraft(approved.id, { expectedVersion: approved.version, expectedCurrentId: null }, fetchImpl)).rejects.toThrow()
+    const provisional = requestWorkspace()
+    provisional.request.resources.teachers.find((teacher) => teacher.courseIds.includes(course.courseId))!.appointment = 'faculty-ordinary'
+    const underMinimum = await approve(await createApproved('Synthetic provisional', '', provisional))
+    await expect(publishAcademicDraft(underMinimum.id, { expectedVersion: underMinimum.version, expectedCurrentId: approved.id }, fetchImpl)).rejects.toThrow(/acreditar|mínimo/)
+  })
 
   it('previews, approves, publishes, serves immutable history and forks the published schedule', async () => {
     const ready = await createApproved()

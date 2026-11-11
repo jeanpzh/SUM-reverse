@@ -1,7 +1,7 @@
 // Independently constructed synthetic contract envelopes.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { validateAcademicAdvisorRequest, validateAcademicAdvisorResponse } from './programacion-academica-api.mjs'
+import { validateAcademicAdvisorPatch, validateAcademicAdvisorRequest, validateAcademicAdvisorResponse } from './programacion-academica-api.mjs'
 const response = () => ({
   proposalId: 'synthetic', editVersion: 2,
   source: { mode: 'deterministic-fallback', providerLabel: null, fallbackReason: 'not_configured' },
@@ -29,4 +29,27 @@ test('reject incomplete, fabricated, out of range and unknown impact or trace fi
   delete incomplete.totalSections
   assert.throws(() => validateAcademicAdvisorResponse({ ...response(), verifiedImpact: incomplete }))
   assert.throws(() => validateAcademicAdvisorResponse({ ...response(), reasoningSteps: [{ toolName: 'fabricated', inputSummary: '{}', outputSummary: 'ok' }] }))
+})
+
+const fixture = () => ({ proposalId: 'SYN', editVersion: 0, source: { mode: 'engine-decisions', providerLabel: null }, summary: 'Synthetic', bottlenecks: [],
+  recommendations: [{ id: 'SYN-rec', title: 'Window', rationale: 'Retained', impactSummary: 'Necessary', recommendedByDefault: false, decisionIds: ['SYN-decision'], patch: { kind: 'enable_planning_window', allowAfternoon: true } }] })
+test('engine source and decision traces reject invalid, duplicate and stale identities; legacy remains readable', () => {
+  validateAcademicAdvisorResponse(fixture(), [{ id: 'SYN-decision' }])
+  for (const ids of [[], [''], ['SYN-decision', 'SYN-decision'], ['stale']]) {
+    const response = fixture(); response.recommendations[0].decisionIds = ids
+    assert.throws(() => validateAcademicAdvisorResponse(response, [{ id: 'SYN-decision' }]))
+  }
+  for (const extra of [{ verifiedImpact: {} }, { reasoningSteps: [] }, { source: { mode: 'engine-decisions', providerLabel: 'LLM' } }, { source: { mode: 'engine-decisions', providerLabel: null, fallbackReason: 'timeout' } }]) assert.throws(() => validateAcademicAdvisorResponse({ ...fixture(), ...extra }))
+  const legacy = fixture(); legacy.source = { mode: 'deterministic-fallback', providerLabel: null }; delete legacy.recommendations[0].decisionIds
+  validateAcademicAdvisorResponse(legacy)
+})
+
+test('combined window patches validate both parts while old patches remain readable', () => {
+  const old = { kind: 'enable_planning_window', allowSaturday: true }
+  assert.doesNotThrow(() => validateAcademicAdvisorPatch(old))
+  assert.doesNotThrow(() => validateAcademicAdvisorPatch({ ...old, splitCourseIds: ['SYN-C'] }))
+  for (const fields of [{ allowSaturday: false }, { splitCourseIds: [] }, { splitCourseIds: null },
+    { splitCourseIds: [1] }, { splitCourseIds: [''] }, { splitCourseIds: ['SYN-C', 'SYN-C'] }]) {
+    assert.throws(() => validateAcademicAdvisorPatch({ ...old, splitCourseIds: ['SYN-C'], ...fields }))
+  }
 })

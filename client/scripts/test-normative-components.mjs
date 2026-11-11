@@ -149,3 +149,14 @@ test('actual advisor outcome reports a decline honestly instead of reusing proje
   assert.ok(html.includes('Quedan 4 componentes pendientes'))
   assert.doesNotMatch(html, /Simulada|mejor[oó]|resuelt[oa]|complet[oó] la cobertura/)
 })
+
+test('engine load configuration uses already-authorized wording while legacy keeps its warning', () => {
+  const props = { recommendation: { id: 'SYN-LOAD', title: 'Synthetic authorized adjustment', rationale: 'Within resolved cap',
+    impactSummary: 'Necessary condition', recommendedByDefault: false, decisionIds: ['SYN-DECISION'],
+    patch: { kind: 'increase_teacher_load', adjustments: [{ teacherId: 'SYN-T', previousMaxWeeklyMinutes: 60, nextMaxWeeklyMinutes: 120 }] } },
+    checked: false, disabled: false, onCheckedChange: () => {}, teacherNames: {}, courseNames: {}, roomNames: {} }
+  const engine = render(SuggestionCard, { ...props, sourceMode: 'engine-decisions' })
+  assert.match(engine, /Ajuste dentro del máximo ya autorizado/)
+  assert.doesNotMatch(engine, /Escenario de simulación|requiere autorización externa/)
+  assert.match(render(SuggestionCard, props), /Escenario de simulación: requiere autorización externa/)
+})

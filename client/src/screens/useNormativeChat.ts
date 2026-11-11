@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AcademicNormativeRequest, AcademicNormativeResponse } from '../../../shared/programacion-academica-api.mjs'
 import { fetchAcademicNormativeAdvice, type PlanningPeriod } from '../data/academicScheduling'
+import { prototypeProfileFor } from '../../../shared/prototype-teacher-profiles.mjs'
 
 type Turn = { id: string; question: string; previousQuestion?: string; answer?: AcademicNormativeResponse; error?: string; cancelled?: boolean }
 
@@ -10,6 +11,8 @@ export function useNormativeChat(academicPeriod: PlanningPeriod) {
   const [loading, setLoading] = useState(false)
   const [asOf, setAsOf] = useState(() => new Date().toLocaleDateString('en-CA'))
   const [teacherType, setTeacherType] = useState<AcademicNormativeRequest['teacherType']>('unknown')
+  // Prototype-only: a synthetic reference code whose regime fixes the filter. Not an official record.
+  const [teacherId, setTeacherId] = useState('')
   const pending = useRef<AbortController | null>(null)
   const sequence = useRef(0)
 
@@ -86,11 +89,20 @@ export function useNormativeChat(academicPeriod: PlanningPeriod) {
   const changeTeacherType = (value: AcademicNormativeRequest['teacherType']) => {
     pending.current?.abort()
     setLoading(false)
+    setTeacherId('')
     setTeacherType(value)
     setTurns([])
   }
+  const changeTeacher = (id: string) => {
+    pending.current?.abort()
+    setLoading(false)
+    const profile = id ? prototypeProfileFor(id) : null
+    setTeacherId(profile ? profile.id : '')
+    setTeacherType(profile ? profile.regime : 'unknown')
+    setTurns([])
+  }
 
-  return { question, setQuestion, turns, loading, asOf, teacherType, cancel, submit, retry, changeAsOf, changeTeacherType }
+  return { question, setQuestion, turns, loading, asOf, teacherType, teacherId, cancel, submit, retry, changeAsOf, changeTeacherType, changeTeacher }
 }
 
 export type NormativeChat = ReturnType<typeof useNormativeChat>

@@ -303,3 +303,56 @@ describe('durable local academic drafts', () => {
     await supertest(httpApp.getHttpServer()).post(`${api}/borradores/${created.body.id}/continuar`).send({ expectedVersion: 2 }).expect(409)
   })
 })
+
+// The fixtures above and below are independently synthetic, never snapshot exports.
+describe('regulated draft persistence', () => {
+  it('validates, saves and resumes optional regulated teacher fields without losing authorizations', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'sum-academic-drafts-regulated-'))
+    vi.stubEnv('SUM_ACADEMIC_DRAFT_DIR', directory)
+    try {
+      const configuration = workspace()
+      configuration.lectiveHourMinutes = 60
+      Object.assign(configuration.request, { academicPeriod: configuration.academicPeriod, lectiveHourMinutes: 60 })
+      Object.assign(configuration.request.resources.teachers[0], { regime: 'tiempo-completo', appointment: 'faculty-ordinary',
+        weeklyServiceHours: 30, loadConditions: ['renacyt-researcher'], loadAuthorizations: [{ kind: 'voluntary-declaration', reference: 'SYN-DECLARATION' }] })
+      const proposals = new DemoProposalService()
+      const generated = proposals.createProposal(configuration.request)
+      expect(generated.status).toBe('complete')
+      const service = new SavedDraftService(proposals)
+      const saved = await service.save({ id: null, expectedVersion: null, title: 'Synthetic regulated draft', state: 'draft',
+        configuration, proposalId: generated.proposalId, proposalEditVersion: 0 })
+      const resumed = await new SavedDraftService(new DemoProposalService()).resume(saved.id, { expectedVersion: saved.version })
+      expect(resumed.draft.configuration).toEqual(configuration)
+      expect(resumed.draft.proposal?.normative?.lectiveHourMinutes).toBe(60)
+    } finally { rmSync(directory, { recursive: true, force: true }); vi.unstubAllEnvs() }
+  })
+})
+
+describe('pre-normative persisted draft compatibility', () => {
+  it('resumes the prior synthetic catalog fingerprint and proposals without optional normative metadata', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'sum-academic-drafts-legacy-'))
+    vi.stubEnv('SUM_ACADEMIC_DRAFT_DIR', directory)
+    try {
+      const configuration = workspace()
+      configuration.request.resources.teachers = configuration.request.resources.teachers.map(({ id, name, courseIds, availability }) => ({ id, name, courseIds, availability, maxWeeklyMinutes: 600 }))
+      const proposals = new DemoProposalService()
+      const generated = proposals.createProposal(configuration.request)
+      const service = new SavedDraftService(proposals)
+      const saved = await service.save({ id: null, expectedVersion: null, title: 'Synthetic old draft', state: 'draft', configuration,
+        proposalId: generated.proposalId, proposalEditVersion: 0 })
+      const store = new SavedDraftStore()
+      const payload = store.read(saved.id)!
+      // Model the old on-disk wire contract, independently of the new optional fields.
+      const legacyCatalog = { ...catalog, teachers: catalog.teachers.map(({ id, name, courseIds, availability }) => ({ id, name, courseIds, availability, maxWeeklyMinutes: 600 })) }
+      payload.catalogFingerprint = createHash('sha256').update(canonical(legacyCatalog)).digest('hex')
+      const retained = payload.retained as { view: { normative?: unknown }, automaticView: { normative?: unknown } }
+      delete retained.view.normative
+      delete retained.automaticView.normative
+      delete (payload.document as { proposal: { normative?: unknown } }).proposal.normative
+      store.write(saved.id, payload)
+      const resumed = await new SavedDraftService(new DemoProposalService()).resume(saved.id, { expectedVersion: saved.version })
+      expect(resumed.draft.configuration).toEqual(configuration)
+      expect(resumed.draft.proposal?.status).toBe('complete')
+    } finally { rmSync(directory, { recursive: true, force: true }); vi.unstubAllEnvs() }
+  })
+})

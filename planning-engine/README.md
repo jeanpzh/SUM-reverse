@@ -286,3 +286,312 @@ The real FastAPI public-corpus response also passed the shared JavaScript
 validator with extractive generation and a null provider label. A final targeted
 pipeline recheck passed 9 tests after distinguishing provider-construction
 failures from invalid structured model output.
+
+## PA-ENGINE-2 — authorized capacity, decisions and teacher prelation
+
+This is an internal product contract, specified by ticket T2; it does not claim
+observed SUM behavior. No UI is changed; existing interfaces and the A/B/C design
+direction remain outside this change. The engine accepts resolved teacher caps
+and ranks, without resolving regulations, articles or implicit hour ceilings.
+
+`TeacherInput` adds optional `exceptionMaxWeeklyMinutes`, `exceptionKind`
+(`voluntary-declaration` / `vrap-authorization`), `appointmentTier` (0 faculty,
+1 interfaculty, 2 contract) and `categoryRank` (1–9, lower first). An exception
+cap, when supplied, must exceed `maxWeeklyMinutes`. Exception caps only enter
+capacity decision analysis: every timetable assignment still uses the authorized
+`maxWeeklyMinutes` and existing course-specific `sectionLimits`. The request's
+`maxTimeSeconds` accepts up to 120 seconds; its 3-second default is unchanged.
+
+The response always serializes these additional fields (old constructors and
+callers remain valid):
+
+- `coverageProof`, default `inconclusive`: `complete` witnesses every required
+  session; `shortfall-proven` means the actual complete-section schedule reaches
+  a proven capacity upper bound, optionally combined with existing proven
+  no-teacher/no-room/no-window exclusions. Only that case returns `impossible`.
+  Other partial results return `search-limit`. Candidate sampling/truncation
+  cannot establish impossibility. If a sampled schedule reaches an independently
+  proven capacity upper bound, sampling cannot hide additional coverage, so that
+  capacity proof remains valid. Exhaustive timetable infeasibility alone is not
+  classified as one of the contract's proven causes.
+- `capacityCertificate`, default `null`: an exact section-to-eligible-teacher
+  assignment relaxation using actual required section minutes, shared teacher
+  load and section limits, without rooms/calendars/cohort conflicts. `proven`
+  requires CP-SAT optimality; otherwise the returned covered count is only a
+  feasible lower bound. Course rows list deficits in one deterministic global
+  optimum, **not independent per-course maxima**: shared teachers can make
+  several equally optimal distributions possible. `requiredMinutes` is the
+  total required minutes for all sections of that course. Existing
+  `TEACHER_CAPACITY_SHORTFALL` codes and Spanish message shapes are retained;
+  these course diagnostics describe the joint allocation rather than freezing
+  excluded section IDs. The separate precheck codes are unchanged.
+- `decisions`, default `[]`: when authorized capacity is incomplete, an exact
+  relaxation maximizes exception-cap coverage, fixes that value, minimizes the
+  number of exception teachers, fixes that count, then minimizes extra minutes.
+  Each `teacher-load-exception` reports the teacher's actual minimal overload;
+  `courseIds` lists courses assigned to that teacher in the relaxation.
+  `sectionsUnlocked` is the marginal optimal coverage gain when enabling these
+  minimal concessions in teacher-ID order, allowing global reassignment at each
+  step. These gains sum to the overall capacity improvement; complementary
+  concessions can have a zero individual marginal gain. Remaining unassigned
+  sections produce one `additional-teacher` row per course with their total
+  minutes. IDs are `teacher-load-exception:<teacherId>` and
+  `additional-teacher:<courseId>`, in that order and sorted by resource ID.
+  Every capacity decision has `basis: capacity-relaxation`: these are necessary capacity
+  concessions, not promises of feasible timetable placement. If any concession
+  optimization is unproven, no minimal decisions are claimed and diagnostic
+  `CAPACITY_ANALYSIS_LIMIT` is emitted. The authorized certificate may still be
+  proven. A construction timeout can return the default null certificate.
+- `prelation`, default `null`: applies only if all teachers eligible for any
+  requested section carry both priority fields. Otherwise diagnostic
+  `PRELATION_DATA_MISSING` explains the absence; no ranks are inferred. With
+  complete data, successive CP-SAT objectives maximize scheduled sessions,
+  minimize contract sections, minimize interfaculty sections, minimize summed
+  category rank per section, then maximize the existing preference/time bonus.
+  Achieved objective values become constraints; teacher assignments stay free.
+  Coverage receives the search budget first. The three reported levels give
+  their actual achieved values and `proven` flags. A time limit or candidate
+  sampling keeps affected priority proofs false, even with complete coverage.
+  Without priority data, existing preference assignment behavior is retained.
+
+Capacity analysis shares the request deadline and gets at most 20% of the request
+budget, capped at 1 s, after the existing cheap timetable incumbent is built. It
+counts sections per (course, required minutes, teacher) rather than choosing a
+teacher per section: with the per-section model the minimal-concession objectives
+stayed unproven after 60 s on the 166-section synthetic catalog; aggregated, the
+full analysis with exception caps is proven in 0.16–0.25 s (orchestrator
+measurement, 2026-11-10).
+This preserves a useful feasible schedule if candidate preparation later expires.
+It uses one CP-SAT worker; the timetable coverage search uses `min(4, usable cores)` (see PA-ENGINE-JOBS-1).
+
+Synthetic acceptance is through `solve_academic_schedule`, without a running
+server or private fixtures. `test_capacity_prelation.py` covers criteria 1–9,
+joint deficits, section limits, minimal teacher-count/minute concessions, mixed
+precheck/capacity proof, honest candidate sampling, deterministic decisions,
+response defaults and request limits. Criterion 10 uses unchanged regression
+suites. Run the timing-sensitive scale suite once, after the focused checks:
+
+```sh
+nice uv run --directory planning-engine pytest test_capacity_prelation.py test_engine.py test_advisor_agent.py -q
+nice uv run --directory planning-engine pytest test_solver_scale.py -q
+```
+
+Consumer follow-up is outside T2: `advisor.py` still derives its legacy synthetic
+increase-load recommendations with its simulator ceiling; it does not consume
+these minimal decisions or proof fields. `advisor_agent.py` retains only legacy
+coverage counters and `solverStatus` from a dry run. NestJS's engine adapter and
+shared wire contracts must forward/validate resolved caps and priorities and
+retain the new response fields before the product can expose this analysis.
+`main.py` already serializes the extended Pydantic response; no change is needed.
+
+T2 execution record (2026-11-10), using independently constructed synthetic
+fixtures only:
+
+| Criterion | Public-interface test in `test_capacity_prelation.py` | Actual |
+| --- | --- | --- |
+| 1. Authorized 600 / four 360-minute sections | `test_authorized_capacity_shortfall_is_proven` | Pass: proven 1/4, one scheduled, impossible |
+| 2. Shared teacher deficit | `test_shared_teacher_capacity_is_joint` | Pass: two shared teachers cover 2/4 jointly |
+| 3. Exception analysis keeps timetable authorized | `test_exception_decision_and_remaining_teacher_gap` | Pass: +120 minutes unlock one section; timetable remains at one |
+| 4. Remaining teacher gap | same test | Pass: two missing sections / 720 minutes |
+| 5. Faculty before better contract preference | `test_faculty_precedes_contract_preference` | Pass |
+| 6. Global reassignment preserves coverage | `test_prelating_does_not_freeze_assignments_before_coverage` | Pass: A→Y, C→X; contract value 1 |
+| 7. Interfaculty and category priority | `test_interfaculty_precedes_contract`, `test_lower_category_rank_precedes_preferences` | Both pass; exhaustive rank fixture has proven levels |
+| 8. Missing priority fields | `test_missing_priority_data_disables_prelation`, `test_missing_rank_also_disables_prelation` | Both pass: null plus diagnostic |
+| 9. Authorized loads | Shared `solve` assertion in every scheduling fixture | Pass: every returned teacher load within authorized cap |
+| 10. Existing engine/advisor/scale regression | Commands below | Focused suites pass; all five scale cases pass after repair |
+
+Actual command results:
+
+- `nice uv run --directory planning-engine pytest test_capacity_prelation.py test_engine.py test_advisor_agent.py -q`: **36 passed, 1 warning in 1.18s**.
+- After strengthening the joint-capacity fixture to two teachers, targeted
+  `test_capacity_prelation.py -q -k shared_teacher_capacity_is_joint`:
+  **1 passed, 16 deselected, 1 warning in 0.56s**.
+- The full `test_solver_scale.py -q` ran once: **1 failed, 4 passed in 7.71s**.
+  Its existing injected-deadline test intercepted the new capacity solver before
+  its old timetable-candidate expiration point. Capacity assignment variables
+  now use Boolean variables, so the same injection correctly expires during
+  capacity preparation, returns an unproven certificate, and preserves the
+  already constructed feasible incumbent. No existing test assertions changed.
+- Necessary post-repair scale checks were split into targeted selections:
+  `-k 'scale_useful_within_advisor_budget or deadline_during_construction'`:
+  **2 passed, 3 deselected in 0.96s**; the complementary selection:
+  **3 passed, 2 deselected in 6.75s**. The full suite was not repeated. This
+  targeted retry is the only deviation from the requested one scale execution.
+- A temporary pytest timing observer outside the repository wrapped capacity
+  analysis, using `perf_counter` without changing its inputs or results. Final
+  166-section analysis measurements: **29.538, 29.278, 23.092, 24.773 and
+  25.484 ms**, all with proven certificates. The deadline-injection case took
+  8.022 ms and correctly returned `proven=false`. Timing instrumentation was
+  selected with `PYTHONPATH` / `PYTEST_PLUGINS`; its first setup attempt failed
+  before test collection because the engine import path was absent, then was
+  corrected. No scale scenario executed during that setup failure.
+- `git diff --check`: pass. The warning in focused suites is the existing
+  upstream `langchain-community` deprecation warning.
+
+No contract deviation or outstanding implementation blocker. Live services,
+cloud calls, private datasets, browser/visual validation and downstream consumer
+integration were not used to establish these results.
+
+### T6a — window and delivery-mode options (2026-11-10)
+
+For sections already excluded by `NO_SCHEDULING_WINDOW`, the response appends
+counterfactual decisions **after** the unchanged capacity decisions, in this order:
+
+1. `planning-window:afternoon`, kind `planning-window`, with
+   `policyChange: { allowAfternoon: true }` when afternoon is not already allowed.
+2. `planning-window:saturday`, same kind, with
+   `policyChange: { allowSaturday: true }` when Saturday is not already allowed.
+3. `delivery-mode-split`, kind `delivery-mode-split`, for continuous courses only.
+4. `planning-window:combined`, kind `planning-window`, for sections that none of
+   the single changes unlocks but the combination unlocks.
+
+Each single change is evaluated independently. A section unlocked by two options
+counts in both; counts must not be summed as disjoint gains. Only nonempty
+options are returned. All have `basis: window-precheck`, `teacherId: null`,
+`exceptionKind: null`, `additionalMinutes: 0`, sorted affected `courseIds`, and
+`sectionsUnlocked` counting excluded sections that gain a permitted window for
+every block. `policyChange` omits null flags and is absent on delivery-mode and
+capacity decisions. Its flag model is shared with the existing advisor patch.
+
+The combined option enables **all currently disabled policy flags** and evaluates
+each component separately for continuous courses. Its `policyChange` lists those
+flags, while the deterministic `:combined` ID also denotes the split assumption;
+the fixed contract has no separate split field on this decision. Already enabled
+flags and already split modes remain enabled. This is an all-changes comparison,
+not a claim that each participating change is individually necessary or that the
+combination is minimal. Sections that still fail produce one
+`WINDOW_RELAXATION_INSUFFICIENT` diagnostic listing their session IDs.
+
+The analysis reuses the precheck's `planning_time_rank`, request windows, start
+grid and continuous/individual durations. It checks only window existence, not
+teacher/room availability, capacity, clashes or joint component placement.
+Results are necessary conditions, not feasible-timetable promises, rankings or
+automatically selected changes. Upper-cycle window criteria remain `testimony`
+without a located regulation, as recorded in
+[`0003`](../docs/adr/0003-regulated-load-exceptions-and-lexicographic-prelation.md)
+and the normative-engine plan's
+[`Resultado de T2`](../docs/reverse-engineering/plans/programacion-academica-normative-engine.md#resultado-de-t2).
+This is a local product decision, not observed SUM behavior. No UI or design
+direction changes are authorized by this ticket.
+
+Explanation runs after timetable construction, under the original request
+deadline, with request-local memoization and no additional CP-SAT solve. It never
+changes the request, assignments, status, coverage proof, certificate, capacity
+decisions or prelation. No window exclusions means no new information. Additive
+deadline behavior: `WINDOW_ANALYSIS_LIMIT` lists the excluded session IDs if the
+budget expires; no partial options or insufficient-window conclusions are then
+claimed. This explicit diagnostic extends the ticket's diagnostic list to honor
+its deadline requirement without misrepresenting unfinished analysis.
+
+Synthetic acceptance record (independently invented tiny fixtures in
+`test_window_decisions.py`; no private data, services or provider calls):
+
+| Criterion | Pytest check | Expected → actual |
+| --- | --- | --- |
+| 1. Afternoon only | `test_afternoon_option_does_not_schedule_afternoon` | One afternoon decision, count 1/course X, no assignments or request mutation → passed |
+| 2. Saturday only | `test_saturday_option_does_not_schedule_saturday` | One Saturday decision, count 1/course X, no Saturday assignments → passed |
+| 3. Split only | `test_split_option_does_not_change_continuous_delivery` | One split decision; request stays continuous, no split assignments → passed |
+| 4. Independent counts | `test_single_options_count_the_same_section_independently` | One section counted by both afternoon and Saturday → passed |
+| 5. Combined / insufficient | `test_combination_and_insufficient_options_report_only_their_sections` | Combined unlocks X; insufficient diagnostic lists only Y's session → passed |
+| 6. Already allowed | `test_already_allowed_afternoon_is_not_offered` | No afternoon option → passed |
+| 7. Capacity compatibility | Unmodified `test_capacity_prelation.py` | 17 tests pass; 17 responses separately compared with baseline `a768ce4`, matching assignments, status, coverage, certificate, capacity decisions, prelation, limit reason and old diagnostics → passed |
+| 8. Engine/advisor/scale regression | `test_engine.py`, `test_advisor_agent.py`, `test_solver_scale.py` | All pass in the commands below |
+| Wire compatibility, aggregation, empty options and boundaries | Remaining window tests | Null policy keys omitted; sorted course IDs and section counts; already active split not offered; no exclusions give no options; start grid and Sunday unchanged → passed |
+| Deadline | `test_expired_budget_keeps_schedule_and_does_not_claim_options` | Original proven result retained; explicit analysis-limit diagnostic without unsupported options → passed |
+
+Executed with `UV_OFFLINE=1 UV_FROZEN=1` so only locked, cached dependencies
+were used:
+
+```text
+nice uv run --directory planning-engine pytest test_window_decisions.py test_capacity_prelation.py test_engine.py test_advisor_agent.py -q
+50 passed, 1 warning in 1.43s
+
+nice uv run --directory planning-engine pytest test_solver_scale.py -q
+5 passed, 1 warning in 7.85s
+```
+
+The warning is the existing upstream `langchain-community` deprecation. Scale
+suite executed once. A throwaway script in `/tmp` reused the scale fixture
+(`scale_request.__wrapped__()`), without adding a test or changing its data:
+56 synthetic courses / 166 sections / 332 sessions; 18 excluded sections;
+afternoon unlocks **18**, Saturday **0**, split **18**, combined-only **0**;
+no insufficient-relaxation diagnostic. The measured window analysis took
+**0.387 ms** against the 800 ms request budget. The options concern the same
+18 sections and do not constitute 36 unlocked sections. Disk free space stayed
+above 1.8 GB during execution; no additional repository copy was created.
+
+## PA-ENGINE-JOBS-1 — background search jobs (ticket T4a, 2026-11-11)
+
+Internal product contract; no UI and no SUM behavior is claimed. It lets the backend
+show a first feasible timetable quickly, watch it improve and cancel, without new
+infrastructure: one in-memory job inside the engine, polled over HTTP. `POST /v1/solve`
+is unchanged. Engine restarts lose all jobs (nothing is written to disk).
+
+| Call | Response |
+| --- | --- |
+| `POST /v1/solve-jobs` with a `SolveScheduleRequest` (`maxTimeSeconds`, up to 120, is the search budget) | `202 { jobId, state: 'running', budgetSeconds }`. Only one search runs: starting a job cancels the running one (it becomes `cancelled`) |
+| `GET /v1/solve-jobs/{jobId}` | `200 { jobId, state, phase, elapsedSeconds, budgetSeconds, progress, result, error }`; unknown or expired id: `404` |
+| `DELETE /v1/solve-jobs/{jobId}` | Cancels a running job and returns the same body as GET in its terminal state; on a terminal job it is a no-op returning that state; `404` if unknown |
+
+- `state`: `running` / `completed` / `cancelled` / `failed`. `phase`: `preparing`
+  (prechecks, cheap incumbent, model build) → `capacity` → `coverage` (first CP-SAT
+  solve) → `prelation` (contract, interfaculty, category stages) → `preferences` →
+  `done`. `done` is reported only when `completed`; a `cancelled` or `failed` job keeps
+  the phase it stopped in. `prelation` and `preferences` appear only with complete
+  priority data (PA-ENGINE-2).
+- `elapsedSeconds` counts from the moment the search worker starts solving, the same
+  clock as `budgetSeconds`; it is `0` while the worker is still booting and stops at the
+  terminal state.
+- `progress`: `requiredSessions` / `requiredSections` come from the request.
+  `scheduledSessions` / `scheduledSections` describe the best valid schedule seen so far
+  and never decrease. `improvements` counts strictly better schedules. "Better" means
+  more scheduled sessions or, with equal sessions and complete priority data, a
+  lexicographically better (contract, interfaculty, category-rank) value. Improvements
+  that only raise the legacy preference bonus are not counted. No percentage or time
+  estimate is produced.
+- `result` is `null` while running. `completed`: the final `SolveScheduleResponse`, the
+  same as `POST /v1/solve` for that request and budget (status, `coverageProof`,
+  certificate, decisions, prelation, diagnostics). `cancelled`: the best valid schedule
+  found so far if there is one, else `null`; `status` is `complete` only if every session
+  is placed, otherwise `search-limit` with `coverageProof: 'inconclusive'`,
+  `limitReason: null`, no certificate/decisions/prelation and a `SEARCH_CANCELLED`
+  diagnostic listing the unscheduled sessions. `failed`: always `null`.
+- `error` codes (messages are fixed Spanish texts that never echo input): `SEARCH_FAILED`
+  (exception inside the search), `SEARCH_PROCESS_LOST` (the worker died without a result),
+  `SEARCH_OVERRUN` (no result after `1.5 × budget + 20 s`; the worker is killed).
+- Retention: terminal jobs are kept 15 minutes and at most 20 of them, oldest dropped
+  first. A running job is never dropped. Teacher names and ids are never logged; only job
+  ids and exception class names.
+
+Isolation: each job runs `solve_academic_schedule` in a child process (`forkserver`
+start, `solver` preloaded, `spawn` where unavailable) niced by 5 so `/health` and the job
+endpoints stay responsive. The child streams `phase` and `best` messages over a pipe to a
+supervisor thread in the server process, which owns the job state. Cancellation sends
+`SIGKILL` to the child, so the CPU work ends with the process (the test asserts the child
+is no longer alive within one second of the `DELETE` response, which itself took about 6 ms
+in the measured run), and the best schedule received so far is returned. The supervisor reaps the child on every
+outcome; children are daemonic, so an engine exit takes them down.
+
+`solve_academic_schedule(req, hooks=None)` keeps its signature for direct callers. The
+optional `SearchHooks` (`on_phase`, `on_improvement`, `should_cancel`) attach a CP-SAT
+solution callback only when supplied; without hooks the solve call is the plain one.
+`should_cancel` is cooperative (polled between stages and on each solution); hard
+stopping is the job manager's process kill.
+
+CP-SAT worker count: the timetable coverage solve now uses `search_workers()` =
+`min(4, usable cores)`, taking the smaller of the CPU affinity and the cgroup quota
+(previously a fixed 4). This setting is shared by `POST /v1/solve`. The capacity analysis
+and the lexicographic stages still use one worker.
+
+Backend integration notes: poll `GET` at roughly 250–500 ms; stop polling at any state
+other than `running`; treat `404` as "lost" (expired or engine restarted) and re-run.
+`budgetSeconds` is the search budget only; wall time can exceed it by the final window
+analysis and, for the first job after an engine start, by the worker bootstrap (about 1 s).
+A `cancelled` result with `status: 'complete'` is a valid full schedule.
+
+Prelation proofs and budget (measured 2026-11-11, synthetic 56-course catalog with
+invented tiers/ranks, 30 s job): the contract, interfaculty and category stages all ended
+`OPTIMAL` (the job reached `preferences`), yet every level stayed `proven: false`. The
+proof flag also requires `not candidates_truncated`, and candidate sampling truncates on
+this catalog, so a longer budget improves coverage and time to a first schedule but does
+not by itself yield prelation proofs while sampling truncates candidates.

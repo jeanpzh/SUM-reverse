@@ -5,8 +5,9 @@ import type {
   AcademicCatalog, AcademicDraftSaveRequest, AcademicProposal, AcademicSavedDraft, AcademicTeacherReview,
 } from '../../../shared/programacion-academica-api.mjs'
 import {
-  createPlanningSession, derivePlanningProgress, derivePlanningView, derivePlanningDraftLabel, derivePlanningPrimaryAction, initialPlanningSessionState, reducePlanningSession,
+  buildPlanningWorkspace, createPlanningSession, derivePlanningProgress, derivePlanningView, derivePlanningDraftLabel, derivePlanningPrimaryAction, initialPlanningSessionState, reducePlanningSession,
 } from './planningSession.ts'
+import { AcademicLoadAuthorizationError } from './academicScheduling.ts'
 import type { PlanningBlock, PlanningSessionClient, PlanningSessionState } from './planningSession.ts'
 
 // Synthetic fixtures only.
@@ -94,6 +95,7 @@ test('catalog load applies period defaults without marking the workspace dirty',
   assert.equal(state.busy.catalog, false)
   assert.equal(state.dirty, false)
   assert.equal(state.capacities.CS101, '45')
+  assert.equal(state.lectiveHourMinutes, 60)
   assert.equal(state.resources.teachers.length, 1)
   assert.deepEqual(state.selectedCourses, [])
 })
@@ -268,6 +270,7 @@ test('resume hydrates the saved workspace and proposal', async () => {
   const state = reader.getState()
   assert.deepEqual(state.selectedCourses, ['CS101'])
   assert.equal(state.demands.CS101, '33')
+  assert.equal(state.lectiveHourMinutes, 60)
   assert.equal(state.draft.version, 1)
   assert.equal(state.dirty, false)
   assert.equal(state.proposal?.proposalId, 'proposal-synthetic')
@@ -425,4 +428,222 @@ test('planning progress marks every step done after publication', () => {
   const state = initialPlanningSessionState()
   assert.deepEqual(derivePlanningProgress({ ...state, draft: { ...state.draft, savedState: 'published' } }),
     { preparacion: 'done', horario: 'done', revision: 'done', aprobacion: 'done' })
+})
+
+
+test('generation and saving carry the same explicit demo lective context', async () => {
+  let generatedRequest: Parameters<PlanningSessionClient['createProposal']>[0] | undefined
+  let savedRequest: AcademicDraftSaveRequest | undefined
+  const memory = memoryClient({ createProposal: async (request) => { generatedRequest = request; return makeProposal() } })
+  const saveDraft = memory.client.saveDraft
+  memory.client.saveDraft = async (request) => { savedRequest = request; return saveDraft(request) }
+  const session = createPlanningSession(memory.client)
+  await session.commands.loadCatalog()
+  session.commands.edit({ type: 'toggleCourse', courseId: 'CS101', checked: true })
+  await session.commands.generate()
+  await session.commands.save()
+  assert.equal(generatedRequest?.lectiveHourMinutes, 60)
+  assert.equal(generatedRequest?.academicPeriod, '2027-I')
+  assert.equal(savedRequest?.configuration.lectiveHourMinutes, 60)
+  assert.deepEqual(savedRequest?.configuration.request, generatedRequest)
+})
+
+test('lective hour choice invalidates the proposal, is saved with the workspace and can be unset', async () => {
+  const memory = memoryClient()
+  const session = createPlanningSession(memory.client)
+  await session.commands.loadCatalog()
+  session.commands.edit({ type: 'toggleCourse', courseId: 'CS101', checked: true })
+  await session.commands.generate()
+  assert.ok(session.getState().proposal)
+  session.commands.edit({ type: 'updateLectiveHourMinutes', value: 50 })
+  assert.equal(session.getState().proposal, null)
+  assert.equal(session.getState().lectiveHourMinutes, 50)
+  assert.equal(session.getState().dirty, true)
+  session.commands.edit({ type: 'updateLectiveHourMinutes', value: undefined })
+  assert.equal(session.getState().lectiveHourMinutes, undefined)
+  assert.equal(buildPlanningWorkspace(session.getState()).lectiveHourMinutes, undefined)
+})
+
+test('the decisions of an outdated proposal stay visible until the next generation', async () => {
+  const decisions = [{ id: 'D1', kind: 'planning-window' as const, teacherId: null, courseIds: [], exceptionKind: null, additionalMinutes: 0,
+    sectionsUnlocked: 2, basis: 'window-precheck' as const, policyChange: { allowAfternoon: true as const } }]
+  const memory = memoryClient({ createProposal: async () => makeProposal({ decisions }) })
+  const session = createPlanningSession(memory.client)
+  await session.commands.loadCatalog()
+  session.commands.edit({ type: 'toggleCourse', courseId: 'CS101', checked: true })
+  await session.commands.generate()
+  assert.equal(session.getState().staleDecisions, null)
+  session.commands.edit({ type: 'updateResources', value: { teachers: [], rooms: [] } })
+  assert.equal(session.getState().proposal, null)
+  assert.deepEqual(session.getState().staleDecisions?.decisions, decisions)
+  session.commands.edit({ type: 'updatePlanningException', key: 'allowSaturday', checked: true })
+  assert.deepEqual(session.getState().staleDecisions?.decisions, decisions, 'a second edit keeps the snapshot')
+  await session.commands.generate()
+  assert.equal(session.getState().staleDecisions, null)
+})
+
+test('a publication refused for missing load authorization keeps the blocker list until the draft changes', async () => {
+  const blockers = [{ teacherId: 'T1', assignedMinutes: 960, authorizedMaxMinutes: 720, reason: 'over-authorized-load' as const,
+    requiredAuthorization: 'voluntary-declaration' as const, sourceIds: ['OF-02'] }]
+  const memory = memoryClient({ publishDraft: async () => { throw new AcademicLoadAuthorizationError('Falta registrar la autorización formal.', blockers) } })
+  const session = createPlanningSession(memory.client)
+  await session.commands.loadCatalog()
+  session.commands.edit({ type: 'toggleCourse', courseId: 'CS101', checked: true })
+  await session.commands.save()
+  memory.drafts.set(draftId, { ...memory.drafts.get(draftId)!, state: 'ready-for-approval' })
+  await session.commands.resume(draftId, 1)
+  await session.commands.approve()
+  assert.equal(session.getState().draft.savedState, 'approved')
+  await session.commands.publish(null)
+  assert.deepEqual(session.getState().releaseBlockers, blockers)
+  assert.match(session.getState().errors.draft ?? '', /autorización formal/)
+  session.commands.edit({ type: 'setTitle', title: 'Otro nombre' })
+  assert.equal(session.getState().releaseBlockers, null)
+})
+
+const searchSnapshot = (proposal: AcademicProposal | null = null, state: 'running' | 'cancelled' | 'completed' = 'running') => ({
+  jobId: 'synthetic-job', state, phase: 'coverage' as const, elapsedSeconds: 1, budgetSeconds: 30,
+  progress: { requiredSessions: 1, scheduledSessions: proposal ? 1 : 0, requiredSections: 1, scheduledSections: proposal ? 1 : 0, improvements: proposal ? 1 : 0 }, proposal, error: null,
+})
+test('jobs expose incumbent while busy, prevent save and cancel preserving witness', async () => {
+  const { session, calls } = await loadedSession({ startSearch: async () => searchSnapshot(makeProposal()),
+    pollSearch: async () => searchSnapshot(makeProposal()), cancelSearch: async () => searchSnapshot(makeProposal(), 'cancelled') })
+  const running = session.commands.generate()
+  await new Promise(resolve => setTimeout(resolve, 5))
+  assert.ok(session.getState().proposal)
+  assert.equal(session.getState().busy.generate, true)
+  assert.equal(derivePlanningView(session.getState()).canSave, false)
+  await session.commands.save()
+  assert.ok(!calls.includes('save'))
+  await session.commands.cancelSearch()
+  await running
+  assert.equal(session.getState().search?.state, 'cancelled')
+  assert.ok(session.getState().proposal)
+  assert.equal(session.getState().busy.generate, false)
+  session.dispose()
+})
+test('late starts after dispose, configuration, period or cancel are cancelled without polling', async () => {
+  for (const change of ['dispose', 'configuration', 'period', 'cancel', 'restart']) {
+    const late = deferred<ReturnType<typeof searchSnapshot>>()
+    const cancelled: string[] = []
+    let starts = 0
+    const { session } = await loadedSession({ startSearch: () => ++starts === 1 ? late.promise : Promise.resolve(searchSnapshot(null, 'completed')),
+      pollSearch: async () => { throw new Error('Must not poll stale job') },
+      cancelSearch: async id => { cancelled.push(id); return searchSnapshot(null, 'cancelled') } })
+    const pending = session.commands.generate()
+    if (change === 'dispose') session.dispose()
+    if (change === 'configuration') session.commands.edit({ type: 'updateDemand', courseId: 'CS101', value: '20' })
+    if (change === 'period') session.commands.edit({ type: 'applyPeriodDefaults', period: '2026-II' })
+    if (change === 'cancel') await session.commands.cancelSearch()
+    if (change === 'restart') await session.commands.generate()
+    late.resolve(searchSnapshot())
+    assert.equal(await pending, false)
+    assert.ok(cancelled.includes('synthetic-job'))
+    if (change !== 'dispose') assert.equal(session.getState().busy.generate, false)
+    assert.equal(session.getState().proposal, null)
+    session.dispose()
+  }
+})
+test('job errors do not fall back to synchronous generation', async () => {
+  const { session, calls } = await loadedSession({ startSearch: async () => { throw new Error('engine unavailable') },
+    pollSearch: async () => searchSnapshot(), cancelSearch: async () => searchSnapshot(null, 'cancelled') })
+  assert.equal(await session.commands.generate(), false)
+  assert.ok(!calls.includes('generate'))
+  assert.match(session.getState().errors.proposal!, /engine unavailable/)
+  session.dispose()
+})
+
+test('cancellation without a new incumbent keeps the old draft proposal', async () => {
+  const memory = memoryClient({ startSearch: async () => searchSnapshot(), pollSearch: async () => searchSnapshot(),
+    cancelSearch: async () => searchSnapshot(null, 'cancelled') })
+  const base = createPlanningSession(memory.client)
+  await base.commands.loadCatalog()
+  const old = makeProposal()
+  const initial = reducePlanningSession(base.getState(), { type: 'generate/succeeded', token: base.getState().intents.proposal, proposal: old, resources: base.getState().resources })
+  base.dispose()
+  const session = createPlanningSession(memory.client, initial)
+  const pending = session.commands.generate()
+  await new Promise(resolve => setTimeout(resolve, 5))
+  await session.commands.cancelSearch()
+  await pending
+  assert.equal(session.getState().proposal, old)
+  assert.equal(session.getState().search?.state, 'cancelled')
+  session.dispose()
+})
+test('polls are sequential and an aborted stale poll cannot replace the current configuration', async () => {
+  const late = deferred<ReturnType<typeof searchSnapshot>>()
+  let polls = 0
+  let signal: AbortSignal | undefined
+  const { session } = await loadedSession({ startSearch: async () => searchSnapshot(makeProposal()),
+    pollSearch: (_id, nextSignal) => { polls++; signal = nextSignal; return late.promise },
+    cancelSearch: async () => searchSnapshot(null, 'cancelled') })
+  const pending = session.commands.generate()
+  await new Promise(resolve => setTimeout(resolve, 300))
+  assert.equal(polls, 1)
+  session.commands.edit({ type: 'updateDemand', courseId: 'CS101', value: '99' })
+  assert.equal(signal?.aborted, true)
+  late.resolve(searchSnapshot(makeProposal(), 'completed'))
+  await pending
+  assert.equal(session.getState().proposal, null)
+  assert.equal(polls, 1)
+  session.dispose()
+})
+test('failed cancellation keeps save gated and retry recovers', async () => {
+  let offline = true
+  const { session } = await loadedSession({ startSearch: async () => searchSnapshot(makeProposal()),
+    pollSearch: async () => searchSnapshot(), cancelSearch: async () => { if (offline) throw new Error('offline'); return searchSnapshot(null, 'cancelled') } })
+  const pending = session.commands.generate()
+  await new Promise(resolve => setTimeout(resolve, 5))
+  await session.commands.cancelSearch()
+  assert.equal(session.getState().busy.generate, true)
+  assert.equal(derivePlanningView(session.getState()).canSave, false)
+  assert.match(session.getState().errors.proposal ?? '', /[Rr]eintent/)
+  offline = false
+  await session.commands.cancelSearch()
+  await pending
+  assert.equal(session.getState().busy.generate, false)
+  session.dispose()
+})
+test('cancel before start rejection settles instead of swallowing failure forever', async () => {
+  const late = deferred<ReturnType<typeof searchSnapshot>>()
+  const { session } = await loadedSession({ startSearch: () => late.promise,
+    pollSearch: async () => searchSnapshot(), cancelSearch: async () => searchSnapshot(null, 'cancelled') })
+  const pending = session.commands.generate()
+  await session.commands.cancelSearch()
+  late.reject(new Error('lost start'))
+  await pending
+  assert.equal(session.getState().busy.generate, false)
+  session.dispose()
+})
+test('uncertain obsolete cleanup gates edits and new starts until retry recovers', async () => {
+  let offline = true
+  let starts = 0
+  const { session } = await loadedSession({ startSearch: async () => { starts++; return searchSnapshot() },
+    pollSearch: async () => searchSnapshot(), cancelSearch: async () => { if (offline) throw new Error('offline'); return searchSnapshot(null, 'cancelled') } })
+  const running = session.commands.generate()
+  await new Promise(resolve => setTimeout(resolve, 5))
+  session.commands.edit({ type: 'applyPeriodDefaults', period: '2026-II' })
+  await running
+  const before = session.getState()
+  session.commands.edit({ type: 'updateDemand', courseId: 'CS101', value: '999' })
+  assert.equal(session.getState(), before)
+  assert.equal(await session.commands.generate(), false)
+  assert.equal(starts, 1)
+  assert.equal(derivePlanningView(session.getState()).canSave, false)
+  offline = false
+  await session.commands.cancelSearch()
+  assert.equal(session.getState().busy.generate, false)
+  assert.equal(session.getState().proposal, null)
+  session.dispose()
+})
+test('lost start response uses caller UUID to reconcile accepted work', async () => {
+  let known: string | undefined
+  let cancelled: string | undefined
+  const { session } = await loadedSession({ startSearch: async (_request, id) => { known = id; throw new Error('lost accepted response') },
+    pollSearch: async () => searchSnapshot(), cancelSearch: async id => { cancelled = id; return { ...searchSnapshot(null, 'cancelled'), jobId: id } } })
+  await session.commands.generate()
+  assert.match(known!, /^[0-9a-f-]{36}$/)
+  assert.equal(cancelled, known)
+  assert.equal(session.getState().busy.generate, false)
+  session.dispose()
 })

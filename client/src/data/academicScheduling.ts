@@ -1,9 +1,13 @@
+import { validateAcademicSearch, validateAcademicSearchRequest } from '../../../shared/programacion-academica-api.mjs'
+import type { AcademicSearch } from '../../../shared/programacion-academica-api.mjs'
 import { validateAcademicNormativeRequest, validateAcademicNormativeResponse } from '../../../shared/programacion-academica-api.mjs'
 import type { AcademicNormativeRequest, AcademicNormativeResponse } from '../../../shared/programacion-academica-api.mjs'
 import { ACADEMIC_API, ACADEMIC_REVISION, ACADEMIC_ROUTE, validateAcademicAdjustment, validateAcademicAdvisorRequest, validateAcademicAdvisorResponse, validateAcademicCatalog, validateAcademicDemandEstimate, validateAcademicDemandRequest, validateAcademicProposal, validateAcademicRequest, validateAcademicDraftList, validateAcademicDraftResume, validateAcademicDraftSaveRequest, validateAcademicSavedDraft, validateAcademicReviewSubmission, validateAcademicReviewDecision, validateAcademicPublicationRequest, validateAcademicReleasePreview, validateAcademicPublication, validateAcademicPublicationList } from '../../../shared/programacion-academica-api.mjs'
 import type { AcademicAdjustment, AcademicAdvisorRequest, AcademicAdvisorResponse, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest, AcademicProposal, AcademicRequest, AcademicInterval, AcademicDraftList, AcademicDraftResume, AcademicDraftSaveRequest, AcademicSavedDraft, AcademicReviewSubmission, AcademicReviewDecision, AcademicReleasePreview, AcademicPublication, AcademicPublicationList, AcademicPublicationRequest } from '../../../shared/programacion-academica-api.mjs'
-import { planningDefaults as getPlanningDefaults, PLANNING_LIMITS, syntheticTeachingMetadata, validatePlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
+import { planningDefaults as getPlanningDefaults, PLANNING_LIMITS, syntheticTeachingMetadata, syntheticTeacherMaxMinutes, validatePlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
 import type { PlanningPeriod, PlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
+import type { LoadAuthorizationBlocker } from '../../../shared/academic-normative-profile.mjs'
+import { parseLoadAuthorizationBlockers } from './planningDecisions.ts'
 
 export type { AcademicAdvisorBottleneck, AcademicAdvisorPatch, AcademicAdvisorRecommendation, AcademicAdvisorResponse, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest, AcademicProposal, AcademicRequest } from '../../../shared/programacion-academica-api.mjs'
 export { PLANNING_LIMITS, syntheticTeachingMetadata }
@@ -23,15 +27,19 @@ export function createAcademicPlanningDefaults(catalog: AcademicCatalog, period:
   const demands = Object.fromEntries(catalog.courses.map((course) => [course.courseId,
     String(course.cycle === undefined ? course.estimatedDemand : getPlanningDefaults(course.cycle, period).estimatedDemand)]))
   const capacities = Object.fromEntries(catalog.courses.map((course) => [course.courseId, '45']))
+  // Explicit local demo parameter: synthetic sessions are multiples of 60; FISI duration is unverified.
+  const lectiveHourMinutes = 60 as const
   const resources = {
-    teachers: (catalog.referenceTeachers ?? []).map((teacher, index) => ({ ...teacher,
-      maxWeeklyMinutes: 600, ...syntheticTeachingMetadata(index),
-      availability: [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 })) })),
+    teachers: (catalog.referenceTeachers ?? []).map((teacher, index) => {
+      const metadata = syntheticTeachingMetadata(index, teacher.id)
+      return { ...teacher, ...metadata, maxWeeklyMinutes: syntheticTeacherMaxMinutes(metadata, { period, lectiveHourMinutes }),
+        availability: [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 })) }
+    }),
     rooms: (catalog.referenceRooms ?? []).map((room) => ({ id: room.id, name: room.name,
       capacity: room.capacity, kind: room.kind,
       availability: [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 })) })),
   }
-  return { demands, capacities, resources, planningPolicy: {
+  return { demands, capacities, resources, lectiveHourMinutes, planningPolicy: {
     revision: 'FISI-PLANNING-1' as const, period, allowAfternoon: false, allowSaturday: false,
   } }
 }
@@ -68,6 +76,7 @@ export function isLocalAcademicArea(pathname: string,
 // Human messages at the planning data seam; wire field names never become UI labels.
 export function academicPlanningErrorMessage(error: unknown): string {
   if (!(error instanceof Error)) return 'No se pudo completar la acción. Inténtalo de nuevo.'
+  if ('code' in error && error.code === 'LOAD_AUTHORIZATION_REQUIRED') return 'Falta registrar la autorización formal de carga docente o corregir las asignaciones antes de publicar.'
   const message = error.message
   if (/^title:/.test(message)) return 'Escribe un nombre para la propuesta.'
   if (/^Nombre de propuesta:/.test(message)) return 'El nombre de la propuesta debe tener entre 1 y 100 caracteres, sin espacios al inicio ni al final.'
@@ -82,6 +91,9 @@ export function academicPlanningErrorMessage(error: unknown): string {
       demands: 'la demanda de los cursos', resources: 'los recursos disponibles',
       teachers: 'los docentes', rooms: 'los ambientes', windows: 'la disponibilidad',
       academicPeriod: 'el periodo académico', patternId: 'el patrón de sesiones',
+      weeklyServiceHours: 'las horas semanales de servicio', maxLectiveHours: 'las horas lectivas máximas de la autorización',
+      reference: 'la referencia de la autorización', loadAuthorization: 'la autorización de carga', loadAuthorizations: 'las autorizaciones de carga',
+      loadConditions: 'las condiciones de carga', regime: 'el régimen de dedicación', appointment: 'el nombramiento', lectiveHourMinutes: 'la duración de la hora lectiva',
     }
     const name = field.split(/[.[\]]/u).filter(Boolean).reverse().find((part) => labels[part])
     return name ? `Revisa ${labels[name]}; el valor no es válido.`
@@ -91,6 +103,17 @@ export function academicPlanningErrorMessage(error: unknown): string {
     return 'No se pudo conectar con el servicio local. Revisa la conexión e inténtalo de nuevo.'
   }
   return message
+}
+
+// Publication refused because teaching load exceeds what is authorized; keeps the server's blocker list for display.
+export class AcademicLoadAuthorizationError extends Error {
+  readonly code = 'LOAD_AUTHORIZATION_REQUIRED'
+  readonly blockers: LoadAuthorizationBlocker[]
+  constructor(message: string, blockers: LoadAuthorizationBlocker[]) {
+    super(message)
+    this.name = 'AcademicLoadAuthorizationError'
+    this.blockers = blockers
+  }
 }
 
 async function readJson(response: Response) {
@@ -106,11 +129,17 @@ async function readJson(response: Response) {
       ? body as Record<string, unknown> : null
     const error = envelope?.error && typeof envelope.error === 'object' && !Array.isArray(envelope.error)
       ? envelope.error as Record<string, unknown> : null
-    if (!envelope || Object.keys(envelope).length !== 1 || !error || Object.keys(error).length !== 2
+    if (!envelope || Object.keys(envelope).length !== 1 || !error || Object.keys(error).some((key) => !['code', 'message', 'blockers', 'gaps'].includes(key))
       || typeof error.code !== 'string' || !error.code || typeof error.message !== 'string' || !error.message) {
       throw new Error('La API local devolvió un error con formato inválido.')
     }
-    throw new Error(academicPlanningErrorMessage(new Error(error.message)))
+    const message = academicPlanningErrorMessage(Object.assign(new Error(error.message), { code: error.code }))
+    if (error.code === 'LOAD_AUTHORIZATION_REQUIRED') {
+      const blockers = parseLoadAuthorizationBlockers(error.blockers)
+      if (!blockers) throw new Error('La API local devolvió un error con formato inválido.')
+      throw new AcademicLoadAuthorizationError(message, blockers)
+    }
+    throw new Error(message)
   }
   return body
 }
@@ -506,4 +535,33 @@ export async function fetchAcademicNormativeAdvice(request: AcademicNormativeReq
 export function defaultAcademicAdvisorSelection(advice: AcademicAdvisorResponse): string[] {
   return advice.recommendations.filter((item) => item.recommendedByDefault
     && item.patch.kind !== 'increase_teacher_load').map((item) => item.id)
+}
+
+export async function startAcademicSearch(request: AcademicRequest, budgetSeconds = 30,
+  fetchImpl: typeof fetch = globalThis.fetch, requestId?: string): Promise<AcademicSearch> {
+  const input = { request, budgetSeconds, ...(requestId ? { requestId } : {}) }
+  validateAcademicSearchRequest(input)
+  const result = await readJson(await fetchImpl(`${ACADEMIC_API}/busquedas`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    credentials: 'omit', body: JSON.stringify(input), signal: AbortSignal.timeout(10000),
+  }))
+  validateAcademicSearch(result)
+  if (requestId && result.jobId !== requestId) throw new TypeError('Respuesta de otra búsqueda')
+  return result
+}
+export async function pollAcademicSearch(jobId: string, fetchImpl: typeof fetch = globalThis.fetch, signal?: AbortSignal): Promise<AcademicSearch> {
+  const result = await readJson(await fetchImpl(`${ACADEMIC_API}/busquedas/${encodeURIComponent(jobId)}`, {
+    credentials: 'omit', headers: { Accept: 'application/json' }, signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(10000)]) : AbortSignal.timeout(10000),
+  }))
+  validateAcademicSearch(result)
+  if (result.jobId !== jobId) throw new TypeError('Respuesta de otra búsqueda')
+  return result
+}
+export async function cancelAcademicSearch(jobId: string, fetchImpl: typeof fetch = globalThis.fetch): Promise<AcademicSearch> {
+  const result = await readJson(await fetchImpl(`${ACADEMIC_API}/busquedas/${encodeURIComponent(jobId)}/cancelar`, {
+    method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: '{}', signal: AbortSignal.timeout(10000),
+  }))
+  validateAcademicSearch(result)
+  if (result.jobId !== jobId) throw new TypeError('Respuesta de otra búsqueda')
+  return result
 }

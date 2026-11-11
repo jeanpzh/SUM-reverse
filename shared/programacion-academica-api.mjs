@@ -1,4 +1,5 @@
 import { PLANNING_LIMITS, isPlanningPeriod, validatePlanningPolicy } from './academic-planning-policy.mjs'
+import { LOAD_AUTHORIZATION_KINDS, TEACHER_APPOINTMENTS, TEACHER_LOAD_CONDITIONS, TEACHER_REGIMES, LECTIVE_HOUR_MINUTES } from './academic-normative-profile.mjs'
 /** PA-DEMO-1: independent local synthetic planning wire contract. */
 export const ACADEMIC_REVISION = 'PA-DEMO-1'
 export const ACADEMIC_ROUTE = '/local/programacion-academica'
@@ -19,10 +20,16 @@ function draftDates(value) {
   }
   if (Date.parse(value.updatedAt) < Date.parse(value.createdAt)) throw new TypeError('Fechas de propuesta guardada inconsistentes')
 }
+function validateLectiveDuration(value) {
+  if (Object.hasOwn(value, 'lectiveHourMinutes') && !LECTIVE_HOUR_MINUTES.includes(value.lectiveHourMinutes)) throw new TypeError('lectiveHourMinutes: duración inválida')
+}
 export function validateAcademicWorkspace(value) {
-  object(value, ['schoolId', 'academicPeriod', 'request', 'demandSourceId', 'demandBaseRequest'], 'workspace')
+  object(value, ['schoolId', 'academicPeriod', 'request', 'demandSourceId', 'demandBaseRequest'], 'workspace', ['lectiveHourMinutes'])
+  validateLectiveDuration(value)
   if (value.schoolId !== 'SISTEMAS' || !isPlanningPeriod(value.academicPeriod) || !demandSources.includes(value.demandSourceId)) throw new TypeError('Ámbito local de propuesta no admitido')
   validateAcademicRequest(value.request)
+  if (value.request.academicPeriod !== undefined && value.request.academicPeriod !== value.academicPeriod) throw new TypeError('El periodo de solicitud no corresponde al borrador')
+  if (value.request.lectiveHourMinutes !== undefined && value.request.lectiveHourMinutes !== value.lectiveHourMinutes) throw new TypeError('La duración lectiva no corresponde al borrador')
   if (value.request.planningPolicy && value.request.planningPolicy.period !== value.academicPeriod) throw new TypeError('El periodo de política no corresponde al borrador')
   if (!value.request.resources) throw new TypeError('Guardar requiere configuración explícita de docentes y ambientes')
   if (value.demandBaseRequest !== null) {
@@ -295,7 +302,10 @@ function sectionCapacities(row) {
   })
 }
 export function validateAcademicRequest(value) {
-  object(value, ['revision', 'demands'], 'request', ['resources', 'allocationPolicy', 'planningPolicy'])
+  object(value, ['revision', 'demands'], 'request', ['resources', 'allocationPolicy', 'planningPolicy', 'academicPeriod', 'lectiveHourMinutes'])
+  validateLectiveDuration(value)
+  if (Object.hasOwn(value, 'academicPeriod') && !isPlanningPeriod(value.academicPeriod)) throw new TypeError('academicPeriod: periodo inválido')
+  if (value.academicPeriod && value.planningPolicy && value.academicPeriod !== value.planningPolicy.period) throw new TypeError('El periodo de política no corresponde a la solicitud')
   if (Object.hasOwn(value, 'planningPolicy')) validatePlanningPolicy(value.planningPolicy)
   if (Object.hasOwn(value, 'allocationPolicy') && !['preferences', 'balanced', 'first-feasible'].includes(value.allocationPolicy)) throw new TypeError('Política docente inválida')
   if (Object.hasOwn(value, 'resources')) validateAcademicResources(value.resources)
@@ -317,12 +327,33 @@ function resourceId(value) {
   string(value, 'resource.id')
   if (value.length > 80 || value.trim() !== value) throw new TypeError('Identificación de recurso inválida')
 }
+// Optional teaching-load fields read by the Perfil normativo (academic-normative-profile.mjs). The regulation itself lives there.
+export function validateTeacherLoadFields(row) {
+  if (Object.hasOwn(row, 'regime') && !TEACHER_REGIMES.includes(row.regime)) throw new TypeError('Régimen docente inválido')
+  if (Object.hasOwn(row, 'appointment') && !TEACHER_APPOINTMENTS.includes(row.appointment)) throw new TypeError('Nombramiento docente inválido')
+  if (Object.hasOwn(row, 'weeklyServiceHours')) number(row.weeklyServiceHours, 'weeklyServiceHours', 1, 39)
+  if (Object.hasOwn(row, 'loadConditions')) {
+    array(row.loadConditions, 'loadConditions', TEACHER_LOAD_CONDITIONS.length)
+    if (row.loadConditions.some((item) => !TEACHER_LOAD_CONDITIONS.includes(item)) || new Set(row.loadConditions).size !== row.loadConditions.length) throw new TypeError('Condición de carga docente inválida')
+  }
+  if (Object.hasOwn(row, 'loadAuthorizations')) {
+    array(row.loadAuthorizations, 'loadAuthorizations', 16).forEach((item) => {
+      object(item, ['kind', 'reference'], 'loadAuthorization', ['maxLectiveHours'])
+      if (!LOAD_AUTHORIZATION_KINDS.includes(item.kind)) throw new TypeError('Tipo de autorización de carga inválido')
+      string(item.reference, 'loadAuthorization.reference')
+      if (!item.reference.trim()) throw new TypeError('Referencia de autorización requerida')
+      if (item.kind === 'vrap-authorization') number(item.maxLectiveHours, 'loadAuthorization.maxLectiveHours', 1, 168)
+      else if (Object.hasOwn(item, 'maxLectiveHours')) throw new TypeError('Solo la autorización de la VRAP indica horas máximas')
+    })
+  }
+}
 function teacherResource(row) {
-  object(row, ['id', 'name', 'courseIds', 'maxWeeklyMinutes', 'availability'], 'teacher', ['preferences', 'sectionLimits', 'facultyId', 'category', 'qualificationSource'])
+  object(row, ['id', 'name', 'courseIds', 'maxWeeklyMinutes', 'availability'], 'teacher', ['preferences', 'sectionLimits', 'facultyId', 'category', 'qualificationSource', 'regime', 'appointment', 'weeklyServiceHours', 'loadConditions', 'loadAuthorizations'])
   resourceId(row.id)
   if (Object.hasOwn(row, 'facultyId')) resourceId(row.facultyId)
   if (Object.hasOwn(row, 'category') && !['principal', 'asociado', 'auxiliar'].includes(row.category)) throw new TypeError('Categoría docente inválida')
   if (Object.hasOwn(row, 'qualificationSource') && row.qualificationSource !== 'synthetic') throw new TypeError('Procedencia docente inválida')
+  validateTeacherLoadFields(row)
   string(row.name, 'teacher.name')
   if (!row.name.trim()) throw new TypeError('Nombre de docente requerido')
   strings(row.courseIds, 'courseIds')
@@ -445,7 +476,8 @@ export function validateAcademicCatalog(value) {
   number(value.maxExplorations, 'maxExplorations', 0, 100000)
 }
 export function validateAcademicProposal(value) {
-  object(value, ['proposalId', 'createdAt', 'expiresAt', 'status', 'sections', 'assignments', 'pending', 'diagnostics', 'coverageComplete', 'counts', 'stats'], 'proposal', ['preferenceReport', 'editVersion', 'manuallyAdjustedSectionIds'])
+  object(value, ['proposalId', 'createdAt', 'expiresAt', 'status', 'sections', 'assignments', 'pending', 'diagnostics', 'coverageComplete', 'counts', 'stats'], 'proposal', ['preferenceReport', 'editVersion', 'manuallyAdjustedSectionIds', 'coverageProof', 'capacityCertificate', 'decisions', 'prelation', 'normative'])
+  validateProposalNormativeResult(value)
   string(value.proposalId, 'proposalId')
   for (const field of ['createdAt', 'expiresAt']) {
     string(value[field], field)
@@ -491,7 +523,7 @@ export function validateAcademicProposal(value) {
     || value.counts.requiredSessions !== value.assignments.length + value.pending.length) throw new TypeError('Conteos inconsistentes')
   object(value.stats, ['exploredCandidates', 'candidateVisits', 'backtracks', 'limitReason'], 'stats')
   for (const field of ['exploredCandidates', 'candidateVisits', 'backtracks']) number(value.stats[field], field)
-  if (![null, 'explorations', 'work', 'time'].includes(value.stats.limitReason)) throw new TypeError('Límite inválido')
+  if (![null, 'explorations', 'work', 'time', 'running', 'cancelled'].includes(value.stats.limitReason)) throw new TypeError('Límite inválido')
   if (value.coverageComplete !== (value.status === 'complete') || (value.coverageComplete && value.pending.length)) throw new TypeError('Cobertura inconsistente')
   if (new Set(value.sections.map((row) => row.sectionId)).size !== value.sections.length
     || new Set([...value.assignments, ...value.pending].map((row) => row.sessionId)).size !== value.assignments.length + value.pending.length) throw new TypeError('Sección o componente repetido')
@@ -551,29 +583,31 @@ export function validateAcademicAdvisorPatch(value) {
     adjustments.forEach((row) => {
       object(row, ['teacherId', 'previousMaxWeeklyMinutes', 'nextMaxWeeklyMinutes'], 'adjustment')
       resourceId(row.teacherId)
-      number(row.previousMaxWeeklyMinutes, 'previousMaxWeeklyMinutes', 0, 2400)
-      number(row.nextMaxWeeklyMinutes, 'nextMaxWeeklyMinutes', 1, 2400)
+      number(row.previousMaxWeeklyMinutes, 'previousMaxWeeklyMinutes', 0, 10080)
+      number(row.nextMaxWeeklyMinutes, 'nextMaxWeeklyMinutes', 1, 10080)
       if (row.nextMaxWeeklyMinutes <= row.previousMaxWeeklyMinutes) throw new TypeError('nextMaxWeeklyMinutes debe superar a previousMaxWeeklyMinutes')
     })
     return
   }
   if (value.kind === 'enable_planning_window') {
-    object(value, ['kind'], 'patch', ['allowAfternoon', 'allowSaturday'])
+    object(value, ['kind'], 'patch', ['allowAfternoon', 'allowSaturday', 'splitCourseIds'])
     if (value.allowAfternoon !== undefined && value.allowAfternoon !== true) throw new TypeError('allowAfternoon inválido')
     if (value.allowSaturday !== undefined && value.allowSaturday !== true) throw new TypeError('allowSaturday inválido')
     if (!value.allowAfternoon && !value.allowSaturday) throw new TypeError('enable_planning_window requiere al menos una ventana')
+    if (Object.hasOwn(value, 'splitCourseIds')) validateAcademicAdvisorPatch({ kind: 'change_delivery_mode', courseIds: value.splitCourseIds, deliveryMode: 'split' })
     return
   }
   if (value.kind === 'change_delivery_mode') {
     object(value, ['kind', 'courseIds', 'deliveryMode'], 'patch')
     if (value.deliveryMode !== 'split') throw new TypeError('deliveryMode debe ser split')
     strings(value.courseIds, 'courseIds')
-    if (!value.courseIds.length) throw new TypeError('courseIds vacío')
+    if (!value.courseIds.length || new Set(value.courseIds).size !== value.courseIds.length || value.courseIds.some(id => !id.trim())) throw new TypeError('courseIds vacío')
     return
   }
   if (value.kind === 'incorporate_reference_resource') {
     object(value, ['kind', 'teacherIds', 'roomIds'], 'patch')
     if (!Array.isArray(value.teacherIds) || !Array.isArray(value.roomIds)) throw new TypeError('teacherIds/roomIds deben ser listas')
+    if (new Set(value.teacherIds).size !== value.teacherIds.length || new Set(value.roomIds).size !== value.roomIds.length) throw new TypeError('Recursos duplicados')
     value.teacherIds.forEach(resourceId)
     value.roomIds.forEach(resourceId)
     if (!value.teacherIds.length && !value.roomIds.length) throw new TypeError('incorporate_reference_resource requiere al menos un recurso')
@@ -582,13 +616,14 @@ export function validateAcademicAdvisorPatch(value) {
   throw new TypeError('kind de recomendación desconocido')
 }
 
-export function validateAcademicAdvisorResponse(value) {
+export function validateAcademicAdvisorResponse(value, decisions) {
   object(value, ['proposalId', 'editVersion', 'source', 'summary', 'bottlenecks', 'recommendations'], 'advisorResponse', ['verifiedImpact', 'reasoningSteps', 'normativeContext'])
   if (value.normativeContext !== undefined) validateAcademicNormativeResponse(value.normativeContext)
   string(value.proposalId, 'proposalId')
   number(value.editVersion, 'editVersion', 0)
   object(value.source, ['mode', 'providerLabel'], 'source', ['fallbackReason'])
-  if (!['llm-assisted', 'deterministic-fallback'].includes(value.source.mode)) throw new TypeError('source.mode inválido')
+  if (!['llm-assisted', 'deterministic-fallback', 'engine-decisions'].includes(value.source.mode)) throw new TypeError('source.mode inválido')
+  if (value.source.mode === 'engine-decisions' && (value.source.providerLabel !== null || Object.hasOwn(value.source, 'fallbackReason') || Object.hasOwn(value, 'verifiedImpact') || Object.hasOwn(value, 'reasoningSteps'))) throw new TypeError('engine-decisions: source/impact inválido')
   if (value.source.providerLabel !== null) string(value.source.providerLabel, 'providerLabel')
   if (value.source.fallbackReason !== undefined
     && !['not_configured', 'timeout', 'rate_limited', 'upstream_error', 'invalid_llm_output'].includes(value.source.fallbackReason)) {
@@ -625,7 +660,11 @@ export function validateAcademicAdvisorResponse(value) {
     number(row.affectedSessionCount, 'affectedSessionCount', 0)
   })
   array(value.recommendations, 'recommendations').forEach((row) => {
-    object(row, ['id', 'title', 'rationale', 'impactSummary', 'recommendedByDefault', 'patch'], 'recommendation')
+    object(row, ['id', 'title', 'rationale', 'impactSummary', 'recommendedByDefault', 'patch'], 'recommendation', ['decisionIds'])
+    if (row.decisionIds !== undefined) {
+      strings(row.decisionIds, 'decisionIds')
+      if (!row.decisionIds.length || row.decisionIds.some(id => !id.trim()) || new Set(row.decisionIds).size !== row.decisionIds.length || (decisions && row.decisionIds.some(id => !decisions.some(d => d.id === id)))) throw new TypeError('decisionIds desconocidos, vacíos o duplicados')
+    }
     string(row.id, 'id')
     string(row.title, 'title')
     string(row.rationale, 'rationale')
@@ -684,4 +723,124 @@ export function validateAcademicNormativeResponse(value, request) {
     validateAcademicNormativeRequest(request)
     if (value.question !== request.question.trim() || ['facultyId', 'academicPeriod', 'asOf', 'teacherType'].some((key) => value.context[key] !== request[key])) throw new TypeError('Respuesta normativa de otra consulta')
   }
+}
+
+// Optional PA-ENGINE-2 evidence; old stored proposals remain valid.
+function validateProposalNormativeResult(value) {
+  const boolean = (item) => { if (typeof item !== 'boolean') throw new TypeError('Prueba booleana requerida') }
+  const authorization = (item) => { if (item !== null && !LOAD_AUTHORIZATION_KINDS.includes(item)) throw new TypeError('Autorización inválida') }
+  if (value.coverageProof !== undefined && !value.coverageComplete && !value.pending.length) throw new TypeError('Prueba parcial sin componentes pendientes')
+  if (Object.hasOwn(value, 'coverageProof') && !['complete', 'shortfall-proven', 'inconclusive'].includes(value.coverageProof)) throw new TypeError('Prueba de cobertura inválida')
+  if (value.coverageProof !== undefined && ((value.coverageProof === 'complete') !== value.coverageComplete
+    || (value.coverageProof === 'shortfall-proven' && value.status !== 'impossible')
+    || (value.coverageProof === 'inconclusive' && value.status !== 'search-limit'))) throw new TypeError('Prueba de cobertura contradictoria')
+  if (Object.hasOwn(value, 'capacityCertificate')) {
+    const certificate = value.capacityCertificate
+    object(certificate, ['proven', 'requiredSectionsTotal', 'coverableSectionsTotal', 'courses'], 'capacityCertificate')
+    boolean(certificate.proven)
+    number(certificate.requiredSectionsTotal, 'requiredSectionsTotal')
+    number(certificate.coverableSectionsTotal, 'coverableSectionsTotal', 0, certificate.requiredSectionsTotal)
+    const ids = new Set()
+    array(certificate.courses, 'capacityCourses', PLANNING_LIMITS.courses).forEach((course) => {
+      object(course, ['courseId', 'requiredSections', 'coverableSections', 'requiredMinutes'], 'capacityCourse')
+      string(course.courseId, 'courseId')
+      if (ids.has(course.courseId)) throw new TypeError('Curso de capacidad repetido')
+      ids.add(course.courseId)
+      number(course.requiredSections, 'requiredSections')
+      number(course.coverableSections, 'coverableSections', 0, course.requiredSections)
+      number(course.requiredMinutes, 'requiredMinutes')
+    })
+    // The engine lists only the courses with a shortfall, so the rows account for the uncovered sections, not the totals.
+    if (certificate.courses.reduce((sum, c) => sum + c.requiredSections - c.coverableSections, 0)
+      !== certificate.requiredSectionsTotal - certificate.coverableSectionsTotal) throw new TypeError('Totales de capacidad inconsistentes')
+  }
+  if (Object.hasOwn(value, 'decisions')) {
+    const ids = new Set()
+    array(value.decisions, 'decisions', PLANNING_LIMITS.sessions).forEach((decision) => {
+      object(decision, ['id', 'kind', 'teacherId', 'courseIds', 'exceptionKind', 'additionalMinutes', 'sectionsUnlocked', 'basis'], 'decision', ['policyChange', 'requires', 'sourceIds', 'requiresSplit'])
+      string(decision.id, 'decision.id')
+      if (ids.has(decision.id)) throw new TypeError('Decisión repetida')
+      ids.add(decision.id)
+      if (!['teacher-load-exception', 'additional-teacher', 'planning-window', 'delivery-mode-split'].includes(decision.kind)
+        || !['capacity-relaxation', 'window-precheck'].includes(decision.basis)) throw new TypeError('Decisión inválida')
+      if (decision.teacherId !== null) string(decision.teacherId, 'teacherId')
+      strings(decision.courseIds, 'courseIds')
+      if (decision.exceptionKind !== 'configuration-adjustment') authorization(decision.exceptionKind)
+      number(decision.additionalMinutes, 'additionalMinutes')
+      number(decision.sectionsUnlocked, 'sectionsUnlocked')
+      if (decision.kind === 'teacher-load-exception' && (decision.teacherId === null || decision.exceptionKind === null)) throw new TypeError('Excepción sin docente o autorización')
+      for (const key of ['requires', 'sourceIds']) if (Object.hasOwn(decision, key)) strings(decision[key], key)
+      if (Object.hasOwn(decision, 'requiresSplit') && (decision.requiresSplit !== true || decision.kind !== 'planning-window'
+        || !decision.policyChange || !decision.courseIds.length || new Set(decision.courseIds).size !== decision.courseIds.length
+        || decision.courseIds.some(id => !id.trim()))) throw new TypeError('Requisito de separación inválido')
+      if (Object.hasOwn(decision, 'policyChange')) {
+        object(decision.policyChange, [], 'policyChange', ['allowAfternoon', 'allowSaturday'])
+        if (!Object.keys(decision.policyChange).length || Object.values(decision.policyChange).some((item) => item !== true)) throw new TypeError('Cambio de política inválido')
+      }
+    })
+  }
+  if (Object.hasOwn(value, 'prelation')) {
+    object(value.prelation, ['levels'], 'prelation')
+    const ids = new Set()
+    array(value.prelation.levels, 'prelation.levels', 3).forEach((level) => {
+      object(level, ['id', 'value', 'proven'], 'prelation.level')
+      if (!['contract-sections', 'interfaculty-sections', 'category-rank'].includes(level.id) || ids.has(level.id)) throw new TypeError('Nivel de prelación inválido')
+      ids.add(level.id)
+      number(level.value, 'prelation.value')
+      boolean(level.proven)
+    })
+  }
+  if (Object.hasOwn(value, 'normative')) {
+    const normative = value.normative
+    object(normative, ['profileRevision', 'lectiveHourMinutes', 'gaps', 'blockers'], 'normative')
+    if (normative.profileRevision !== null) string(normative.profileRevision, 'profileRevision')
+    if (normative.lectiveHourMinutes !== null && !LECTIVE_HOUR_MINUTES.includes(normative.lectiveHourMinutes)) throw new TypeError('Duración lectiva inválida')
+    array(normative.gaps, 'normative.gaps', PLANNING_LIMITS.sessions).forEach((gap) => {
+      object(gap, ['code', 'message'], 'normative.gap', ['teacherIds', 'blocking', 'assignedMinutes', 'minimumMinutes', 'shortfallMinutes'])
+      if (gap.blocking !== undefined) boolean(gap.blocking)
+      for (const key of ['assignedMinutes', 'minimumMinutes', 'shortfallMinutes']) if (gap[key] !== undefined) number(gap[key], key)
+      string(gap.code, 'gap.code')
+      string(gap.message, 'gap.message')
+      if (Object.hasOwn(gap, 'teacherIds')) strings(gap.teacherIds, 'gap.teacherIds')
+    })
+    array(normative.blockers, 'normative.blockers', PLANNING_LIMITS.teachers).forEach((blocker) => {
+      object(blocker, ['teacherId', 'assignedMinutes', 'authorizedMaxMinutes', 'reason', 'requiredAuthorization', 'sourceIds'], 'normative.blocker')
+      string(blocker.teacherId, 'teacherId')
+      number(blocker.assignedMinutes, 'assignedMinutes')
+      number(blocker.authorizedMaxMinutes, 'authorizedMaxMinutes')
+      if (!['over-authorized-load', 'on-leave'].includes(blocker.reason)) throw new TypeError('Motivo de bloqueo inválido')
+      authorization(blocker.requiredAuthorization)
+      strings(blocker.sourceIds, 'sourceIds')
+    })
+  }
+}
+
+export function validateAcademicSearchRequest(value) {
+  object(value, ['request', 'budgetSeconds'], 'searchRequest', ['requestId'])
+  if (value.requestId !== undefined && (typeof value.requestId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.requestId))) throw new TypeError('requestId UUID inválido')
+  validateAcademicRequest(value.request)
+  if (!Number.isFinite(value.budgetSeconds) || value.budgetSeconds < 1 || value.budgetSeconds > 120) throw new TypeError('Presupuesto fuera de 1–120 segundos')
+}
+export function validateAcademicSearch(value) {
+  object(value, ['jobId', 'state', 'phase', 'elapsedSeconds', 'budgetSeconds', 'progress', 'proposal', 'error'], 'search')
+  string(value.jobId, 'jobId')
+  if (!['running', 'completed', 'cancelled', 'failed'].includes(value.state)
+    || !['preparing', 'capacity', 'coverage', 'prelation', 'preferences', 'done'].includes(value.phase)) throw new TypeError('Estado de búsqueda inválido')
+  if (!Number.isFinite(value.elapsedSeconds) || value.elapsedSeconds < 0 || !Number.isFinite(value.budgetSeconds) || value.budgetSeconds < 1 || value.budgetSeconds > 120) throw new TypeError('Tiempo de búsqueda inválido')
+  object(value.progress, ['requiredSessions', 'scheduledSessions', 'requiredSections', 'scheduledSections', 'improvements'], 'progress')
+  for (const key of ['requiredSessions', 'scheduledSessions', 'requiredSections', 'scheduledSections', 'improvements']) number(value.progress[key], key, 0)
+  if (value.progress.scheduledSessions > value.progress.requiredSessions || value.progress.scheduledSections > value.progress.requiredSections) throw new TypeError('Progreso inválido')
+  if (['running', 'cancelled'].includes(value.state) && value.progress.scheduledSessions > 0 && value.proposal === null) throw new TypeError('Progreso sin incumbente')
+  if (value.state === 'completed' && (value.proposal === null || value.phase !== 'done')) throw new TypeError('Búsqueda completa sin resultado final')
+  if (value.proposal !== null) {
+    validateAcademicProposal(value.proposal)
+    if (value.proposal.counts.requiredSessions !== value.progress.requiredSessions || value.proposal.counts.scheduledSessions !== value.progress.scheduledSessions
+      || value.proposal.sections.length !== value.progress.requiredSections
+      || new Set(value.proposal.assignments.map(assignment => assignment.sectionId)).size !== value.progress.scheduledSections) throw new TypeError('Progreso y propuesta incompatibles')
+    if (value.proposal.status === 'search-limit' && ['running', 'cancelled'].includes(value.state) && value.proposal.stats.limitReason !== value.state) throw new TypeError('Motivo de búsqueda inválido')
+    if (value.proposal.coverageProof === 'shortfall-proven' && value.state !== 'completed') throw new TypeError('Prueba prematura')
+    if (['running', 'cancelled'].includes(value.state) && value.proposal.prelation?.levels.some(level => level.proven)) throw new TypeError('Optimalidad prematura')
+  }
+  if ((value.state === 'failed') !== (value.error !== null) || (value.state === 'failed' && value.proposal !== null)) throw new TypeError('Error de búsqueda incoherente')
+  if (value.error !== null) { object(value.error, ['code', 'message'], 'searchError'); string(value.error.code, 'code'); string(value.error.message, 'message') }
 }

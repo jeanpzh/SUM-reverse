@@ -13,6 +13,8 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { NativeSelect } from '../components/ui/NativeSelect'
 import { Label } from '../components/ui/Label'
+import { regimeNamedIn } from '../data/normativeRegime'
+import { PROTOTYPE_TEACHER_PROFILES, prototypeProfileFor } from '../../../shared/prototype-teacher-profiles.mjs'
 
 
 type ExampleQuestion = {
@@ -40,13 +42,16 @@ const EXAMPLE_QUESTIONS: readonly ExampleQuestion[] = [
 ] as const
 
 export function PlanningNormativeChat({ academicPeriod, chat }: { academicPeriod: PlanningPeriod; chat: NormativeChat }) {
-  const { question, setQuestion, turns, loading, asOf, teacherType, cancel, submit } = chat
+  const { question, setQuestion, turns, loading, asOf, teacherType, teacherId, cancel, submit } = chat
+  const profile = teacherId ? prototypeProfileFor(teacherId) : null
+  const regimeLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
   const selectSuggestion = (item: ExampleQuestion) => {
-    chat.changeTeacherType(item.teacherType)
+    // A selected teacher profile fixes the regime; suggestions must not silently replace it.
+    if (!profile) chat.changeTeacherType(item.teacherType)
     chat.setQuestion(item.question)
-    void chat.submit(item.question, item.teacherType, undefined, true)
+    void chat.submit(item.question, profile ? teacherType : item.teacherType, undefined, true)
   }
 
   return (
@@ -56,7 +61,7 @@ export function PlanningNormativeChat({ academicPeriod, chat }: { academicPeriod
           <div className="planning-chat__context-info">
             <span className="planning-chat__context-badge">Contexto · FISI · {academicPeriod}</span>
             <span className="planning-chat__context-meta">
-              {teacherType === 'unknown' ? 'Filtro: Todos los regímenes' : `Filtro: Régimen ${teacherType}`}
+              {profile ? `Docente ${profile.id} · ${regimeLabel(profile.regime)} ${profile.dedication}` : teacherType === 'unknown' ? 'Filtro: Todos los regímenes' : `Filtro: Régimen ${teacherType}`}
             </span>
           </div>
           <span className="planning-chat__context-toggle">
@@ -80,10 +85,31 @@ export function PlanningNormativeChat({ academicPeriod, chat }: { academicPeriod
             />
           </Label>
           <Label className="text-xs font-medium">
+            Docente (prototipo sintético)
+            <NativeSelect
+              value={teacherId}
+              disabled={loading}
+              onChange={(e) => {
+                chat.changeTeacher(e.target.value)
+              }}
+              className="mt-1 h-8 text-xs"
+            >
+              <option value="">Ninguno (elegir régimen)</option>
+              {PROTOTYPE_TEACHER_PROFILES.map((item) => (
+                <option key={item.id} value={item.id}>{`${item.id} · ${regimeLabel(item.regime)} ${item.dedication}`}</option>
+              ))}
+            </NativeSelect>
+          </Label>
+          {profile && (
+            <p className="m-0 text-xs text-muted-foreground">
+              Perfil sintético del prototipo, no oficial. Solo el régimen se envía a la consulta; la dedicación se muestra como referencia.
+            </p>
+          )}
+          <Label className="text-xs font-medium">
             Régimen docente
             <NativeSelect
               value={teacherType}
-              disabled={loading}
+              disabled={loading || Boolean(profile)}
               onChange={(e) => {
                 chat.changeTeacherType(e.target.value as AcademicNormativeRequest['teacherType'])
               }}
@@ -141,7 +167,26 @@ export function PlanningNormativeChat({ academicPeriod, chat }: { academicPeriod
                   <Message className="planning-chat__reply">
                     <MessageContent>
                       {turn.answer ? (
-                        <NormativeAdvice advice={turn.answer} />
+                        <div className="grid gap-2">
+                          {regimeNamedIn(turn.question) && regimeNamedIn(turn.question) !== turn.answer.context.teacherType && (
+                            <div role="status" className="flex flex-wrap items-center gap-2 text-sm">
+                              <span className="text-muted-foreground">
+                                {turn.answer.context.teacherType === 'unknown'
+                                  ? `La pregunta menciona el régimen ${regimeNamedIn(turn.question)}, pero el filtro está en Todos los regímenes.`
+                                  : `La pregunta menciona el régimen ${regimeNamedIn(turn.question)}, pero esta consulta usó el régimen ${turn.answer.context.teacherType}.`}
+                              </span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={loading}
+                                onClick={() => void submit(turn.question, regimeNamedIn(turn.question) ?? undefined)}
+                              >
+                                {`Consultar como docente ${regimeNamedIn(turn.question)}`}
+                              </Button>
+                            </div>
+                          )}
+                          <NormativeAdvice advice={turn.answer} />
+                        </div>
                       ) : turn.error ? (
                         <div role="alert" className="grid gap-2 text-sm text-destructive">
                           <p className="m-0 font-normal">{turn.error}</p>

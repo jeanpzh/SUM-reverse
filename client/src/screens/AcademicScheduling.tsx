@@ -5,7 +5,7 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { academicSectionCoverage, formatAcademicInterval } from '../data/academicScheduling'
 import type { PlanningPeriod } from '../data/academicScheduling'
-import type { AcademicAdjustment, AcademicAllocationPolicy, AcademicDraftState, AcademicPlanningResources } from '../../../shared/programacion-academica-api.mjs'
+import type { AcademicAdjustment, AcademicAdvisorPatch, AcademicAllocationPolicy, AcademicDraftState, AcademicPlanningResources } from '../../../shared/programacion-academica-api.mjs'
 import { usePlanningSessionContext } from '../components/PlanningSessionProvider'
 import type { PlanningPreparationView, PlanningBlock } from '../data/planningSession'
 import { AcademicResourceEditor } from './AcademicResourceEditor'
@@ -31,6 +31,7 @@ import { PlanningScheduleToolbar } from './PlanningScheduleToolbar'
 import { PlanningStatusBar, PlanningSearchDetails } from './PlanningStatusBar'
 import { PlanningSectionsTable } from './PlanningSectionsTable'
 import { PlanningInspector } from './PlanningInspector'
+import { LoadBlockerList, PlanningDecisions } from './PlanningDecisions'
 import { PlanningWeekView } from './PlanningWeekView'
 import { useDefaultLayout } from 'react-resizable-panels'
 import { useMediaQuery } from '../lib/useMediaQuery'
@@ -60,6 +61,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
   const { state, view, commands } = usePlanningSessionContext()
   const [applyingAdvisor, setApplyingAdvisor] = useState(false)
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null)
+  const [resourceFocus, setResourceFocus] = useState<{ token: number; teacherId?: string; courseIds?: string[] } | null>(null)
   const [viewMode, setViewMode] = useState<'tabla' | 'semana'>('tabla')
   const [searchQuery, setSearchQuery] = useState('')
   const [teacherFilter, setTeacherFilter] = useState('all')
@@ -123,7 +125,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
   const draftError = state.errors.draft
   const reviewError = state.errors.review
   const draftMessage = state.message
-  const lockedDraft = view.locked
+  const lockedDraft = view.locked || generating
   const validDemands = view.offerValid
   const canSave = view.canSave
   const disabledSaveReason = view.disabledSaveReason
@@ -183,6 +185,14 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       await navigate({ to: '/local/programacion-academica', search: { etapa: 'horario' } })
     }
   }
+  const revealedSearch = useRef<string | null>(null)
+  useEffect(() => {
+    const search = state.search
+    if (search?.state === 'running' && search.proposal && revealedSearch.current !== search.jobId) {
+      revealedSearch.current = search.jobId
+      void navigate({ to: '/local/programacion-academica', search: { etapa: 'horario' } })
+    }
+  }, [state.search, navigate])
   const submitBlockReview = () => commands.adjust()
   const approveDraft = () => commands.approve()
   const publishDraft = (expectedCurrentId: string | null) => commands.publish(expectedCurrentId)
@@ -227,6 +237,43 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
     if (!proposal || lockedDraft || draftBusy) return
     setSelectedSectionId(block.sectionId)
     commands.edit({ type: 'startBlockReview', block })
+  }
+
+  const teacherNames = Object.fromEntries([...(catalog?.referenceTeachers ?? []), ...resources.teachers].map((teacher) => [teacher.id, teacher.name]))
+  const courseNames = Object.fromEntries((catalog?.courses ?? []).map((course) => [course.courseId, course.name]))
+  const roomNames = Object.fromEntries([...(catalog?.referenceRooms ?? []), ...resources.rooms].map((room) => [room.id, room.name]))
+  // Decision queue actions that lead to the teacher resources (authorizations, or the teachers eligible for a course).
+  const goToResources = async (focus: { teacherId?: string; courseIds?: string[] }) => {
+    await navigate({ to: '/local/programacion-academica', search: { etapa: 'preparacion', vista: 'recursos' } })
+    setResourceFocus({ token: Date.now(), ...focus })
+  }
+  // Same flow as the advisor: apply the configuration change, then regenerate through the existing generation path.
+  const applyPatchesAndRegenerate = async (patches: AcademicAdvisorPatch[]) => {
+    if (!proposal) return false
+    if ((proposal.manuallyAdjustedSectionIds?.length ?? 0) > 0) {
+      const confirmed = await confirm({
+        title: 'Reemplazar ajustes manuales',
+        description: 'Aplicar recomendaciones y regenerar el horario descartará los movimientos manuales realizados en esta propuesta. ¿Deseas continuar?',
+        confirmLabel: 'Aplicar y regenerar',
+        destructive: true,
+      })
+      if (!confirmed) return false
+    }
+    setApplyingAdvisor(true)
+    try {
+      return await commands.applyAdvisorPatchesAndRegenerate(patches, { proposalId: proposal.proposalId, editVersion: proposal.editVersion ?? 0 })
+    } finally {
+      setApplyingAdvisor(false)
+    }
+  }
+
+  const decisionProps = {
+    proposal, staleDecisions: state.staleDecisions, period: planningPeriod, teacherNames, courseNames, resources, policy: planningPolicy,
+    deliveryModes, isLocked: lockedDraft, busy: draftBusy || generating || adjusting || applyingAdvisor,
+    onApplyPatches: applyPatchesAndRegenerate,
+    onRecordAuthorization: (teacherId: string) => void goToResources({ teacherId }),
+    onAddTeacher: (courseIds: string[]) => void goToResources({ courseIds }),
+    onRegenerate: () => void generate(),
   }
 
   const inspectorOpen = currentStage === 'horario' && Boolean(proposal) && selectedSectionId !== null
@@ -398,7 +445,9 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
     <ResizablePanelGroup orientation="vertical" defaultLayout={detailLayout} onLayoutChanged={onDetailLayoutChanged} className="planning-schedule-split">
     <ResizablePanel id="planning-schedule-content" minSize="40%" className="planning-workspace__panel">
     <div ref={scrollerRef} className={`planning-workspace__content ${currentStage === 'preparacion' && preparationView === 'cursos' ? 'planning-workspace__content--courses' : ''}`}>
-    {draftError && !draftListOpen && <Alert id="planning-draft-error" variant="destructive" role="alert"><AlertDescription>{draftError}</AlertDescription></Alert>}
+    {draftError && !draftListOpen && <Alert id="planning-draft-error" variant="destructive" role="alert"><AlertDescription>{draftError}
+      {state.releaseBlockers && state.releaseBlockers.length > 0 && <LoadBlockerList blockers={state.releaseBlockers} teacherNames={teacherNames} period={planningPeriod} />}
+    </AlertDescription></Alert>}
     {loadingCatalog && preparationView !== 'cursos' && currentStage === 'preparacion' && <PlanningFetchLoading label="Consultando catálogo local…" layout="cards" />}
     {/* Stage 1: Preparación */}
     <section
@@ -450,6 +499,10 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
             onChange={updateResources}
             isLocked={lockedDraft || draftBusy}
             proposal={proposal}
+            academicPeriod={planningPeriod}
+            lectiveHourMinutes={state.lectiveHourMinutes}
+            onLectiveHourMinutesChange={(value) => commands.edit({ type: 'updateLectiveHourMinutes', value })}
+            focus={resourceFocus}
           />
           <Collapsible className="academic-scheduling__general-windows">
             <CollapsibleTrigger asChild><Button type="button" variant="ghost" className="planning-resources-disclosure">Franjas generales del catálogo</Button></CollapsibleTrigger>
@@ -504,6 +557,12 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       </div>
     </section>
 
+    {generating && <div role="status" aria-live="polite">
+      {proposalError ? 'Detención pendiente de confirmar' : state.search ? `Búsqueda · ${state.search.phase} · ${state.search.progress.scheduledSessions}/${state.search.progress.requiredSessions} componentes · ${state.search.progress.improvements} mejoras` : 'Iniciando búsqueda…'}
+      <Button variant="outline" onClick={() => void commands.cancelSearch()}>{proposalError ? 'Reintentar cancelación' : 'Cancelar'}</Button>
+      {proposalError && <p role="alert">{proposalError}</p>}
+    </div>}
+    {state.search?.state === 'cancelled' && <p role="status">Búsqueda cancelada. {state.search.proposal ? 'Se conserva el mejor horario encontrado.' : 'Sin horario nuevo; se conserva el borrador anterior.'}</p>}
     {/* Stage 2: Horario */}
     <section
       className="planning-stage-panel planning-stage-panel--horario"
@@ -517,31 +576,16 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
             : <><p>Selecciona los cursos y revisa los recursos en Preparación para generar una propuesta.</p>
               <Button asChild variant="link"><Link to="/local/programacion-academica" search={{ etapa: 'preparacion', vista: 'resumen' }}>Ir a Preparación</Link></Button></>}
         </div>}
+        {!proposal && !generating && !applyingAdvisor && <PlanningDecisions {...decisionProps} />}
         {proposal && <>
           <PlanningStatusBar key={`${proposal.proposalId}:${proposal.editVersion ?? 0}`}
-            teacherNames={Object.fromEntries([...(catalog?.referenceTeachers ?? []), ...resources.teachers].map((teacher) => [teacher.id, teacher.name]))}
-            courseNames={Object.fromEntries((catalog?.courses ?? []).map((course) => [course.courseId, course.name]))}
-            roomNames={Object.fromEntries([...(catalog?.referenceRooms ?? []), ...resources.rooms].map((room) => [room.id, room.name]))}
+            teacherNames={teacherNames}
+            courseNames={courseNames}
+            roomNames={roomNames}
             proposal={proposal}
             academicPeriod={state.period}
             isDraft={!lockedDraft}
-            onApplyAdvisorPatches={async (patches) => {
-              if ((proposal.manuallyAdjustedSectionIds?.length ?? 0) > 0) {
-                const confirmed = await confirm({
-                  title: 'Reemplazar ajustes manuales',
-                  description: 'Aplicar recomendaciones y regenerar el horario descartará los movimientos manuales realizados en esta propuesta. ¿Deseas continuar?',
-                  confirmLabel: 'Aplicar y regenerar',
-                  destructive: true,
-                })
-                if (!confirmed) return false
-              }
-              setApplyingAdvisor(true)
-              try {
-                return await commands.applyAdvisorPatchesAndRegenerate(patches, { proposalId: proposal.proposalId, editVersion: proposal.editVersion ?? 0 })
-              } finally {
-                setApplyingAdvisor(false)
-              }
-            }}
+            onApplyAdvisorPatches={applyPatchesAndRegenerate}
             isLocked={lockedDraft || draftBusy}
             advisorDisabledReason={draftBusy ? 'Esperando a que termine la operación con la propuesta.' : undefined}
           />
@@ -549,6 +593,8 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
           {state.advisorOutcome?.proposalId === proposal.proposalId
             && state.advisorOutcome.editVersion === (proposal.editVersion ?? 0)
             && <AdvisorOutcome outcome={state.advisorOutcome} />}
+
+          <PlanningDecisions {...decisionProps} />
 
           <PlanningScheduleToolbar proposal={proposal} searchQuery={searchQuery} onSearchChange={setSearchQuery}
             teacherFilter={teacherFilter} onTeacherFilterChange={setTeacherFilter} viewMode={viewMode} onToggleView={handleToggleView} />
@@ -646,7 +692,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       hidden={currentStage !== 'aprobacion'}
       aria-label="Etapa de aprobación"
     >
-      <AcademicPublicationPanel primaryActionId={approvalAction?.id} draftId={draftId} draftVersion={draftVersion} draftTitle={draftTitle}
+      <AcademicPublicationPanel active={currentStage === 'aprobacion'} loadBlockers={proposal?.normative?.blockers ?? []} teacherNames={teacherNames} period={planningPeriod} primaryActionId={approvalAction?.id} draftId={draftId} draftVersion={draftVersion} draftTitle={draftTitle}
         draftState={savedDraftState} dirty={workspaceDirty} busy={draftBusy || generating || adjusting || demandLoading} onApprove={approveDraft}
         onPublish={publishDraft} onFork={forkDraft}
         onError={(message) => commands.edit({ type: 'setDraftError', message })}

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from normative import NormativeResponse
 
 
@@ -27,6 +27,21 @@ class TeacherInput(BaseModel):
     facultyId: str | None = None
     category: Literal["principal", "asociado", "auxiliar"] | None = None
     qualificationSource: Literal["synthetic"] | None = None
+    configurationMaxWeeklyMinutes: int | None = Field(default=None, ge=0)
+    exceptionMaxWeeklyMinutes: int | None = Field(default=None, ge=0)
+    exceptionKind: Literal['voluntary-declaration', 'vrap-authorization', 'configuration-adjustment'] | None = None
+    appointmentTier: Literal[0, 1, 2] | None = None
+    categoryRank: int | None = Field(default=None, ge=1, le=9)
+
+    @model_validator(mode='after')
+    def validate_exception(self):
+        if (self.exceptionMaxWeeklyMinutes is None) != (self.exceptionKind is None):
+            raise ValueError('exception cap and kind must be provided together')
+        if self.exceptionMaxWeeklyMinutes is not None and self.exceptionMaxWeeklyMinutes <= self.maxWeeklyMinutes:
+            raise ValueError('exceptionMaxWeeklyMinutes must exceed maxWeeklyMinutes')
+        if self.configurationMaxWeeklyMinutes is not None and not (self.exceptionMaxWeeklyMinutes is not None and self.maxWeeklyMinutes < self.configurationMaxWeeklyMinutes <= self.exceptionMaxWeeklyMinutes):
+            raise ValueError('configuration cap must be above current and within the reachable cap')
+        return self
 
 
 class RoomInput(BaseModel):
@@ -108,7 +123,49 @@ class SolveScheduleRequest(BaseModel):
     startStepMinutes: int = 60
     allocationPolicy: Literal["preferences", "balanced", "first-feasible"] = "preferences"
     planningPolicy: PlanningPolicyInput | None = None
-    maxTimeSeconds: float = Field(default=3.0, gt=0.1, le=10.0)
+    maxTimeSeconds: float = Field(default=3.0, gt=0.1, le=120.0)
+
+
+class CapacityCourse(BaseModel):
+    courseId: str
+    requiredSections: int
+    coverableSections: int
+    requiredMinutes: int
+
+
+class CapacityCertificate(BaseModel):
+    proven: bool
+    requiredSectionsTotal: int
+    coverableSectionsTotal: int
+    courses: list[CapacityCourse]
+
+
+class PlanningWindowChange(BaseModel):
+    allowAfternoon: Literal[True] | None = Field(default=None, exclude_if=lambda value: value is None)
+    allowSaturday: Literal[True] | None = Field(default=None, exclude_if=lambda value: value is None)
+
+
+class CapacityDecision(BaseModel):
+    id: str
+    kind: Literal['teacher-load-exception', 'additional-teacher', 'planning-window', 'delivery-mode-split']
+    teacherId: str | None = None
+    courseIds: list[str]
+    exceptionKind: Literal['voluntary-declaration', 'vrap-authorization', 'configuration-adjustment'] | None = None
+    additionalMinutes: int
+    sectionsUnlocked: int
+    basis: Literal['capacity-relaxation', 'window-precheck'] = 'capacity-relaxation'
+    requiresSplit: Literal[True] | None = Field(default=None, exclude_if=lambda value: value is None)
+    policyChange: PlanningWindowChange | None = Field(default=None, exclude_if=lambda value: value is None)
+
+
+class PrelationLevel(BaseModel):
+    id: Literal['contract-sections', 'interfaculty-sections', 'category-rank']
+    value: int
+    proven: bool
+
+
+class PrelationOutput(BaseModel):
+    levels: list[PrelationLevel]
 
 
 class SolveScheduleResponse(BaseModel):
@@ -117,8 +174,42 @@ class SolveScheduleResponse(BaseModel):
     exploredCandidates: int
     candidateVisits: int
     backtracks: int
-    limitReason: Literal["explorations", "work", "time"] | None = None
+    limitReason: Literal["explorations", "work", "time", "running", "cancelled"] | None = None
     diagnostics: list[DiagnosticOutput]
+    coverageProof: Literal['complete', 'shortfall-proven', 'inconclusive'] = 'inconclusive'
+    capacityCertificate: CapacityCertificate | None = None
+    decisions: list[CapacityDecision] = Field(default_factory=list)
+    prelation: PrelationOutput | None = None
+
+
+class SolveJobStarted(BaseModel):
+    jobId: str
+    state: Literal['running']
+    budgetSeconds: float
+
+
+class SolveJobProgress(BaseModel):
+    requiredSessions: int
+    scheduledSessions: int
+    requiredSections: int
+    scheduledSections: int
+    improvements: int
+
+
+class SolveJobError(BaseModel):
+    code: Literal['SEARCH_FAILED', 'SEARCH_PROCESS_LOST', 'SEARCH_OVERRUN']
+    message: str
+
+
+class SolveJobStatus(BaseModel):
+    jobId: str
+    state: Literal['running', 'completed', 'cancelled', 'failed']
+    phase: Literal['preparing', 'capacity', 'coverage', 'prelation', 'preferences', 'done']
+    elapsedSeconds: float
+    budgetSeconds: float
+    progress: SolveJobProgress
+    result: SolveScheduleResponse | None = None
+    error: SolveJobError | None = None
 
 
 class ReferenceTeacherInput(BaseModel):
@@ -145,10 +236,8 @@ class IncreaseTeacherLoadPatch(BaseModel):
     adjustments: list[TeacherLoadAdjustment]
 
 
-class EnablePlanningWindowPatch(BaseModel):
+class EnablePlanningWindowPatch(PlanningWindowChange):
     kind: Literal["enable_planning_window"] = "enable_planning_window"
-    allowAfternoon: Literal[True] | None = Field(default=None, exclude_if=lambda value: value is None)
-    allowSaturday: Literal[True] | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class ChangeDeliveryModePatch(BaseModel):

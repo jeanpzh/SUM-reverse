@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { PLANNING_LIMITS } from '../../../shared/academic-planning-policy.mjs'
 import { ACADEMIC_API } from '../../../shared/programacion-academica-api.mjs'
 import type { AcademicAdvisorResponse } from './academicScheduling.ts'
 import { defaultAcademicAdvisorSelection, fetchAcademicProposalAdvice, hasCurrentAdvisorImpact } from './academicScheduling.ts'
@@ -69,7 +70,7 @@ test('advisor preview respects abort signal and does not turn transport failure 
 test('stale advisor application is rejected before mutating workspace or invoking generation', async () => {
   const session = createPlanningSession()
   const before = session.getState()
-  await assert.rejects(session.commands.applyAdvisorPatchesAndRegenerate([advice.recommendations[0].patch],
+  await assert.rejects(session.commands.applyAdvisorPatchesAndRegenerate([{ kind: 'enable_planning_window', allowSaturday: true, splitCourseIds: ['SYN1'] }],
     { proposalId: advice.proposalId, editVersion: 2 }), /propuesta cambió/)
   assert.equal(session.getState(), before)
   session.dispose()
@@ -149,4 +150,63 @@ test('teacher load increase is never selected by default even in a legacy respon
     patch: { kind: 'increase_teacher_load', adjustments: [{ teacherId: 'SYN', previousMaxWeeklyMinutes: 60, nextMaxWeeklyMinutes: 120 }] },
   }] }
   assert.deepEqual(defaultAcademicAdvisorSelection(legacy), ['enable-afternoon'])
+})
+
+test('reference patches keep incomplete fields empty and reject duplicate/unknown references', () => {
+  const state = { ...initialPlanningSessionState(), catalog: { revision: 'PA-DEMO-1', courses: [], teachers: [], rooms: [], windows: [], startStepMinutes: 30, maxExplorations: 1, referenceTeachers: [{ id: 'SYN-REF', name: 'Synthetic', courseIds: ['SYN'] }] } }
+  const patch = { kind: 'incorporate_reference_resource' as const, teacherIds: ['SYN-REF'], roomIds: [] }
+  const next = reducePlanningSession(state, { type: 'applyAdvisorPatches', patches: [patch] })
+  assert.deepEqual(next.resources.teachers.find(t => t.id === 'SYN-REF'), { id: 'SYN-REF', name: 'Synthetic', courseIds: ['SYN'], maxWeeklyMinutes: 0, availability: [] })
+  assert.equal(reducePlanningSession(next, { type: 'applyAdvisorPatches', patches: [patch] }).resources.teachers.filter(t => t.id === 'SYN-REF').length, 1)
+  for (const ids of [['UNKNOWN'], ['SYN-REF', 'SYN-REF']]) assert.throws(() => reducePlanningSession(state, { type: 'applyAdvisorPatches', patches: [{ ...patch, teacherIds: ids }] }))
+})
+test('load patches respect exact configuration, period, duration and authorization', () => {
+  const teacher = { id: 'SYN-T', name: 'Synthetic', courseIds: ['SYN'], maxWeeklyMinutes: 60, availability: [], regime: 'tiempo-completo' as const, appointment: 'faculty-ordinary' as const }
+  const state = { ...initialPlanningSessionState(), period: '2027-I' as const, lectiveHourMinutes: 60 as const, resources: { teachers: [teacher], rooms: [] } }
+  const patch = (previous: number, next: number) => ({ kind: 'increase_teacher_load' as const, adjustments: [{ teacherId: 'SYN-T', previousMaxWeeklyMinutes: previous, nextMaxWeeklyMinutes: next }] })
+  assert.equal(reducePlanningSession(state, { type: 'applyAdvisorPatches', patches: [patch(60, 120)] }).resources.teachers[0].maxWeeklyMinutes, 120)
+  for (const value of [patch(59, 120), patch(60, 721)]) assert.throws(() => reducePlanningSession(state, { type: 'applyAdvisorPatches', patches: [value] }))
+  const authorized = { ...state, resources: { teachers: [{ ...teacher, loadAuthorizations: [{ kind: 'voluntary-declaration' as const, reference: 'SYN-DOCUMENT' }] }], rooms: [] } }
+  assert.equal(reducePlanningSession(authorized, { type: 'applyAdvisorPatches', patches: [patch(60, 1200)] }).resources.teachers[0].maxWeeklyMinutes, 1200)
+  assert.throws(() => reducePlanningSession({ ...state, lectiveHourMinutes: undefined }, { type: 'applyAdvisorPatches', patches: [patch(60, 120)] }))
+  assert.throws(() => reducePlanningSession({ ...state, period: '2026-I' }, { type: 'applyAdvisorPatches', patches: [patch(60, 120)] }))
+})
+
+test('reference incorporation validates composed resource limits before changing the session', () => {
+  const teacher = (n: number) => ({ id: `SYN-T${n}`, name: `Synthetic ${n}`, courseIds: ['SYN'], maxWeeklyMinutes: 0, availability: [] })
+  const room = (n: number) => ({ id: `SYN-R${n}`, name: `Synthetic ${n}`, capacity: 45, availability: [] })
+  const catalog = { revision: 'PA-DEMO-1', courses: [], teachers: [], rooms: [], windows: [], startStepMinutes: 30, maxExplorations: 1,
+    referenceTeachers: [{ id: 'SYN-REF-T', name: 'Synthetic reference', courseIds: ['SYN'] }],
+    referenceRooms: [{ id: 'SYN-REF-R', name: 'Synthetic reference', capacity: 45, kind: 'classroom' as const, pavilion: 'AP' as const }] }
+  const state = { ...initialPlanningSessionState(), catalog,
+    resources: { teachers: Array.from({ length: PLANNING_LIMITS.teachers }, (_, n) => teacher(n)), rooms: Array.from({ length: PLANNING_LIMITS.rooms }, (_, n) => room(n)) } }
+  const session = createPlanningSession(undefined, state)
+  for (const patch of [
+    { kind: 'incorporate_reference_resource' as const, teacherIds: ['SYN-REF-T'], roomIds: [] },
+    { kind: 'incorporate_reference_resource' as const, teacherIds: [], roomIds: ['SYN-REF-R'] },
+  ]) {
+    assert.throws(() => session.commands.edit({ type: 'applyAdvisorPatches', patches: [patch] }))
+    assert.equal(session.getState(), state, 'invalid patch is atomic and keeps the prior state')
+  }
+  const below = { ...state, resources: { teachers: state.resources.teachers.slice(1), rooms: state.resources.rooms.slice(1) } }
+  const atLimit = reducePlanningSession(below, { type: 'applyAdvisorPatches', patches: [{
+    kind: 'incorporate_reference_resource', teacherIds: ['SYN-REF-T'], roomIds: ['SYN-REF-R'],
+  }] })
+  assert.equal(atLimit.resources.teachers.length, PLANNING_LIMITS.teachers)
+  assert.equal(atLimit.resources.rooms.length, PLANNING_LIMITS.rooms)
+  session.dispose()
+})
+
+test('combined window action commits both parts atomically and rejects either invalid part', () => {
+  const before = { ...initialPlanningSessionState(), policy: null }
+  const patch = { kind: 'enable_planning_window' as const, allowSaturday: true as const, splitCourseIds: ['SYN1'] }
+  const snapshot = structuredClone(before)
+  const next = reducePlanningSession(before, { type: 'applyAdvisorPatches', patches: [patch] })
+  assert.equal(next.policy?.allowSaturday, true)
+  assert.equal(next.deliveryModes.SYN1, 'split')
+  for (const invalid of [{ ...patch, allowSaturday: false }, { ...patch, splitCourseIds: [] },
+    { ...patch, splitCourseIds: [null] }, { ...patch, splitCourseIds: ['SYN1', 'SYN1'] }]) {
+    assert.throws(() => reducePlanningSession(before, { type: 'applyAdvisorPatches', patches: [invalid as unknown as typeof patch] }))
+    assert.deepEqual(before, snapshot)
+  }
 })
