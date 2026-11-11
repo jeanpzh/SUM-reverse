@@ -69,6 +69,7 @@ export function TeacherLoadFields({ teacher, period, lectiveHourMinutes, disable
 
   return <fieldset className="academic-resource-workbench__resource-fields planning-teacher-load" id="teacher-load-fieldset">
     <legend>Carga reglamentaria</legend>
+    <div className="planning-teacher-load__pair">
     <Label>
       Régimen de dedicación
       <NativeSelect aria-label="Régimen de dedicación" value={teacher.regime ?? ''} disabled={disabled}
@@ -89,6 +90,7 @@ export function TeacherLoadFields({ teacher, period, lectiveHourMinutes, disable
         {(Object.keys(APPOINTMENT_LABEL) as Array<keyof typeof APPOINTMENT_LABEL>).map((value) => <option key={value} value={value}>{APPOINTMENT_LABEL[value]}</option>)}
       </NativeSelect>
     </Label>
+    </div>
     {partTime && <div>
       <Label htmlFor={ids.service}>Horas semanales de servicio (tiempo parcial)</Label>
       <Input id={ids.service} inputMode="numeric" value={serviceText} disabled={disabled} aria-invalid={Boolean(serviceError)} aria-describedby={serviceError ? ids.error : undefined}

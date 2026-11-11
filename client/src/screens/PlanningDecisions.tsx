@@ -46,6 +46,10 @@ function ItemRow({ item, disabled, onAction }: { item: DecisionItem; disabled: b
       {item.action.kind === 'record-authorization' && <p className="planning-decisions__provenance">
         Registrar la autorización no cambia por sí sola la carga semanal del docente: tras registrarla, ajusta su carga máxima hasta el tope autorizado.</p>}
       <p className="planning-decisions__necessity">{item.necessity}</p>
+      {item.courseNames.length > 0 && <details className="planning-decisions__details">
+        <summary>Cursos incluidos ({item.courseNames.length})</summary>
+        <ul>{item.courseNames.map((name) => <li key={name}>{name}</li>)}</ul>
+      </details>}
       {(item.requires.length > 0 || item.sources.length > 0) && <details className="planning-decisions__details">
         <summary>Requisitos formales y fuente{item.sources.length ? ` · ${item.sources.map((source) => source.id).join(', ')}` : ''}</summary>
         {item.requires.length > 0 && <ol>{item.requires.map((step) => <li key={step}>{step}</li>)}</ol>}

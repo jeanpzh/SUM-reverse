@@ -66,6 +66,8 @@ export type DecisionItem = {
   kindLabel: string
   effect: string
   necessity: string
+  // Course names when a decision spans several courses: the title then reads "N cursos" and the names go in a list.
+  courseNames: string[]
   requires: string[]
   sources: Array<{ id: string; title: string }>
   provenance: string | null
@@ -118,7 +120,9 @@ export function buildDecisionQueue(decisions: AcademicProposal['decisions'] | un
 
   const toItem = (decision: Decision): DecisionItem => {
     const base = { id: decision.id, necessity: NECESSITY, sectionsUnlocked: decision.sectionsUnlocked, additionalMinutes: decision.additionalMinutes,
-      requires: [...(decision.requires ?? [])], sources: sourceList(profile, decision.sourceIds), provenance: null as string | null }
+      requires: [...(decision.requires ?? [])], sources: sourceList(profile, decision.sourceIds), provenance: null as string | null,
+      courseNames: decision.courseIds.length > 1 ? decision.courseIds.map(courseName) : [] }
+    const coursesTitle = decision.courseIds.length > 1 ? `${decision.courseIds.length} cursos` : decision.courseIds.map(courseName).join('')
     if (decision.kind === 'teacher-load-exception') {
       const teacherId = decision.teacherId ?? ''
       const recorded = teachers.find((teacher) => teacher.id === teacherId)?.loadAuthorizations?.some((item) => item.kind === decision.exceptionKind) ?? false
@@ -127,7 +131,7 @@ export function buildDecisionQueue(decisions: AcademicProposal['decisions'] | un
         effect: `+${decision.additionalMinutes} min semanales · libera ${sections(decision.sectionsUnlocked)}.` }
     }
     if (decision.kind === 'additional-teacher') {
-      return { ...base, title: decision.courseIds.map(courseName).join(', ') || 'Curso sin nombre', applied: false,
+      return { ...base, title: coursesTitle || 'Curso sin nombre', applied: false,
         action: { kind: 'add-teacher', courseIds: [...decision.courseIds] }, actionLabel: 'Ver docentes del curso', kindLabel: 'Docente adicional',
         effect: `Faltan ${decision.additionalMinutes} min semanales de docencia · ${sections(decision.sectionsUnlocked)}.` }
     }
@@ -140,7 +144,7 @@ export function buildDecisionQueue(decisions: AcademicProposal['decisions'] | un
         effect: `${sections(decision.sectionsUnlocked)} ganarían una franja.` }
     }
     const applied = decision.courseIds.length > 0 && decision.courseIds.every((courseId) => context.deliveryModes?.[courseId] === 'split')
-    return { ...base, title: decision.courseIds.map(courseName).join(', '), applied, kindLabel: 'Modalidad de dictado',
+    return { ...base, title: coursesTitle, applied, kindLabel: 'Modalidad de dictado',
       action: { kind: 'apply-patches', patches: [{ kind: 'change_delivery_mode', courseIds: [...decision.courseIds], deliveryMode: 'split' }] },
       actionLabel: 'Partir y regenerar', effect: `${sections(decision.sectionsUnlocked)} ganarían una franja si se dictan partidos.` }
   }
