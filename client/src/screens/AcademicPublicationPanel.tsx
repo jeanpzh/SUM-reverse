@@ -14,11 +14,18 @@ import { fetchAcademicPublication, fetchAcademicPublications, fetchAcademicRelea
 import { activateEnrollmentOffer, fetchOperationalOffers } from '../data/enrollmentOffer'
 import type { OperationalOffer, OperationalOfferCatalog } from '../data/enrollmentOffer'
 import { ConfirmDialog, useConfirm, type ConfirmRequest } from '../components/ui/ConfirmDialog'
+import { LoadBlockerList } from './PlanningDecisions'
+import { PUBLICATION_BLOCK_EXPLANATION } from '../data/planningDecisions'
+import type { LoadAuthorizationBlocker } from '../../../shared/academic-normative-profile.mjs'
 import './AcademicPublicationPanel.css'
 
 type PreviewSource = { id: string; version: number; schedule: AcademicScheduleSnapshot; title: string; label: string; source: 'draft' | 'publication'; state: AcademicDraftState }
 
 type Props = {
+  // Blockers reported with the current proposal (normative.blockers). Approval does not clear them; only publication is blocked.
+  loadBlockers?: readonly LoadAuthorizationBlocker[]
+  teacherNames?: Record<string, string>
+  period?: string
   primaryActionId?: string
   draftId: string | null
   draftVersion: number | null
@@ -43,7 +50,7 @@ function dateLabel(value: string) {
   return new Date(value).toLocaleString('es-PE')
 }
 
-export function AcademicPublicationPanel({ primaryActionId, draftId, draftVersion, draftTitle, draftState, dirty, busy,
+export function AcademicPublicationPanel({ loadBlockers = [], teacherNames = {}, period = '2027-I', primaryActionId, draftId, draftVersion, draftTitle, draftState, dirty, busy,
   onApprove, onPublish, onFork, onError, onMessage }: Props) {
   const [confirmElement, confirm] = useConfirm()
   const [publicationList, setPublicationList] = useState<AcademicPublicationList | null>(null)
@@ -70,11 +77,13 @@ export function AcademicPublicationPanel({ primaryActionId, draftId, draftVersio
   const canUseRelease = Boolean(draftId && draftVersion && !dirty && !busy && !working)
   const canApprove = canUseRelease && draftState === 'ready-for-approval'
     && currentPreview?.id === draftId && currentPreview.version === draftVersion && currentPreview.state === 'ready-for-approval'
-  const canPublish = canUseRelease && draftState === 'approved'
+  const publishBlocked = loadBlockers.length > 0
+  const canPublish = !publishBlocked && canUseRelease && draftState === 'approved'
     && currentPreview?.id === draftId && currentPreview.version === draftVersion && currentPreview.state === 'approved'
     && Boolean(publicationList) && !listLoading && !listError && !selectedPublicationId
   const publishDisabledReason = draftState === 'published' ? 'Esta versión ya está publicada'
     : draftState !== 'approved' ? 'Primero aprueba la versión'
+    : publishBlocked ? `Hay ${loadBlockers.length} ${loadBlockers.length === 1 ? 'bloqueo' : 'bloqueos'} de carga docente`
     : !publicationList || listLoading
     ? 'Cargando publicaciones…'
     : listError ? 'No se pudieron cargar las publicaciones'
@@ -281,6 +290,11 @@ export function AcademicPublicationPanel({ primaryActionId, draftId, draftVersio
         <span>{dirty ? 'Cambios sin guardar' : draftId ? 'Guardada' : 'Sin guardar'}</span>
         {primaryActionId === 'approve' && canApprove && <Button id="academic-approve-action" type="button" size="sm" onClick={approve}>Aprobar (simulada)</Button>}
       </div>
+      {publishBlocked && <section className="academic-publication__section academic-publication__blockers" aria-labelledby="academic-publication-blockers">
+        <h3 id="academic-publication-blockers">Bloqueos de publicación ({loadBlockers.length})</h3>
+        <p className="academic-publication__status" role="status">{PUBLICATION_BLOCK_EXPLANATION}{frozen ? ' Esta versión está congelada: crea un nuevo borrador, registra la autorización en el docente y regenera la propuesta.' : ''}</p>
+        <LoadBlockerList blockers={loadBlockers} teacherNames={teacherNames} period={period} />
+      </section>}
       {blockingReason && <p id={draftState === 'approved' ? 'academic-publish-reason' : 'academic-approve-reason'} className="academic-publication__status">{blockingReason}</p>}
       <section className="academic-publication__section" aria-labelledby="academic-publication-title">
         <h3 id="academic-publication-title">Decisión</h3>

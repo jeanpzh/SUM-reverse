@@ -21,6 +21,7 @@ import {
   formatAcademicMinute,
 } from '../data/academicScheduling'
 import { formatAvailabilitySummary } from '../data/academicResources'
+import { describeCoverage } from '../data/planningDecisions'
 
 export interface PlanningInspectorProps {
   sectionId: string | null
@@ -64,6 +65,8 @@ export function PlanningInspector({
 
   const sectionBlocks = blocks.filter((b) => b.sectionId === sectionId)
   const pendingComponents = proposal.pending.filter((p) => p.sectionId === sectionId)
+  const coverageProof = describeCoverage(proposal)
+  const coverageNote = coverageProof && coverageProof.kind !== 'complete' ? coverageProof.detail : null
   const isEditing = editingBlock !== null && editingBlock.sectionId === sectionId
 
   const activeBlock = isEditing
@@ -341,9 +344,9 @@ export function PlanningInspector({
                   </Badge>
                 </div>
                 <p className="planning-inspector__explanation">
-                  {proposal.status === 'search-limit'
+                  {coverageNote ?? (proposal.status === 'search-limit'
                     ? 'La búsqueda alcanzó su límite. No prueba que no exista solución.'
-                    : 'Sin solución completa en el dominio configurado.'}
+                    : 'Sin solución completa en el dominio configurado.')}
                 </p>
                 <ul className="planning-inspector__pending-list">
                   {pendingComponents.map((p, index) => {
