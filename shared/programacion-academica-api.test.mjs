@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { ACADEMIC_REVISION, validateAcademicCatalog, validateAcademicRequest, validateAcademicResources, validateAcademicProposal, validateAcademicAdjustment } from './programacion-academica-api.mjs'
+import { ACADEMIC_REVISION, validateAcademicCatalog, validateAcademicRequest, validateAcademicResources, validateAcademicProposal, validateAcademicAdjustment, validateAcademicSearch, validateAcademicSearchRequest } from './programacion-academica-api.mjs'
 
 test('partial proposal counters, termination reason and diagnostics cannot contradict each other', () => {
   const proposal = {
@@ -14,6 +14,21 @@ test('partial proposal counters, termination reason and diagnostics cannot contr
     stats: { exploredCandidates: 1, candidateVisits: 3, backtracks: 0, limitReason: 'explorations' },
   }
   assert.doesNotThrow(() => validateAcademicProposal(proposal))
+  for (const state of ['running', 'cancelled']) {
+    const live = { ...proposal, coverageProof: 'inconclusive', diagnostics: [], stats: { ...proposal.stats, limitReason: state } }
+    const job = { jobId: 'SYN-JOB', state, phase: 'coverage', elapsedSeconds: 1, budgetSeconds: 30,
+      progress: { requiredSessions: 4, scheduledSessions: 2, requiredSections: 2, scheduledSections: 1, improvements: 1 }, proposal: live, error: null }
+    assert.doesNotThrow(() => validateAcademicSearch(job))
+    assert.throws(() => validateAcademicSearch({ ...job, proposal: { ...live, stats: { ...live.stats, limitReason: 'time' } } }))
+    assert.throws(() => validateAcademicSearch({ ...job, progress: { ...job.progress, scheduledSessions: 3 } }))
+    assert.throws(() => validateAcademicSearch({ ...job, proposal: { ...live, coverageProof: 'shortfall-proven' } }))
+    assert.throws(() => validateAcademicSearch({ ...job, state: 'failed' }))
+  }
+
+  assert.throws(() => validateAcademicProposal({ ...proposal, coverageProof: 'complete' }))
+  assert.doesNotThrow(() => validateAcademicProposal({ ...proposal, coverageProof: 'inconclusive' }))
+  assert.doesNotThrow(() => validateAcademicProposal({ ...proposal, status: 'impossible', diagnostics: [], stats: { ...proposal.stats, limitReason: null }, coverageProof: 'shortfall-proven' }))
+  assert.throws(() => validateAcademicProposal({ ...proposal, coverageProof: 'shortfall-proven' }))
   assert.doesNotThrow(() => validateAcademicProposal({ ...proposal, editVersion: 1, manuallyAdjustedSectionIds: ['S1'] }))
   for (const metadata of [
     { editVersion: 1 }, { manuallyAdjustedSectionIds: [] },
@@ -171,6 +186,7 @@ test('optional proposal proofs, window decisions and normative blockers have str
       blockers: [{ teacherId: 'SYN-T', assignedMinutes: 960, authorizedMaxMinutes: 720, reason: 'over-authorized-load', requiredAuthorization: 'voluntary-declaration', sourceIds: ['OF-02'] }] } }
   assert.doesNotThrow(() => validateAcademicProposal(proposal))
   assert.doesNotThrow(() => validateAcademicProposal({ ...proposal, ...metadata }))
+  for (const coverageProof of ['inconclusive', 'shortfall-proven']) assert.throws(() => validateAcademicProposal({ ...proposal, ...metadata, coverageProof }))
   // The engine lists only courses with a shortfall: rows explain the uncovered sections, not the totals.
   assert.doesNotThrow(() => validateAcademicProposal({ ...proposal, ...metadata, capacityCertificate: { proven: true, requiredSectionsTotal: 10,
     coverableSectionsTotal: 8, courses: [{ courseId: 'SYN-C', requiredSections: 4, coverableSections: 2, requiredMinutes: 960 }] } }))
@@ -185,4 +201,12 @@ test('optional proposal proofs, window decisions and normative blockers have str
     { normative: { ...metadata.normative, lectiveHourMinutes: 55 } },
     { normative: { ...metadata.normative, gaps: [{ code: 'SYN', message: 'Synthetic gap', teacherIds: [4] }] } },
   ]) assert.throws(() => validateAcademicProposal({ ...proposal, ...metadata, ...patch }))
+})
+
+
+test('optional caller correlation is a validated UUID and legacy starts remain compatible', () => {
+  const input = { request: { revision: ACADEMIC_REVISION, demands: [] }, budgetSeconds: 30 }
+  assert.doesNotThrow(() => validateAcademicSearchRequest(input))
+  assert.doesNotThrow(() => validateAcademicSearchRequest({ ...input, requestId: '11111111-1111-4111-8111-111111111111' }))
+  for (const requestId of ['', 'wrong', null, 123]) assert.throws(() => validateAcademicSearchRequest({ ...input, requestId }))
 })

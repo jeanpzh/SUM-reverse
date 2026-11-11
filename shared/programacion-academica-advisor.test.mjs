@@ -30,3 +30,16 @@ test('reject incomplete, fabricated, out of range and unknown impact or trace fi
   assert.throws(() => validateAcademicAdvisorResponse({ ...response(), verifiedImpact: incomplete }))
   assert.throws(() => validateAcademicAdvisorResponse({ ...response(), reasoningSteps: [{ toolName: 'fabricated', inputSummary: '{}', outputSummary: 'ok' }] }))
 })
+
+const fixture = () => ({ proposalId: 'SYN', editVersion: 0, source: { mode: 'engine-decisions', providerLabel: null }, summary: 'Synthetic', bottlenecks: [],
+  recommendations: [{ id: 'SYN-rec', title: 'Window', rationale: 'Retained', impactSummary: 'Necessary', recommendedByDefault: false, decisionIds: ['SYN-decision'], patch: { kind: 'enable_planning_window', allowAfternoon: true } }] })
+test('engine source and decision traces reject invalid, duplicate and stale identities; legacy remains readable', () => {
+  validateAcademicAdvisorResponse(fixture(), [{ id: 'SYN-decision' }])
+  for (const ids of [[], [''], ['SYN-decision', 'SYN-decision'], ['stale']]) {
+    const response = fixture(); response.recommendations[0].decisionIds = ids
+    assert.throws(() => validateAcademicAdvisorResponse(response, [{ id: 'SYN-decision' }]))
+  }
+  for (const extra of [{ verifiedImpact: {} }, { reasoningSteps: [] }, { source: { mode: 'engine-decisions', providerLabel: 'LLM' } }, { source: { mode: 'engine-decisions', providerLabel: null, fallbackReason: 'timeout' } }]) assert.throws(() => validateAcademicAdvisorResponse({ ...fixture(), ...extra }))
+  const legacy = fixture(); legacy.source = { mode: 'deterministic-fallback', providerLabel: null }; delete legacy.recommendations[0].decisionIds
+  validateAcademicAdvisorResponse(legacy)
+})

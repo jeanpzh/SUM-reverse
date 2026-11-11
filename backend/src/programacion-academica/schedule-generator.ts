@@ -384,7 +384,7 @@ function makeUnits(input: GeneratorInput, requirements: RequiredSession[]): Sear
 
 function getDiagnostic(
   status: GeneratorResult['status'],
-  limitReason: GeneratorResult['limitReason'],
+  limitReason: Exclude<GeneratorResult['limitReason'], 'running' | 'cancelled'>,
   input: GeneratorInput,
   requirements: RequiredSession[],
   rejections: GeneratorResult['rejectionCounts'],

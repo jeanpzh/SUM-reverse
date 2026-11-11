@@ -185,8 +185,12 @@ export class SavedDraftService {
         throw this.httpError(409, 'DRAFT_CORRUPT', error instanceof Error ? error.message : 'La propuesta aprobada no superó la validación')
       }
 
-      const blockers = resolvePlanningNormative(workspaceNormativeContext(draft.configuration), draft.configuration.request.resources.teachers)
-        .report(snapshot.assignments).blockers
+      const normative = resolvePlanningNormative(workspaceNormativeContext(draft.configuration), draft.configuration.request.resources.teachers)
+        .report(snapshot.assignments)
+      const gaps = normative.gaps.filter((gap) => gap.blocking)
+      if (gaps.length) throw new HttpException({ error: { code: 'NORMATIVE_VALIDATION_REQUIRED',
+        message: `No se puede acreditar la carga reglamentaria antes de publicar: ${gaps.map((gap) => gap.message).join(' ')}`, gaps } }, 409)
+      const blockers = normative.blockers
       if (blockers.length) throw new HttpException({ error: { code: 'LOAD_AUTHORIZATION_REQUIRED',
         message: 'Falta registrar la autorización formal de carga docente o corregir las asignaciones antes de publicar.', blockers } }, 409)
 

@@ -48,6 +48,30 @@ export class DemoController {
     return queryNormative(body)
   }
 
+  @Post('busquedas')
+  @HttpCode(200)
+  async startSearch(@Req() request: Request, @Headers('origin') origin: string | undefined, @Headers('sec-fetch-site') fetchSite: string | undefined, @Body() body: unknown) {
+    await this.access.assertAllowed(request)
+    assertWriteScope(request, origin, fetchSite)
+    return this.proposals.startSearch(body)
+  }
+
+  @Get('busquedas/:jobId')
+  async searchStatus(@Req() request: Request) {
+    await this.access.assertAllowed(request)
+    assertNoReadInput(request)
+    return this.proposals.searchStatus(String(request.params.jobId))
+  }
+
+  @Post('busquedas/:jobId/cancelar')
+  @HttpCode(200)
+  async cancelSearch(@Req() request: Request, @Headers('origin') origin: string | undefined, @Headers('sec-fetch-site') fetchSite: string | undefined, @Body() body: unknown) {
+    await this.access.assertAllowed(request)
+    assertWriteScope(request, origin, fetchSite)
+    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).length) return fail(400, 'INVALID_REQUEST', 'Se requiere un objeto vacío')
+    return this.proposals.searchStatus(String(request.params.jobId), true)
+  }
+
   @Post('propuestas')
   @HttpCode(200)
   async createProposal(@Req() request: Request, @Headers('origin') origin: string | undefined, @Headers('sec-fetch-site') fetchSite: string | undefined, @Body() body: unknown) {

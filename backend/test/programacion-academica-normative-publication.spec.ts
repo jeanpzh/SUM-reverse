@@ -18,26 +18,28 @@ const configurationRegime = (fields: Partial<AcademicTeacherResource>) => Object
 const directories: string[] = []
 afterEach(() => { directories.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })); vi.unstubAllEnvs() })
 
-async function approvedFixture(teacherFields: Partial<AcademicTeacherResource>) {
+async function approvedFixture(teacherFields: Partial<AcademicTeacherResource>, duration: 60 | null = 60, demand = 4, sectionMinutes = 240) {
   const directory = mkdtempSync(join(tmpdir(), 'sum-academic-normative-publication-'))
   directories.push(directory)
   vi.stubEnv('SUM_ACADEMIC_DRAFT_DIR', directory)
   const proposals = new HistoricalProposalSource()
   const catalog = proposals.getCatalog()
-  const course = catalog.courses.find((c) => c.weeklySessions.reduce((n, s) => n + s.durationMinutes, 0) === 240)!
+  const course = catalog.courses.find((c) => c.weeklySessions.reduce((n, s) => n + s.durationMinutes, 0) === sectionMinutes)!
   const availability = [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 }))
-  const configuration: AcademicWorkspace = { schoolId: 'SISTEMAS', academicPeriod: '2027-I', lectiveHourMinutes: 60,
+  const configuration: AcademicWorkspace = { schoolId: 'SISTEMAS', academicPeriod: '2027-I', lectiveHourMinutes: duration ?? undefined,
     demandSourceId: 'independent-120-v1', demandBaseRequest: null,
-    request: { revision: catalog.revision, demands: [{ courseId: course.courseId, estimatedDemand: 4, targetCapacity: 1 }], resources: {
+    request: { revision: catalog.revision, demands: [{ courseId: course.courseId, estimatedDemand: demand, targetCapacity: 1 }], resources: {
       teachers: [{ id: 'SYN-T', name: 'Synthetic historical teacher', courseIds: [course.courseId], maxWeeklyMinutes: 9999,
         availability, regime: 'tiempo-completo', appointment: 'faculty-ordinary', category: 'principal', ...teacherFields }],
       rooms: [{ id: 'SYN-R', name: 'Synthetic room', capacity: 45, availability }],
     } } }
   if (teacherFields.regime === undefined && Object.hasOwn(teacherFields, 'regime')) delete configuration.request.resources.teachers[0].regime
+  if (duration === null) delete configuration.lectiveHourMinutes
+  if (Object.hasOwn(teacherFields, 'appointment') && teacherFields.appointment === undefined) delete configuration.request.resources.teachers[0].appointment
   // No duration on the old generator request. The historical workspace did record it.
   const generated = proposals.createProposal(configuration.request)
   expect(generated.status).toBe('complete')
-  expect(generated.assignments.reduce((n, a) => n + a.endMinute - a.startMinute, 0)).toBe(960)
+  expect(generated.assignments.reduce((n, a) => n + a.endMinute - a.startMinute, 0)).toBe(sectionMinutes * demand)
   const service = new SavedDraftService(proposals)
   let draft = await service.save({ id: null, expectedVersion: null, title: 'Synthetic historical schedule', state: 'draft',
     configuration, proposalId: generated.proposalId, proposalEditVersion: 0 })
@@ -67,8 +69,8 @@ it('rejects load on an on-leave teacher regardless of a declaration', async () =
 
 it.each([
   [{ appointment: 'contract' }, 'CONTRACT_LOAD_NOT_REGULATED'],
-  [{ regime: 'tiempo-parcial' }, 'TP_MAXIMUM_NOT_REGULATED'],
-  [{ regime: undefined }, 'REGIME_MISSING'],
+  [{ appointment: 'contract', regime: undefined }, 'CONTRACT_LOAD_NOT_REGULATED'],
+  [{ regime: 'tiempo-parcial', weeklyServiceHours: 10 }, 'TP_MAXIMUM_NOT_REGULATED'],
 ] as const)('publishes teachers without a regulated maximum and reports their gaps: %s', async (fields, code) => {
   const { draft, service } = await approvedFixture(fields)
   const { draft: resumed } = await service.resume(draft.id, { expectedVersion: draft.version })
@@ -79,4 +81,26 @@ it.each([
   const normative = resolvePlanningNormative(workspaceNormativeContext(draft.configuration), draft.configuration.request.resources.teachers).report(draft.proposal!.assignments)
   expect(normative.blockers).toEqual([])
   expect(normative.gaps).toContainEqual(expect.objectContaining({ code, teacherIds: ['SYN-T'] }))
+})
+
+it.each([
+  [{}, null, 4, 'LECTIVE_HOUR_MINUTES_MISSING'],
+  [{ regime: undefined }, 60, 4, 'REGIME_MISSING'],
+  [{ appointment: undefined }, 60, 4, 'APPOINTMENT_MISSING'],
+  [{}, 60, 1, 'MINIMUM_LOAD_SCOPE_UNRESOLVED'],
+] as const)('T7 publication rejects unresolved mandatory validation %s %s %s', async (fields, duration, demand, code) => {
+  const { draft, service } = await approvedFixture(fields, duration, demand)
+  await expect(service.publish(draft.id, { expectedVersion: draft.version, expectedCurrentId: null }))
+    .rejects.toMatchObject({ status: 409, response: { error: { code: 'NORMATIVE_VALIDATION_REQUIRED', gaps: expect.arrayContaining([expect.objectContaining({ code })]) } } })
+})
+
+
+it('publishes at the profile-derived ordinary minimum without requiring external-load evidence', async () => {
+  const { resolveNormativeProfile, teacherLoadLimits } = await import('../../shared/academic-normative-profile.mjs')
+  for (const regime of ['tiempo-completo', 'dedicacion-exclusiva'] as const) {
+    const minimum = teacherLoadLimits(resolveNormativeProfile({ facultyId: 'FISI', period: '2027-I' }),
+      { regime, appointment: 'faculty-ordinary' }, { lectiveHourMinutes: 60 }).minimumMinutes!
+    const { draft, service } = await approvedFixture({ regime }, 60, minimum / 120, 120)
+    expect((await service.publish(draft.id, { expectedVersion: draft.version, expectedCurrentId: null })).draft.state).toBe('published')
+  }
 })

@@ -1,3 +1,6 @@
+import { validateAcademicSearch, validateAcademicSearchRequest } from '../../../shared/programacion-academica-api.mjs'
+import type { AcademicSearch } from '../../../shared/programacion-academica-api.mjs'
+import { engineUrl, engineJobPayload } from './planning-engine.client.js'
 import { resolvePlanningNormative, workspaceNormativeContext } from './normative-planning.js'
 import { createHash, randomUUID } from 'node:crypto'
 import { HttpException, Injectable } from '@nestjs/common'
@@ -14,7 +17,7 @@ import { assessTeacherPreferences } from './teacher-preferences.js'
 import { createDemandSources } from './demand-fixtures.js'
 import { estimateAcademicDemand } from './demand-estimator.js'
 import { prepareGeneratorInput } from './generator-input.js'
-import { buildLocalDeterministicAdvisor, analyzeProposalAdvisor, trySolveWithPythonEngine } from './planning-engine.client.js'
+import { analyzeProposalAdvisor, trySolveWithPythonEngine } from './planning-engine.client.js'
 import { THESIS_COURSE_IDS } from '../../../shared/academic-planning-policy.mjs'
 
 type RetainedProposal = {
@@ -41,6 +44,150 @@ export class DemoProposalService {
   private readonly catalog = createDemoCatalog()
   private readonly demandSources = createDemandSources(this.catalog)
   private readonly proposals = new Map<string, RetainedProposal>()
+
+  private readonly searches = new Map<string, { engineId: string; base: string; proposalId: string; created: number; fingerprint: string; cleanupPending: boolean; cancelRequested: boolean;
+    context: ReturnType<DemoProposalService['validateAndPrepareProposalRequest']>; snapshot: AcademicSearch }>()
+  private closing = false
+  private readonly fences = new Map<string, number>()
+  private starts: Promise<unknown> = Promise.resolve()
+
+  async startSearch(value: unknown): Promise<AcademicSearch> {
+    try { validateAcademicSearchRequest(value) } catch { throw this.httpError(400, 'INVALID_REQUEST', 'Solicitud o presupuesto inválido') }
+    const base = engineUrl()
+    if (!base) throw this.httpError(503, 'ENGINE_UNAVAILABLE', 'El motor de búsqueda está deshabilitado')
+    if (this.closing) throw this.httpError(503, 'ENGINE_CLOSING', 'Servicio cerrando')
+    const jobId = value.requestId ?? randomUUID()
+    const fingerprint = canonicalize({ request: value.request, budgetSeconds: value.budgetSeconds })
+    for (const [id, at] of this.fences) if (Date.now() - at > retentionMs) this.fences.delete(id)
+    const existing = this.searches.get(jobId)
+    if (existing) {
+      if (existing.fingerprint !== fingerprint) throw this.httpError(409, 'SEARCH_CONFLICT', 'La identidad ya corresponde a otra solicitud')
+      return existing.cancelRequested ? this.searchStatus(jobId, true) : structuredClone(existing.snapshot)
+    }
+    if (this.fences.has(jobId)) throw this.httpError(409, 'SEARCH_CANCELLED', 'Inicio previamente cancelado')
+    for (const [id, job] of this.searches) {
+      if (!job.cleanupPending && job.snapshot.state !== 'running' && Date.now() - job.created > retentionMs) this.searches.delete(id)
+    }
+    if (this.searches.size + this.fences.size >= 256) throw this.httpError(429, 'SEARCH_CAPACITY', 'Reintenta la limpieza de búsquedas pendientes')
+    const context = this.validateAndPrepareProposalRequest(value.request)
+    const budgetSeconds = value.budgetSeconds
+    const snapshot: AcademicSearch = { jobId, state: 'running', phase: 'preparing', elapsedSeconds: 0, budgetSeconds,
+      progress: { requiredSessions: prepareGeneratorInput(context.input).requirements.length, scheduledSessions: 0,
+        requiredSections: prepareGeneratorInput(context.input).schedule.sections.length, scheduledSections: 0, improvements: 0 }, proposal: null, error: null }
+    const job = { engineId: randomUUID().replaceAll('-', ''), base, proposalId: randomUUID(), created: Date.now(),
+      fingerprint, cleanupPending: true, cancelRequested: false, context, snapshot }
+    this.searches.set(jobId, job) // Ownership exists before either upstream request or queue wait.
+    const run = this.starts.catch(() => {}).then(async () => {
+      if (job.cancelRequested || this.closing || Date.now() - job.created > retentionMs) return this.searchStatus(jobId, true)
+      for (const [id, previous] of this.searches) {
+        if (id === jobId) break // Later reservations belong to queued starts, not predecessors.
+        if (previous.cleanupPending || previous.snapshot.state === 'running') await this.searchStatus(id, true)
+      }
+      if (job.cancelRequested || this.closing || Date.now() - job.created > retentionMs) return this.searchStatus(jobId, true)
+      try {
+        const started = await this.engineSearchRequest(base, '', 'POST', { ...engineJobPayload(context.input, this.catalog, context.resources), maxTimeSeconds: budgetSeconds }, job.engineId) as { jobId: string }
+        if (started.jobId !== job.engineId) throw this.httpError(502, 'ENGINE_INVALID', 'Identidad de motor inválida')
+        if (job.cancelRequested || this.closing || Date.now() - job.created > retentionMs) return this.searchStatus(jobId, true)
+        return structuredClone(job.snapshot)
+      } catch (error) {
+        job.cancelRequested = true
+        await this.searchStatus(jobId, true).catch(() => {}) // Failed cleanup stays owned and retryable.
+        throw error
+      }
+    })
+    this.starts = run
+    return run
+  }
+
+  private async engineSearchRequest(base: string, path: string, method: string, body?: unknown, engineId?: string): Promise<unknown> {
+    try {
+      const response = await fetch(`${base}/v1/solve-jobs${path}`, { method, headers: { 'Content-Type': 'application/json', ...(engineId ? { 'X-Job-Id': engineId } : {}) },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(5000) })
+      if (!response.ok) throw this.httpError(response.status === 404 ? 404 : 502, 'ENGINE_ERROR', 'El motor no pudo atender la búsqueda')
+      return await response.json()
+    } catch (error) {
+      if (error instanceof HttpException) throw error
+      throw this.httpError(503, 'ENGINE_UNAVAILABLE', 'No se pudo conectar con el motor local')
+    }
+  }
+
+  async searchStatus(id: string, cancel = false): Promise<AcademicSearch> {
+    const job = this.searches.get(id)
+    if (!job) {
+      for (const [key, at] of this.fences) if (Date.now() - at > retentionMs) this.fences.delete(key)
+      if (!cancel || !/^[0-9a-f-]{36}$/i.test(id)) throw this.httpError(404, 'SEARCH_NOT_FOUND', 'Búsqueda desconocida o caducada')
+      if (!this.fences.has(id) && this.fences.size + this.searches.size >= 256) throw this.httpError(429, 'SEARCH_CAPACITY', 'Capacidad de correlación agotada')
+      if (!this.fences.has(id)) this.fences.set(id, Date.now())
+      return { jobId: id, state: 'cancelled', phase: 'preparing', elapsedSeconds: 0, budgetSeconds: 1,
+        progress: { requiredSessions: 0, scheduledSessions: 0, requiredSections: 0, scheduledSections: 0, improvements: 0 }, proposal: null, error: null }
+    }
+    const expired = Date.now() - job.created > retentionMs
+    if (cancel || expired) job.cancelRequested = true
+    if (job.snapshot.state !== 'running' && !job.cleanupPending) {
+      if (expired) throw this.httpError(404, 'SEARCH_NOT_FOUND', 'Búsqueda caducada')
+      return structuredClone(job.snapshot)
+    }
+    cancel = job.cancelRequested
+    try {
+      const raw = await this.engineSearchRequest(job.base, `/${job.engineId}`, cancel ? 'DELETE' : 'GET') as AcademicSearch & { result: {
+        status: GeneratorResult['status']; assignments: AcademicSchedule['assignments']; exploredCandidates: number; candidateVisits: number;
+        backtracks: number; limitReason: GeneratorResult['limitReason']; diagnostics: GeneratorResult['diagnostics']
+      } & Pick<GeneratorResult, 'coverageProof' | 'capacityCertificate' | 'decisions' | 'prelation'> | null }
+      if (!job.cleanupPending && job.snapshot.state !== 'running') return structuredClone(job.snapshot)
+      if (raw.jobId !== job.engineId || raw.budgetSeconds !== job.snapshot.budgetSeconds) throw new Error('Engine identity mismatch')
+      const { context } = job
+      let proposal: AcademicProposal | null = null
+      if (raw.result && raw.state !== 'failed') {
+        const prepared = prepareGeneratorInput(context.input)
+        const schedule = { ...prepared.schedule, assignments: raw.result.assignments }
+        const coverage = context.authority.check(schedule)
+        if (coverage.issues.some(issue => issue.code !== 'MISSING_SESSION')) throw new Error('Invalid engine witness')
+        const result: GeneratorResult = { ...raw.result, schedule, requirements: prepared.requirements, coverage, rejectionCounts: {} }
+        proposal = this.buildProposalView(context.request, context.input, context.resources, result, context.authority)
+        proposal.proposalId = job.proposalId
+        proposal.createdAt = new Date(job.created).toISOString()
+        proposal.expiresAt = new Date(job.created + retentionMs).toISOString()
+        this.proposals.set(job.proposalId, { ...context, requirements: prepared.requirements, automaticView: structuredClone(proposal), view: structuredClone(proposal) })
+      }
+      const snapshot: AcademicSearch = { jobId: id, state: raw.state, phase: raw.phase, elapsedSeconds: raw.elapsedSeconds,
+        budgetSeconds: raw.budgetSeconds, progress: raw.progress, proposal, error: raw.error }
+      validateAcademicSearch(snapshot)
+      job.snapshot = snapshot
+      job.cleanupPending = raw.state === 'running'
+      if (cancel && job.cleanupPending) throw this.httpError(503, 'CLEANUP_PENDING', 'Cancelación sin confirmar; reintenta')
+      if (expired) throw this.httpError(404, 'SEARCH_NOT_FOUND', 'Búsqueda caducada')
+      return structuredClone(snapshot)
+    } catch (error) {
+      if (!job.cleanupPending) throw error
+      job.cancelRequested = true
+      // DELETE 404 is an engine fence, not evidence obtained from a GET miss.
+      let confirmed = false
+      for (let attempt = 0; attempt < 2 && !confirmed; attempt++) {
+        try {
+          const stopped = await this.engineSearchRequest(job.base, `/${job.engineId}`, 'DELETE') as { jobId: string; state: string }
+          confirmed = stopped.jobId === job.engineId && ['cancelled', 'completed', 'failed'].includes(stopped.state)
+        } catch (cleanupError) { confirmed = cleanupError instanceof HttpException && cleanupError.getStatus() === 404 }
+      }
+      job.cleanupPending = !confirmed
+      if (confirmed) {
+        this.proposals.delete(job.proposalId)
+        job.snapshot = { ...job.snapshot, state: 'failed', proposal: null, error: { code: 'ENGINE_ERROR', message: 'No se pudo validar o consultar la búsqueda local' } }
+      }
+      throw error instanceof HttpException ? error : this.httpError(502, 'ENGINE_INVALID', 'El motor devolvió una búsqueda inválida')
+    }
+  }
+
+  async onModuleDestroy() {
+    this.closing = true
+    await Promise.all([...this.searches].filter(([, job]) => job.cleanupPending || job.snapshot.state === 'running')
+      .map(([id]) => this.searchStatus(id, true).catch(() => {})))
+  }
+
+  private assertSearchFinished(proposalId: string) {
+    if ([...this.searches.values()].some(job => job.proposalId === proposalId && (job.cleanupPending || job.snapshot.state === 'running'))) {
+      throw this.httpError(409, 'SEARCH_RUNNING', 'Cancela o termina la búsqueda antes de modificar o guardar')
+    }
+  }
 
   constructor() {
     validateAcademicCatalog(this.catalog)
@@ -149,16 +296,23 @@ export class DemoProposalService {
     if (value.expectedEditVersion !== currentVersion) {
       throw this.httpError(409, 'VERSION_MISMATCH', `Versión vigente ${currentVersion}; se recibió ${value.expectedEditVersion}`)
     }
-    const candidates = buildLocalDeterministicAdvisor(retained.view, retained.input, retained.resources, this.catalog).recommendations
+    this.assertSearchFinished(proposalId)
+    const resolved = resolvePlanningNormative(retained.normativeContext ?? retained.request, retained.resources.teachers)
+    const currentNormative = resolved.report(retained.view.assignments)
+    if (retained.view.normative?.profileRevision && (currentNormative.profileRevision !== retained.view.normative.profileRevision
+      || currentNormative.lectiveHourMinutes !== retained.view.normative.lectiveHourMinutes)) {
+      throw this.httpError(409, 'VERSION_MISMATCH', 'El perfil normativo cambió; ejecuta una nueva búsqueda')
+    }
+    const result = analyzeProposalAdvisor(retained.view, { ...retained.input, teachers: resolved.teachers }, retained.resources, this.catalog)
+    const candidates = result.recommendations
     if (value.selectedRecommendationIds?.some((id) => !candidates.some((r) => r.id === id))) {
       throw this.httpError(400, 'INVALID_REQUEST', 'Recomendación desconocida')
     }
-    const result = await analyzeProposalAdvisor(retained.view, retained.input, retained.resources, retained.requirements, this.catalog, globalThis.fetch, value.selectedRecommendationIds)
-    if ((retained.view.editVersion ?? 0) !== currentVersion) throw this.httpError(409, 'VERSION_MISMATCH', 'La propuesta cambió durante la simulación')
     return result
   }
 
   adjustProposal(proposalId: string, value: unknown): AcademicProposal {
+    this.assertSearchFinished(proposalId)
     let adjustment: AcademicAdjustment
     try {
       validateAcademicAdjustment(value)
@@ -284,6 +438,10 @@ export class DemoProposalService {
     changedView.normative = resolvePlanningNormative(retained.normativeContext ?? retained.request, retained.resources.teachers).report(assignments)
     // Manual teacher changes do not retain the automatic solver's prelation proof.
     delete changedView.prelation
+    // A placement edit changes neither demand/resources nor the number of covered
+    // sessions, so the original coverage bound and termination remain applicable.
+    delete changedView.capacityCertificate
+    delete changedView.decisions
     changedView.diagnostics = changedView.diagnostics.filter((diagnostic) => diagnostic.code !== 'PREFERENCES_NOT_MET')
     if (preferenceReport.outsidePreferenceSections > 0) {
       changedView.diagnostics.push({ code: 'PREFERENCES_NOT_MET', message: 'Hay secciones programadas fuera de sus preferencias. Las preferencias son orientativas; no se ha demostrado optimalidad global.', sessionIds: [] })
@@ -335,6 +493,7 @@ export class DemoProposalService {
   }
 
   captureDraftRetention(proposalId: string, editVersion: number, workspace: AcademicWorkspace): TrustedDraftRetention {
+    this.assertSearchFinished(proposalId)
     this.cleanExpired()
     const retained = this.proposals.get(proposalId)
     if (!retained) throw this.httpError(404, 'PROPOSAL_NOT_FOUND', 'El horario temporal expiró; vuelve a generarlo antes de guardar')
@@ -486,7 +645,7 @@ export class DemoProposalService {
     const normative = resolvePlanningNormative(request, resources.teachers)
     view.normative = normative.report(view.assignments)
     for (const key of ['coverageProof', 'capacityCertificate', 'prelation'] as const) {
-      if (result[key] !== undefined) Object.assign(view, { [key]: structuredClone(result[key]) })
+      if (result[key] != null) Object.assign(view, { [key]: structuredClone(result[key]) })
     }
     if (result.decisions !== undefined) view.decisions = normative.enrichDecisions(result.decisions)
     validateAcademicProposal(view)

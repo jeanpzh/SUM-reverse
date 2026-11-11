@@ -56,7 +56,7 @@ export type GeneratorResult = Pick<AcademicProposal, 'coverageProof' | 'capacity
   exploredCandidates: number
   backtracks: number
   candidateVisits: number
-  limitReason: 'explorations' | 'work' | 'time' | null
+  limitReason: 'explorations' | 'work' | 'time' | 'running' | 'cancelled' | null
   rejectionCounts: Partial<Record<ScheduleIssueCode, number>>
   diagnostics: GeneratorDiagnostic[]
 }

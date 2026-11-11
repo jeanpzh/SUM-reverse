@@ -26,9 +26,9 @@ export type AcademicCatalog = {
 export type AcademicProposal = {
   coverageProof?: 'complete' | 'shortfall-proven' | 'inconclusive'
   capacityCertificate?: { proven: boolean; requiredSectionsTotal: number; coverableSectionsTotal: number; courses: Array<{ courseId: string; requiredSections: number; coverableSections: number; requiredMinutes: number }> }
-  decisions?: Array<{ id: string; kind: 'teacher-load-exception' | 'additional-teacher' | 'planning-window' | 'delivery-mode-split'; teacherId: string | null; courseIds: string[]; exceptionKind: 'voluntary-declaration' | 'vrap-authorization' | null; additionalMinutes: number; sectionsUnlocked: number; basis: 'capacity-relaxation' | 'window-precheck'; policyChange?: { allowAfternoon?: true; allowSaturday?: true }; requires?: string[]; sourceIds?: string[] }>
+  decisions?: Array<{ id: string; kind: 'teacher-load-exception' | 'additional-teacher' | 'planning-window' | 'delivery-mode-split'; teacherId: string | null; courseIds: string[]; exceptionKind: 'voluntary-declaration' | 'vrap-authorization' | 'configuration-adjustment' | null; additionalMinutes: number; sectionsUnlocked: number; basis: 'capacity-relaxation' | 'window-precheck'; policyChange?: { allowAfternoon?: true; allowSaturday?: true }; requires?: string[]; sourceIds?: string[] }>
   prelation?: { levels: Array<{ id: 'contract-sections' | 'interfaculty-sections' | 'category-rank'; value: number; proven: boolean }> }
-  normative?: { profileRevision: string | null; lectiveHourMinutes: number | null; gaps: Array<{ code: string; message: string; teacherIds?: string[] }>; blockers: LoadAuthorizationBlocker[] }
+  normative?: { profileRevision: string | null; lectiveHourMinutes: number | null; gaps: Array<{ code: string; message: string; teacherIds?: string[]; blocking?: boolean; assignedMinutes?: number; minimumMinutes?: number; shortfallMinutes?: number }>; blockers: LoadAuthorizationBlocker[] }
   editVersion?: number
   manuallyAdjustedSectionIds?: string[]
   preferenceReport?: { policy: AcademicAllocationPolicy; evaluatedSections: number; withinPreferenceSections: number; outsidePreferenceSections: number; withoutPreferenceSections: number; optimality: 'not-proven' }
@@ -42,7 +42,7 @@ export type AcademicProposal = {
   diagnostics: Array<{ code: string; message: string; sessionIds: string[] }>
   coverageComplete: boolean
   counts: { sections: number; requiredSessions: number; scheduledSessions: number }
-  stats: { exploredCandidates: number; candidateVisits: number; backtracks: number; limitReason: 'explorations' | 'work' | 'time' | null }
+  stats: { exploredCandidates: number; candidateVisits: number; backtracks: number; limitReason: 'explorations' | 'work' | 'time' | 'running' | 'cancelled' | null }
 }
 export function validateAcademicRequest(value: unknown): asserts value is AcademicRequest
 export function validateAcademicResources(value: unknown): asserts value is AcademicPlanningResources
@@ -101,6 +101,7 @@ export type AcademicAdvisorBottleneck = {
   affectedSessionCount: number
 }
 export type AcademicAdvisorRecommendation = {
+  decisionIds?: string[]
   id: string
   title: string
   rationale: string
@@ -126,7 +127,7 @@ export type AcademicAdvisorResponse = {
   proposalId: string
   editVersion: number
   source: {
-    mode: 'llm-assisted' | 'deterministic-fallback'
+    mode: 'llm-assisted' | 'deterministic-fallback' | 'engine-decisions'
     providerLabel: string | null
     fallbackReason?: 'not_configured' | 'timeout' | 'rate_limited' | 'upstream_error' | 'invalid_llm_output'
   }
@@ -136,7 +137,7 @@ export type AcademicAdvisorResponse = {
 }
 export function validateAcademicAdvisorRequest(value: unknown): asserts value is AcademicAdvisorRequest
 export function validateAcademicAdvisorPatch(value: unknown): asserts value is AcademicAdvisorPatch
-export function validateAcademicAdvisorResponse(value: unknown): asserts value is AcademicAdvisorResponse
+export function validateAcademicAdvisorResponse(value: unknown, decisions?: NonNullable<AcademicProposal['decisions']>): asserts value is AcademicAdvisorResponse
 
 export type AcademicNormativeRequest = { question: string; facultyId: 'FISI'; academicPeriod: PlanningPeriod; asOf: string; teacherType: 'ordinario' | 'contratado' | 'unknown'; previousQuestion?: string }
 export type AcademicNormativeCitation = { id: string; documentId: string; title: string; article: string; page: number; url: string; excerpt: string; sourceClass: 'normative'; scope: 'UNMSM' | 'FISI'; reviewedAt: string; effectiveFrom: string | null; effectiveTo: string | null }
@@ -145,3 +146,17 @@ export function validateAcademicNormativeRequest(value: unknown): asserts value 
 export function validateAcademicNormativeResponse(value: unknown, request?: AcademicNormativeRequest): asserts value is AcademicNormativeResponse
 
 export function validateTeacherLoadFields(value: unknown): void
+
+/** PA-PLANNING-JOBS-1 — ephemeral search; proposal identity is stable. */
+export type AcademicSearch = {
+  jobId: string
+  state: 'running' | 'completed' | 'cancelled' | 'failed'
+  phase: 'preparing' | 'capacity' | 'coverage' | 'prelation' | 'preferences' | 'done'
+  elapsedSeconds: number
+  budgetSeconds: number
+  progress: { requiredSessions: number; scheduledSessions: number; requiredSections: number; scheduledSections: number; improvements: number }
+  proposal: AcademicProposal | null
+  error: { code: string; message: string } | null
+}
+export function validateAcademicSearchRequest(value: unknown): asserts value is { request: AcademicRequest; budgetSeconds: number; requestId?: string }
+export function validateAcademicSearch(value: unknown): asserts value is AcademicSearch

@@ -523,7 +523,7 @@ export function validateAcademicProposal(value) {
     || value.counts.requiredSessions !== value.assignments.length + value.pending.length) throw new TypeError('Conteos inconsistentes')
   object(value.stats, ['exploredCandidates', 'candidateVisits', 'backtracks', 'limitReason'], 'stats')
   for (const field of ['exploredCandidates', 'candidateVisits', 'backtracks']) number(value.stats[field], field)
-  if (![null, 'explorations', 'work', 'time'].includes(value.stats.limitReason)) throw new TypeError('Límite inválido')
+  if (![null, 'explorations', 'work', 'time', 'running', 'cancelled'].includes(value.stats.limitReason)) throw new TypeError('Límite inválido')
   if (value.coverageComplete !== (value.status === 'complete') || (value.coverageComplete && value.pending.length)) throw new TypeError('Cobertura inconsistente')
   if (new Set(value.sections.map((row) => row.sectionId)).size !== value.sections.length
     || new Set([...value.assignments, ...value.pending].map((row) => row.sessionId)).size !== value.assignments.length + value.pending.length) throw new TypeError('Sección o componente repetido')
@@ -583,8 +583,8 @@ export function validateAcademicAdvisorPatch(value) {
     adjustments.forEach((row) => {
       object(row, ['teacherId', 'previousMaxWeeklyMinutes', 'nextMaxWeeklyMinutes'], 'adjustment')
       resourceId(row.teacherId)
-      number(row.previousMaxWeeklyMinutes, 'previousMaxWeeklyMinutes', 0, 2400)
-      number(row.nextMaxWeeklyMinutes, 'nextMaxWeeklyMinutes', 1, 2400)
+      number(row.previousMaxWeeklyMinutes, 'previousMaxWeeklyMinutes', 0, 10080)
+      number(row.nextMaxWeeklyMinutes, 'nextMaxWeeklyMinutes', 1, 10080)
       if (row.nextMaxWeeklyMinutes <= row.previousMaxWeeklyMinutes) throw new TypeError('nextMaxWeeklyMinutes debe superar a previousMaxWeeklyMinutes')
     })
     return
@@ -606,6 +606,7 @@ export function validateAcademicAdvisorPatch(value) {
   if (value.kind === 'incorporate_reference_resource') {
     object(value, ['kind', 'teacherIds', 'roomIds'], 'patch')
     if (!Array.isArray(value.teacherIds) || !Array.isArray(value.roomIds)) throw new TypeError('teacherIds/roomIds deben ser listas')
+    if (new Set(value.teacherIds).size !== value.teacherIds.length || new Set(value.roomIds).size !== value.roomIds.length) throw new TypeError('Recursos duplicados')
     value.teacherIds.forEach(resourceId)
     value.roomIds.forEach(resourceId)
     if (!value.teacherIds.length && !value.roomIds.length) throw new TypeError('incorporate_reference_resource requiere al menos un recurso')
@@ -614,13 +615,14 @@ export function validateAcademicAdvisorPatch(value) {
   throw new TypeError('kind de recomendación desconocido')
 }
 
-export function validateAcademicAdvisorResponse(value) {
+export function validateAcademicAdvisorResponse(value, decisions) {
   object(value, ['proposalId', 'editVersion', 'source', 'summary', 'bottlenecks', 'recommendations'], 'advisorResponse', ['verifiedImpact', 'reasoningSteps', 'normativeContext'])
   if (value.normativeContext !== undefined) validateAcademicNormativeResponse(value.normativeContext)
   string(value.proposalId, 'proposalId')
   number(value.editVersion, 'editVersion', 0)
   object(value.source, ['mode', 'providerLabel'], 'source', ['fallbackReason'])
-  if (!['llm-assisted', 'deterministic-fallback'].includes(value.source.mode)) throw new TypeError('source.mode inválido')
+  if (!['llm-assisted', 'deterministic-fallback', 'engine-decisions'].includes(value.source.mode)) throw new TypeError('source.mode inválido')
+  if (value.source.mode === 'engine-decisions' && (value.source.providerLabel !== null || Object.hasOwn(value.source, 'fallbackReason') || Object.hasOwn(value, 'verifiedImpact') || Object.hasOwn(value, 'reasoningSteps'))) throw new TypeError('engine-decisions: source/impact inválido')
   if (value.source.providerLabel !== null) string(value.source.providerLabel, 'providerLabel')
   if (value.source.fallbackReason !== undefined
     && !['not_configured', 'timeout', 'rate_limited', 'upstream_error', 'invalid_llm_output'].includes(value.source.fallbackReason)) {
@@ -657,7 +659,11 @@ export function validateAcademicAdvisorResponse(value) {
     number(row.affectedSessionCount, 'affectedSessionCount', 0)
   })
   array(value.recommendations, 'recommendations').forEach((row) => {
-    object(row, ['id', 'title', 'rationale', 'impactSummary', 'recommendedByDefault', 'patch'], 'recommendation')
+    object(row, ['id', 'title', 'rationale', 'impactSummary', 'recommendedByDefault', 'patch'], 'recommendation', ['decisionIds'])
+    if (row.decisionIds !== undefined) {
+      strings(row.decisionIds, 'decisionIds')
+      if (!row.decisionIds.length || row.decisionIds.some(id => !id.trim()) || new Set(row.decisionIds).size !== row.decisionIds.length || (decisions && row.decisionIds.some(id => !decisions.some(d => d.id === id)))) throw new TypeError('decisionIds desconocidos, vacíos o duplicados')
+    }
     string(row.id, 'id')
     string(row.title, 'title')
     string(row.rationale, 'rationale')
@@ -722,7 +728,11 @@ export function validateAcademicNormativeResponse(value, request) {
 function validateProposalNormativeResult(value) {
   const boolean = (item) => { if (typeof item !== 'boolean') throw new TypeError('Prueba booleana requerida') }
   const authorization = (item) => { if (item !== null && !LOAD_AUTHORIZATION_KINDS.includes(item)) throw new TypeError('Autorización inválida') }
+  if (value.coverageProof !== undefined && !value.coverageComplete && !value.pending.length) throw new TypeError('Prueba parcial sin componentes pendientes')
   if (Object.hasOwn(value, 'coverageProof') && !['complete', 'shortfall-proven', 'inconclusive'].includes(value.coverageProof)) throw new TypeError('Prueba de cobertura inválida')
+  if (value.coverageProof !== undefined && ((value.coverageProof === 'complete') !== value.coverageComplete
+    || (value.coverageProof === 'shortfall-proven' && value.status !== 'impossible')
+    || (value.coverageProof === 'inconclusive' && value.status !== 'search-limit'))) throw new TypeError('Prueba de cobertura contradictoria')
   if (Object.hasOwn(value, 'capacityCertificate')) {
     const certificate = value.capacityCertificate
     object(certificate, ['proven', 'requiredSectionsTotal', 'coverableSectionsTotal', 'courses'], 'capacityCertificate')
@@ -754,7 +764,7 @@ function validateProposalNormativeResult(value) {
         || !['capacity-relaxation', 'window-precheck'].includes(decision.basis)) throw new TypeError('Decisión inválida')
       if (decision.teacherId !== null) string(decision.teacherId, 'teacherId')
       strings(decision.courseIds, 'courseIds')
-      authorization(decision.exceptionKind)
+      if (decision.exceptionKind !== 'configuration-adjustment') authorization(decision.exceptionKind)
       number(decision.additionalMinutes, 'additionalMinutes')
       number(decision.sectionsUnlocked, 'sectionsUnlocked')
       if (decision.kind === 'teacher-load-exception' && (decision.teacherId === null || decision.exceptionKind === null)) throw new TypeError('Excepción sin docente o autorización')
@@ -782,7 +792,9 @@ function validateProposalNormativeResult(value) {
     if (normative.profileRevision !== null) string(normative.profileRevision, 'profileRevision')
     if (normative.lectiveHourMinutes !== null && !LECTIVE_HOUR_MINUTES.includes(normative.lectiveHourMinutes)) throw new TypeError('Duración lectiva inválida')
     array(normative.gaps, 'normative.gaps', PLANNING_LIMITS.sessions).forEach((gap) => {
-      object(gap, ['code', 'message'], 'normative.gap', ['teacherIds'])
+      object(gap, ['code', 'message'], 'normative.gap', ['teacherIds', 'blocking', 'assignedMinutes', 'minimumMinutes', 'shortfallMinutes'])
+      if (gap.blocking !== undefined) boolean(gap.blocking)
+      for (const key of ['assignedMinutes', 'minimumMinutes', 'shortfallMinutes']) if (gap[key] !== undefined) number(gap[key], key)
       string(gap.code, 'gap.code')
       string(gap.message, 'gap.message')
       if (Object.hasOwn(gap, 'teacherIds')) strings(gap.teacherIds, 'gap.teacherIds')
@@ -797,4 +809,34 @@ function validateProposalNormativeResult(value) {
       strings(blocker.sourceIds, 'sourceIds')
     })
   }
+}
+
+export function validateAcademicSearchRequest(value) {
+  object(value, ['request', 'budgetSeconds'], 'searchRequest', ['requestId'])
+  if (value.requestId !== undefined && (typeof value.requestId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.requestId))) throw new TypeError('requestId UUID inválido')
+  validateAcademicRequest(value.request)
+  if (!Number.isFinite(value.budgetSeconds) || value.budgetSeconds < 1 || value.budgetSeconds > 120) throw new TypeError('Presupuesto fuera de 1–120 segundos')
+}
+export function validateAcademicSearch(value) {
+  object(value, ['jobId', 'state', 'phase', 'elapsedSeconds', 'budgetSeconds', 'progress', 'proposal', 'error'], 'search')
+  string(value.jobId, 'jobId')
+  if (!['running', 'completed', 'cancelled', 'failed'].includes(value.state)
+    || !['preparing', 'capacity', 'coverage', 'prelation', 'preferences', 'done'].includes(value.phase)) throw new TypeError('Estado de búsqueda inválido')
+  if (!Number.isFinite(value.elapsedSeconds) || value.elapsedSeconds < 0 || !Number.isFinite(value.budgetSeconds) || value.budgetSeconds < 1 || value.budgetSeconds > 120) throw new TypeError('Tiempo de búsqueda inválido')
+  object(value.progress, ['requiredSessions', 'scheduledSessions', 'requiredSections', 'scheduledSections', 'improvements'], 'progress')
+  for (const key of ['requiredSessions', 'scheduledSessions', 'requiredSections', 'scheduledSections', 'improvements']) number(value.progress[key], key, 0)
+  if (value.progress.scheduledSessions > value.progress.requiredSessions || value.progress.scheduledSections > value.progress.requiredSections) throw new TypeError('Progreso inválido')
+  if (['running', 'cancelled'].includes(value.state) && value.progress.scheduledSessions > 0 && value.proposal === null) throw new TypeError('Progreso sin incumbente')
+  if (value.state === 'completed' && (value.proposal === null || value.phase !== 'done')) throw new TypeError('Búsqueda completa sin resultado final')
+  if (value.proposal !== null) {
+    validateAcademicProposal(value.proposal)
+    if (value.proposal.counts.requiredSessions !== value.progress.requiredSessions || value.proposal.counts.scheduledSessions !== value.progress.scheduledSessions
+      || value.proposal.sections.length !== value.progress.requiredSections
+      || new Set(value.proposal.assignments.map(assignment => assignment.sectionId)).size !== value.progress.scheduledSections) throw new TypeError('Progreso y propuesta incompatibles')
+    if (value.proposal.status === 'search-limit' && ['running', 'cancelled'].includes(value.state) && value.proposal.stats.limitReason !== value.state) throw new TypeError('Motivo de búsqueda inválido')
+    if (value.proposal.coverageProof === 'shortfall-proven' && value.state !== 'completed') throw new TypeError('Prueba prematura')
+    if (['running', 'cancelled'].includes(value.state) && value.proposal.prelation?.levels.some(level => level.proven)) throw new TypeError('Optimalidad prematura')
+  }
+  if ((value.state === 'failed') !== (value.error !== null) || (value.state === 'failed' && value.proposal !== null)) throw new TypeError('Error de búsqueda incoherente')
+  if (value.error !== null) { object(value.error, ['code', 'message'], 'searchError'); string(value.error.code, 'code'); string(value.error.message, 'message') }
 }

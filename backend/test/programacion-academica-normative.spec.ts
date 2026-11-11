@@ -145,3 +145,80 @@ it('retains workspace lective context when manually adjusting a resumed legacy r
   expect(adjusted.normative?.lectiveHourMinutes).toBe(60)
   expect(adjusted.normative?.gaps.some((g) => g.code === 'LECTIVE_HOUR_MINUTES_MISSING')).toBe(false)
 })
+
+it('T7 reports profile-derived minima without constraining partial generation or inventing external load', async () => {
+  const { resolvePlanningNormative } = await import('../src/programacion-academica/normative-planning.js')
+  const { resolveNormativeProfile, teacherLoadLimits } = await import('../../shared/academic-normative-profile.mjs')
+  const profile = resolveNormativeProfile({ facultyId: 'FISI', period: '2027-I' })
+  for (const fields of [
+    { regime: 'tiempo-completo' }, { regime: 'dedicacion-exclusiva' },
+    { regime: 'tiempo-parcial', weeklyServiceHours: 20 },
+    { regime: 'tiempo-completo', loadConditions: ['renacyt-researcher'] },
+    { regime: 'dedicacion-exclusiva', loadConditions: ['on-leave'] },
+    { regime: 'tiempo-completo', appointment: 'contract' },
+  ] as const) {
+    const teacher = { ...fixture().resources!.teachers[0], ...structuredClone(fields), loadConditions: 'loadConditions' in fields ? [...(fields.loadConditions ?? [])] : [] }
+    const minimum = teacherLoadLimits(profile, teacher, { lectiveHourMinutes: 60 }).minimumMinutes
+    const resolved = resolvePlanningNormative({ academicPeriod: '2027-I', lectiveHourMinutes: 60 }, [teacher])
+    const assignments = (minutes: number) => minutes ? [{ teacherId: teacher.id, startMinute: 0, endMinute: minutes }] as any : []
+    const gap = (minutes: number) => resolved.report(assignments(minutes)).gaps.filter((g) => g.code === 'MINIMUM_LOAD_SCOPE_UNRESOLVED')
+    expect(gap(minimum ?? 0)).toEqual([])
+    if (minimum && teacher.appointment !== 'contract') expect(gap(minimum - 1)).toEqual([expect.objectContaining({
+      blocking: true, assignedMinutes: minimum - 1, minimumMinutes: minimum, shortfallMinutes: 1,
+    })])
+  }
+  for (const fields of [{ regime: undefined }, { appointment: undefined }, { regime: 'tiempo-parcial', weeklyServiceHours: undefined }] as const) {
+    const teacher = { ...fixture().resources!.teachers[0], ...fields }
+    expect(resolvePlanningNormative({ academicPeriod: '2027-I', lectiveHourMinutes: 60 }, [teacher]).report([]).gaps.some((g) => g.blocking)).toBe(true)
+  }
+})
+
+it('T7 configured cap keeps both the authorized adjustment and the next formal exception', async () => {
+  const { resolvePlanningNormative } = await import('../src/programacion-academica/normative-planning.js')
+  for (const loadAuthorizations of [[], [{ kind: 'voluntary-declaration' as const, reference: 'SYN' }], [{ kind: 'vrap-authorization' as const, reference: 'SYN', maxLectiveHours: 24 }]]) {
+    const teacher = { ...fixture().resources!.teachers[0], maxWeeklyMinutes: 60, loadAuthorizations }
+    const resolved = resolvePlanningNormative({ academicPeriod: '2027-I', lectiveHourMinutes: 60 }, [teacher]).teachers[0]
+    expect(resolved.maxWeeklyMinutes).toBe(60)
+    expect(resolved.configurationMaxWeeklyMinutes).toBeGreaterThan(60)
+    expect(resolved.exceptionMaxWeeklyMinutes).toBeGreaterThanOrEqual(resolved.configurationMaxWeeklyMinutes!)
+    expect(resolved.exceptionKind).toBe(loadAuthorizations.length ? 'configuration-adjustment' : 'voluntary-declaration')
+  }
+})
+
+
+it('T7 partial demand does not enforce another course teacher minimum', async () => {
+  const { resolvePlanningNormative } = await import('../src/programacion-academica/normative-planning.js')
+  const request = fixture()
+  const teacher = { ...request.resources!.teachers[0], courseIds: ['SYN-UNRELATED'] }
+  const report = resolvePlanningNormative(request, [teacher]).report([])
+  expect(report.gaps.filter((gap) => gap.blocking)).toEqual([])
+})
+
+it('T7 recheck keeps contract ordering gaps nonblocking without a regime', async () => {
+  const { resolvePlanningNormative } = await import('../src/programacion-academica/normative-planning.js')
+  const request = fixture()
+  const teacher = { ...request.resources!.teachers[0], appointment: 'contract' as const }
+  delete teacher.regime
+  const report = resolvePlanningNormative(request, [teacher]).report([])
+  expect(report.gaps.some((gap) => gap.code === 'REGIME_MISSING')).toBe(true)
+  expect(report.gaps.filter((gap) => gap.blocking)).toEqual([])
+})
+
+it('T7 recheck manual placement preserves coverage status without inventing a search budget', () => {
+  const service = new DemoProposalService()
+  const request = fixture()
+  const course = service.getCatalog().courses.find((c) => c.weeklySessions.reduce((n, s) => n + s.durationMinutes, 0) === 240)!
+  request.demands = [{ courseId: course.courseId, estimatedDemand: 4, targetCapacity: 1 }]
+  request.resources!.teachers[0].courseIds = [course.courseId]
+  const original = service.createProposal(request)
+  expect(original.status).toBe('impossible')
+  expect(original.stats.limitReason).toBeNull()
+  const block = original.assignments.filter((a) => a.sectionId === original.assignments[0].sectionId).sort((a, b) => a.startMinute - b.startMinute)
+  const adjusted = service.adjustProposal(original.proposalId, { expectedVersion: 0, sectionId: block[0].sectionId,
+    sessionIds: block.map((a) => a.sessionId), teacherId: block[0].teacherId, roomIds: block.map((a) => a.roomId),
+    day: block[0].day === 5 ? 4 : 5, startMinute: block[0].startMinute })
+  expect(adjusted.status).toBe(original.status)
+  expect(adjusted.stats.limitReason).toBeNull()
+  expect(adjusted.coverageProof).toBe(original.coverageProof)
+  expect(() => validateAcademicProposal(adjusted)).not.toThrow()
+})

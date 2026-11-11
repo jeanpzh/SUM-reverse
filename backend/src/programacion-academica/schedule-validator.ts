@@ -69,7 +69,7 @@ export function validateAcademicSchedule(value: unknown, options: { planningPoli
     const seen = new Set<string>()
     Array.from(rows).forEach((row: unknown, index: number) => {
       const path = `${key}[${index}]`
-      if (!exact(row, shape, path, key === 'teachers' ? ['preferences', 'sectionLimits', 'facultyId', 'category', 'qualificationSource', 'regime', 'appointment', 'weeklyServiceHours', 'loadConditions', 'loadAuthorizations', 'exceptionMaxWeeklyMinutes', 'exceptionKind', 'appointmentTier', 'categoryRank']
+      if (!exact(row, shape, path, key === 'teachers' ? ['preferences', 'sectionLimits', 'facultyId', 'category', 'qualificationSource', 'regime', 'appointment', 'weeklyServiceHours', 'loadConditions', 'loadAuthorizations', 'configurationMaxWeeklyMinutes', 'exceptionMaxWeeklyMinutes', 'exceptionKind', 'appointmentTier', 'categoryRank']
         : key === 'rooms' ? ['kind'] : key === 'sections' ? ['cycle', 'ordinal'] : key === 'assignments' ? ['sessionType'] : [])) return
       for (const field of shape.filter((name) => name === 'id' || name.endsWith('Id'))) {
         if (!id(row[field])) invalid(`${path}.${field}`, 'Identificador inválido')
@@ -83,7 +83,8 @@ export function validateAcademicSchedule(value: unknown, options: { planningPoli
       if (key === 'teachers') {
         try { validateTeacherLoadFields(row) } catch (error) { invalid(path, error instanceof Error ? error.message : 'Datos normativos inválidos') }
         if (row.exceptionMaxWeeklyMinutes !== undefined && (!integer(row.exceptionMaxWeeklyMinutes, 1) || Number(row.exceptionMaxWeeklyMinutes) <= Number(row.maxWeeklyMinutes))) invalid(path, 'Tope de excepción inválido')
-        if (row.exceptionKind !== undefined && !['voluntary-declaration', 'vrap-authorization'].includes(row.exceptionKind as string)) invalid(path, 'Tipo de excepción inválido')
+        if (row.configurationMaxWeeklyMinutes !== undefined && (!integer(row.configurationMaxWeeklyMinutes, 1) || Number(row.configurationMaxWeeklyMinutes) <= Number(row.maxWeeklyMinutes) || row.exceptionMaxWeeklyMinutes === undefined || Number(row.configurationMaxWeeklyMinutes) > Number(row.exceptionMaxWeeklyMinutes))) invalid(path, 'Tope de ajuste inválido')
+        if (row.exceptionKind !== undefined && !['voluntary-declaration', 'vrap-authorization', 'configuration-adjustment'].includes(row.exceptionKind as string)) invalid(path, 'Tipo de excepción inválido')
         if ((row.exceptionMaxWeeklyMinutes === undefined) !== (row.exceptionKind === undefined)) invalid(path, 'Excepción incompleta')
         if (row.appointmentTier !== undefined && !integer(row.appointmentTier, 0, 2)) invalid(path, 'Escalón de prelación inválido')
         if (row.categoryRank !== undefined && !integer(row.categoryRank, 1, 9)) invalid(path, 'Orden de categoría inválido')

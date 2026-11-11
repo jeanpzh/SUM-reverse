@@ -5,8 +5,9 @@ export type TimeInterval = {
   endMinute: number
 }
 export type AcademicTeacher = NormativeTeacher & {
+  configurationMaxWeeklyMinutes?: number
   exceptionMaxWeeklyMinutes?: number
-  exceptionKind?: LoadAuthorizationKind
+  exceptionKind?: LoadAuthorizationKind | 'configuration-adjustment'
   appointmentTier?: 0 | 1 | 2
   categoryRank?: number
   id: string
