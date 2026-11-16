@@ -596,7 +596,11 @@ def solve_academic_schedule(req: SolveScheduleRequest) -> SolveScheduleResponse:
         return generation_timeout()
     # Reserve serialization/CP shutdown time inside the caller's end-to-end budget.
     solver.parameters.max_time_in_seconds = max(0.001, deadline - time.monotonic() - min(0.05, req.maxTimeSeconds * 0.1))
-    solver.parameters.num_search_workers = 4
+    solver.parameters.num_search_workers = (
+        req.numSearchWorkers if req.numSearchWorkers is not None else 4
+    )
+    if req.randomSeed is not None:
+        solver.parameters.random_seed = req.randomSeed
     status_code = solver.solve(model)
 
     if status_code == cp_model.MODEL_INVALID:

@@ -6,49 +6,28 @@ import json
 import os
 import time
 
-from models import AdvisorReasoningStep, AdvisorSource, AdvisorVerifiedImpact, SolveScheduleRequest, TeacherInput, RoomInput
+from advisor_catalog import CATALOG_BY_KIND
+from models import AdvisorReasoningStep, AdvisorSource, AdvisorVerifiedImpact, SolveScheduleRequest
 from solver import solve_academic_schedule
 
 MAX_TOOL_CALLS = 4
 MAX_TOOL_ROUNDS = 2
 
 
-def run_cpsat_dry_run(req, recommendations, recommendation_ids):
+def run_cpsat_dry_run(req, recommendations, recommendation_ids, *, max_time_seconds: float = 0.8):
     catalog = {r.id: r for r in recommendations}
     if len(set(recommendation_ids)) != len(recommendation_ids) or any(i not in catalog for i in recommendation_ids):
         raise ValueError("Unknown or duplicate recommendation ID")
     copy = req.model_copy(deep=True)
-    from models import TimeInterval
-    reference_windows = [TimeInterval(day=d, startMinute=480, endMinute=1320) for d in range(1, 6)]
     for rec_id in recommendation_ids:
         patch = catalog[rec_id].patch
-        if patch.kind == 'increase_teacher_load':
-            for adjustment in patch.adjustments:
-                teacher = next(t for t in copy.teachers if t.id == adjustment.teacherId)
-                if teacher.maxWeeklyMinutes != adjustment.previousMaxWeeklyMinutes:
-                    raise ValueError('Stale teacher load')
-                teacher.maxWeeklyMinutes = adjustment.nextMaxWeeklyMinutes
-        elif patch.kind == 'enable_planning_window' and copy.planningPolicy:
-            if patch.allowAfternoon:
-                copy.planningPolicy.allowAfternoon = True
-            if patch.allowSaturday:
-                copy.planningPolicy.allowSaturday = True
-        elif patch.kind == 'change_delivery_mode':
-            for course in copy.courses:
-                if course.courseId in patch.courseIds:
-                    course.deliveryMode = 'split'
-        elif patch.kind == 'incorporate_reference_resource':
-            for teacher in copy.referenceTeachers:
-                if teacher.id in patch.teacherIds and not any(t.id == teacher.id for t in copy.teachers):
-                    copy.teachers.append(TeacherInput(id=teacher.id, name=teacher.name, courseIds=teacher.courseIds, maxWeeklyMinutes=600, availability=reference_windows, facultyId='FISI', qualificationSource='synthetic'))
-            for room in copy.referenceRooms:
-                if room.id in patch.roomIds and not any(r.id == room.id for r in copy.rooms):
-                    copy.rooms.append(RoomInput(**room.model_dump(), availability=reference_windows))
+        CATALOG_BY_KIND[patch.kind].apply(copy, patch, original_req=req)
     result = solve_academic_schedule(SolveScheduleRequest(
         courses=copy.courses, teachers=copy.teachers, rooms=copy.rooms,
         sections=copy.sections, requirements=copy.requirements,
         windows=copy.windows, startStepMinutes=copy.startStepMinutes,
-        planningPolicy=copy.planningPolicy, maxTimeSeconds=0.8,
+        planningPolicy=copy.planningPolicy, maxTimeSeconds=max_time_seconds,
+        numSearchWorkers=1, randomSeed=42,
     ))
     def complete_sections(assignments):
         ids = {a.id for a in assignments}

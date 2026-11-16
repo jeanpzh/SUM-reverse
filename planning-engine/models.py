@@ -109,6 +109,8 @@ class SolveScheduleRequest(BaseModel):
     allocationPolicy: Literal["preferences", "balanced", "first-feasible"] = "preferences"
     planningPolicy: PlanningPolicyInput | None = None
     maxTimeSeconds: float = Field(default=3.0, gt=0.1, le=10.0)
+    numSearchWorkers: int | None = Field(default=None, ge=1, le=16)
+    randomSeed: int | None = None
 
 
 class SolveScheduleResponse(BaseModel):
