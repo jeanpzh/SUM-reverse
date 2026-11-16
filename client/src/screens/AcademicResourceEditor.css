@@ -109,3 +109,5 @@
 @media (max-width: 719px) {
   .academic-resource-workbench__split { margin-inline: -16px; width: calc(100% + 32px); }
 }
+/* A 24px name target plus 14px cell padding keeps the specified 40px row. */
+.planning-root .academic-resource-table td { padding-block: 7px; }
