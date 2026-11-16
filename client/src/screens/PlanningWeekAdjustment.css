@@ -1,0 +1,273 @@
+.planning-root #planning-week-adjustment-slot:has(> aside) {
+  flex: 0 0 360px;
+  border-left: 1px solid var(--plan-dove);
+  margin-left: 0;
+}
+.planning-root .planning-week-adjustment {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  background: var(--plan-paper);
+  color: var(--plan-ink);
+  font: 14px/20px var(--plan-font-sans);
+}
+.planning-root .planning-week-adjustment header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+.planning-root .planning-week-adjustment h2 {
+  margin: 0;
+  font: 400 24px/30px var(--plan-font-sans);
+  letter-spacing: -0.025em;
+}
+.planning-root .planning-week-adjustment__eyebrow {
+  margin: 0 0 4px;
+  color: var(--plan-fog);
+  font: 11px/16px var(--plan-font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.planning-root .planning-week-adjustment__comparison {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 16px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--plan-cream);
+}
+.planning-root .planning-week-adjustment__comparison span {
+  color: var(--plan-fog);
+  font: 11px/16px var(--plan-font-mono);
+  text-transform: uppercase;
+}
+.planning-root .planning-week-adjustment__comparison p {
+  margin: 0;
+  font: 13px/18px var(--plan-font-mono);
+  overflow-wrap: anywhere;
+}
+.planning-root .planning-week-adjustment__comparison small {
+  color: var(--plan-fog);
+  font-size: 12px;
+}
+.planning-root .planning-week-adjustment form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.planning-root .planning-week-adjustment label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  font-weight: 500;
+}
+.planning-root .planning-week-adjustment :is(input, select) {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  border: 1px solid var(--plan-control-border);
+  border-radius: 6px;
+  background: var(--plan-paper);
+  color: var(--plan-ink);
+  padding: 0 10px;
+  font: 400 14px/20px var(--plan-font-sans);
+}
+.planning-root .planning-week-adjustment__time-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.planning-root .planning-week-adjustment__duration {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0;
+  border-block: 1px solid var(--plan-row-divider);
+  color: var(--plan-fog);
+}
+.planning-root .planning-week-adjustment__duration output {
+  color: var(--plan-ink);
+  font-family: var(--plan-font-mono);
+}
+.planning-root .planning-week-adjustment__notice {
+  margin: 0;
+  color: var(--plan-steel);
+  font-size: 13px;
+  line-height: 18px;
+}
+.planning-root .planning-week-adjustment__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.planning-root .planning-week-adjustment [data-slot='button'] {
+  border-radius: 9999px;
+  min-height: 32px;
+  font-weight: 500;
+}
+.planning-root .planning-week-adjustment button[type='submit'] {
+  background: var(--plan-ink);
+  color: var(--plan-on-ink);
+}
+.planning-root .planning-week-adjustment__error {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--plan-danger-bg);
+  color: var(--plan-danger);
+}
+.planning-root .planning-week-adjustment__error svg {
+  flex: none;
+  margin-top: 2px;
+}
+.planning-root .planning-week-adjustment__error strong {
+  font-weight: 500;
+}
+.planning-root .planning-week-adjustment__error p {
+  margin: 2px 0 0;
+  color: var(--plan-ink);
+}
+.planning-root .planning-week-adjustment :focus-visible {
+  outline: 2px solid var(--plan-ink);
+  outline-offset: 2px;
+}
+/* The inspector is hosted by ticket 4's lower pane. Its editing content is
+   portaled into Semana's side slot; collapse the now empty host pane. */
+.planning-root:has(#planning-week-adjustment-slot > aside)
+  :is(.planning-workspace__detail, .planning-detail-divider) {
+  display: none;
+}
+.planning-root:has(.planning-week-adjustment) #planning-tour-primary {
+  background: var(--plan-paper);
+  color: var(--plan-ink);
+  box-shadow: inset 0 0 0 1px var(--plan-dove);
+}
+.planning-root .planning-week-adjustment-sheet {
+  padding: 8px 0 16px;
+  max-height: 85dvh;
+  overflow-y: auto;
+  border-radius: 16px 16px 0 0;
+}
+@media (max-width: 1023px) {
+  .planning-root .planning-week-adjustment {
+    padding: 8px 16px 16px;
+    gap: 12px;
+  }
+  .planning-root .planning-week-adjustment::before {
+    content: '';
+    align-self: center;
+    width: 36px;
+    height: 4px;
+    border-radius: 9999px;
+    background: var(--plan-dove);
+  }
+}
+@media (max-width: 719px) {
+  .planning-root .planning-week-adjustment :is(input, select) {
+    height: 44px;
+  }
+  .planning-root .planning-week-adjustment [data-slot='button'] {
+    min-height: 44px;
+  }
+  .planning-root .planning-week-adjustment__actions button {
+    flex: 1;
+  }
+}
+/* Retain legacy acceptance hooks without inheriting the retired inspector frame. */
+.planning-root .planning-week-adjustment.planning-inspector.academic-scheduling__manual-review {
+  position: static;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+.planning-root .planning-week-adjustment.planning-inspector.academic-scheduling__manual-review {
+  padding: 24px;
+  gap: 20px;
+  background: var(--plan-paper);
+}
+.planning-root .planning-week-adjustment-sheet {
+  background: var(--plan-paper);
+  box-shadow: var(--plan-shadow-float);
+}
+@media (max-width: 1023px) {
+  .planning-root .planning-week-adjustment.planning-inspector.academic-scheduling__manual-review {
+    padding: 8px 16px 16px;
+    gap: 12px;
+  }
+}
+.planning-root .planning-week-adjustment__resources summary,
+.planning-root .planning-week-adjustment__mobile-placement,
+.planning-root .planning-week-adjustment__mobile-validation {
+  display: none;
+}
+.planning-root .planning-week-adjustment__resource-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+@media (max-width: 719px) {
+  .planning-root .planning-week-adjustment__eyebrow,
+  .planning-root .planning-week-adjustment__comparison,
+  .planning-root .planning-week-adjustment__notice,
+  .planning-root .planning-week-adjustment__duration-label {
+    display: none;
+  }
+  .planning-root .planning-week-adjustment__time-fields {
+    order: 1;
+  }
+  .planning-root .planning-week-adjustment__duration {
+    order: 2;
+    border: 0;
+    padding: 0;
+    justify-content: flex-start;
+    gap: 4px;
+    font: 13px/18px var(--plan-font-sans);
+  }
+  .planning-root .planning-week-adjustment__duration output {
+    font: inherit;
+    color: inherit;
+  }
+  .planning-root .planning-week-adjustment__mobile-placement {
+    display: inline;
+  }
+  .planning-root .planning-week-adjustment__resources {
+    order: 3;
+  }
+  .planning-root .planning-week-adjustment__resources summary {
+    display: list-item;
+    cursor: pointer;
+    min-height: 24px;
+    color: var(--plan-steel);
+  }
+  .planning-root .planning-week-adjustment__mobile-validation {
+    display: block;
+    margin: 0;
+    font: 13px/18px var(--plan-font-sans);
+    color: var(--plan-steel);
+  }
+  .planning-root .planning-week-adjustment__resource-fields {
+    padding-top: 8px;
+  }
+  .planning-root .planning-week-adjustment__actions {
+    order: 4;
+  }
+  .planning-root .planning-week-adjustment__actions button[type='submit'] {
+    order: 2;
+  }
+}
+@media (min-width: 720px) and (max-width: 1023px) {
+  .planning-root .planning-week-adjustment__resources summary { display: list-item; cursor: pointer; min-height: 24px; }
+}
