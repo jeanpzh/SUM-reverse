@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { chromium } from 'playwright'
+import { openNormativa } from './planning-v2-helpers.mjs'
 import { qualityCases } from './planning-quality/cases.mjs'
 import { assertQualityObservation } from './planning-quality/assertions.mjs'
 if (process.env.SUM_REDESIGN_SYNTHETIC !== '1') throw new Error('Own synthetic stack required')
@@ -34,7 +35,7 @@ const ask = async question => {
 try {
   await page.goto(`${base.origin}/local/programacion-academica`, { waitUntil: 'networkidle' })
   await page.locator('#planning-page-title').waitFor()
-  if (await page.locator('#planning-toggle-chat').getAttribute('aria-expanded') !== 'true') await page.locator('#planning-toggle-chat').click()
+  await openNormativa(page) // v2: closed-by-default rail; the question field is mounted only on the Normativa tab
   await page.locator('.planning-chat__context-summary').click()
   await page.getByLabel('Fecha de consulta', { exact: true }).fill('2026-11-10')
   for (const item of qualityCases) {
@@ -68,7 +69,7 @@ try {
   await page.getByRole('button', { name: 'Consultar consejero', exact: true }).click()
   const response = await pending
   const body = await response.json()
-  const sheet = page.getByRole('dialog', { name: 'Consejero de planificación', exact: true })
+  const sheet = page.getByRole('tabpanel', { name: 'Consejero', exact: true }) // v2: Consejero tab of the assistance rail
   await sheet.locator('[data-advisor-impact]').waitFor()
   observations.push({ id: 'advisor', response: body, initialText: await sheet.innerText() })
   await page.screenshot({ path: resolve(evidence, 'advisor.png') })

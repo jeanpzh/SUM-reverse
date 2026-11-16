@@ -49,6 +49,23 @@ export async function gotoStage(page, name, etapa) {
   if (etapa) await page.waitForURL(new RegExp(`etapa=${etapa}(?:&|$)`))
 }
 
+/**
+ * The result strip of the CURRENT stage (`.planning-status-bar[data-status]`, handoff §3). All stages stay mounted and the
+ * inactive ones are hidden, so an unscoped `.planning-status-bar` locator matches several strips (strict-mode violation).
+ */
+export const statusBar = (page) => page.locator('.planning-status-bar[data-status]:visible')
+
+/**
+ * "No result is displayed": the Horario strip stays mounted without a proposal but reports `data-status="empty"`
+ * (it never claims a result). Replaces v1 `.planning-status-bar` `count() === 0` checks, which are no longer meaningful
+ * because the preparation readiness strip and the approval/round strips share the class. Pass the page assert module.
+ */
+export async function noResultDisplayed(page) {
+  const statuses = await page.locator('.planning-stage-panel--horario .planning-status-bar[aria-label="Resultado"]')
+    .evaluateAll((strips) => strips.map((strip) => strip.getAttribute('data-status')))
+  return { statuses, none: statuses.every((status) => status === 'empty') }
+}
+
 /** The proposal switcher's container (`#planning-tour-proposal`); only present while the menu is open. */
 export const proposalMenu = (page) => page.locator('#planning-tour-proposal')
 export const proposalTitleField = (page) => proposalMenu(page).locator('#planning-proposal-title')
@@ -92,4 +109,66 @@ export async function isProposalTitleDisabled(page) {
 export async function savedProposalRow(page, title) {
   await openProposalMenu(page)
   return page.locator('.academic-scheduling__saved-row').filter({ hasText: title })
+}
+
+/**
+ * Opens the assistance rail (≥1280px) or Sheet (<1280px) from the scope bar and selects a tab.
+ * The rail is closed by default (handoff §1) and holds two tabs: "Consejero" and "Normativa". The normative
+ * question field exists only while the Normativa tab is mounted; the advisor only while Consejero is.
+ */
+export async function openAssistance(page, tab) {
+  const body = page.locator('#planning-chat-body')
+  if (!await body.isVisible()) await page.locator('#planning-toggle-chat').click()
+  await body.waitFor({ state: 'visible' })
+  if (tab) {
+    const control = page.getByRole('tab', { name: tab, exact: true })
+    if (await control.getAttribute('aria-selected') !== 'true') await control.click()
+    await control.and(page.locator('[aria-selected="true"]')).waitFor()
+  }
+  return body
+}
+
+export const openNormativa = (page) => openAssistance(page, 'Normativa')
+export const openConsejero = (page) => openAssistance(page, 'Consejero')
+
+const coursesTable = (page) => page.getByRole('table', { name: 'Cursos de la oferta' })
+
+/**
+ * Leaves exactly one course in the offer. v2 hides the course table until the offer has courses (empty state, handoff §5.1
+ * and States board 03), so the only way in is the catalog button; narrow down with the cycle filter and "Quitar selección".
+ */
+export async function selectOnlyCourse(page, courseId) {
+  const table = coursesTable(page)
+  if (!await table.isVisible()) await page.getByRole('button', { name: /^Seleccionar los .* cursos del catálogo$/ }).click()
+  await table.waitFor({ state: 'visible' })
+  const cycle = (await table.locator(`tr[data-course-id=${JSON.stringify(courseId)}] td`).nth(2).innerText()).trim()
+  const filter = page.getByRole('combobox', { name: 'Filtrar cursos por ciclo', exact: true })
+  const remove = page.getByRole('button', { name: 'Quitar selección', exact: true })
+  // The filters sit in the collapsed "Filtros y valores iniciales" disclosure (handoff: advanced controls live in disclosures)
+  if (!await filter.isVisible()) await page.getByText('Filtros y valores iniciales', { exact: true }).click()
+  await filter.waitFor({ state: 'visible' })
+  for (const label of await filter.locator('option').allInnerTexts()) {
+    if (label === 'Todos' || label === `Ciclo ${cycle}`) continue
+    await filter.selectOption({ label })
+    if (await remove.isEnabled()) await remove.click()
+  }
+  await filter.selectOption({ label: 'Todos' })
+  for (const name of await table.getByRole('checkbox', { checked: true }).evaluateAll((boxes) => boxes.map((box) => box.getAttribute('aria-label')))) {
+    if (name !== `Seleccionar ${courseId}` && name !== 'Seleccionar cursos visibles') await table.getByRole('checkbox', { name, exact: true }).click()
+  }
+  await page.getByRole('checkbox', { name: `Seleccionar ${courseId}`, exact: true }).and(page.locator('[aria-checked="true"]')).waitFor()
+}
+
+/**
+ * Per-course fields live in the course detail pane (v2): "Demanda final", then the "Configuración del curso" disclosure
+ * for "Capacidad", "Patrón" and "Modalidad de sesiones". `kind` is that label; the control's accessible name is `${kind} ${courseId}`.
+ */
+export async function courseControl(page, kind, courseId) {
+  const inspector = page.getByRole('complementary', { name: `Inspector de curso ${courseId}`, exact: true })
+  if (!await inspector.isVisible()) await page.getByRole('button', { name: `Inspeccionar ${courseId}`, exact: true }).click()
+  await inspector.waitFor({ state: 'visible' })
+  const control = inspector.getByLabel(`${kind} ${courseId}`, { exact: true })
+  if (!await control.isVisible()) await inspector.getByText('Configuración del curso', { exact: true }).click()
+  await control.waitFor({ state: 'visible' })
+  return control
 }

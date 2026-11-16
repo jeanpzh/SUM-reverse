@@ -3,8 +3,7 @@
 // Does NOT attach to, reuse, or interfere with user demo on 3210/5176.
 
 import assert from 'node:assert/strict'
-import { gotoStage, openProposalMenu, setProposalTitle } from './planning-v2-helpers.mjs'
-import { setPlanningCheckbox } from './planning-checkboxes.mjs'
+import { gotoStage, openProposalMenu, setProposalTitle, selectOnlyCourse, courseControl } from './planning-v2-helpers.mjs'
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
@@ -124,7 +123,7 @@ try {
   page.setDefaultTimeout(10000)
   page.setDefaultNavigationTimeout(45000)
 
-  await page.goto(`${webUrl}${route}`, { waitUntil: 'domcontentloaded' })
+  await page.goto(`${webUrl}${route}?etapa=preparacion&vista=recursos`, { waitUntil: 'domcontentloaded' }) // v2: resources are their own stage view
   page.on('pageerror', (err) => console.error('[BROWSER PAGE ERROR]', err.message))
   await page.locator('#academic-scheduling-resource-editor').waitFor()
 
@@ -360,10 +359,12 @@ try {
   const schedCourse = catalogData.courses.find((item) => item.planningPatterns?.some((p) => p.weeklySessions.length > 0)) || catalogData.courses[0]
   const pattern = schedCourse.planningPatterns?.find((p) => p.weeklySessions.length > 0)
 
-  await setPlanningCheckbox(page.getByRole('checkbox', { name: `Seleccionar ${schedCourse.courseId}`, exact: true }))
-  await page.getByLabel(`Demanda ${schedCourse.courseId}`, { exact: true }).fill('1')
+  // v2: courses are their own stage view; the offer starts empty, and demand/pattern live in the course detail pane
+  await gotoStage(page, 'Oferta de cursos', 'preparacion')
+  await selectOnlyCourse(page, schedCourse.courseId)
+  await (await courseControl(page, 'Demanda final', schedCourse.courseId)).fill('1')
   if (pattern) {
-    await page.getByLabel(`Patrón ${schedCourse.courseId}`, { exact: true }).selectOption(pattern.id)
+    await (await courseControl(page, 'Patrón', schedCourse.courseId)).selectOption(pattern.id)
   }
 
   // Generar horario
@@ -390,7 +391,7 @@ try {
   assert.equal(savedData.title, draftTitle)
 
   // Recargar y continuar edición
-  await page.reload()
+  await page.goto(`${webUrl}${route}?etapa=preparacion&vista=recursos`, { waitUntil: 'domcontentloaded' }) // reload to the resources view (the current stage is Horario)
   await page.locator('#academic-scheduling-resource-editor').waitFor()
   await openProposalMenu(page)
   const savedProposals = page.locator('#academic-scheduling-saved-proposals')
@@ -422,7 +423,7 @@ try {
 
   for (const teacher of currentReviewDraft.review.teachers) {
     await page.getByLabel('Rol simulado de revisión', { exact: true }).selectOption('teacher')
-    await page.getByLabel('Docente de revisión', { exact: true }).selectOption(teacher.teacherId)
+    await page.getByRole('row', { name: /Pendiente/ }).getByRole('button', { name: /^Registrar respuesta de / }).first().click() // v2: no teacher select
     const resp = page.waitForResponse((res) => res.url().includes('/revision/responder') && res.request().method() === 'POST')
     await page.getByRole('button', { name: 'Dar conformidad', exact: true }).click()
     currentReviewDraft = (await (await resp).json()).draft
@@ -437,13 +438,13 @@ try {
   await previewResponse
 
   const approvalResponse = page.waitForResponse((res) => res.url().includes('/aprobar') && res.request().method() === 'POST')
-  await page.getByRole('button', { name: 'Aprobar (simulada)', exact: true }).click()
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Aprobar', exact: true }).click()
+  await page.locator('#planning-tour-primary:visible').click() // v2: "Aprobar versión N" is the single primary
+  await page.getByRole('alertdialog').getByRole('button', { name: /^Aprobar versión \d+$/ }).click()
   const approvedDraft = (await (await approvalResponse).json()).draft
   assert.equal(approvedDraft.state, 'approved')
 
   // Regresar a Preparación, recargar y Consultar
-  await stage('Preparación', 'preparacion')
+  await stage('Docentes y ambientes', 'preparacion')
   await page.reload()
   await page.locator('#academic-scheduling-resource-editor').waitFor()
   await openProposalMenu(page)
@@ -488,12 +489,13 @@ try {
   // -------------------------------------------------------------
   console.log('[RUI9] Verificando accesibilidad de teclado, diálogo, viewport 720px y zoom de render...')
   // Comprobar región de scroll con foco
-  const scrollRegion = page.locator('.academic-resource-workbench__scroll-region')
-  await scrollRegion.focus()
+  // v2: the keyboard stop for table scrolling is the table itself (tabIndex=0 inside the labelled scroll region)
+  const scrollTable = page.locator('.academic-resource-workbench__scroll-region table[tabindex="0"]').first()
+  await scrollTable.focus()
   assert.equal(
-    await page.evaluate(() => document.activeElement === document.querySelector('.academic-resource-workbench__scroll-region')),
+    await scrollTable.evaluate((el) => el === document.activeElement && el.closest('.academic-resource-workbench__scroll-region') !== null),
     true,
-    'La región de la tabla debe recibir foco visible para scroll por teclado',
+    'La tabla dentro de la región debe recibir foco para scroll por teclado',
   )
 
   // Viewport 720px sin desborde horizontal del documento
@@ -529,13 +531,20 @@ try {
   const minFontSize = await page.evaluate(() => {
     const texts = Array.from(document.querySelectorAll('.academic-resource-workbench *'))
     let minSize = 999
+    window.__smallText = []
     for (const el of texts) {
-      const size = parseFloat(window.getComputedStyle(el).fontSize)
+      const style = window.getComputedStyle(el)
+      const size = parseFloat(style.fontSize)
+      // Board-defined exception (all boards, `.eyebrow`): Geist Mono uppercase metadata labels are 11px/16px. They label fields and
+      // groups; the text they annotate stays >= 12px. Anything else under 12px still fails.
+      const eyebrow = style.fontFamily.includes('Geist Mono') && style.textTransform === 'uppercase' && size === 11
+      if (size > 0 && size < 12) window.__smallText.push({ tag: el.tagName, cls: String(el.className).slice(0, 40), size, eyebrow, text: (el.textContent || '').trim().slice(0, 24) })
+      if (eyebrow) continue
       if (size > 0 && size < minSize) minSize = size
     }
     return minSize
   })
-  assert.ok(minFontSize >= 12, `El texto esencial debe ser >= 12px (encontrado mínimo: ${minFontSize}px)`)
+  assert.ok(minFontSize >= 12, `El texto esencial debe ser >= 12px (encontrado mínimo: ${minFontSize}px): ${JSON.stringify(await page.evaluate(() => window.__smallText.filter((item) => !item.eyebrow).slice(0, 6)))}`)
 
   // Zoom de render 200% (CSS layout scale de 1280px -> reflow 640px equivalente; distinguiendo CSS zoom de zoom nativo de navegador)
   await page.setViewportSize({ width: 1280, height: 900 })

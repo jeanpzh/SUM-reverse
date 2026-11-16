@@ -112,7 +112,9 @@ export const BOARD_SPEC = Object.freeze({
     },
     horario: {
       label: 'Horario', title: 'Horario', // Main
-      eyebrowPattern: /^.+ · versión \d+ · .+$/, // "Propuesta base 2027-I · versión 4 · cambios sin guardar"
+      // Main shows a saved version: "Propuesta base 2027-I · versión 4 · cambios sin guardar". The boards state no copy for an
+      // unsaved proposal; the app's local wording is "sin versión guardada" in the version slot (local-only, not board-sourced).
+      eyebrowPattern: /^.+ · (?:versión \d+|sin versión guardada) · .+$/,
       saveLabel: 'Guardar',
       searchPlaceholder: 'Buscar curso, sección o aula',
       teacherFilterName: 'Docente',

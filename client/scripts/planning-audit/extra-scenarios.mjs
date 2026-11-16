@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import {nav,response,json,singleCourse,generate,save,resume,closeChat} from './helpers.mjs'
+import {courseControl,noResultDisplayed} from '../planning-v2-helpers.mjs'
 export const extraScenarios = [
   ['demand-two-sources-preserve-manual-demand',async ({page,base,record}) => {
     const course=await singleCourse(page,base)
@@ -16,13 +17,13 @@ export const extraScenarios = [
       record({source,population:result.source.populationSize})
     }
     await page.keyboard.press('Escape');await modal.waitFor({state:'hidden'})
-    assert.equal(await page.getByLabel(`Demanda ${course.courseId}`,{exact:true}).inputValue(),'1')
+    assert.equal(await (await courseControl(page,'Demanda final',course.courseId)).inputValue(),'1')
   }],
   ['manual-valid-slot-updates-version-and-preserves-duration',async ({page,base}) => {
     await singleCourse(page,base);const proposal=await generate(page)
     const first=proposal.assignments[0]
     const old=first.startMinute
-    await page.locator(`.planning-sections__row[data-section-id=${JSON.stringify(first.sectionId)}]`).getByRole('button',{name:/^Inspeccionar sección/}).click()
+    await page.getByRole('table',{name:'Secciones de la propuesta'}).locator(`tr[data-section-id=${JSON.stringify(first.sectionId)}]`).first().getByRole('button',{name:/^Inspeccionar sección/}).click()
     await page.locator('.planning-inspector').getByRole('button',{name:'Editar horario',exact:true}).click()
     const targetDay=first.day===1?2:1
     await page.getByLabel(`Día revisión ${first.sectionId}`,{exact:true}).selectOption(String(targetDay))
@@ -40,8 +41,8 @@ export const extraScenarios = [
     const course=await singleCourse(page,base);await generate(page)
     const {draft}=await save(page,`AUDIT config ${Date.now()}`)
     await nav(page,'preparacion','cursos')
-    await page.getByLabel(`Demanda ${course.courseId}`,{exact:true}).fill('2')
-    assert.equal(await page.locator('.planning-status-bar').count(),0)
+    await (await courseControl(page,'Demanda final',course.courseId)).fill('2')
+    const stale=await noResultDisplayed(page);assert.ok(stale.none,`Changing demand invalidates the visible result: ${JSON.stringify(stale)}`)
     const {draft:changed,payload}=await save(page,draft.title)
     assert.equal(payload.proposalId,null)
     assert.equal(changed.proposal,null)
@@ -50,6 +51,6 @@ export const extraScenarios = [
     const restored=await resume(page,changed)
     assert.equal(restored.proposal,null)
     await nav(page,'preparacion','cursos')
-    assert.equal(await page.getByLabel(`Demanda ${course.courseId}`,{exact:true}).inputValue(),'2')
+    assert.equal(await (await courseControl(page,'Demanda final',course.courseId)).inputValue(),'2')
   }],
 ]

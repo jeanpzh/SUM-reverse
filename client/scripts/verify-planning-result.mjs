@@ -11,18 +11,20 @@ const vite = await createServer({ configFile: false, envDir: false, root: new UR
 let browser
 try {
   const { PlanningStatusBar } = await vite.ssrLoadModule('/src/screens/PlanningStatusBar.tsx')
+  // v2: the strip reads the planning session (draft version) from context, so render it under the real provider.
+  const { PlanningSessionProvider } = await vite.ssrLoadModule('/src/components/PlanningSessionProvider.tsx')
   const proposal = { proposalId: 'synthetic-layout', editVersion: 0, status: 'search-limit',
     counts: { sections: 3, scheduledSessions: 2, requiredSessions: 4 },
     sections: ['a', 'b', 'c'].map(sectionId => ({ sectionId, courseId: 'synthetic-course' })),
     assignments: ['a', 'b'].map((sectionId, i) => ({ sectionId, teacherId: `synthetic-${i}`, roomId: `synthetic-${i}`, day: 1, startMinute: 480, endMinute: 540 })),
     pending: ['b', 'c'].map(sectionId => ({ sectionId, courseId: 'synthetic-course' })),
     diagnostics: [], stats: { exploredCandidates: 1, candidateVisits: 1, backtracks: 0 } }
-  const render = (value) => renderToStaticMarkup(React.createElement(PlanningStatusBar, {
+  const render = (value) => renderToStaticMarkup(React.createElement(PlanningSessionProvider, null, React.createElement(PlanningStatusBar, {
     proposal: value, academicPeriod: '2027-I', onReviewPending() {}, onRegenerate() {}, onApplyAdvisorPatches() {},
-  }))
+  })))
   const html = render(proposal)
   assert.match(html, /2 por completar/)
-  assert.match(html, /Programación parcial/)
+  assert.match(html, /Búsqueda inconclusa/) // v2 (handoff §2.5): a search limit reads "Búsqueda inconclusa", never "parcial"/impossible
   // Retry consequences are disclosed in the confirmation after interaction.
   assert.doesNotMatch(html, /límite computacional/)
   assert.match(html, /Consultar consejero/)

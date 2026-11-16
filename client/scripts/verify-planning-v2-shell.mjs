@@ -57,7 +57,7 @@ const errors = []
 page.on('pageerror', (error) => errors.push(error.message))
 const root = page.locator('.planning-root')
 const title = page.locator('#planning-page-title')
-const primary = page.locator('#planning-tour-primary')
+const primary = page.locator('#planning-tour-primary:visible') // the id also exists on hidden stage copies (all stages stay mounted)
 
 const capture = (name) => page.screenshot({ path: resolve(evidence, `${name}.png`) })
 const settle = async () => { await page.evaluate(() => document.fonts.ready) }
@@ -125,8 +125,17 @@ const assertPrimaryStyle = async (label) => {
   expectTrue(px(ghost.borderTopLeftRadius) >= B.ghost.radiusMinPx, `${label} Guardar is a pill`)
 }
 
-const assertOnePrimary = async (label, { allowSelectAll = false } = {}) => {
-  expect(await primary.count(), 1, `${label} #planning-tour-primary count`)
+const assertOnePrimary = async (label, { allowSelectAll = false, allowNone = false } = {}) => {
+  // Contract (handoff §3 / DESIGN-v2 "one primary"): at most one `#planning-tour-primary` is visible per view. Zero is valid when
+  // no action applies (e.g. Revisión/Aprobación without a saved proposal); then no ink-filled pressable may stand in for it.
+  // The id also exists on hidden stage copies, so only the visible one counts.
+  const visiblePrimaries = await page.locator('#planning-tour-primary:visible').count()
+  if (allowNone && visiblePrimaries === 0) {
+    const stray = (await inkFilled()).filter((item) => item.id !== 'planning-tour-primary')
+    expectTrue(stray.length === 0, `${label} has no primary but shows ink-filled pressables: ${JSON.stringify(stray)}`)
+    return
+  }
+  expect(visiblePrimaries, 1, `${label} visible #planning-tour-primary count`)
   const filled = await inkFilled()
   const extras = filled.filter((item) => item.id !== 'planning-tour-primary')
   const tolerated = allowSelectAll && B.tolerances.emptyStateSelectAllMayBeInk
@@ -148,8 +157,11 @@ const assertFields = async (label) => {
     const name = await field.evaluate((el) => el.getAttribute('aria-label') || el.getAttribute('placeholder') || el.id || el.tagName)
     const tag = `${label} field #${index + 1} (${name})`
     const s = await styles(field, ['borderTopLeftRadius', 'borderTopColor', 'borderTopWidth', 'backgroundColor'])
-    near((await box(field)).height, B.field.heightPx, `${tag} height`)
-    expect(px(s.borderTopLeftRadius), B.field.radiusPx, `${tag} radius`)
+    // Review board: the simulated-role select is the one documented exception (`border-radius:9999px; height:28px`).
+    const roleSelect = name === 'Rol simulado de revisión'
+    near((await box(field)).height, roleSelect ? 28 : B.field.heightPx, `${tag} height`)
+    if (roleSelect) expectTrue(px(s.borderTopLeftRadius) >= 9999, `${tag} is a pill (radius ${s.borderTopLeftRadius})`)
+    else expect(px(s.borderTopLeftRadius), B.field.radiusPx, `${tag} radius`)
     expect(color(s.borderTopColor), B.field.borderColor, `${tag} border color`)
     expect(px(s.borderTopWidth), B.field.borderWidthPx, `${tag} border width`)
   }
@@ -194,7 +206,8 @@ try {
     await openProposalMenu(page)
     expect(await proposalTitleField(page).count(), 1, '#planning-proposal-title inside #planning-tour-proposal')
     expect(await proposalTitleField(page).getAttribute('id'), 'planning-proposal-title', 'rename field id')
-    expectTrue((await page.locator('#planning-tour-proposal').innerText()).includes('Nombre de la propuesta'), 'rename field label "Nombre de la propuesta"')
+    // textContent, not innerText: v2 renders field labels as uppercase mono eyebrows (text-transform), which innerText follows
+    expectTrue((await page.locator('#planning-tour-proposal').textContent()).includes('Nombre de la propuesta') && await page.locator('#planning-tour-proposal').getByLabel('Nombre de la propuesta', { exact: true }).isVisible(), 'rename field label "Nombre de la propuesta"')
     await capture('proposal-menu-1440')
     await closeProposalMenu(page)
   })
@@ -261,7 +274,9 @@ try {
     expectTrue(/\p{L}{4,}/u.test(label), 'status is conveyed as text, not color only')
     if (state) {
       const tone = B.statusColors[state[1].tone]
-      const stripStyle = await styles(strip, ['backgroundColor', 'borderTopLeftRadius', 'paddingTop', 'paddingLeft'])
+      // The region (`.planning-status-bar`) is the strip root hook; the board's surface (tint, 12px radius, 10/16 padding) is its
+      // inner `.planning-status-bar__strip`, which is what the board values describe.
+      const stripStyle = await styles(strip.locator('.planning-status-bar__strip').first(), ['backgroundColor', 'borderTopLeftRadius', 'paddingTop', 'paddingLeft'])
       expect(color(stripStyle.backgroundColor), tone.background, `strip background (${state[0]})`)
       expect(color((await styles(status, ['color'])).color), tone.color, `strip status color (${state[0]})`)
       expect(px(stripStyle.borderTopLeftRadius), B.strip.radiusPx, 'strip radius')
@@ -297,6 +312,11 @@ try {
   })
 
   await criterion('oferta-fields', 'every visible field in the page is 32px high, 6px radius, 1px rgb(138,143,153) border', async () => {
+    // v2: on a populated offer the course filters sit in the collapsed "Filtros y valores iniciales" disclosure and the demand
+    // input lives in the course detail pane (Preparation board: "Demanda de planificación"). Open both so their fields are measured.
+    await page.getByText('Filtros y valores iniciales', { exact: true }).click()
+    await page.getByRole('button', { name: /^Inspeccionar / }).first().click()
+    await page.getByRole('complementary', { name: /^Inspector de curso / }).waitFor()
     const count = await assertFields('Oferta de cursos')
     console.log(`  Oferta de cursos: ${count} field(s) checked`)
     expectTrue(count >= 1, 'at least one field (course search or demand input) is visible on Oferta de cursos')
@@ -342,12 +362,13 @@ try {
       await assertPrimaryStyle('Horario')
       expect(norm(await page.locator('#planning-tour-save').innerText()), spec.saveLabel, 'Guardar label')
 
-      const strip = page.locator('.planning-status-bar[data-status]')
-      expect(await strip.count(), 1, 'result strip .planning-status-bar[data-status]')
+      // All stages stay mounted and the inactive ones are hidden: scope to the current stage's strip (handoff §3 hook).
+      const strip = page.locator('.planning-status-bar[data-status]:visible')
+      expect(await strip.count(), 1, 'visible result strip .planning-status-bar[data-status]')
       const word = page.locator('#academic-scheduling-result')
       expect(await word.getAttribute('role'), 'status', '#academic-scheduling-result role')
       expectTrue(/\p{L}{4,}/u.test(norm(await word.innerText())), 'result status is text, not color only')
-      const stripStyle = await styles(strip, ['borderTopLeftRadius', 'paddingTop', 'paddingLeft', 'backgroundColor'])
+      const stripStyle = await styles(strip.locator('.planning-status-bar__strip').first(), ['borderTopLeftRadius', 'paddingTop', 'paddingLeft', 'backgroundColor']) // inner surface, see oferta-readiness-strip
       expect(px(stripStyle.borderTopLeftRadius), B.strip.radiusPx, 'result strip radius')
       expect(px(stripStyle.paddingTop), B.strip.paddingY, 'result strip padding-y')
       expect(px(stripStyle.paddingLeft), B.strip.paddingX, 'result strip padding-x')
@@ -381,8 +402,8 @@ try {
       await title.waitFor()
       await settle()
       await assertPageHead(spec, spec.label)
-      await assertOnePrimary(spec.label)
-      await assertPrimaryStyle(spec.label)
+      await assertOnePrimary(spec.label, { allowNone: true })
+      if (await page.locator('#planning-tour-primary:visible').count()) await assertPrimaryStyle(spec.label)
       await assertFields(spec.label)
       await capture(`${key}-1440`)
       await overflowAt(spec.label)

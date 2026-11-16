@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { chromium } from 'playwright'
+import { openNormativa } from './planning-v2-helpers.mjs'
 if (process.env.SUM_REDESIGN_SYNTHETIC !== '1') throw new Error('Own synthetic stack required')
 const base = new URL(process.env.SUM_REDESIGN_BASE || 'http://127.0.0.1:5746')
 if (base.protocol !== 'http:' || base.hostname !== '127.0.0.1' || base.pathname !== '/' || base.username || base.password || base.search || base.hash) throw new Error('Dedicated loopback origin required')
@@ -19,7 +20,8 @@ const check = async (id, run) => {await run(); results.push(id); console.log(`PA
 try {
   await page.goto(`${base.origin}/local/programacion-academica`, {waitUntil:'networkidle'})
   const panel = page.getByRole('region',{name:'Asistente normativo',exact:true})
-  await check('no-query-on-mount',async () => {await panel.waitFor(); assert.equal(calls.length,0)})
+  // v2: the rail is closed by default and the question field lives on the Normativa tab; neither mounting nor opening queries the API.
+  await check('no-query-on-mount',async () => {assert.equal(await panel.count(),0); assert.equal(calls.length,0); await openNormativa(page); await panel.waitFor(); assert.equal(calls.length,0)})
   await check('real-api-response-and-history',async () => {
     await page.getByLabel('Pregunta normativa',{exact:true}).fill('¿Cuál es la carga docente máxima?')
     const response = page.waitForResponse((r) => r.url().includes('/normativa/consultas'))

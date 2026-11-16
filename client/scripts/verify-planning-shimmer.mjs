@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright'
+import { openNormativa } from './planning-v2-helpers.mjs'
 if (process.env.SUM_REDESIGN_SYNTHETIC !== '1') throw new Error('Own synthetic stack required')
 const base = new URL(process.env.SUM_REDESIGN_BASE || 'http://127.0.0.1:5746')
 if (base.protocol !== 'http:' || base.hostname !== '127.0.0.1' || base.pathname !== '/' || base.username || base.password || base.search || base.hash) throw new Error('Dedicated loopback origin required')
@@ -25,7 +26,7 @@ try {
   await loader.waitFor({state:'hidden'})
   console.log('PASS catalog: measured skeleton, accessible status, inert content, reduced motion, loading completes')
   await page.route('**/normativa/consultas', async (route) => {await new Promise((resolve) => setTimeout(resolve,1200)); await route.abort()})
-  if (await page.locator('#planning-toggle-chat').getAttribute('aria-expanded') !== 'true') await page.locator('#planning-toggle-chat').click()
+  await openNormativa(page) // v2: closed-by-default rail; the question field is mounted only on the Normativa tab
   await page.getByLabel('Pregunta normativa',{exact:true}).fill('¿Qué carga lectiva corresponde?')
   await page.getByRole('button',{name:'Enviar consulta',exact:true}).click()
   await page.locator('.planning-chat .planning-fetch-loading').waitFor()
