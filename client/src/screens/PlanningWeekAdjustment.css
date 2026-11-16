@@ -193,3 +193,18 @@
   box-shadow: none;
   overflow: visible;
 }
+.planning-root .planning-week-adjustment.planning-inspector.academic-scheduling__manual-review {
+  padding: 24px;
+  gap: 20px;
+  background: var(--plan-paper);
+}
+.planning-root .planning-week-adjustment-sheet {
+  background: var(--plan-paper);
+  box-shadow: var(--plan-shadow-float);
+}
+@media (max-width: 1023px) {
+  .planning-root .planning-week-adjustment.planning-inspector.academic-scheduling__manual-review {
+    padding: 8px 16px 16px;
+    gap: 12px;
+  }
+}
