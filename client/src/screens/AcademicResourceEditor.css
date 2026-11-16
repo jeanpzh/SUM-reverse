@@ -111,3 +111,5 @@
 }
 /* A 24px name target plus 14px cell padding keeps the specified 40px row. */
 .planning-root .academic-resource-table td { padding-block: 7px; }
+.planning-root .academic-resource-workbench .academic-resource-workbench__inspector-header > button,
+.planning-root .academic-resource-workbench .academic-resource-workbench__chip button { border: 0; background: transparent; box-shadow: none; padding: 0; }
