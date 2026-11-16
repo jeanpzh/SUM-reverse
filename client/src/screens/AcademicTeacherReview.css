@@ -1,141 +1,264 @@
-.academic-teacher-review {
+/*
+ * Revisión docente — Planning v2 (board: docs/design/academic-planning-2026-11-16/boards/Review.dc.html).
+ * Plain elements on --plan-* tokens; every selector carries `.planning-root` so it outranks the
+ * legacy global table/input rules in App.css and index.css without !important.
+ */
+.planning-root .academic-teacher-review {
+  --review-gutter: 32px;
   min-width: 0;
   max-width: 100%;
   margin: 0;
   padding: 0;
-  color: var(--planning-text);
-  font-size: var(--planning-text-sm);
-  font-variant-numeric: tabular-nums;
+  color: var(--plan-ink);
+  font: 400 var(--text-plan-body)/var(--text-plan-body--line-height) var(--plan-font-sans);
   overflow-wrap: anywhere;
 }
+@media (max-width: 1279px) { .planning-root .academic-teacher-review { --review-gutter: 24px; } }
+@media (max-width: 719px) { .planning-root .academic-teacher-review { --review-gutter: 16px; } }
 
-.academic-teacher-review__state,
-.academic-teacher-review__warning {
-  margin: 8px 0;
-  color: var(--planning-muted);
-  font-size: var(--planning-text-xs);
+.planning-root .academic-teacher-review :is(b, strong) { font-weight: 500; }
+.planning-root .academic-teacher-review__muted { color: var(--plan-fog); }
+.planning-root .academic-teacher-review__mono { font-family: var(--plan-font-mono); letter-spacing: -0.01em; }
+.planning-root .academic-teacher-review__eyebrow {
+  display: block;
+  color: var(--plan-fog);
+  font: 400 var(--text-plan-label)/var(--text-plan-label--line-height) var(--plan-font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.academic-teacher-review__warning {
-  color: var(--planning-warning);
-}
-
-.academic-teacher-review__toolbar,
-.academic-teacher-review__actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.academic-teacher-review__field,
-.academic-teacher-review__observation {
-  display: grid;
-  min-width: 0;
-  max-width: 100%;
-  gap: 4px;
-}
-
-.academic-teacher-review__table-wrap {
-  min-width: 0;
-  max-width: 100%;
-  margin: 8px 0;
-}
-
-.academic-teacher-review__table-wrap table {
-  min-width: 640px;
-}
-
-.academic-teacher-review__observation {
-  margin-top: 12px;
-}
-
-.academic-teacher-review__observation-readonly {
-  margin: 8px 0;
-  white-space: pre-wrap;
-  font-size: var(--planning-text-sm);
-}
-
-.academic-teacher-review__history {
-  margin-top: 12px;
-  color: var(--planning-muted);
-  font-size: var(--planning-text-sm);
-}
-
-.academic-teacher-review__history ol {
-  display: grid;
-  gap: 8px;
-  margin: 8px 0 0;
-  padding-left: 24px;
-}
-
-.academic-teacher-review__history li {
-  display: grid;
-  gap: 4px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--planning-border);
-}
-
-.academic-teacher-review__history p {
-  margin: 4px 0;
-  white-space: pre-wrap;
-}
-
-
-
-.academic-teacher-review__strip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
-  padding: 8px 16px;
-  border-radius: 8px;
-  background: var(--planning-surface-subtle);
-  line-height: 20px;
-}
-.academic-teacher-review__strip > span {
-  border-left: 1px solid var(--planning-border);
-  padding-left: 16px;
-}
-.academic-teacher-review__strip small {
-  color: var(--planning-muted);
-  font-size: var(--planning-text-xs);
-}
-.academic-teacher-review__status {
+/* Simulated-role selector lives in the page head (portal): label pill + pill select. */
+.planning-root .academic-teacher-review__role {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  padding: 2px 4px 2px 12px;
+  border-radius: 9999px;
+  background: var(--plan-cream);
+  color: var(--plan-fog);
+  font-size: var(--text-plan-dense);
+  line-height: var(--text-plan-dense--line-height);
 }
-.academic-teacher-review__status svg { flex-shrink: 0; }
-.academic-teacher-review__section {
-  min-width: 0;
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid var(--planning-border);
+.planning-root .academic-teacher-review__role select {
+  box-sizing: border-box;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--plan-control-border);
+  border-radius: 9999px;
+  background: var(--plan-paper);
+  color: var(--plan-ink);
+  font: 400 var(--text-plan-body)/var(--text-plan-body--line-height) var(--plan-font-sans);
 }
-.planning-root .academic-teacher-review__section h3 {
-  margin: 0 0 12px;
-  color: var(--planning-text);
-  font-size: var(--planning-text-xl);
-  line-height: 22px;
-  font-weight: 700;
+
+.planning-root .academic-teacher-review__note {
+  margin: 8px 0 0;
+  color: var(--plan-fog);
+  font-size: var(--text-plan-meta);
+  line-height: var(--text-plan-meta--line-height);
 }
-.academic-teacher-review__table-wrap :is(th, td) {
-  height: 40px;
+.planning-root .academic-teacher-review__warning {
+  margin: 8px 0;
+  color: var(--plan-warning);
+  font-size: var(--text-plan-meta);
+  line-height: var(--text-plan-meta--line-height);
+}
+.planning-root .academic-teacher-review__empty { margin: 16px 0; color: var(--plan-steel); }
+.planning-root .academic-teacher-review__alert {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 10px 16px;
+  border-radius: var(--radius-plan-strip);
+  background: var(--plan-danger-bg);
+  color: var(--plan-danger);
+  font-weight: 500;
+}
+
+/* Toolbar: search + count sentence */
+.planning-root .academic-teacher-review__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0 12px;
+}
+.planning-root .academic-teacher-review__toolbar input,
+.planning-root .academic-teacher-review__observation textarea {
+  box-sizing: border-box;
+  border: 1px solid var(--plan-control-border);
+  border-radius: var(--radius-plan-input);
+  background: var(--plan-paper);
+  color: var(--plan-ink);
+  font: 400 var(--text-plan-body)/var(--text-plan-body--line-height) var(--plan-font-sans);
+}
+.planning-root .academic-teacher-review__toolbar input { width: 260px; max-width: 100%; height: 32px; padding: 0 10px; }
+.planning-root .academic-teacher-review__toolbar span { color: var(--plan-fog); font-size: var(--text-plan-dense); line-height: var(--text-plan-dense--line-height); }
+
+/* Master–detail: full-bleed hairline band, table left, detail pane right. */
+.planning-root .academic-teacher-review__split {
+  display: flex;
+  flex-wrap: wrap;
+  margin-inline: calc(var(--review-gutter) * -1);
+  border-top: 1px solid var(--plan-dove);
+}
+.planning-root .academic-teacher-review__table-wrap { flex: 999 1 520px; min-width: 0; overflow-x: auto; }
+.planning-root .academic-teacher-review table {
+  width: 100%;
+  border-collapse: collapse;
+  font: 400 var(--text-plan-body)/var(--text-plan-body--line-height) var(--plan-font-sans);
+  color: var(--plan-ink);
+}
+.planning-root .academic-teacher-review th {
+  height: auto;
   padding: 8px 12px;
-  font-size: var(--planning-text-sm);
-  line-height: 20px;
+  border: 0;
+  border-bottom: 1px solid var(--plan-dove);
+  background: transparent;
+  color: var(--plan-fog);
+  font: 400 var(--text-plan-label)/var(--text-plan-label--line-height) var(--plan-font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: left;
+  white-space: nowrap;
 }
-.academic-teacher-review__table-wrap th { font-weight: 700; }
-.academic-teacher-review__table-wrap tr[data-state='selected'] { background: var(--planning-selected); }
-.academic-teacher-review__empty { margin: 16px 0; }
-.academic-teacher-review details > summary { cursor: pointer; }
-.academic-teacher-review summary:focus-visible {
-  outline: 2px solid var(--planning-focus-ring);
-  outline-offset: 4px;
+.planning-root .academic-teacher-review td {
+  height: auto;
+  padding: 9px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--plan-row-divider);
+  background: transparent;
+  text-align: left;
+  white-space: nowrap;
 }
-@media (max-width: 639px) {
-  .academic-teacher-review__strip { padding: 8px; gap: 8px; }
-  .academic-teacher-review__strip > span { padding-left: 8px; }
+.planning-root .academic-teacher-review tbody tr:nth-child(even) { background: transparent; }
+.planning-root .academic-teacher-review__table-wrap tbody tr:hover td { background: var(--plan-cream); }
+.planning-root .academic-teacher-review__table-wrap tr[data-selected] td,
+.planning-root .academic-teacher-review__table-wrap tr[data-selected]:hover td { background: var(--plan-sand); }
+.planning-root .academic-teacher-review__table-wrap tr[data-selected] td:first-child { box-shadow: inset 3px 0 0 var(--plan-ink); }
+.planning-root .academic-teacher-review .academic-teacher-review__observation-cell { white-space: normal; max-width: 280px; min-width: 200px; }
+/* The board's first column is plain text; here it is a button so every row is keyboard-selectable. */
+.planning-root .academic-teacher-review__name {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.planning-root .academic-teacher-review__name:hover { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--plan-dove); }
+
+.planning-root .academic-teacher-review__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-plan-dense);
+  font-weight: 500;
+  color: var(--plan-steel);
+}
+.planning-root .academic-teacher-review__status[data-status='conformity'] { color: var(--plan-success); }
+.planning-root .academic-teacher-review__status[data-status='changes-requested'] { color: var(--plan-danger); }
+.planning-root .academic-teacher-review__status[data-status='outdated'] { color: var(--plan-fog); }
+
+.planning-root .academic-teacher-review__row-action,
+.planning-root .academic-teacher-review__button {
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--plan-ink);
+  box-shadow: inset 0 0 0 1px var(--plan-dove);
+  font: 500 var(--text-plan-body)/var(--text-plan-body--line-height) var(--plan-font-sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.planning-root .academic-teacher-review__row-action { padding: 2px 10px; font-size: var(--text-plan-dense); }
+.planning-root .academic-teacher-review__button { padding: 6px 14px; }
+.planning-root .academic-teacher-review__button[disabled] { background: var(--plan-cream); color: var(--plan-fog); box-shadow: none; cursor: not-allowed; }
+
+/* Detail pane */
+.planning-root .academic-teacher-review__pane {
+  display: flex;
+  flex: 1 1 400px;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 460px;
+  padding: 20px 24px;
+  border-left: 1px solid var(--plan-dove);
+}
+.planning-root .academic-teacher-review__pane-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.planning-root .academic-teacher-review__pane-head > div { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+.planning-root .academic-teacher-review__pane h2 {
+  margin: 4px 0 4px;
+  font: 400 var(--text-plan-section)/30px var(--plan-font-sans);
+  letter-spacing: var(--text-plan-section--letter-spacing);
+}
+.planning-root .academic-teacher-review__close {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--plan-steel);
+  cursor: pointer;
+}
+.planning-root .academic-teacher-review__close:hover { background: var(--plan-cream); }
+.planning-root .academic-teacher-review__observation-readonly {
+  margin: 0;
+  padding: 12px;
+  border-radius: var(--radius-plan-strip);
+  background: var(--plan-cream);
+  white-space: pre-wrap;
+}
+.planning-root .academic-teacher-review__observation-readonly .academic-teacher-review__eyebrow { margin-bottom: 4px; }
+.planning-root .academic-teacher-review__blocks { min-width: 0; overflow-x: auto; }
+.planning-root .academic-teacher-review__small {
+  margin: 0;
+  color: var(--plan-fog);
+  font-size: var(--text-plan-meta);
+  line-height: var(--text-plan-meta--line-height);
+}
+.planning-root .academic-teacher-review__form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--plan-row-divider);
+}
+.planning-root .academic-teacher-review__observation { display: flex; flex-direction: column; gap: 6px; font-weight: 500; }
+.planning-root .academic-teacher-review__observation textarea { width: 100%; padding: 8px 10px; font-weight: 400; resize: vertical; }
+.planning-root .academic-teacher-review__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Historial (existing capability, kept as a quiet disclosure) */
+.planning-root .academic-teacher-review__history { margin: 16px 0 0; }
+.planning-root .academic-teacher-review__history summary { cursor: pointer; font-weight: 500; min-height: 24px; }
+.planning-root .academic-teacher-review__history ol { display: grid; gap: 8px; margin: 8px 0 0; padding-left: 24px; }
+.planning-root .academic-teacher-review__history li { display: grid; gap: 4px; padding-bottom: 8px; border-bottom: 1px solid var(--plan-row-divider); }
+.planning-root .academic-teacher-review__history p { margin: 4px 0; white-space: pre-wrap; }
+
+/* Visible 2px ink focus ring (planning-v2 base rule covers focus-visible; summaries and plain buttons included). */
+.planning-root .academic-teacher-review :is(button, select, input, textarea, summary):focus-visible,
+.planning-root .academic-teacher-review__role select:focus-visible {
+  outline: 2px solid var(--plan-focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1279px) {
+  .planning-root .academic-teacher-review__pane { max-width: none; border-left: 0; border-top: 1px solid var(--plan-dove); flex-basis: 100%; }
+}
+@media (max-width: 719px) {
+  .planning-root .academic-teacher-review__toolbar input { width: 100%; height: 44px; }
+  .planning-root .academic-teacher-review__row-action,
+  .planning-root .academic-teacher-review__button,
+  .planning-root .academic-teacher-review__close { min-height: 44px; }
+  .planning-root .academic-teacher-review__close { min-width: 44px; }
+  .planning-root .academic-teacher-review__name { min-height: 44px; }
+  .planning-root .academic-teacher-review__role select { height: 44px; }
 }
