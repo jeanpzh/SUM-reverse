@@ -5,7 +5,7 @@ const setTheme = async (page, item) => {
 // Acceptance for the 2026-11-10 internal redesign. Run against a fresh, operator-confirmed
 // synthetic stack only. Never attach to a snapshot-backed server or production.
 import assert from 'node:assert/strict'
-import { openProposalMenu, closeProposalMenu, proposalTitleField } from './planning-v2-helpers.mjs'
+import { openProposalMenu, closeProposalMenu, proposalTitleField, statusBar } from './planning-v2-helpers.mjs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { chromium } from 'playwright'
@@ -137,23 +137,27 @@ try {
     proposal = await generated.json()
     assert.ok(proposal.sections.length > 0)
     await page.waitForURL(url => url.searchParams.get('etapa') === 'horario')
-    await page.locator('.planning-status-bar').waitFor()
-    assert.equal(await page.locator('.planning-status-bar').getAttribute('data-status'),proposal.status)
-    const facts = await page.locator('.planning-status-bar__facts').innerText()
+    await statusBar(page).waitFor()
+    assert.equal(await statusBar(page).getAttribute('data-status'),proposal.status)
+    const facts = await statusBar(page).locator('.planning-status-bar__facts').innerText()
     assert.match(facts,/\d+ de \d+ secciones completas/)
     assert.match(facts,/\d+ por completar/)
     assert.match(facts,/\d+ cruces en lo asignado/)
     assert.equal(await page.locator('.planning-view-pane--tabla').isVisible(),true)
     const before = requests.filter(({method,path}) => method === 'POST' && /\/propuestas$/.test(path)).length
-    await page.getByRole('button',{name:'Reintentar búsqueda',exact:true}).click()
+    // v2: "Reintentar búsqueda" lives in the "Ver avisos" panel (handoff §1 action table); its confirmation still gates the request
+    await page.getByRole('button',{name:/^Ver avisos/}).click()
+    await page.getByRole('dialog',{name:'Avisos de la generación'}).getByRole('button',{name:'Reintentar búsqueda',exact:true}).click()
     await page.getByRole('alertdialog').getByRole('button',{name:'Cancelar',exact:true}).click()
+    if (await page.getByRole('dialog',{name:'Avisos de la generación'}).isVisible()) await page.keyboard.press('Escape')
+    await page.getByRole('dialog',{name:'Avisos de la generación'}).waitFor({state:'hidden'})
     assert.equal(requests.filter(({method,path}) => method === 'POST' && /\/propuestas$/.test(path)).length,before)
     await capture('horario-tabla-light-1440')
   })
   await check('table-week-filters-selection-and-section-detail', async () => {
     const search = page.getByRole('searchbox',{name:'Buscar secciones',exact:true})
     const teacher = page.getByRole('combobox',{name:'Filtrar por docente',exact:true})
-    const row = page.locator('.planning-sections__row').first()
+    const row = page.getByRole('table',{name:'Secciones de la propuesta'}).locator('tr[data-section-id]').first()
     const sectionId = await row.getAttribute('data-section-id')
     const selected = proposal.sections.find(section => section.sectionId === sectionId)
     await row.getByRole('button',{name:/^Inspeccionar sección/}).click()
@@ -167,7 +171,10 @@ try {
     assert.equal(await teacher.inputValue(),teacherValue)
     assert.equal(await detail.isVisible(),true)
     await page.getByRole('button',{name:'Tabla',exact:true}).click()
-    assert.equal(await page.locator(`tr[data-section-id=${JSON.stringify(sectionId)}]`).getAttribute('aria-selected'),'true')
+    // v2: one table row per section component (T/P/L) share the section id; selection is per section, so every row of it is selected
+    const sectionRows = page.locator(`tr[data-section-id=${JSON.stringify(sectionId)}]`)
+    assert.ok(await sectionRows.count() >= 1)
+    assert.equal(await sectionRows.evaluateAll(rows => rows.every(row => row.getAttribute('aria-selected') === 'true')),true)
     await page.getByRole('button',{name:'Cerrar detalle',exact:true}).click()
     await detail.waitFor({state:'hidden'})
     await search.fill('')

@@ -49,6 +49,12 @@ export async function gotoStage(page, name, etapa) {
   if (etapa) await page.waitForURL(new RegExp(`etapa=${etapa}(?:&|$)`))
 }
 
+/**
+ * The result strip of the CURRENT stage (`.planning-status-bar[data-status]`, handoff §3). All stages stay mounted and the
+ * inactive ones are hidden, so an unscoped `.planning-status-bar` locator matches several strips (strict-mode violation).
+ */
+export const statusBar = (page) => page.locator('.planning-status-bar[data-status]:visible')
+
 /** The proposal switcher's container (`#planning-tour-proposal`); only present while the menu is open. */
 export const proposalMenu = (page) => page.locator('#planning-tour-proposal')
 export const proposalTitleField = (page) => proposalMenu(page).locator('#planning-proposal-title')
