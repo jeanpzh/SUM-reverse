@@ -20,9 +20,10 @@ export const lifecycleScenarios = [
     await page.getByRole('button',{name:/^Enviar a revisión(?: docente)?$/}).click()
     let state = (await json(await submit)).draft
     assert.equal(state.state,'in-review')
+    await page.getByLabel('Rol simulado de revisión',{exact:true}).selectOption('teacher')
     for (const teacher of state.review.teachers) {
-      await page.getByLabel('Rol simulado de revisión',{exact:true}).selectOption('teacher')
-      await page.getByLabel('Docente de revisión',{exact:true}).selectOption(teacher.teacherId)
+      // v2: no "Docente de revisión" select; the teacher is chosen from the row action "Registrar respuesta de …" (one pending row per teacher)
+      await page.getByRole('row',{name:/Pendiente/}).getByRole('button',{name:/^Registrar respuesta de /}).first().click()
       const conform = response(page,`/borradores/${saved.id}/revision/responder`)
       await page.getByRole('button',{name:'Dar conformidad',exact:true}).click()
       state = (await json(await conform)).draft
@@ -30,28 +31,34 @@ export const lifecycleScenarios = [
     assert.equal(state.state,'ready-for-approval')
     await page.getByLabel('Rol simulado de revisión',{exact:true}).selectOption('school')
     await nav(page,'aprobacion')
-    await page.locator('.academic-publication__preview').waitFor()
-    const approve = page.getByRole('button',{name:'Aprobar (simulada)',exact:true})
+    await page.getByRole('region',{name:'Condiciones para aprobar'}).waitFor()
+    // v2: the preview is a <details>, open only with a selected publication; its table lives inside
+    const preview=page.locator('.academic-publication__preview')
+    assert.equal(await preview.evaluate(el=>el.tagName==='DETAILS'),true)
+    assert.equal(await preview.evaluate(el=>el.open),false)
+    const approve = page.locator('#planning-tour-primary:visible')
+    assert.match(await approve.innerText(),/^Aprobar versión \d+$/)
     await approve.click()
     await page.getByRole('alertdialog').getByRole('button',{name:'Cancelar',exact:true}).click()
     assert.equal((await json(await page.request.get(`${base}${api}/borradores/${saved.id}/vista-previa`))).state,'ready-for-approval')
     await approve.click()
     const approval = response(page,`/borradores/${saved.id}/aprobar`)
-    await page.getByRole('alertdialog').getByRole('button',{name:'Aprobar',exact:true}).click()
+    await page.getByRole('alertdialog').getByRole('button',{name:/^Aprobar versión \d+$/}).click()
     const approved = (await json(await approval)).draft
     assert.equal(approved.state,'approved')
     assert.equal(await isProposalTitleDisabled(page),true)
     const list = response(page,'/publicaciones','GET')
     await page.getByRole('button',{name:'Actualizar publicaciones',exact:true}).click()
     await json(await list)
-    await page.getByRole('button',{name:'Publicar (simulada)',exact:true}).click()
+    await page.locator('.planning-page-head').getByRole('button',{name:'Publicar',exact:true}).click()
     const publish = response(page,`/borradores/${saved.id}/publicar`)
-    await page.getByRole('alertdialog').getByRole('button',{name:'Publicar',exact:true}).click()
+    await page.getByRole('alertdialog').getByRole('button',{name:/^Publicar versión \d+$/}).click()
     const published = (await json(await publish)).draft
     assert.equal(published.state,'published')
     const release = await json(await page.request.get(`${base}${api}/publicaciones/${saved.id}`))
     assert.deepEqual(release.schedule.assignments,proposal.assignments)
-    await page.getByRole('button',{name:'Crear nuevo borrador',exact:true}).click()
+    // v2: per-row fork, named after its row: "…desde la versión N" (current version) or "…desde la publicación N" (earlier release)
+    await page.getByRole('button',{name:/^Crear nuevo borrador desde (?:la versión|la publicación) \d+$/}).first().click()
     const fork = response(page,`/borradores/${saved.id}/nuevo-borrador`)
     await page.getByRole('alertdialog').getByRole('button',{name:'Crear borrador',exact:true}).click()
     const forked = (await json(await fork)).draft
@@ -68,7 +75,7 @@ export const lifecycleScenarios = [
     await page.getByRole('button',{name:/^Enviar a revisión(?: docente)?$/}).click()
     const state=(await json(await submit)).draft
     await page.getByLabel('Rol simulado de revisión',{exact:true}).selectOption('teacher')
-    await page.getByLabel('Docente de revisión',{exact:true}).selectOption(state.review.teachers[0].teacherId)
+    await page.getByRole('button',{name:/^Registrar respuesta de /}).first().click() // v2: the row action selects the teacher
     await page.getByLabel('Observación docente',{exact:true}).fill('Observación sintética: revisar disponibilidad.')
     const pending=response(page,`/borradores/${draft.id}/revision/responder`)
     await page.getByRole('button',{name:'Solicitar cambios',exact:true}).click()
@@ -77,7 +84,10 @@ export const lifecycleScenarios = [
     assert.equal(observed.review.teachers[0].status,'changes-requested')
     await page.getByLabel('Rol simulado de revisión',{exact:true}).selectOption('school')
     await nav(page,'aprobacion')
-    assert.equal(await page.getByRole('button',{name:'Aprobar (simulada)',exact:true}).count(),0)
+    assert.equal(await page.getByRole('button',{name:/^Aprobar versión \d+$/}).count(),0)
+    // v2: Aprobar is not offered; the one primary is the navigation back to the open review, and Publicar stays disabled until approval
+    assert.equal(await page.locator('#planning-tour-primary:visible').innerText(),'Volver a Revisión docente')
+    assert.equal(await page.locator('.planning-page-head').getByRole('button',{name:'Publicar',exact:true}).isDisabled(),true)
   }],
   ['stale-save-does-not-overwrite-newer-version',async ({page,base}) => {
     await singleCourse(page,base);await generate(page)
