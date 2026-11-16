@@ -697,7 +697,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
     </ResizablePanel>
     {railOpen && <>
       <ResizableHandle withHandle aria-label="Redimensionar asistente" />
-      <ResizablePanel id="planning-rail" defaultSize="30%" minSize="280px" maxSize="45%" className="planning-workspace__panel">
+      <ResizablePanel id="planning-rail" defaultSize="360px" minSize="320px" maxSize="560px" className="planning-workspace__panel">
         <aside className="planning-rail" aria-label="Asistente normativo">
           <PlanningContextPanel academicPeriod={planningPeriod} chat={chat}
             expanded={false} onExpandedChange={setChatExpanded} onClose={closeChat} />

@@ -329,3 +329,7 @@
 
 .planning-horario-toolbar-spacer { flex: 1; }
 .planning-root .planning-horario-table td { border-bottom-color: color-mix(in srgb, var(--plan-dove) 45%, var(--plan-paper)); }
+
+/* Long course, teacher and room names wrap so Estado stays visible beside the rail. */
+.planning-root .planning-horario-table td:is(:nth-child(1), :nth-child(4), :nth-child(5)) { white-space: normal; min-width: 8rem; max-width: 18rem; overflow-wrap: anywhere; }
+.planning-root .planning-horario-table td:first-child { min-width: 12rem; }
