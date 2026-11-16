@@ -125,6 +125,18 @@ export function PlanningWeekView({
       ) / 60,
     ) * 60,
   )
+  const dayAvailability = (day: number) => {
+    const merged: Array<{ startMinute: number; endMinute: number }> = []
+    for (const window of windows
+      .filter((w) => w.day === day)
+      .sort((a, b) => a.startMinute - b.startMinute)) {
+      const previous = merged[merged.length - 1]
+      if (previous && window.startMinute <= previous.endMinute)
+        previous.endMinute = Math.max(previous.endMinute, window.endMinute)
+      else merged.push({ startMinute: window.startMinute, endMinute: window.endMinute })
+    }
+    return merged
+  }
   const hours = Array.from({ length: (max - min) / 60 }, (_, i) => min + i * 60)
   const selected = filtered.find((b) => b.sectionId === selectedSectionId)
   const visibleDay = agendaDay ?? selected?.day ?? days[0]
@@ -265,6 +277,18 @@ export function PlanningWeekView({
             {days.map((day) => (
               <div key={day} className="planning-week__day-heading">
                 {short[day]}
+                {day > 5 && (
+                  <span>
+                    {' '}
+                    ·{' '}
+                    {dayAvailability(day)
+                      .map(
+                        (w) =>
+                          `${formatAcademicMinute(w.startMinute).replace(':00', '')}–${formatAcademicMinute(w.endMinute).replace(':00', '')}`,
+                      )
+                      .join(', ')}
+                  </span>
+                )}
               </div>
             ))}
             <div className="planning-week__time-axis" style={{ height: hours.length * 40 }}>
@@ -279,6 +303,17 @@ export function PlanningWeekView({
             {days.map((day) => {
               const dayItems = items.filter((i) => i.day === day)
               const layout = computeWeekDayLayout(dayItems)
+              const unavailable: Array<{ startMinute: number; endMinute: number }> = []
+              let cursor = min
+              for (const window of dayAvailability(day)) {
+                if (window.startMinute > cursor)
+                  unavailable.push({
+                    startMinute: cursor,
+                    endMinute: Math.min(max, window.startMinute),
+                  })
+                cursor = Math.max(cursor, window.endMinute)
+              }
+              if (cursor < max) unavailable.push({ startMinute: cursor, endMinute: max })
               return (
                 <div
                   key={day}
@@ -286,19 +321,17 @@ export function PlanningWeekView({
                   aria-label={`Horarios del ${names[day]}`}
                   style={{ height: hours.length * 40 }}
                 >
-                  {hours.map(
-                    (minute) =>
-                      !windows.some(
-                        (w) => w.day === day && w.startMinute < minute + 60 && w.endMinute > minute,
-                      ) && (
-                        <div
-                          key={minute}
-                          className="planning-week__unavailable"
-                          title="Fuera de la disponibilidad configurada"
-                          style={{ top: ((minute - min) / 60) * 40, height: 40 }}
-                        />
-                      ),
-                  )}
+                  {unavailable.map((window) => (
+                    <div
+                      key={window.startMinute}
+                      className="planning-week__unavailable"
+                      title="Fuera de la disponibilidad configurada"
+                      style={{
+                        top: ((window.startMinute - min) / 60) * 40,
+                        height: ((window.endMinute - window.startMinute) / 60) * 40,
+                      }}
+                    />
+                  ))}
                   {dayItems.map((item) => {
                     const lane = layout.get(item.id)
                     return renderBlock(item, {

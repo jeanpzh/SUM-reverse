@@ -189,3 +189,10 @@
     padding-inline: 16px;
   }
 }
+.planning-root .planning-week__day-heading {
+  overflow: hidden;
+  white-space: nowrap;
+}
+.planning-root .planning-week__day-heading span {
+  text-transform: none;
+}
