@@ -3,7 +3,7 @@ import { AdvisorOutcome } from '../components/ai-elements/AdvisorOutcome'
 import { usePlanningAssistantDisplay } from './usePlanningAssistantDisplay'
 import { PlanningFetchLoading } from '../components/PlanningFetchLoading'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { useCallback, useMemo, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useMemo, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { academicSectionCoverage, academicSectionLabel, aggregateAcademicBlocks, formatAcademicMinute, normalizeAcademicSearch, formatAcademicInterval } from '../data/academicScheduling'
 import type { AcademicCatalog, AcademicProposal, PlanningPeriod } from '../data/academicScheduling'
 import type { AcademicAdjustment, AcademicAllocationPolicy, AcademicDraftState, AcademicPlanningResources } from '../../../shared/programacion-academica-api.mjs'
@@ -32,7 +32,7 @@ import { PlanningPreparationSummary } from './PlanningPreparationSummary'
 import { PlanningStatusBar, PlanningSearchDetails } from './PlanningStatusBar'
 import { PlanningInspector } from './PlanningInspector'
 import { PlanningWeekView } from './PlanningWeekView'
-import { useDefaultLayout, useGroupRef } from 'react-resizable-panels'
+import { useDefaultLayout, useGroupRef, type GroupImperativeHandle } from 'react-resizable-panels'
 import { useMediaQuery } from '../lib/useMediaQuery'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '../components/ui/Resizable'
 import { Sheet, SheetContent, SheetTitle } from '../components/ui/Sheet'
@@ -264,8 +264,8 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
   // Removing a panel leaves the survivor at its previous share; give it the whole group back.
   const workspaceGroupRef = useGroupRef()
   const detailGroupRef = useGroupRef()
-  useLayoutEffect(() => { if (!railOpen) workspaceGroupRef.current?.setLayout({ 'planning-content': 100 }) }, [railOpen, workspaceGroupRef])
-  useLayoutEffect(() => { if (!inspectorDocked) detailGroupRef.current?.setLayout({ 'planning-schedule-content': 100 }) }, [inspectorDocked, detailGroupRef])
+  useSolePanelFill(workspaceGroupRef, 'planning-content', !railOpen)
+  useSolePanelFill(detailGroupRef, 'planning-schedule-content', !inspectorDocked)
   const reviewPending = () => {
     if (!proposal) return
     const sectionId = proposal.pending[0]?.sectionId
@@ -872,4 +872,16 @@ function PlanningScheduleToolbar({ contextContainer, mobileActionContainer, prop
     {mobileActionContainer ? createPortal(<div className="planning-mobile-schedule-controls">{controls}</div>, mobileActionContainer) : controls}
   </div>
   return contextContainer ? createPortal(toolbar, contextContainer) : toolbar
+}
+
+// The group unregisters a removed panel after this render, so wait a frame and only act once one panel remains.
+function useSolePanelFill(groupRef: RefObject<GroupImperativeHandle | null>, panelId: string, sole: boolean) {
+  useEffect(() => {
+    if (!sole) return
+    const frame = requestAnimationFrame(() => {
+      const layout = groupRef.current?.getLayout()
+      if (layout && Object.keys(layout).length === 1 && (layout[panelId] ?? 100) < 100) groupRef.current?.setLayout({ [panelId]: 100 })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [groupRef, panelId, sole])
 }
