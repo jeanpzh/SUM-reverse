@@ -5,7 +5,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/Dialog'
 import './PlanningStatusBar.css'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../components/ui/Sheet'
-import { CalendarCheck2, CircleAlert } from 'lucide-react'
+import { PlanningResultStrip } from './PlanningResultStrip'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { AdvisorFindings } from '../components/ai-elements/AdvisorFindings'
@@ -24,6 +24,7 @@ const diagnosticLabels: Record<string, string> = {
 }
 
 export interface PlanningStatusBarProps {
+  onRetrySearch?: () => void
   academicPeriod: PlanningPeriod
   proposal: AcademicProposal
   onApplyAdvisorPatches?: (patches: AcademicAdvisorPatch[]) => Promise<boolean | void> | boolean | void
@@ -58,7 +59,7 @@ function resultWording(proposal: AcademicProposal) {
   let diagnosisText: string | null = null
 
   if (proposal.status === 'search-limit') {
-    badgeText = 'Programación parcial'
+    badgeText = 'Búsqueda inconclusa'
     headline = 'La programación aún tiene secciones por completar'
     subtext = 'La búsqueda se detuvo antes de completar la programación. Revisa las secciones pendientes o ajusta las restricciones.'
     diagnosisText = 'La búsqueda alcanzó su límite computacional. No prueba que no exista solución en el dominio configurado.'
@@ -82,7 +83,7 @@ function resultWording(proposal: AcademicProposal) {
   return { badgeText, headline, subtext, diagnosisText }
 }
 
-export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatches, teacherNames = {}, courseNames = {}, roomNames = {}, isLocked = false, advisorDisabledReason }: PlanningStatusBarProps) {
+export function PlanningStatusBar({ onRetrySearch, proposal, academicPeriod, onApplyAdvisorPatches, teacherNames = {}, courseNames = {}, roomNames = {}, isLocked = false, advisorDisabledReason }: PlanningStatusBarProps) {
   const advisorDisabledReasonId = useId()
   const applyDisabledReasonId = useId()
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
@@ -166,16 +167,10 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
   const { badgeText, headline, subtext, diagnosisText } = resultWording(proposal)
 
   return (
-    <section className="planning-status-bar" aria-labelledby="academic-scheduling-result" data-status={proposal.status}>
-      <div className="planning-status-bar__strip">
-        <strong id="academic-scheduling-result" role="status" className="planning-status-bar__state-row">
-          {proposal.status === 'complete' ? <CalendarCheck2 size={16} aria-hidden="true" /> : <CircleAlert size={16} aria-hidden="true" />}
-          {proposal.status === 'complete' ? headline : badgeText}
-        </strong>
-        <div className="planning-status-bar__facts"><span className="planning-status-bar__fact">{coverage.complete} de {totalSections} secciones completas</span>
-        <span className="planning-status-bar__fact">{coverage.partial + coverage.pending} por completar</span>
-        <span className="planning-status-bar__fact">{conflicts} cruces en lo asignado</span></div>
-        <div className="planning-status-bar__actions">
+    <PlanningResultStrip status={proposal.status} statusId="academic-scheduling-result"
+      label={proposal.status === 'complete' ? headline : badgeText}
+      facts={[<><span className="planning-desktop-fact">{coverage.complete} de {totalSections} secciones completas</span><span className="planning-mobile-fact">{coverage.complete} de {totalSections} completas</span></>, `${coverage.partial + coverage.pending} por completar`, `${conflicts} cruces en lo asignado`]}
+      action={<>
           {proposal.diagnostics.length > 0 && <Button type="button" variant="link" size="sm" aria-haspopup="dialog" onClick={() => setDiagnosticsOpen(true)}>Ver avisos ({proposal.diagnostics.length})</Button>}
           {(coverage.partial + coverage.pending) > 0 && onApplyAdvisorPatches && <>
             <Button type="button" variant="outline" size="sm" disabled={isLocked}
@@ -184,14 +179,15 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
             {isLocked && advisorDisabledReason && <span id={advisorDisabledReasonId} role="status"
               className="text-sm text-muted-foreground">{advisorDisabledReason}</span>}
           </>}
-        </div>
-      </div>
+      </>}>
+
       {(subtext || diagnosisText) && <p className="planning-status-bar__subtext">{subtext ?? diagnosisText}</p>}
       <Dialog open={diagnosticsOpen} onOpenChange={setDiagnosticsOpen}>
         <DialogContent showCloseButton={false} className="planning-status-bar__dialog min-w-0 sm:max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Avisos de la generación</DialogTitle>
             <DialogDescription>{proposal.diagnostics.length} avisos agrupados por tipo</DialogDescription>
+            {onRetrySearch && <Button variant="link" disabled={isLocked} onClick={onRetrySearch}>Reintentar búsqueda</Button>}
           </DialogHeader>
           <div className="planning-status-bar__groups grid min-w-0 gap-3">
             {diagnosticGroups.map((group) => {
@@ -336,7 +332,7 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
           )}
         </SheetContent>
       </Sheet>
-    </section>
+    </PlanningResultStrip>
   )
 }
 

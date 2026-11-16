@@ -1,6 +1,7 @@
+import { createPortal } from 'react-dom'
+import { PlanningResultStrip } from './PlanningResultStrip'
 import { PlanningFetchLoading } from '../components/PlanningFetchLoading'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CircleAlert, CircleCheck } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { NativeSelect } from '../components/ui/NativeSelect'
 import { Label } from '../components/ui/Label'
@@ -19,6 +20,7 @@ import './AcademicPublicationPanel.css'
 type PreviewSource = { id: string; version: number; schedule: AcademicScheduleSnapshot; title: string; label: string; source: 'draft' | 'publication'; state: AcademicDraftState }
 
 type Props = {
+  actionContainer?: HTMLElement | null
   primaryActionId?: string
   draftId: string | null
   draftVersion: number | null
@@ -43,7 +45,7 @@ function dateLabel(value: string) {
   return new Date(value).toLocaleString('es-PE')
 }
 
-export function AcademicPublicationPanel({ primaryActionId, draftId, draftVersion, draftTitle, draftState, dirty, busy,
+export function AcademicPublicationPanel({ actionContainer, primaryActionId, draftId, draftVersion, draftTitle, draftState, dirty, busy,
   onApprove, onPublish, onFork, onError, onMessage }: Props) {
   const [confirmElement, confirm] = useConfirm()
   const [publicationList, setPublicationList] = useState<AcademicPublicationList | null>(null)
@@ -272,19 +274,15 @@ export function AcademicPublicationPanel({ primaryActionId, draftId, draftVersio
     : draftState !== 'ready-for-approval' ? `${approveDisabledReason}. Vuelve a Revisión docente para completar la revisión.` : approveDisabledReason
 
   return <section className="academic-publication" aria-label="Aprobación y publicación simuladas">
-      <div className="academic-publication__strip">
-        <strong className="academic-publication__state" role="status">
-          {frozen || canApprove ? <CircleCheck size={16} aria-hidden="true" /> : <CircleAlert size={16} aria-hidden="true" />}
-          {stateLabels[draftState]}
-        </strong>
-        <span>{draftVersion ? `Versión ${draftVersion}` : 'Sin versión guardada'}</span>
-        <span>{dirty ? 'Cambios sin guardar' : draftId ? 'Guardada' : 'Sin guardar'}</span>
-        {primaryActionId === 'approve' && canApprove && <Button id="academic-approve-action" type="button" size="sm" onClick={approve}>Aprobar (simulada)</Button>}
-      </div>
+      <PlanningResultStrip status={dirty ? 'incomplete' : draftState} label={stateLabels[draftState]}
+        facts={[draftVersion ? `Versión ${draftVersion}` : 'Sin versión guardada', dirty ? 'Cambios sin guardar' : draftId ? 'Guardada' : 'Sin guardar']} />
+      {actionContainer && primaryActionId === 'approve' && createPortal(<Button id="planning-tour-primary" disabled={!canApprove} aria-describedby={!canApprove ? 'academic-approve-reason' : undefined} onClick={approve}>Aprobar versión {draftVersion}</Button>, actionContainer)}
+      {actionContainer && draftState === 'approved' && createPortal(<Button variant="outline" disabled={!canPublish} aria-describedby={!canPublish ? 'academic-publish-reason' : undefined} onClick={publish}>Publicar (simulada)</Button>, actionContainer)}
+
       {blockingReason && <p id={draftState === 'approved' ? 'academic-publish-reason' : 'academic-approve-reason'} className="academic-publication__status">{blockingReason}</p>}
       <section className="academic-publication__section" aria-labelledby="academic-publication-title">
         <h3 id="academic-publication-title">Decisión</h3>
-        {draftState === 'approved' && <div className="academic-publication__actions">
+        {!actionContainer && draftState === 'approved' && <div className="academic-publication__actions">
           <Button variant="outline" type="button" disabled={!canPublish}
             aria-describedby={!canPublish ? 'academic-publish-reason' : undefined} onClick={publish}>Publicar (simulada)</Button>
         </div>}

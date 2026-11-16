@@ -1,3 +1,5 @@
+import { createPortal } from 'react-dom'
+import { PlanningResultStrip } from './PlanningResultStrip'
 import { useMemo, useState } from 'react'
 import { CircleAlert, CircleCheck, Clock } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
@@ -13,6 +15,7 @@ import { academicSectionLabel, aggregateAcademicBlocks, formatAcademicDuration, 
 import './AcademicTeacherReview.css'
 
 type Props = {
+  actionContainer?: HTMLElement | null
   primaryActionId?: string
   review: AcademicTeacherReview | undefined
   proposal: AcademicProposal | null
@@ -28,7 +31,7 @@ type Props = {
 
 const statusLabels = { pending: 'Pendiente', conformity: 'Conforme', 'changes-requested': 'Observó cambios', outdated: 'Desactualizado' } as const
 
-export function AcademicTeacherReview({ primaryActionId, review, proposal, draftId, draftVersion, derivedState, dirty, busy, error, onSubmit, onRespond }: Props) {
+export function AcademicTeacherReview({ actionContainer, primaryActionId, review, proposal, draftId, draftVersion, derivedState, dirty, busy, error, onSubmit, onRespond }: Props) {
   const [role, setRole] = useState<'school' | 'teacher'>('school')
   const [teacherId, setTeacherId] = useState('')
   const [observation, setObservation] = useState('')
@@ -49,18 +52,14 @@ export function AcademicTeacherReview({ primaryActionId, review, proposal, draft
     : 'El horario está completo y guardado. Ya puedes enviarlo a revisión.'
 
   return <section className="academic-teacher-review" aria-label="Revisión docente simulada">
-    <div className="academic-teacher-review__strip">
-      <strong className="academic-teacher-review__status" role="status">
-        {!review ? <CircleAlert size={16} aria-hidden="true" /> : derivedState === 'Lista para aprobación' ? <CircleCheck size={16} aria-hidden="true" /> : <Clock size={16} aria-hidden="true" />}
-        {review ? derivedState : 'Sin enviar'}
-      </strong>
-      {review && <>
-        <span>{teachers.length} docentes</span><span>{counts.conformity} conformes</span>
-        <span>{counts['changes-requested']} con cambios solicitados</span><span>{counts.pending} pendientes</span>
-        {counts.outdated > 0 && <span>{counts.outdated} desactualizados</span>}
-      </>}
-      <small>Revisión simulada{review ? ` · ronda ${review.round} · versión ${draftVersion}` : ''}</small>
-    </div>
+    {actionContainer && primaryActionId === 'record-response' && createPortal(<Button id="planning-tour-primary" onClick={() => {
+      setRole('teacher')
+      requestAnimationFrame(() => document.querySelector<HTMLTextAreaElement>('#academic-review-detail textarea')?.focus())
+    }}>Registrar respuesta ({counts.pending})</Button>, actionContainer)}
+    <PlanningResultStrip status={review && teachers.every((teacher) => teacher.status === 'conformity') ? 'ready' : 'incomplete'}
+      label={review ? derivedState : 'Sin enviar'}
+      facts={review ? [`${teachers.length} docentes`, `${counts.conformity} conformes`, `${counts['changes-requested']} con cambios solicitados`, `${counts.pending} pendientes`, `Revisión simulada · ronda ${review.round} · versión ${draftVersion}`] : ['Revisión simulada']} />
+
     {!review && <p className="academic-teacher-review__empty">{emptyMessage}</p>}
     {teachers.length > 0 && <section className="academic-teacher-review__section" aria-labelledby="academic-review-teachers-title">
       <h3 id="academic-review-teachers-title">Docentes</h3>
