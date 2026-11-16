@@ -102,7 +102,7 @@ export function PlanningWeekAdjustment({
           {docked || slot ? (
             <h2 id="academic-scheduling-manual-review">{heading}</h2>
           ) : (
-            <SheetTitle id="academic-scheduling-manual-review">{heading}</SheetTitle>
+            <SheetTitle><span id="academic-scheduling-manual-review">{heading}</span></SheetTitle>
           )}
         </div>
         <Button
