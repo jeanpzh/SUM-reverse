@@ -3,7 +3,7 @@ import { useState } from 'react'
 // A layout change never supplies the user's intent to open a modal. Reset before
 // committing the new layout so the workspace is never briefly made inert.
 export function usePlanningAssistantDisplay(railLayout: boolean) {
-  const [display, setDisplay] = useState({ railLayout, open: railLayout, expanded: false })
+  const [display, setDisplay] = useState({ railLayout, open: false, expanded: false })
   let current = display
   if (display.railLayout !== railLayout) {
     current = { railLayout, open: false, expanded: false }

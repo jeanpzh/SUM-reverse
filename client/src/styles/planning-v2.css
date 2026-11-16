@@ -1,0 +1,405 @@
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/inter/Inter-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/inter/Inter-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/geist-mono/GeistMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/geist-mono/GeistMono-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+/*
+ * Planning v2 theme — Tailwind CSS v4 (client uses tailwindcss ^4.3.3).
+ * Status: proposed with DESIGN-v2.md (2026-11-16). Not imported anywhere yet.
+ *
+ * Scoping: values live on `.planning-root` only. `@theme inline` registers
+ * utilities (`bg-plan-cream`, `text-plan-fog`, `rounded-plan-input`,
+ * `text-plan-title`, `font-plan-mono`, …) that resolve to those variables, so
+ * they render nothing outside the planning route and never touch the student
+ * `--sum-*` tokens or the global `--font-sans` (Poppins) used by SUM screens.
+ *
+ * Adaptations from the supplied theme.css (each justified in DESIGN-v2.md §5):
+ *  1. `--spacing-4: 4px` etc. are dropped. In v4 they would redefine `p-4` as
+ *     4px instead of 16px. The default `--spacing: 0.25rem` already is the
+ *     4px base unit, so `p-4` = 16px, `gap-3` = 12px, `px-8` = 32px.
+ *  2. `--leading-caption: 20` (unitless 20 = 20× line height) is replaced by
+ *     v4 paired properties `--text-*--line-height` in px.
+ *  3. Font tokens are renamed by role and namespaced (`plan-sans`,
+ *     `plan-display`, `plan-mono`) instead of overriding `--font-sans`.
+ *  4. Fog text #858585 (3.7:1) → #6b6b6b (5.3:1). New control border
+ *     #8a8f99 (3.25:1) because Dove #d5d9e2 (1.4:1) fails WCAG 1.4.11.
+ *  5. Semantic status colors added; ember/sunbeam/sprout dropped.
+ *  6. Radius scale made role-based: pill / input 6 / block 8 / strip 12 / float 16.
+ *  7. The 48–72px display sizes are kept for documentation and empty-state covers only.
+ *  8. A derived dark theme (the shell persists a theme choice).
+ */
+
+.planning-root {
+  /* Ink and neutrals */
+  --plan-ink: #0a0a0a;
+  --plan-steel: #545454;
+  --plan-fog: #6b6b6b;
+  --plan-pewter: #9d9d9d; /* decorative only */
+  --plan-dove: #d5d9e2; /* dividers, ghost rings */
+  --plan-control-border: #8a8f99;
+  --plan-row-divider: #eceef2;
+
+  /* Surfaces */
+  --plan-paper: #ffffff;
+  --plan-cream: #f9f8f6;
+  --plan-sand: #f2ede5;
+  --plan-charcoal: #151515;
+  --plan-on-ink: #ffffff;
+
+  /* Status (always paired with icon + text) */
+  --plan-success: #1a7f37;
+  --plan-success-bg: #eef6ef;
+  --plan-warning: #8a5a00;
+  --plan-warning-bg: #fbf3e2;
+  --plan-danger: #b42318;
+  --plan-danger-bg: #fdeeec;
+
+  --plan-focus: #0a0a0a;
+
+  --plan-shadow-float: 0 0 0 1px rgb(0 0 0 / 0.06), 0 18px 40px -24px rgb(15 23 42 / 0.18);
+
+  --plan-font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --plan-font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  color-scheme: light;
+  font-family: var(--plan-font-sans);
+  color: var(--plan-ink);
+  background: var(--plan-paper);
+}
+
+.planning-root[data-theme='dark'] {
+  --plan-ink: #ededeb;
+  --plan-steel: #c2c2bf;
+  --plan-fog: #a3a3a3;
+  --plan-pewter: #5c5c5c;
+  --plan-dove: #2e3036;
+  --plan-control-border: #6b7079;
+  --plan-row-divider: #1f2126;
+
+  --plan-paper: #111111;
+  --plan-cream: #191919;
+  --plan-sand: #24211c;
+  --plan-charcoal: #ededeb;
+  --plan-on-ink: #111111;
+
+  --plan-success: #5cc679;
+  --plan-success-bg: #0f2416;
+  --plan-warning: #e3b55a;
+  --plan-warning-bg: #2a2010;
+  --plan-danger: #ff8a80;
+  --plan-danger-bg: #2c1210;
+
+  --plan-focus: #ededeb;
+  --plan-shadow-float: 0 0 0 1px rgb(255 255 255 / 0.08), 0 18px 40px -24px rgb(0 0 0 / 0.6);
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  /* Colors → bg-plan-*, text-plan-*, border-plan-*, ring-plan-* */
+  --color-plan-ink: var(--plan-ink);
+  --color-plan-steel: var(--plan-steel);
+  --color-plan-fog: var(--plan-fog);
+  --color-plan-pewter: var(--plan-pewter);
+  --color-plan-dove: var(--plan-dove);
+  --color-plan-control: var(--plan-control-border);
+  --color-plan-divider: var(--plan-row-divider);
+  --color-plan-paper: var(--plan-paper);
+  --color-plan-cream: var(--plan-cream);
+  --color-plan-sand: var(--plan-sand);
+  --color-plan-charcoal: var(--plan-charcoal);
+  --color-plan-on-ink: var(--plan-on-ink);
+  --color-plan-success: var(--plan-success);
+  --color-plan-success-bg: var(--plan-success-bg);
+  --color-plan-warning: var(--plan-warning);
+  --color-plan-warning-bg: var(--plan-warning-bg);
+  --color-plan-danger: var(--plan-danger);
+  --color-plan-danger-bg: var(--plan-danger-bg);
+  --color-plan-focus: var(--plan-focus);
+
+  /* Families → font-plan-sans, font-plan-display, font-plan-mono */
+  --font-plan-sans: var(--plan-font-sans);
+  --font-plan-display: var(--plan-font-sans);
+  --font-plan-mono: var(--plan-font-mono);
+
+  /* Shadow → shadow-plan-float (floating surfaces only) */
+  --shadow-plan-float: var(--plan-shadow-float);
+}
+
+@theme static {
+  /* Type scale → text-plan-* (size + paired line height + tracking) */
+  --text-plan-label: 11px; /* mono caps eyebrows and column headers */
+  --text-plan-label--line-height: 16px;
+  --text-plan-label--letter-spacing: 0.04em;
+  --text-plan-meta: 12px;
+  --text-plan-meta--line-height: 16px;
+  --text-plan-dense: 13px;
+  --text-plan-dense--line-height: 18px;
+  --text-plan-body: 14px;
+  --text-plan-body--line-height: 20px;
+  --text-plan-lead: 16px;
+  --text-plan-lead--line-height: 24px;
+  --text-plan-state: 20px;
+  --text-plan-state--line-height: 26px;
+  --text-plan-state--letter-spacing: -0.4px;
+  --text-plan-section: 24px;
+  --text-plan-section--line-height: 32px;
+  --text-plan-section--letter-spacing: -0.6px;
+  --text-plan-title: 30px;
+  --text-plan-title--line-height: 36px;
+  --text-plan-title--letter-spacing: -0.75px;
+  /* Documentation / empty-state covers only */
+  --text-plan-cover: 48px;
+  --text-plan-cover--line-height: 48px;
+  --text-plan-cover--letter-spacing: -1.2px;
+  --text-plan-display: 72px;
+  --text-plan-display--line-height: 72px;
+  --text-plan-display--letter-spacing: -1.8px;
+
+  /* Role radii → rounded-plan-* */
+  --radius-plan-input: 6px;
+  --radius-plan-block: 8px;
+  --radius-plan-strip: 12px;
+  --radius-plan-float: 16px;
+  /* Pills use the built-in rounded-full. */
+
+  /* Layout */
+  --container-plan-rail: 216px;
+  --container-plan-assist: 360px;
+}
+
+/* Base rules for the planning root (no global selectors) */
+.planning-root :focus-visible {
+  outline: 2px solid var(--plan-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planning-root * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Compatibility aliases keep the existing content and controls on one palette. */
+.planning-root.planning-root[data-theme] {
+  --planning-canvas: var(--plan-paper);
+  --planning-surface: var(--plan-paper);
+  --planning-surface-subtle: var(--plan-cream);
+  --planning-text: var(--plan-ink);
+  --planning-muted: var(--plan-steel);
+  --planning-border: var(--plan-dove);
+  --planning-border-control: var(--plan-control-border);
+  --planning-primary: var(--plan-ink);
+  --planning-primary-foreground: var(--plan-on-ink);
+  --planning-selected: var(--plan-sand);
+  --planning-focus-ring: var(--plan-focus);
+  --planning-warning: var(--plan-warning);
+  --planning-warning-surface: var(--plan-warning-bg);
+  --planning-error: var(--plan-danger);
+  --planning-error-surface: var(--plan-danger-bg);
+  --planning-success: var(--plan-success);
+  --planning-success-surface: var(--plan-success-bg);
+  --planning-radius-control: var(--radius-plan-input);
+  --planning-radius-panel: var(--radius-plan-strip);
+  --planning-radius-floating: var(--radius-plan-float);
+  --font-weight-medium: 500;
+  --font-weight-semibold: 500;
+  --font-weight-bold: 500;
+  --font-mono: var(--plan-font-mono);
+  font-family: var(--plan-font-sans);
+  font-synthesis: none;
+  font-size: var(--text-plan-body);
+  line-height: var(--text-plan-body--line-height);
+}
+.planning-root :where(h1, h2, h3, h4, strong, b) { font-weight: 500; }
+.planning-root .planning-shell-layout { display: flex; flex-direction: column; height: 100dvh; min-height: 0; --sidebar-width: 216px; }
+.planning-shell-body { display: flex; flex: 1; min-height: 0; min-width: 0; }
+.planning-root [data-slot='sidebar-container'] { position: absolute; height: 100%; }
+.planning-shell-body > [data-slot='sidebar'] { position: relative; }
+.planning-root .planning-main-wrapper { height: auto; }
+.planning-root .screen-academic-scheduling { padding: 0; }
+.planning-scope-bar-slot { flex: none; }
+.planning-scope-bar { min-height: 52px; padding: 0 16px; display: flex; align-items: center; flex-wrap: wrap; gap: 16px; border-bottom: 1px solid var(--plan-dove); }
+.planning-scope-bar__product { font-weight: 500; }
+.planning-scope-bar__divider { width: 1px; height: 16px; background: var(--plan-dove); }
+.planning-scope-bar__faculty { color: var(--plan-fog); font: var(--text-plan-meta)/var(--text-plan-meta--line-height) var(--plan-font-mono); }
+.planning-scope-bar__tools { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.planning-proposal-name { overflow: hidden; text-overflow: ellipsis; }
+.planning-root .planning-scope-header__draft-state { font: var(--text-plan-meta)/var(--text-plan-meta--line-height) var(--plan-font-mono); color: var(--plan-ink); border-radius: 9999px; background: var(--plan-sand); padding: 0 8px; white-space: normal; }
+.planning-root [data-slot='sidebar-content'] { padding: 20px 12px; gap: 20px; }
+.planning-root [data-slot='sidebar-group'] { padding: 0; }
+.planning-root [data-slot='sidebar-group-label'] { padding: 0 10px 8px; height: auto; font: var(--text-plan-label)/var(--text-plan-label--line-height) var(--plan-font-mono); letter-spacing: 0.04em; text-transform: uppercase; color: var(--plan-fog); }
+.planning-root [data-slot='sidebar-menu-button'] { border-radius: 9999px; padding: 6px 10px; font-size: var(--text-plan-body); font-weight: 500; color: var(--plan-steel); }
+.planning-root [data-slot='sidebar-menu-button'][data-active='true'] { background: var(--plan-sand); color: var(--plan-ink); }
+.planning-root [data-slot='sidebar-menu-button'] > svg { display: none; }
+.planning-root [data-collapsible='icon'] [data-slot='sidebar-menu-button'] > svg { display: block; }
+.planning-root [data-slot='sidebar-footer'] { padding: 12px 22px; border-top: 1px solid var(--plan-row-divider); }
+.planning-root .planning-sidebar__provenance { padding: 0; font: var(--text-plan-label)/var(--text-plan-label--line-height) var(--plan-font-mono); color: var(--plan-fog); }
+.planning-root [data-slot='sidebar-footer'] [data-slot='sidebar-menu-button'] { padding-inline: 0; }
+.planning-root [data-slot='sidebar-footer'] [data-slot='sidebar-menu-button'] > svg { display: block; }
+.planning-page-head { padding: 24px 32px 16px; display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; min-width: 0; flex: none; }
+.planning-page-head__text { min-width: 0; overflow-wrap: anywhere; display: flex; flex-direction: column; gap: 6px; }
+.planning-eyebrow { margin: 0; color: var(--plan-fog); font: var(--text-plan-label)/var(--text-plan-label--line-height) var(--plan-font-mono); letter-spacing: 0.04em; text-transform: uppercase; }
+.planning-eyebrow [data-dirty] { color: var(--plan-warning); }
+.planning-root #planning-page-title { margin: 0; font: 400 var(--text-plan-title)/var(--text-plan-title--line-height) var(--plan-font-sans); letter-spacing: var(--text-plan-title--letter-spacing); color: var(--plan-ink); }
+.planning-page-head__reason { margin: 0; font-size: var(--text-plan-meta); color: var(--plan-fog); }
+.planning-page-head__actions, .planning-page-head__panel-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.planning-page-head__panel-actions:empty { display: none; }
+.planning-root :is(.planning-page-head, .planning-scope-bar, .planning-proposal-switcher, .planning-status-bar) [data-slot='button'] { border-radius: 9999px; padding: 6px 14px; min-height: 32px; height: auto; font: 500 var(--text-plan-body)/var(--text-plan-body--line-height) var(--plan-font-sans); box-shadow: none; white-space: normal; }
+.planning-root .planning-scope-bar [data-size='icon'] { padding: 0; width: 32px; height: 32px; }
+.planning-root :is(.planning-page-head, .planning-scope-bar) [data-variant='outline'] { background: transparent; border: 1px solid var(--plan-dove); }
+.planning-root #planning-tour-primary { border: 0; background: var(--plan-ink); color: var(--plan-on-ink); }
+.planning-root #planning-tour-save { background: transparent; color: var(--plan-ink); }
+.planning-root #planning-tour-save > svg { display: none; }
+.planning-root .planning-workspace__content { padding: 0 32px 24px; }
+.planning-root .planning-status-bar { margin: 0 0 16px; }
+.planning-root .planning-status-bar__strip { padding: 10px 16px; border-radius: var(--radius-plan-strip); gap: 12px 16px; background: var(--plan-warning-bg); color: var(--plan-ink); font-size: var(--text-plan-body); }
+.planning-root .planning-status-bar__state-row { font-weight: 500; font-size: var(--text-plan-dense); color: var(--plan-warning); }
+.planning-root .planning-status-bar:is([data-status='complete'], [data-status='ready'], [data-status='ready-for-approval'], [data-status='approved'], [data-status='published']) .planning-status-bar__strip { background: var(--plan-success-bg); }
+.planning-root .planning-status-bar:is([data-status='complete'], [data-status='ready'], [data-status='ready-for-approval'], [data-status='approved'], [data-status='published']) .planning-status-bar__state-row { color: var(--plan-success); }
+.planning-root .planning-status-bar[data-status='invalid-input'] .planning-status-bar__strip { background: var(--plan-danger-bg); }
+.planning-root .planning-status-bar[data-status='invalid-input'] .planning-status-bar__state-row { color: var(--plan-danger); }
+.planning-root .planning-status-bar__facts { flex: 1 1 auto; gap: 12px 16px; }
+.planning-root .planning-status-bar__fact { border-left: 1px solid var(--plan-dove); padding-left: 16px; }
+.planning-root .planning-status-bar__fact a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.planning-root .planning-status-bar__actions { flex: 0 1 auto; }
+.planning-root .planning-status-bar__actions [data-slot='button'] { padding: 2px 4px; background: transparent; border: 0; color: var(--plan-ink); }
+.planning-readiness-disclosure summary { cursor: pointer; text-decoration: underline; min-height: 24px; }
+.planning-readiness-disclosure ul { padding-left: 20px; }
+.planning-root .planning-generation-popover { width: min(380px, calc(100vw - 32px)); max-height: min(600px, 75dvh); overflow: auto; margin: 0; inset: 112px 32px auto auto; padding: 20px; border: 1px solid var(--plan-dove); border-radius: var(--radius-plan-float); box-shadow: var(--plan-shadow-float); background: var(--plan-paper); color: var(--plan-ink); }
+.planning-root .planning-generation-popover .academic-scheduling__generate { margin: 0; padding: 0; border: 0; background: transparent; }
+.planning-root .planning-proposal-switcher { top: 52px; left: min(440px, 40vw); transform: none; width: 380px; max-width: calc(100vw - 32px); max-height: calc(100dvh - 84px); overflow: auto; padding: 16px; border-radius: var(--radius-plan-float); box-shadow: var(--plan-shadow-float); background: var(--plan-cream); }
+.planning-root .planning-proposal-switcher .academic-scheduling__draft-field { width: 100%; max-width: none; }
+.planning-root .planning-proposal-switcher [data-slot='input'] { width: 100%; border-radius: var(--radius-plan-input); border-color: var(--plan-control-border); }
+.planning-proposal-rename-note { margin: 0; font-size: var(--text-plan-meta); line-height: var(--text-plan-meta--line-height); color: var(--plan-fog); }
+@media (max-width: 1279px) {
+  .planning-page-head { padding-inline: 24px; }
+  .planning-root .planning-workspace__content { padding-inline: 24px; }
+}
+@media (max-width: 719px) {
+  .planning-scope-bar { gap: 4px; padding: 4px; }
+  .planning-scope-bar__product, .planning-scope-bar__divider, .planning-scope-bar__faculty { display: none; }
+  .planning-scope-bar #planning-tour-proposal { order: 3; flex: 1 1 100%; min-width: 0; }
+  .planning-scope-bar #planning-tour-proposals { max-width: 100%; }
+  .planning-page-head { padding: 16px; }
+  .planning-root .planning-workspace__content { padding-inline: 16px; }
+  .planning-page-head__actions { width: 100%; }
+  .planning-root :is(.planning-page-head, .planning-scope-bar) [data-slot='button'] { min-height: 44px; }
+  .planning-root .planning-scope-bar [data-size='icon'] { width: 44px; }
+  .planning-root .planning-proposal-switcher { left: 16px; top: 104px; }
+  .planning-root .planning-generation-popover { inset: auto 16px 16px; }
+}
+/* Keep the shell typography independent of legacy heading and form rules. */
+.planning-root .planning-eyebrow { line-height: var(--text-plan-label--line-height); }
+.planning-root .planning-status-bar__strip { min-height: 40px; }
+.planning-root [data-slot='sidebar-menu'] { gap: 2px; }
+.planning-root .planning-scope-bar [data-slot='button'][data-variant='ghost'] { padding: 4px 12px; }
+.planning-root .planning-scope-bar [data-slot='button'][data-size='icon'] { padding: 0; }
+.planning-root [data-slot='sidebar-menu-button'] { font-size: var(--text-plan-body); line-height: var(--text-plan-body--line-height); }
+.planning-root .planning-sidebar__provenance > .sr-only { position: absolute; }
+.planning-root .planning-sidebar__provenance { white-space: nowrap; }
+.planning-root [data-collapsible='icon'] [data-slot='sidebar-content'] { padding-inline: 8px; }
+.planning-root [data-collapsible='icon'] [data-slot='sidebar-footer'] { padding-inline: 8px; }
+.planning-root .planning-proposal-switcher [data-slot='dialog-header'] { display: none; }
+.planning-root .planning-proposal-switcher .academic-scheduling__saved-row { padding: 8px 12px; border: 0; border-radius: var(--radius-plan-block); }
+.planning-root .planning-proposal-switcher .academic-scheduling__saved-row:hover { background: var(--plan-sand); }
+.planning-proposal-mobile-scope, .planning-mobile-tools { display: none; }
+.planning-root .planning-proposal-switcher { left: 240px; }
+.planning-root .planning-proposal-option { width: 100%; justify-content: space-between; padding: 8px 12px; border-radius: var(--radius-plan-block); text-align: left; }
+.planning-proposal-option__version { font: var(--text-plan-meta)/var(--text-plan-meta--line-height) var(--plan-font-mono); color: var(--plan-fog); }
+@media (max-width: 719px) {
+  .planning-scope-bar { flex-wrap: nowrap; }
+  .planning-scope-bar > [data-slot='button']:not([data-size='icon']) { display: none; }
+  .planning-root .planning-proposal-trigger { flex: 1; min-width: 0; }
+  .planning-root #planning-tour-proposals { display: flex; align-items: flex-start; flex-direction: column; gap: 0; padding: 0 4px; width: 100%; }
+  .planning-root #planning-tour-proposals > :is(svg, .planning-scope-header__draft-state) { display: none; }
+  .planning-root .planning-proposal-mobile-scope { display: block; font: var(--text-plan-label)/var(--text-plan-label--line-height) var(--plan-font-mono); color: var(--plan-fog); text-transform: uppercase; letter-spacing: 0.04em; }
+  .planning-root .planning-proposal-name { max-width: 100%; white-space: nowrap; }
+  .planning-root .planning-scope-bar :is(#planning-tour-guide, .planning-theme-control) { display: none; }
+  .planning-root .planning-proposal-switcher { left: 16px; top: 52px; }
+  .planning-mobile-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+  .planning-root .planning-page-head__actions { position: fixed; z-index: 30; bottom: 0; left: 0; padding: 12px 16px; background: var(--plan-paper); border-top: 1px solid var(--plan-dove); }
+  .planning-root .planning-workspace__content { padding-bottom: 144px; }
+  .planning-root #planning-tour-primary { flex: 1; }
+}
+.planning-root .planning-scope-bar { flex-direction: row; margin: 0; gap: 16px; border-bottom: 1px solid var(--plan-dove); }
+.planning-stage-rail { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.planning-root .planning-scope-bar :is(#planning-tour-guide, #planning-toggle-chat, .planning-theme-control, [data-sidebar='trigger']) { width: 32px; min-width: 32px; height: 32px; padding: 0; }
+.planning-root .planning-page-head__actions > [data-slot='button']:not(#planning-tour-primary) { border-color: var(--plan-dove); }
+.planning-page-head__tertiary { display: flex; flex-wrap: wrap; }
+.planning-root .planning-page-head__tertiary [data-slot='button'] { border: 0; padding-inline: 8px; }
+.planning-root .academic-scheduling__saved-row[data-current] { background: var(--plan-sand); }
+.planning-proposal-option { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+.planning-proposal-option__actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.planning-root .planning-proposal-option__actions [data-slot='button'] { padding: 2px 4px; font-size: var(--text-plan-meta); }
+.planning-root .planning-empty-offer-primary { margin-top: 12px; border-radius: 9999px; padding: 6px 14px; font-weight: 500; }
+@media (max-width: 719px) {
+  .planning-root .planning-scope-bar { gap: 4px; }
+  .planning-root .planning-scope-switcher-trigger { display: none; }
+  .planning-root .planning-scope-bar :is(#planning-tour-guide, .planning-theme-control) { display: none; }
+  .planning-root .planning-scope-bar :is(#planning-toggle-chat, [data-sidebar='trigger']) { width: 44px; min-width: 44px; height: 44px; }
+}
+/* The retained stable class must not inherit the retired two-row header padding. */
+.planning-root .planning-scope-bar.planning-scope-header { padding: 0 16px; min-height: 52px; }
+@media (max-width: 719px) {
+  .planning-root .planning-scope-bar.planning-scope-header { padding: 4px; height: 52px; }
+}
+.planning-root .planning-stage-rail [data-slot='sidebar-menu-button'] { border-radius: 9999px; }
+.planning-root .planning-sidebar__completed { color: var(--plan-fog); }
+.planning-root .planning-scope-bar :is(.planning-scope-switcher-trigger, #planning-tour-proposals) { border-color: var(--plan-dove); }
+@media (max-width: 719px) {
+  .planning-root .planning-scope-bar #planning-tour-proposals { border-color: transparent; }
+}
+.planning-mobile-provenance { display: none; }
+@media (max-width: 719px) {
+  .planning-mobile-provenance { display: block; flex-basis: 100%; color: var(--plan-fog); font: var(--text-plan-label)/var(--text-plan-label--line-height) var(--plan-font-mono); }
+}
+.planning-root .planning-proposal-switcher { translate: none; }
+.planning-root .planning-status-bar .planning-status-bar__state-row > svg { color: inherit; }
+.planning-mobile-stage-actions, .planning-mobile-fact { display: none; }
+@media (max-width: 719px) {
+  .planning-root .planning-page-head__text > .planning-eyebrow { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .planning-root .planning-page-head__tertiary, .planning-desktop-fact { display: none; }
+  .planning-mobile-stage-actions, .planning-mobile-fact { display: block; }
+  .planning-mobile-stage-actions summary { cursor: pointer; min-height: 24px; }
+  .planning-root .planning-stage-panel--horario .planning-status-bar__strip { padding: 10px 12px; gap: 4px; }
+  .planning-stage-panel--horario .planning-status-bar__state-row { flex-basis: 100%; }
+  .planning-root .planning-stage-panel--horario .planning-status-bar__facts { gap: 4px; }
+  .planning-root .planning-stage-panel--horario .planning-status-bar__fact { padding: 0; border: 0; }
+  .planning-stage-panel--horario .planning-status-bar__fact:nth-child(2)::before { content: '· '; }
+  .planning-stage-panel--horario .planning-status-bar__fact:nth-child(n+3) { display: none; }
+  .planning-stage-panel--horario .planning-status-bar__actions:empty { display: none; }
+}
+.planning-root .planning-proposal-switcher label { font: var(--text-plan-label)/var(--text-plan-label--line-height) var(--plan-font-mono); color: var(--plan-fog); text-transform: uppercase; letter-spacing: 0.04em; }
+.planning-navigation-trigger { position: relative; display: flex; flex: none; }
+.planning-navigation-trigger [data-sidebar='trigger'] > svg { visibility: hidden; }
+.planning-navigation-trigger__desktop { pointer-events: none; position: absolute; inset: 6px; display: flex; align-items: center; justify-content: center; border-radius: 9999px; color: var(--plan-on-ink); background: var(--plan-ink); }
+.planning-navigation-trigger__mobile { display: none; pointer-events: none; }
+@media (max-width: 719px) {
+  .planning-navigation-trigger__desktop { display: none; }
+  .planning-navigation-trigger__mobile { display: block; position: absolute; inset: 13px; color: var(--plan-steel); }
+}

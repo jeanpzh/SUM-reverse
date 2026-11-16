@@ -25,6 +25,7 @@ import { useConfirm } from '../components/ui/ConfirmDialog'
 import { toast } from '../components/ui/Sonner'
 import { Tour, TourPortal, TourSpotlight, TourSpotlightRing, TourStep, TourHeader, TourTitle,
   TourDescription, TourFooter, TourPrev, TourNext, TourSkip, TourStepCounter } from '../components/ui/Tour'
+import { PlanningResultStrip } from './PlanningResultStrip'
 import { PlanningScopeHeader } from './PlanningScopeHeader'
 import { PlanningPreparationSummary } from './PlanningPreparationSummary'
 import { PlanningScheduleToolbar } from './PlanningScheduleToolbar'
@@ -38,7 +39,8 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '../compone
 import { Sheet, SheetContent, SheetTitle } from '../components/ui/Sheet'
 import { useNormativeChat } from './useNormativeChat'
 import { PlanningContextPanel } from './PlanningContextPanel'
-import { FolderKanban } from 'lucide-react'
+import { ModeToggle } from '../components/mode-toggle'
+import { ChevronDown } from 'lucide-react'
 import type { PlanningStage } from '../routes/local.programacion-academica'
 import './AcademicScheduling.css'
 import './PlanningWorkbench.css'
@@ -51,11 +53,12 @@ const GUIDE_STEPS = [
   ['primary', 'Siguiente paso', 'Este botón indica la acción que sigue según el estado de la propuesta.'],
 ] as const
 
-export function AcademicScheduling({ currentStage = 'preparacion', preparationView = 'resumen', onPreparationViewChange }: {
+export function AcademicScheduling({ currentStage = 'preparacion', preparationView: requestedPreparationView = 'cursos', onPreparationViewChange }: {
   currentStage?: PlanningStage
   preparationView?: PlanningPreparationView
   onPreparationViewChange: (view: PlanningPreparationView) => void
 }) {
+  const preparationView = requestedPreparationView === 'resumen' ? 'cursos' : requestedPreparationView
   // Workflow state and rules live in the Sesión de programación (client/src/data/planningSession.ts).
   const { state, view, commands } = usePlanningSessionContext()
   const [applyingAdvisor, setApplyingAdvisor] = useState(false)
@@ -81,6 +84,8 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
     previousAssistantDisplay.current = { railLayout, open: chatOpen }
   }, [railLayout, chatOpen])
   const scrollerRef = useRef<HTMLDivElement | null>(null)
+  const [headActions, setHeadActions] = useState<HTMLDivElement | null>(null)
+  const [scopeOpen, setScopeOpen] = useState(false)
   const [draftListOpen, setDraftListOpen] = useState(false)
   const viewScrollPositions = useRef<{ tabla: number; semana: number }>({ tabla: 0, semana: 0 })
 
@@ -105,6 +110,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
   const chat = useNormativeChat(planningPeriod)
   const planningPolicy = state.policy
   const draftTitle = state.draft.title
+  const invalidDraftTitle = !draftTitle.trim() || draftTitle.trim() !== draftTitle
   const draftId = state.draft.id
   const draftVersion = state.draft.version
   const savedDraftState = state.draft.savedState
@@ -137,7 +143,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
   const pageTitle = currentStage === 'horario' ? 'Horario'
     : currentStage === 'revision' ? 'Revisión docente'
       : currentStage === 'aprobacion' ? 'Aprobación y publicación'
-        : preparationView === 'cursos' ? 'Cursos'
+        : preparationView === 'cursos' ? 'Oferta de cursos'
           : preparationView === 'recursos' ? 'Docentes y ambientes' : 'Resumen de preparación'
 
   useEffect(() => {
@@ -172,10 +178,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
   const refreshDraftList = () => commands.refreshDrafts()
   const saveDraft = async () => {
     await commands.save()
-    if (!draftTitle.trim() || draftTitle.trim() !== draftTitle) {
-      await navigate({ to: '/local/programacion-academica', search: { etapa: 'preparacion', vista: 'resumen' } })
-      document.getElementById('planning-proposal-title')?.focus()
-    }
+    if (invalidDraftTitle) setDraftListOpen(true)
   }
   const estimateDemand = () => commands.estimateDemand()
   const generate = async () => {
@@ -280,8 +283,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
   if (currentAction) {
     switch (currentAction.id) {
       case 'review-offer':
-        nextAction = preparationView === 'cursos' ? null
-          : <Button type="button" size="sm" id="planning-tour-primary" onClick={() => onPreparationViewChange('cursos')}>{currentAction.label}</Button>
+        nextAction = selectedCourses.length === 0 ? <Button variant="outline" disabled aria-describedby="planning-empty-generate-reason">Generar propuesta<span id="planning-empty-generate-reason" className="sr-only">Selecciona cursos para generar</span></Button> : <Button type="button" size="sm" id="planning-tour-primary" onClick={() => onPreparationViewChange('cursos')}>{currentAction.label}</Button>
         break
       case 'generate':
         nextAction = <Button type="button" size="sm" id="planning-tour-primary"
@@ -307,8 +309,11 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       case 'back-review':
         nextAction = stageLink({ etapa: 'revision' }, currentAction.label, 'outline')
         break
+      case 'save':
+        nextAction = <Button id="planning-tour-primary" disabled={!canSave || draftBusy} onClick={() => void saveDraft()}>{currentAction.label}</Button>
+        break
       default:
-        nextAction = null // save, record-response, approve, publish stay in their panels
+        nextAction = null // Panel-owned actions retain their validation and confirmation.
     }
   }
 
@@ -316,18 +321,9 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
     {confirmElement}
     <PlanningScopeHeader
       title={pageTitle}
+      eyebrow={currentStage === 'preparacion' ? `Paso 1 de 4 · ${draftVersion ? workspaceDirty ? 'cambios sin guardar' : 'guardada' : 'cambios en memoria hasta guardar'}` : undefined}
       nextAction={nextAction}
-      tertiaryAction={currentStage === 'horario' && proposal ? <Button type="button" variant="link" disabled={lockedDraft || draftBusy} onClick={() => void retrySearch()}>Reintentar búsqueda</Button> : null}
-      draftState={view.displayedDraftState}
-      proposalControls={
-        <div className="academic-scheduling__draft-field"><Label className="sr-only" htmlFor="planning-proposal-title">Propuesta</Label>
-          <Input id="planning-proposal-title" aria-label="Nombre de la propuesta" aria-invalid={Boolean(draftError && (!draftTitle.trim() || draftTitle.trim() !== draftTitle))} aria-describedby={draftError && !draftListOpen ? 'planning-draft-error' : undefined} maxLength={100} value={draftTitle} disabled={lockedDraft || draftBusy}
-            onChange={(event) => markTitle(event.currentTarget.value)} />
-        </div>
-      }
-      proposalActions={
-        <div className="academic-scheduling__draft-actions">
-          {!lockedDraft && view.proposalComplete && view.displayedDraftState === 'draft' && (
+      tertiaryAction={currentStage === 'horario' ? <>           {!lockedDraft && view.proposalComplete && view.displayedDraftState === 'draft' && (
             <Button type="button" variant="link" disabled={draftBusy} onClick={() => markDraftState('ready-for-review')}>
               Marcar lista para revisión
             </Button>
@@ -337,26 +333,61 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
               Volver a borrador
             </Button>
           )}
-          <Button
-            type="button"
-            variant="ghost"
-            id="planning-tour-proposals"
-            aria-haspopup="dialog"
-            aria-label="Ver mis propuestas guardadas"
-            className="gap-1.5"
-            onClick={() => {
-              setDraftListOpen(true)
-              void refreshDraftList()
-            }}
-          >
-            <FolderKanban className="size-3.5" aria-hidden="true" />
-            <span>Propuestas</span>
-          </Button>
+ </> : currentStage === 'revision' ? <Button asChild variant="link"><Link to="/local/programacion-academica" search={{ etapa: 'horario' }}>Editar horario</Link></Button> : null}
+      draftState={view.displayedDraftState}
+      proposalTitle={draftTitle}
+      version={draftVersion}
+      actionSlotRef={setHeadActions}
+      scopeSwitcher={<Button className="planning-scope-switcher-trigger" variant="ghost" onClick={() => setScopeOpen(true)} aria-haspopup="dialog"><span className="planning-scope-bar__faculty">FISI</span> Sistemas · {planningPeriod}<ChevronDown size={12} aria-hidden="true" /></Button>}
+      generationOptions={currentStage === 'preparacion' ? <>
+        <Button className="planning-generation-trigger" variant="outline" popoverTarget="planning-generation-options">Opciones de generación</Button>
+        <div id="planning-generation-options" className="planning-generation-popover" popover="auto" role="dialog" aria-label="Opciones de generación">
+          <div className="academic-scheduling__locked-workspace">
+            {catalog && <section className="academic-scheduling__section academic-scheduling__generate" aria-labelledby="academic-scheduling-generate">
+              <h3 id="academic-scheduling-generate">Opciones de generación</h3>
+              <p>El horario de {planningPeriod} incluirá todos los cursos seleccionados, también los ocultos por los filtros.</p>
+              <div className="academic-scheduling__advanced">
+
+                <div className="academic-scheduling__advanced-content">
+                  <fieldset className="academic-scheduling__policy">
+                    <legend>Excepciones de horario · decisión local explícita</legend>
+                    <div className="academic-scheduling__exception"><Checkbox id="planning-allow-afternoon" disabled={lockedDraft || draftBusy} checked={planningPolicy?.allowAfternoon ?? false}
+                      onCheckedChange={(checked) => updatePlanningException('allowAfternoon', checked === true)} /><Label htmlFor="planning-allow-afternoon">Permitir propuesta de lunes a viernes desde las 14:00 hasta las 22:00</Label></div>
+                    <div className="academic-scheduling__exception"><Checkbox id="planning-allow-saturday" disabled={lockedDraft || draftBusy} checked={planningPolicy?.allowSaturday ?? false}
+                      onCheckedChange={(checked) => updatePlanningException('allowSaturday', checked === true)} /><Label htmlFor="planning-allow-saturday">Permitir propuesta sábado de 08:00 a 13:00</Label></div>
+                    <p>La disponibilidad docente y de ambientes sigue siendo obligatoria. Habilitar sábado no agrega disponibilidad automáticamente.</p>
+                  </fieldset>
+                  <div className="academic-scheduling__policy"><Label htmlFor="planning-allocation-policy">Criterio para ordenar alternativas</Label>
+                    <NativeSelect disabled={lockedDraft || draftBusy} id="planning-allocation-policy" aria-label="Criterio de asignación" value={allocationPolicy} onChange={(event) => updateAllocationPolicy(event.currentTarget.value as AcademicAllocationPolicy)}>
+                      <option value="preferences">Preferencias (predeterminado)</option>
+                      <option value="balanced">Preferencias y menor concentración en empates</option>
+                      <option value="first-feasible">Primera alternativa factible</option>
+                    </NativeSelect>
+                  </div>
+                  <p className="academic-scheduling__resource-note">
+                    {allocationPolicy === 'preferences' && 'Ordena primero bloques dentro de preferencias; luego docentes sin preferencias y deja alternativas fuera como respaldo.'}
+                    {allocationPolicy === 'balanced' && 'Aplica la prioridad de preferencias y, en empates, prioriza menor concentración (secciones asignadas y luego minutos); no impone equidad global.'}
+                    {allocationPolicy === 'first-feasible' && 'Conserva el orden determinista y no prioriza preferencias.'}
+                  </p>
+                </div>
+              </div>
+
+            </section>}
+            {proposalError && <Alert variant="destructive" role="alert"><AlertDescription>{proposalError}</AlertDescription></Alert>}
+          </div>
+          <Button variant="ghost" popoverTarget="planning-generation-options" popoverTargetAction="hide">Cerrar opciones</Button>
         </div>
-      }
+      </> : null}
+      proposalActions={<div className="planning-proposal-trigger">
+        <Button variant="ghost" id="planning-tour-proposals" aria-haspopup="dialog" aria-expanded={draftListOpen}
+          onClick={() => { setDraftListOpen(true); void refreshDraftList() }}>
+          <span className="planning-proposal-mobile-scope">Sistemas · {planningPeriod}{draftVersion ? ` · v${draftVersion}` : ''}</span><span className="planning-proposal-name">{draftTitle}</span>
+          <span className="planning-scope-header__draft-state" data-draft-state={view.displayedDraftState} data-dirty={workspaceDirty || undefined} role="status">
+            {draftVersion ? `v${draftVersion}` : 'sin versión'} · {view.displayedDraftState === 'draft' ? 'Borrador' : view.draftLabel}
+          </span><ChevronDown size={12} aria-hidden="true" />
+        </Button>
+      </div>}
       onGuide={openGuide}
-      school="Sistemas"
-      period={planningPeriod}
       draftStateText={view.draftLabel}
       workspaceDirty={workspaceDirty}
       canSave={canSave}
@@ -372,22 +403,35 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       }}
       isChatOpen={chatOpen}
     />
-    <Dialog open={draftListOpen} onOpenChange={setDraftListOpen}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Mis propuestas</DialogTitle>
+    <Dialog open={scopeOpen} onOpenChange={setScopeOpen}>
+      <DialogContent className="planning-scope-switcher"><DialogHeader><DialogTitle>Escuela y periodo</DialogTitle><DialogDescription>Ámbito local de la propuesta.</DialogDescription></DialogHeader>
+        <Label htmlFor="planning-school">Escuela</Label><NativeSelect id="planning-school" value="SISTEMAS" disabled><option value="SISTEMAS">Sistemas</option></NativeSelect>
+        <Label htmlFor="planning-scope-period">Periodo</Label><NativeSelect id="planning-scope-period" value={planningPeriod} disabled={lockedDraft || draftBusy} onChange={(event) => { applyPeriodDefaults(event.currentTarget.value as PlanningPeriod); setScopeOpen(false) }}>
+          <option value="2026-II">2026-II</option><option value="2027-I">2027-I</option>
+        </NativeSelect>
+      </DialogContent>
+    </Dialog>
+    <Dialog modal={false} open={draftListOpen} onOpenChange={setDraftListOpen}>
+      <DialogContent id="planning-tour-proposal" aria-modal={false} className="planning-proposal-switcher">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Propuesta</DialogTitle>
           <DialogDescription>Almacenamiento local compartido; no está asociado a una cuenta.</DialogDescription>
         </DialogHeader>
-        {draftError && <Alert variant="destructive" role="alert"><AlertDescription>{draftError}</AlertDescription></Alert>}
+        <Label htmlFor="planning-proposal-title">Nombre de la propuesta</Label>
+          <Input id="planning-proposal-title" aria-label="Nombre de la propuesta" aria-invalid={invalidDraftTitle} aria-describedby={invalidDraftTitle ? 'planning-proposal-title-error' : draftError ? 'planning-proposal-error' : undefined} maxLength={100} value={draftTitle} disabled={lockedDraft || draftBusy}
+            onChange={(event) => markTitle(event.currentTarget.value)} />
+        {invalidDraftTitle && <p id="planning-proposal-title-error" role="alert">El nombre de la propuesta debe tener entre 1 y 100 caracteres, sin espacios al inicio ni al final.</p>}
+        <p className="planning-proposal-rename-note">Se guarda con la propuesta al pulsar Guardar.</p>
+        {draftError && <Alert id="planning-proposal-error" variant="destructive" role="alert"><AlertDescription>{draftError}</AlertDescription></Alert>}
         {draftBusy && <PlanningFetchLoading label="Consultando propuestas guardadas…" layout="table" />}
+        <div className="planning-mobile-tools"><Button variant="ghost" onClick={() => { setDraftListOpen(false); setScopeOpen(true) }}>Escuela y periodo</Button><Button variant="ghost" onClick={() => { setDraftListOpen(false); openGuide() }}>Guía</Button><ModeToggle /></div>
         <div id="academic-scheduling-saved-proposals" className="academic-scheduling__saved-proposals">
           {draftList?.unavailableCount ? <p role="status">{draftList.unavailableCount} propuesta(s) no se pudieron leer.</p> : null}
           {draftList?.items.length === 0 && <p>No hay propuestas guardadas.</p>}
-          <ul className="academic-scheduling__saved-list">{draftList && draftList.items.map((item) => <li className="academic-scheduling__saved-row" key={item.id}>
-            <strong>{item.title} · {item.schoolId} · {item.academicPeriod} · {item.state === 'draft' ? 'Borrador' : item.state === 'ready-for-review' ? 'Lista para revisión' : item.state === 'in-review' ? 'En revisión docente' : item.state === 'ready-for-approval' ? 'Lista para aprobación' : item.state === 'approved' ? 'Aprobada (simulada)' : 'Publicada (simulada)'} · v{item.version}</strong>
-            <div><span>Actualizada {new Date(item.updatedAt).toLocaleString('es-PE')} · {item.hasSchedule ? 'Con horario' : 'Solo configuración'}</span>
-              <Button type="button" variant="outline"
-                disabled={draftBusy} onClick={() => void resumeDraft(item.id, item.version)}>{item.state === 'approved' || item.state === 'published' ? 'Consultar' : 'Continuar edición'}</Button></div>
+          <p className="planning-eyebrow">Otras propuestas · Sistemas {planningPeriod}</p>
+          <ul className="academic-scheduling__saved-list">{draftList && draftList.items.map((item) => <li className="academic-scheduling__saved-row" data-current={item.id === draftId || undefined} key={item.id}>
+            <div className="planning-proposal-option"><span>{item.title}</span><span className="planning-proposal-option__version">v{item.version} · {item.state === 'draft' ? 'Borrador' : item.state === 'published' ? 'Publicada' : item.state === 'approved' ? 'Aprobada' : 'Guardada'}</span></div>
+            <div className="planning-proposal-option__actions"><Button type="button" variant="ghost" disabled={draftBusy} onClick={() => void resumeDraft(item.id, item.version)}>Continuar edición</Button><Button type="button" variant="link" disabled={draftBusy} onClick={() => void resumeDraft(item.id, item.version)}>Consultar</Button></div>
           </li>)}</ul>
         </div>
       </DialogContent>
@@ -406,6 +450,15 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       hidden={currentStage !== 'preparacion'}
       aria-label="Etapa de preparación"
     >
+
+        <PlanningPreparationSummary selectedCourses={selectedCourses.length} invalidCourses={view.invalidCourses.length}
+          catalogCourseCount={catalog?.courses.length ?? 0} selectionDisabled={lockedDraft || draftBusy || generating}
+          onSelectAllCourses={() => selectCourses(catalog?.courses.map((course) => course.courseId) ?? [])}
+          invalidOfferNote={!validDemands ? 'Ingresa demanda válida y capacidad entera positiva para cada curso seleccionado. Sin selección se genera una propuesta vacía.' : undefined}
+          teachers={resources.teachers.length} rooms={resources.rooms.length} offerReady={preparationAction?.id === 'generate'}>
+
+        </PlanningPreparationSummary>
+
       <div className="planning-preparation-view" hidden={preparationView !== 'cursos'}>
         <fieldset className="academic-scheduling__locked-workspace" disabled={lockedDraft || draftBusy}>
           <AcademicPreparationCourses
@@ -461,47 +514,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
         </section>}
 
       </div>
-      <div className="planning-preparation-view" hidden={preparationView !== 'resumen'}>
-        <PlanningPreparationSummary selectedCourses={selectedCourses.length} invalidCourses={view.invalidCourses.length}
-          catalogCourseCount={catalog?.courses.length ?? 0} selectionDisabled={lockedDraft || draftBusy || generating}
-          onSelectAllCourses={() => selectCourses(catalog?.courses.map((course) => course.courseId) ?? [])}
-          invalidOfferNote={!validDemands ? 'Ingresa demanda válida y capacidad entera positiva para cada curso seleccionado. Sin selección se genera una propuesta vacía.' : undefined}
-          teachers={resources.teachers.length} rooms={resources.rooms.length} offerReady={preparationAction?.id === 'generate'}>
-          <div className="academic-scheduling__locked-workspace">
-            {catalog && <section className="academic-scheduling__section academic-scheduling__generate" aria-labelledby="academic-scheduling-generate">
-              <h3 id="academic-scheduling-generate">Opciones de generación</h3>
-              <p>El horario de {planningPeriod} incluirá todos los cursos seleccionados, también los ocultos por los filtros.</p>
-              <Collapsible className="academic-scheduling__advanced">
-                <CollapsibleTrigger asChild><Button type="button" variant="ghost" className="academic-scheduling__advanced-toggle">Opciones avanzadas</Button></CollapsibleTrigger>
-                <CollapsibleContent className="academic-scheduling__advanced-content">
-                  <fieldset className="academic-scheduling__policy">
-                    <legend>Excepciones de horario · decisión local explícita</legend>
-                    <div className="academic-scheduling__exception"><Checkbox id="planning-allow-afternoon" disabled={lockedDraft || draftBusy} checked={planningPolicy?.allowAfternoon ?? false}
-                      onCheckedChange={(checked) => updatePlanningException('allowAfternoon', checked === true)} /><Label htmlFor="planning-allow-afternoon">Permitir propuesta de lunes a viernes desde las 14:00 hasta las 22:00</Label></div>
-                    <div className="academic-scheduling__exception"><Checkbox id="planning-allow-saturday" disabled={lockedDraft || draftBusy} checked={planningPolicy?.allowSaturday ?? false}
-                      onCheckedChange={(checked) => updatePlanningException('allowSaturday', checked === true)} /><Label htmlFor="planning-allow-saturday">Permitir propuesta sábado de 08:00 a 13:00</Label></div>
-                    <p>La disponibilidad docente y de ambientes sigue siendo obligatoria. Habilitar sábado no agrega disponibilidad automáticamente.</p>
-                  </fieldset>
-                  <div className="academic-scheduling__policy"><Label htmlFor="planning-allocation-policy">Criterio para ordenar alternativas</Label>
-                    <NativeSelect disabled={lockedDraft || draftBusy} id="planning-allocation-policy" aria-label="Criterio de asignación" value={allocationPolicy} onChange={(event) => updateAllocationPolicy(event.currentTarget.value as AcademicAllocationPolicy)}>
-                      <option value="preferences">Preferencias (predeterminado)</option>
-                      <option value="balanced">Preferencias y menor concentración en empates</option>
-                      <option value="first-feasible">Primera alternativa factible</option>
-                    </NativeSelect>
-                  </div>
-                  <p className="academic-scheduling__resource-note">
-                    {allocationPolicy === 'preferences' && 'Ordena primero bloques dentro de preferencias; luego docentes sin preferencias y deja alternativas fuera como respaldo.'}
-                    {allocationPolicy === 'balanced' && 'Aplica la prioridad de preferencias y, en empates, prioriza menor concentración (secciones asignadas y luego minutos); no impone equidad global.'}
-                    {allocationPolicy === 'first-feasible' && 'Conserva el orden determinista y no prioriza preferencias.'}
-                  </p>
-                </CollapsibleContent>
-              </Collapsible>
 
-            </section>}
-            {proposalError && <Alert variant="destructive" role="alert"><AlertDescription>{proposalError}</AlertDescription></Alert>}
-          </div>
-        </PlanningPreparationSummary>
-      </div>
     </section>
 
     {/* Stage 2: Horario */}
@@ -512,13 +525,13 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
     >
       <fieldset className="academic-scheduling__locked-workspace" disabled={draftBusy}>
         {proposalError && <Alert variant="destructive" role="alert"><AlertDescription>{proposalError}</AlertDescription></Alert>}
-        {!proposal && <div className="planning-schedule-empty">
-          {generating || applyingAdvisor ? <p role="status">{applyingAdvisor ? 'Aplicando y regenerando…' : 'Generando horarios…'}</p>
-            : <><p>Selecciona los cursos y revisa los recursos en Preparación para generar una propuesta.</p>
-              <Button asChild variant="link"><Link to="/local/programacion-academica" search={{ etapa: 'preparacion', vista: 'resumen' }}>Ir a Preparación</Link></Button></>}
-        </div>}
+        {!proposal && <PlanningResultStrip status={generating || applyingAdvisor ? 'generating' : 'empty'} statusId="academic-scheduling-result"
+          label={applyingAdvisor ? 'Aplicando y regenerando…' : generating ? 'Generando horarios…' : 'Sin propuesta'}
+          facts={generating || applyingAdvisor ? undefined : ['Selecciona los cursos y revisa los recursos en Preparación para generar una propuesta.']}
+          action={generating || applyingAdvisor ? null : <Button asChild variant="link"><Link to="/local/programacion-academica" search={{ etapa: 'preparacion', vista: 'cursos' }}>Ir a Preparación</Link></Button>} />}
+
         {proposal && <>
-          <PlanningStatusBar key={`${proposal.proposalId}:${proposal.editVersion ?? 0}`}
+          <PlanningStatusBar onRetrySearch={() => void retrySearch()} key={`${proposal.proposalId}:${proposal.editVersion ?? 0}`}
             teacherNames={Object.fromEntries([...(catalog?.referenceTeachers ?? []), ...resources.teachers].map((teacher) => [teacher.id, teacher.name]))}
             courseNames={Object.fromEntries((catalog?.courses ?? []).map((course) => [course.courseId, course.name]))}
             roomNames={Object.fromEntries([...(catalog?.referenceRooms ?? []), ...resources.rooms].map((room) => [room.id, room.name]))}
@@ -630,7 +643,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       aria-label="Etapa de revisión docente"
     >
       <fieldset className="academic-scheduling__locked-workspace" disabled={lockedDraft || draftBusy}>
-        <AcademicTeacherReviewPanel primaryActionId={reviewAction?.id} key={`${draftId ?? 'new'}-${savedReview?.round ?? 0}`} review={savedReview} proposal={proposal} draftId={draftId} draftVersion={draftVersion}
+        <AcademicTeacherReviewPanel actionContainer={currentStage === 'revision' ? headActions : null} primaryActionId={reviewAction?.id} key={`${draftId ?? 'new'}-${savedReview?.round ?? 0}`} review={savedReview} proposal={proposal} draftId={draftId} draftVersion={draftVersion}
           derivedState={workspaceDirty ? `${savedDraftState === 'ready-for-approval' ? 'La versión guardada está lista para aprobación' : savedDraftState === 'in-review' ? 'La versión guardada está en revisión docente' : savedDraftState === 'ready-for-review' ? 'La versión guardada está lista para revisión' : savedDraftState === 'approved' ? 'La versión guardada está aprobada (simulada)' : savedDraftState === 'published' ? 'La versión guardada está publicada (simulada)' : 'Borrador'}; cambios locales sin guardar` : savedDraftState === 'ready-for-approval' ? 'Lista para aprobación' : savedDraftState === 'in-review' ? 'En revisión docente' : savedDraftState === 'ready-for-review' ? 'Lista para revisión' : savedDraftState === 'approved' ? 'Aprobada (simulada)' : savedDraftState === 'published' ? 'Publicada (simulada)' : 'Borrador'}
           dirty={workspaceDirty} busy={draftBusy} error={reviewError} onSubmit={() => void submitTeacherReview()}
           onRespond={(teacherId, decision, observation) => void respondTeacherReview(teacherId, decision, observation)} />
@@ -646,7 +659,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       hidden={currentStage !== 'aprobacion'}
       aria-label="Etapa de aprobación"
     >
-      <AcademicPublicationPanel primaryActionId={approvalAction?.id} draftId={draftId} draftVersion={draftVersion} draftTitle={draftTitle}
+      <AcademicPublicationPanel actionContainer={currentStage === 'aprobacion' ? headActions : null} primaryActionId={approvalAction?.id} draftId={draftId} draftVersion={draftVersion} draftTitle={draftTitle}
         draftState={savedDraftState} dirty={workspaceDirty} busy={draftBusy || generating || adjusting || demandLoading} onApprove={approveDraft}
         onPublish={publishDraft} onFork={forkDraft}
         onError={(message) => commands.edit({ type: 'setDraftError', message })}

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode, type CSSProperties } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
 import {
   LayoutDashboard, BookOpen, Users, CalendarDays, ClipboardCheck, BadgeCheck,
@@ -6,14 +6,14 @@ import {
 } from 'lucide-react'
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel,
-  SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
+  SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
   SidebarProvider, SidebarRail, useSidebar,
 } from './ui/Sidebar'
 import { Toaster } from './ui/Sonner'
 import { PlanningPortalContext } from './ui/planningPortal'
 import { PlanningSessionProvider, usePlanningSessionContext } from './PlanningSessionProvider'
 import { ThemeProvider, useTheme, type Theme } from './theme-provider'
-import { ModeToggle } from './mode-toggle'
+import { PlanningScopeBarContext } from './planningSlots'
 import type { PlanningStage } from '../routes/local.programacion-academica'
 import { derivePlanningProgress, type PlanningPreparationView } from '../data/planningSession'
 import './PlanningShell.css'
@@ -32,20 +32,12 @@ interface NavItemConfig {
 const NAV_GROUPS: readonly { stage: PlanningStage; label: string; items: readonly NavItemConfig[] }[] = [
   { stage: 'preparacion', label: 'Preparación', items: [
     {
-      id: 'resumen',
-      label: 'Resumen',
-      icon: LayoutDashboard,
-      to: '/local/programacion-academica',
-      search: { etapa: 'preparacion', vista: 'resumen' },
-      isActive: (stage, vista) => stage === 'preparacion' && (vista === 'resumen' || !vista),
-    },
-    {
       id: 'cursos',
-      label: 'Cursos',
+      label: 'Oferta de cursos',
       icon: BookOpen,
       to: '/local/programacion-academica',
       search: { etapa: 'preparacion', vista: 'cursos' },
-      isActive: (stage, vista) => stage === 'preparacion' && vista === 'cursos',
+      isActive: (stage, vista) => stage === 'preparacion' && vista !== 'recursos',
     },
     {
       id: 'recursos',
@@ -56,7 +48,7 @@ const NAV_GROUPS: readonly { stage: PlanningStage; label: string; items: readonl
       isActive: (stage, vista) => stage === 'preparacion' && vista === 'recursos',
     },
   ] },
-  { stage: 'horario', label: '', items: [
+  { stage: 'horario', label: 'Programación', items: [
     {
       id: 'horario',
       label: 'Horario',
@@ -65,8 +57,6 @@ const NAV_GROUPS: readonly { stage: PlanningStage; label: string; items: readonl
       search: { etapa: 'horario' },
       isActive: (stage) => stage === 'horario',
     },
-  ] },
-  { stage: 'revision', label: '', items: [
     {
       id: 'revision',
       label: 'Revisión docente',
@@ -75,8 +65,6 @@ const NAV_GROUPS: readonly { stage: PlanningStage; label: string; items: readonl
       search: { etapa: 'revision' },
       isActive: (stage) => stage === 'revision',
     },
-  ] },
-  { stage: 'aprobacion', label: '', items: [
     {
       id: 'aprobacion',
       label: 'Aprobación y publicación',
@@ -93,21 +81,13 @@ function PlanningSidebar({ stage, vista }: { stage: PlanningStage; vista: Planni
   const progress = derivePlanningProgress(state)
   const { isMobile, setOpenMobile } = useSidebar()
   return (
-    <Sidebar collapsible="icon" id="planning-tour-nav" aria-label="Navegación de planificación">
-      <SidebarHeader>
-        <div className="group-data-[collapsible=icon]:hidden">
-          <div className="text-xs text-muted-foreground">FISI · UNMSM</div>
-          <div className="text-sm font-bold text-foreground">Planificación académica</div>
-        </div>
-      </SidebarHeader>
+    <Sidebar collapsible="icon" id="planning-tour-nav">
+      <nav className="planning-stage-rail" aria-label="Etapas de la propuesta">
       <SidebarContent>
         {NAV_GROUPS.map((group) => (
           <SidebarGroup key={group.stage} className={group.label ? undefined : 'py-0'}>
             {group.label && <SidebarGroupLabel>
               <span>{group.label}</span>
-              {progress[group.stage] === 'done' && <span className="planning-sidebar__completed">
-                <Check className="size-3" aria-hidden="true" /><span className="sr-only">completado</span>
-              </span>}
             </SidebarGroupLabel>}
             <SidebarMenu>
               {group.items.map((item) => {
@@ -120,7 +100,7 @@ function PlanningSidebar({ stage, vista }: { stage: PlanningStage; vista: Planni
                         onClick={() => { if (isMobile) setOpenMobile(false) }}>
                         <Icon aria-hidden="true" />
                         <span className="planning-sidebar__label">{item.label}</span>
-                        {!group.label && progress[group.stage] === 'done' && <span className="planning-sidebar__completed group-data-[collapsible=icon]:hidden">
+                        {progress[item.search.etapa] === 'done' && <span className="planning-sidebar__completed group-data-[collapsible=icon]:hidden">
                           <Check className="size-3" aria-hidden="true" /><span className="sr-only">completado</span>
                         </span>}
                       </Link>
@@ -135,7 +115,7 @@ function PlanningSidebar({ stage, vista }: { stage: PlanningStage; vista: Planni
       <SidebarFooter>
         <p className="planning-sidebar__provenance group-data-[collapsible=icon]:hidden"
           title="Datos sintéticos. Prototipo local; no es una pantalla oficial SUM.">
-          <span aria-hidden="true">Datos sintéticos · prototipo local</span>
+          <span aria-hidden="true">Datos sintéticos · local</span>
           <span className="sr-only">Datos sintéticos. Prototipo local; no es una pantalla oficial SUM.</span>
         </p>
         <SidebarMenu>
@@ -148,8 +128,8 @@ function PlanningSidebar({ stage, vista }: { stage: PlanningStage; vista: Planni
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <ModeToggle />
       </SidebarFooter>
+      </nav>
       <SidebarRail />
     </Sidebar>
   )
@@ -160,6 +140,7 @@ function PlanningShellContent({ children }: { children: ReactNode }): ReactNode 
   const [systemDark, setSystemDark] = useState(() =>
     typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)').matches : false
   )
+  const [scopeBar, setScopeBar] = useState<HTMLDivElement | null>(null)
   const [portal, setPortal] = useState<HTMLDivElement | null>(null)
 
   // Listen to system theme preference changes
@@ -184,14 +165,19 @@ function PlanningShellContent({ children }: { children: ReactNode }): ReactNode 
     <div className="planning-root" data-theme={resolvedTheme}>
       <PlanningPortalContext.Provider value={portal}>
         <PlanningSessionProvider>
-          <SidebarProvider>
-            <a href="#planning-main-content" className="planning-skip-link">Saltar al contenido principal</a>
+          <SidebarProvider className="planning-shell-layout" style={{ '--sidebar-width': '216px' } as CSSProperties}>
+            <PlanningScopeBarContext.Provider value={scopeBar}>
+              <a href="#planning-main-content" className="planning-skip-link">Saltar al contenido principal</a>
+              <div className="planning-scope-bar-slot" ref={setScopeBar} />
+              <div className="planning-shell-body">
             <PlanningSidebar stage={stage} vista={vista} />
             <SidebarInset className="planning-main-wrapper">
               <main id="planning-main-content" className="planning-main" tabIndex={-1}>
                 {children}
               </main>
             </SidebarInset>
+            </div>
+            </PlanningScopeBarContext.Provider>
           </SidebarProvider>
           <div className="planning-portal-container" ref={setPortal} />
           <Toaster theme={resolvedTheme} />
