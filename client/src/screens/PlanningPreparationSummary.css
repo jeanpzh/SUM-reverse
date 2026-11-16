@@ -1,80 +1,11 @@
-.planning-preparation-views,
-.planning-stage-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: calc(var(--planning-spacing) * 2);
-  margin-bottom: calc(var(--planning-spacing) * 4);
-  min-width: 0;
-}
-
-.planning-preparation-views {
-  width: fit-content;
-  max-width: 100%;
-  box-sizing: border-box;
-  gap: 4px;
-  padding: 4px;
-  border: 1px solid var(--planning-border);
-  border-radius: var(--planning-radius-control);
-  background: var(--planning-surface);
-}
-
-.planning-preparation-views a {
-  min-width: 0;
-  padding: 6px 14px;
-  border: 1px solid transparent;
-  border-radius: var(--planning-radius-control);
-  color: var(--planning-muted);
-  font-size: var(--planning-text-base);
-  font-weight: 500;
-  text-decoration: none;
-  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
-}
-
-.planning-preparation-views a:hover:not([aria-current='page']) {
-  background: var(--planning-surface-subtle);
-  color: var(--planning-text);
-}
-
-.planning-preparation-views a[aria-current='page'] {
-  background: var(--planning-selected);
-  color: var(--planning-text);
-  border-color: var(--planning-border);
-  font-weight: 600;
-}
-
-.planning-preparation-views a:focus-visible {
-  outline: 2px solid var(--planning-primary);
-  outline-offset: 2px;
-}
-
-.planning-stage-actions [data-slot='button'] {
-  max-width: 100%;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  text-decoration: none;
-}
-
-.planning-stage-actions:empty { display: none; }
-
-.planning-root .planning-preparation-view[hidden] {
-  display: none;
-}
-
-.planning-preparation-view {
-  min-width: 0;
-}
-
-.planning-preparation-summary { min-width: 0; }
-.planning-preparation-summary__title { margin: 0 0 12px; font-size: var(--planning-text-2xl); line-height: 24px; font-weight: 700; }
-.planning-preparation-summary__list { margin: 0; padding: 0; list-style: none; border: 1px solid var(--planning-border); border-radius: 8px; }
-.planning-preparation-summary__row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 8px 16px; min-height: 40px; box-sizing: border-box; font-size: var(--planning-text-sm); }
-.planning-preparation-summary__row + li { border-top: 1px solid var(--planning-border); }
-.planning-preparation-summary__row > svg { color: var(--planning-warning); flex-shrink: 0; }
-.planning-preparation-summary__row[data-ready='true'] > svg { color: var(--planning-success); }
-.planning-preparation-summary__row > span { flex: 1 1 12rem; }
-.planning-preparation-summary__row > [data-slot='button'] { margin-left: auto; }
-.planning-preparation-summary__note { margin: 12px 0; color: var(--planning-muted); font-size: var(--planning-text-xs); line-height: 16px; }
-.planning-root .planning-preparation-summary .academic-scheduling__generate { padding: 16px 0; border: 0; border-top: 1px solid var(--planning-border); border-radius: 0; background: transparent; }
-.planning-root .planning-preparation-summary .academic-scheduling__generate h3 { font-size: var(--planning-text-xl); line-height: 22px; font-weight: 700; }
-.planning-root .planning-preparation-summary .academic-scheduling__generate > p { font-size: var(--planning-text-xs); color: var(--planning-muted); }
+.planning-root .planning-preparation-summary { margin-bottom: 0; }
+.planning-root .planning-preparation-summary .planning-status-bar__strip { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+.planning-root .planning-preparation-summary .planning-status-bar__state-row { display: inline-flex; gap: 6px; font-weight: 500; }
+.planning-root .planning-preparation-summary__helper { margin: 8px 0 0; font: 12px/16px var(--plan-font-sans); color: var(--plan-fog); }
+.planning-root .planning-preparation-summary .planning-readiness-disclosure { margin-left: auto; }
+.planning-root .planning-preparation-summary .planning-readiness-disclosure ul { margin: 12px 0; }
+.planning-root .planning-preparation-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; padding: 24px; border-radius: 16px; background: var(--plan-cream); color: var(--plan-ink); }
+.planning-root .planning-preparation-empty h2 { margin: 0; font: 400 20px/26px var(--plan-font-sans); letter-spacing: -0.4px; }
+.planning-root .planning-preparation-empty p { margin: 0; color: var(--plan-steel); }
+.planning-root .planning-preparation-empty .planning-preparation-empty__note { font-size: 13px; color: var(--plan-fog); }
+.planning-root .planning-preparation-empty [data-slot='button'] { border-radius: 9999px; background: var(--plan-ink); color: var(--plan-on-ink); padding: 6px 14px; height: auto; min-height: 32px; white-space: normal; }

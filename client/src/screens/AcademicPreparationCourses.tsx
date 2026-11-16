@@ -6,29 +6,27 @@ import { Input } from '../components/ui/Input'
 import { NativeSelect } from '../components/ui/NativeSelect'
 import { Label } from '../components/ui/Label'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table'
-import { Fragment, useId, useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import type { AcademicCatalog, AcademicDemandEstimate, AcademicProposal, PlanningPeriod } from '../data/academicScheduling.ts'
-import { formatAcademicInterval, PLANNING_LIMITS } from '../data/academicScheduling.ts'
+import { calculatePresentedSections, formatAcademicInterval, PLANNING_LIMITS } from '../data/academicScheduling.ts'
 import {
   applyBulkChanges,
   buildBulkChangePreview,
   calculatePreparationCounts,
   deselectVisibleCourses,
   filterPreparationCourses,
-  groupCoursesByCycle,
   selectVisibleCourses,
 } from '../data/academicPreparation.ts'
 import type { BulkChangePreview } from '../data/academicPreparation.ts'
 import { AcademicDemandPanel } from './AcademicDemandPanel.tsx'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../components/ui/Dialog'
-import { RotateCcw, CheckSquare, Square, SlidersHorizontal } from 'lucide-react'
-import { useDefaultLayout } from 'react-resizable-panels'
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '../components/ui/Resizable'
+import { RotateCcw } from 'lucide-react'
 import { Sheet, SheetContent, SheetTitle } from '../components/ui/Sheet'
 import { useMediaQuery } from '../lib/useMediaQuery'
 import './AcademicPreparationCourses.css'
 
 export interface AcademicPreparationCoursesProps {
+  resources?: Pick<AcademicCatalog, 'teachers' | 'rooms'>
   catalog: AcademicCatalog | null
   loadingCatalog: boolean
   catalogError: string | null
@@ -61,6 +59,7 @@ export interface AcademicPreparationCoursesProps {
 }
 
 export function AcademicPreparationCourses({
+  resources,
   catalog,
   loadingCatalog,
   catalogError,
@@ -95,11 +94,6 @@ export function AcademicPreparationCourses({
   const [searchQuery, setSearchQuery] = useState('')
   const [inspectedCourseId, setInspectedCourseId] = useState<string | null>(null)
   const [demandOpen, setDemandOpen] = useState(false)
-  const { defaultLayout, onLayoutChanged } = useDefaultLayout({
-    id: 'planning-course-detail',
-    panelIds: wideLayout && inspectedCourseId ? ['planning-course-table', 'planning-course-inspector'] : ['planning-course-table'],
-  })
-
   // Bulk edit modal state
   const [isBulkOpen, setIsBulkOpen] = useState(false)
   const [bulkApplyDemand, setBulkApplyDemand] = useState(false)
@@ -124,10 +118,6 @@ export function AcademicPreparationCourses({
   const visibleCourses = useMemo(() => {
     return filterPreparationCourses(courses, searchQuery, cycleFilter)
   }, [courses, searchQuery, cycleFilter])
-
-  const cycleGroups = useMemo(() => {
-    return groupCoursesByCycle(visibleCourses)
-  }, [visibleCourses])
 
   const counts = useMemo(() => {
     return calculatePreparationCounts(courses.length, selectedCourses, visibleCourses.length)
@@ -191,36 +181,60 @@ export function AcademicPreparationCourses({
     handleCloseBulkModal()
   }
 
+  const sessionsFor = (course: AcademicCatalog['courses'][number]) =>
+    course.planningPatterns?.find((pattern) => pattern.id === patterns[course.courseId])?.weeklySessions ?? course.weeklySessions
+  const hoursFor = (course: AcademicCatalog['courses'][number]) => {
+    const sessions = sessionsFor(course)
+    if (sessions.some((session) => !session.type)) return ['—', '—', '—']
+    return ['teor', 'pr', 'lab'].map((type) => sessions
+      .filter((session) => session.type?.toLowerCase().startsWith(type))
+      .reduce((sum, session) => sum + session.durationMinutes / 60, 0))
+  }
+  const demandValue = inspectedCourse ? demands[inspectedCourse.courseId] ?? '' : ''
+  const capacityValue = inspectedCourse ? capacities[inspectedCourse.courseId] ?? '' : ''
+  const invalidDemand = demandValue.trim() === '' || !Number.isSafeInteger(Number(demandValue)) || Number(demandValue) < 0
+  const invalidCapacity = capacityValue.trim() === '' || !Number.isSafeInteger(Number(capacityValue)) || Number(capacityValue) <= 0
+  const estimateRow = demandEstimate?.rows.find((row) => row.courseId === inspectedCourseId)
+
   const courseInspector = inspectedCourse && (
     <aside
       className="planning-inspector planning-inspector--docked academic-preparation__inspector"
       aria-label={`Inspector de curso ${inspectedCourse.courseId}`}
     >
-      <div className="planning-inspector__header">
-        <div className="planning-inspector__heading-info">
-          <h4 className="planning-inspector__title">{inspectedCourse.name}</h4>
-          <p className="planning-inspector__meta">
-            {inspectedCourse.courseId} · Ciclo {inspectedCourse.cycle ?? '—'} ·{' '}
-            {inspectedCourse.credits ?? '—'} créditos
-          </p>
+      <div className="academic-preparation__detail-heading">
+        <div>
+          <p className="planning-eyebrow">{inspectedCourse.courseId} · ciclo {inspectedCourse.cycle ?? '—'}</p>
+          <h2>{inspectedCourse.name}</h2>
         </div>
-        <Button variant="ghost"
-          type="button"
-          className="planning-inspector__close-btn"
-          aria-label="Cerrar inspector"
-          onClick={() => setInspectedCourseId(null)}
-        >
-          ✕ Cerrar
-        </Button>
+        <Button variant="ghost" type="button" aria-label="Cerrar detalle" onClick={() => setInspectedCourseId(null)}>×</Button>
       </div>
-
-      <div className="academic-preparation__inspector-body">
-        {!selectedCourses.includes(inspectedCourse.courseId) && (
-          <p className="academic-preparation__inspector-warning" role="note">
-            Curso no incluido en la propuesta. Marca su casilla para habilitar sus opciones de configuración.
-          </p>
-        )}
-
+      <dl className="academic-preparation__detail-facts">
+        <dt>Elegibles potenciales</dt><dd>{estimateRow?.eligible ?? '—'}</dd>
+        <dt>Intención registrada</dt><dd>—</dd>
+        <dt><Label htmlFor="planning-course-demand">Demanda de planificación</Label></dt>
+        <dd><Input id="planning-course-demand" type="number" min="0" step="1" inputMode="numeric" placeholder="Definir"
+          aria-label={`Demanda final ${inspectedCourse.courseId}`} aria-invalid={invalidDemand}
+          aria-describedby="planning-course-demand-help" value={demandValue}
+          disabled={isLocked || !selectedCourses.includes(inspectedCourse.courseId)}
+          onChange={(event) => onUpdateDemand(inspectedCourse.courseId, event.currentTarget.value)} /></dd>
+      </dl>
+      <p id="planning-course-demand-help" className="academic-preparation__detail-help" data-warning={invalidDemand}>
+        {invalidDemand ? 'Define la demanda de planificación. ' : ''}Los elegibles y la intención son referencia, no se suman.
+      </p>
+      <dl className="academic-preparation__detail-facts academic-preparation__detail-components">
+        <dt>Secciones</dt><dd>{calculatePresentedSections(demandValue, capacityValue) ?? '—'} × {capacityValue || '—'} vacantes</dd>
+        <dt>Componentes</dt><dd>{sessionsFor(inspectedCourse).map((session) => `${session.type ?? 'Sesión'} ${session.durationMinutes / 60} h`).join(' · ')}</dd>
+        <dt>Docentes habilitados</dt><dd>{(resources ?? catalog)?.teachers.filter((teacher) => teacher.courseIds.includes(inspectedCourse.courseId)).length ?? '—'}</dd>
+      </dl>
+      <Button variant="outline" type="button" className="academic-preparation__estimate" disabled={planningPeriod !== '2027-I'} onClick={() => setDemandOpen(true)}>Estimar demanda</Button>
+      <details className="academic-preparation__inspector-body"><summary>Configuración del curso</summary>
+        {!selectedCourses.includes(inspectedCourse.courseId) && <p className="academic-preparation__detail-help" role="note">Curso no incluido en la propuesta. Marca su casilla para habilitar sus opciones de configuración.</p>}
+        <Label>Vacantes por sección
+          <Input type="number" min="1" step="1" inputMode="numeric" value={capacityValue}
+            aria-label={`Capacidad ${inspectedCourse.courseId}`} aria-invalid={invalidCapacity}
+            disabled={isLocked || !selectedCourses.includes(inspectedCourse.courseId)}
+            onChange={(event) => onUpdateCapacity(inspectedCourse.courseId, event.currentTarget.value)} />
+        </Label>
         {inspectedCourse.planningPatterns && inspectedCourse.planningPatterns.length > 0 && (
           <Label>
             Patrón semanal de planificación
@@ -291,7 +305,7 @@ export function AcademicPreparationCourses({
 
           </details>
         )}
-      </div>
+      </details>
     </aside>
   )
 
@@ -313,9 +327,13 @@ export function AcademicPreparationCourses({
         </div>
       )}
 
-      {catalog && (
+      {catalog && selectedCourses.length > 0 && (
         <div className="academic-preparation">
-          <div className="academic-preparation__toolbar">
+          <details className="academic-preparation__settings">
+            <summary>Filtros y valores iniciales</summary>
+            <div className="academic-preparation__settings-body">
+              <Input type="search" placeholder="Buscar curso" aria-label="Buscar curso por código o nombre" value={searchQuery} onChange={(event) => setSearchQuery(event.currentTarget.value)} />
+              <span>{visibleCourses.length} cursos visibles · {selectedCourses.length} seleccionados</span>
           <div className="academic-preparation__period">
             <Label>
               <span className="sr-only">Periodo de planificación</span>
@@ -349,18 +367,6 @@ export function AcademicPreparationCourses({
 
           </div>
 
-              <div className="academic-preparation__search-field">
-                <Label className="sr-only" htmlFor={searchInputId}>Buscar por código o nombre</Label>
-                <Input
-                  id={searchInputId}
-                  type="search"
-                  placeholder="Buscar código o nombre…"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.currentTarget.value)}
-                  aria-label="Buscar curso por código o nombre"
-                />
-              </div>
-
               <div className="academic-preparation__cycle-filter">
                 <Label className="sr-only" htmlFor={cycleSelectId}>Filtrar cursos por ciclo</Label>
                 <NativeSelect
@@ -381,205 +387,56 @@ export function AcademicPreparationCourses({
                 </NativeSelect>
                 {availableCycles.length === 0 && <span>El catálogo no especifica ciclos.</span>}
               </div>
-            <div className="academic-preparation__actions-row">
-              <Button
-                variant="outline"
-                type="button"
-                disabled={isLocked || visibleCourses.length === 0}
-                onClick={handleSelectVisible}
-                aria-label="Seleccionar cursos visibles"
-                className="gap-2 text-sm font-normal"
-              >
-                <CheckSquare className="size-3.5" aria-hidden="true" />
-                <span>Seleccionar visibles</span>
-              </Button>
-              <Button
-                variant="outline"
-                type="button"
-                disabled={isLocked || visibleCourses.every((c) => !selectedCourses.includes(c.courseId))}
-                onClick={handleDeselectVisible}
-                aria-label="Deseleccionar cursos visibles"
-                className="gap-2 text-sm font-normal"
-              >
-                <Square className="size-3.5" aria-hidden="true" />
-                <span>Quitar selección</span>
-              </Button>
-              <Button
-                variant="outline"
-                type="button"
-                disabled={isLocked || selectedCourses.length === 0}
-                onClick={handleOpenBulkModal}
-                aria-haspopup="dialog"
-                aria-label={`Edición en lote (${selectedCourses.length} cursos seleccionados)`}
-                className="gap-2 text-sm font-normal"
-              >
-                <SlidersHorizontal className="size-3.5" aria-hidden="true" />
-                <span>Editar en lote ({selectedCourses.length})</span>
-              </Button>
             </div>
+          </details>
+          {selectedCourses.length > 0 ? <div className="academic-preparation__bulk-bar" role="toolbar" aria-label="Acciones en lote">
+            <span>{selectedCourses.length} cursos seleccionados</span>
+            <Button variant="outline" disabled={planningPeriod !== '2027-I'} onClick={() => setDemandOpen(true)}>Estimar demanda</Button>
+            <Button variant="outline" disabled={isLocked} onClick={handleOpenBulkModal} aria-haspopup="dialog">Editar en lote</Button>
+            <Button variant="outline" disabled={isLocked || visibleCourses.length === 0} onClick={handleSelectVisible}>Seleccionar visibles</Button>
+            <Button variant="outline" disabled={isLocked} onClick={handleDeselectVisible}>Quitar selección</Button>
+          </div> : <div className="academic-preparation__toolbar">
+            <Label className="sr-only" htmlFor={searchInputId}>Buscar curso por código o nombre</Label>
+            <Input id={searchInputId} type="search" placeholder="Buscar curso" value={searchQuery} onChange={(event) => setSearchQuery(event.currentTarget.value)} />
+            <span>{counts.totalIncluded} cursos seleccionados</span>
+          </div>}
+          <div className="sr-only" role="status" aria-label="Contadores de preparación">
+            <span data-testid="count-catalog">{counts.totalCatalog}</span> en catálogo · <span data-testid="count-included">{counts.totalIncluded}</span> incluidos · <span data-testid="count-visible">{counts.totalVisible}</span> visibles · máximo {PLANNING_LIMITS.courses}
           </div>
-          <p className="academic-preparation__counters" role="status" aria-label="Contadores de preparación" title={catalog.revision}>
-            <span><span data-testid="count-catalog">{counts.totalCatalog}</span> en catálogo · <span data-testid="count-included">{counts.totalIncluded}</span> incluidos · <span data-testid="count-visible">{counts.totalVisible}</span> visibles · máximo {PLANNING_LIMITS.courses}</span>
-          </p>
-
-          {/* Workbench: Table + Single Inspector */}
           <div className="academic-preparation__workbench">
-            <ResizablePanelGroup orientation="vertical" defaultLayout={defaultLayout} onLayoutChanged={onLayoutChanged} className="academic-preparation__split">
-            <ResizablePanel id="planning-course-table" minSize="40%" className="academic-preparation__table-panel">
-            {/* Table Pane */}
-            <div className="academic-preparation__table-pane">
-              <div
-                className="academic-preparation__table-wrapper"
-                role="region"
-                aria-label="Tabla de cursos para planificación"
-                tabIndex={0}
-              >
-                <Table stickyHeader containerClassName="academic-preparation__table-scroll" className="academic-preparation__table">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead scope="col" className="academic-preparation__th-select">
-                        <span className="sr-only">Selección</span>
-                      </TableHead>
-                      <TableHead scope="col">Ciclo</TableHead>
-                      <TableHead scope="col">Asignatura</TableHead>
-                      <TableHead scope="col">Demanda final</TableHead>
-                      <TableHead scope="col">Demanda base</TableHead>
-                      <TableHead scope="col">Sec. sugeridas</TableHead>
-                      <TableHead scope="col">Capacidad obj.</TableHead>
-                      <TableHead scope="col">Sec. prev.</TableHead>
-
+            <div className="academic-preparation__table-wrapper" role="region" aria-label="Tabla de cursos para planificación" tabIndex={0}>
+              <Table stickyHeader containerClassName="academic-preparation__table-scroll" className="academic-preparation__table" aria-label="Cursos de la oferta">
+                <TableHeader><TableRow>
+                  <TableHead><Checkbox aria-label="Seleccionar cursos visibles" disabled={isLocked || !visibleCourses.length} checked={visibleCourses.length > 0 && visibleCourses.every((course) => selectedCourses.includes(course.courseId))} onCheckedChange={(checked) => checked === true ? handleSelectVisible() : handleDeselectVisible()} /></TableHead>
+                  <TableHead>Curso</TableHead><TableHead>Ciclo</TableHead><TableHead>Demanda</TableHead><TableHead>Secc.</TableHead><TableHead>Vac./secc.</TableHead><TableHead>Horas T · P · L</TableHead><TableHead>Datos</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {!visibleCourses.length && <TableRow><TableCell colSpan={8}>No hay cursos que coincidan con los filtros aplicados.</TableCell></TableRow>}
+                  {visibleCourses.map((course) => {
+                    const selected = selectedCourses.includes(course.courseId)
+                    const inspected = course.courseId === inspectedCourseId
+                    const demand = demands[course.courseId] ?? ''
+                    const capacity = capacities[course.courseId] ?? ''
+                    const sections = calculatePresentedSections(demand, capacity)
+                    const status = demand.trim() === '' ? '△ Demanda sin definir' : sections === null ? '△ Datos por corregir' : '✓ Completo'
+                    return <TableRow key={course.courseId} data-course-id={course.courseId} aria-selected={inspected} data-state={selected ? 'selected' : undefined}
+                      className={`academic-preparation__row ${inspected ? 'academic-preparation__row--inspected' : ''}`}
+                      onClick={(event) => { if (!(event.target as HTMLElement).closest('button, input, label')) setInspectedCourseId(course.courseId) }}>
+                      <TableCell><Checkbox aria-label={`Seleccionar ${course.courseId}`} checked={selected} disabled={isLocked || (!selected && selectedCourses.length >= PLANNING_LIMITS.courses)} onCheckedChange={(checked) => { onToggleCourse(course.courseId, checked === true); if (checked) setInspectedCourseId(course.courseId) }} /></TableCell>
+                      <TableCell><div className="academic-preparation__course-cell"><code>{course.courseId}</code><Button variant="link" className="planning-table-name" aria-label={`Inspeccionar ${course.courseId}`} aria-expanded={inspected} onClick={() => setInspectedCourseId(course.courseId)}>{course.name}</Button></div></TableCell>
+                      <TableCell>{course.cycle ?? '—'}</TableCell><TableCell>{demand || '—'}</TableCell><TableCell>{proposal?.status === 'invalid-input' ? 'Entrada inválida' : sections ?? '—'}</TableCell><TableCell>{capacity || '—'}</TableCell>
+                      <TableCell>{hoursFor(course).join(' · ')}</TableCell><TableCell><span className="academic-preparation__data-status" data-ready={sections !== null}>{status}</span></TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {visibleCourses.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={8} className="planning-sections__empty">
-                          No hay cursos que coincidan con los filtros aplicados.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                    {cycleGroups.map((group) => (
-                      <Fragment key={String(group.cycle)}>
-                        <TableRow className="academic-preparation__group-row">
-                          <TableHead colSpan={8} scope="colgroup">
-                            {group.label} · {group.courses.length}{' '}
-                            {group.courses.length === 1 ? 'curso' : 'cursos'}
-                          </TableHead>
-                        </TableRow>
-                        {group.courses.map((course) => {
-                          const isSelected = selectedCourses.includes(course.courseId)
-                          const isInspected = inspectedCourseId === course.courseId
-                          const demandVal = demands[course.courseId] ?? ''
-                          const capVal = capacities[course.courseId] ?? ''
-                          const demandRow = demandEstimate?.rows.find((row) => row.courseId === course.courseId)
-                          const dNum = Number(demandVal)
-                          const cNum = Number(capVal)
-                          const computedSections =
-                            proposal?.status === 'invalid-input'
-                              ? 'Entrada inválida'
-                              : proposal
-                              ? proposal.sections.filter((s) => s.courseId === course.courseId).length
-                              : Number.isSafeInteger(dNum) && Number.isSafeInteger(cNum) && cNum > 0
-                              ? Math.ceil(dNum / cNum)
-                              : '—'
-
-                          return (
-                            <TableRow
-                              key={course.courseId}
-                              data-course-id={course.courseId}
-                              aria-selected={isInspected}
-                              onClick={(event) => { if (!(event.target as HTMLElement).closest('button, input, label')) setInspectedCourseId(course.courseId) }}
-                              data-state={isSelected ? 'selected' : undefined}
-                              className={`academic-preparation__row ${
-                                isInspected ? 'academic-preparation__row--inspected' : ''
-                              } ${isSelected ? 'academic-preparation__row--selected' : ''}`}
-                            >
-                              <TableCell className="academic-preparation__td-select">
-                                <Label htmlFor={`preparation-select-${course.courseId}`} className="academic-scheduling__selection">
-                                  <Checkbox
-                                    id={`preparation-select-${course.courseId}`}
-                                    checked={isSelected}
-                                    disabled={
-                                      isLocked ||
-                                      (!isSelected && selectedCourses.length >= PLANNING_LIMITS.courses)
-                                    }
-                                    aria-label={`Seleccionar ${course.courseId}`}
-                                    onCheckedChange={(value) => {
-                                      const checked = value === true
-                                      onToggleCourse(course.courseId, checked)
-                                      if (checked && !inspectedCourseId) {
-                                        setInspectedCourseId(course.courseId)
-                                      }
-                                    }}
-                                  />
-                                </Label>
-                              </TableCell>
-                              <TableCell>{course.cycle !== undefined ? course.cycle : '—'}</TableCell>
-                              <TableCell className="academic-preparation__td-course">
-                                <div className="academic-preparation__course-cell">
-                                  <Button type="button" variant="link" className="planning-table-name" aria-label={`Inspeccionar ${course.courseId}`} aria-expanded={isInspected} onClick={() => setInspectedCourseId(course.courseId)}>{course.name}</Button>
-                                  <span className="academic-preparation__course-code">
-                                    {course.courseId}
-                                  </span>
-                                </div>
-                              </TableCell>
-                              <TableCell className="academic-preparation__td-demand">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  step="1"
-                                  inputMode="numeric"
-                                  value={demandVal}
-                                  disabled={isLocked || !isSelected}
-                                  aria-label={`Demanda ${course.courseId}`}
-                                  onChange={(e) => onUpdateDemand(course.courseId, e.currentTarget.value)}
-                                  onFocus={() => setInspectedCourseId(course.courseId)}
-                                  className="academic-preparation__num-input"
-                                />
-                              </TableCell>
-                              <TableCell>{demandRow?.baseDemand ?? '—'}</TableCell>
-                              <TableCell>{demandRow?.suggestedSections ?? '—'}</TableCell>
-                              <TableCell className="academic-preparation__td-capacity">
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  step="1"
-                                  inputMode="numeric"
-                                  value={capVal}
-                                  disabled={isLocked || !isSelected}
-                                  aria-label={`Capacidad ${course.courseId}`}
-                                  onChange={(e) => onUpdateCapacity(course.courseId, e.currentTarget.value)}
-                                  onFocus={() => setInspectedCourseId(course.courseId)}
-                                  className="academic-preparation__num-input"
-                                />
-                              </TableCell>
-                              <TableCell>{computedSections}</TableCell>
-
-                            </TableRow>
-                          )
-                        })}
-                      </Fragment>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                  })}
+                </TableBody>
+              </Table>
             </div>
-
-            </ResizablePanel>
-            {wideLayout && inspectedCourse && <>
-              <ResizableHandle withHandle aria-label="Ajustar altura del detalle de curso" />
-              <ResizablePanel id="planning-course-inspector" defaultSize="35%" minSize="20%" maxSize="60%" className="academic-preparation__detail-pane">
-                {courseInspector}
-              </ResizablePanel>
-            </>}
-            </ResizablePanelGroup>
+            {wideLayout && courseInspector}
             {!wideLayout && inspectedCourse && <Sheet open onOpenChange={(open) => { if (!open) setInspectedCourseId(null) }}>
-              <SheetContent className="academic-preparation__course-sheet" showCloseButton={false} aria-describedby={undefined}>
-                <SheetTitle className="sr-only">Detalle de curso {inspectedCourse.courseId}</SheetTitle>
-                {courseInspector}
+              <SheetContent side="bottom" className="academic-preparation__course-sheet" showCloseButton={false} aria-describedby={undefined}>
+                <SheetTitle className="sr-only">Detalle de curso {inspectedCourse.courseId}</SheetTitle>{courseInspector}
               </SheetContent>
             </Sheet>}
-
           </div>
 
           {/* Academic Demand Summary (2027-I) */}
