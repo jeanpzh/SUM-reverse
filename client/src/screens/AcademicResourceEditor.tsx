@@ -232,6 +232,7 @@ export function AcademicResourceEditor({
     const current = resources.teachers.find((t) => t.id === inspectedTeacherId)
     if (!current) return
     const oldId = current.id
+    if (patch.id === oldId) setTeacherIdError('')
 
     if (patch.id !== undefined && patch.id !== oldId) {
       if (resources.teachers.some((teacher) => teacher.id !== oldId && teacher.id === patch.id)) {
@@ -256,6 +257,7 @@ export function AcademicResourceEditor({
     const current = resources.rooms.find((r) => r.id === inspectedRoomId)
     if (!current) return
     const oldId = current.id
+    if (patch.id === oldId) setRoomIdError('')
 
     if (patch.id !== undefined && patch.id !== oldId) {
       if (resources.rooms.some((room) => room.id !== oldId && room.id === patch.id)) {
@@ -922,7 +924,7 @@ export function AcademicResourceEditor({
                   })}
                   {filteredTeachers.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="academic-resource-workbench__empty">
+                      <TableCell colSpan={activeTab === 'teachers' ? 6 : 7} className="academic-resource-workbench__empty">
                         {unifiedTeachers.length === 0
                           ? 'No hay docentes disponibles en el catálogo ni en el borrador.'
                           : 'No se encontraron docentes con los filtros y búsqueda aplicados.'}
@@ -1023,12 +1025,12 @@ export function AcademicResourceEditor({
           <PlanningResourceDetail label="Ficha de docente" onClose={closeInspector}>
             <div className="academic-resource-workbench__inspector-header">
               <div>
-                
+
                   <span className="planning-resource-eyebrow">Docente {inspectedTeacher.isIncluded ? 'incorporado' : 'de referencia'} · {inspectedTeacher.id}</span>
                   <h2 className="academic-resource-workbench__inspector-title">
                     {inspectedTeacher.name || inspectedTeacher.id}
                   </h2>
-                
+
                 <details className="planning-resource-extra"><summary>Procedencia</summary><p className="academic-resource-workbench__inspector-subtitle">
                   {inspectedTeacher.isIncluded
                     ? teacherReferenceIds[inspectedTeacher.id]
@@ -1040,7 +1042,7 @@ export function AcademicResourceEditor({
               <Button
                 type="button"
                 variant="ghost"
-                aria-label="Cerrar detalle"
+                aria-label="Cerrar ficha"
                 onClick={closeInspector}
               >
                 <X size={14} aria-hidden="true" />
@@ -1141,7 +1143,7 @@ export function AcademicResourceEditor({
                             min="0"
                             max="168"
                             step={1 / 60}
-                            aria-label="Carga semanal docente"
+                            aria-label="Carga máxima docente en horas"
                             aria-invalid={!Number.isInteger(currentTeacher.maxWeeklyMinutes) || currentTeacher.maxWeeklyMinutes < 0 || currentTeacher.maxWeeklyMinutes > 10080}
                             value={Number.isFinite(currentTeacher.maxWeeklyMinutes) ? currentTeacher.maxWeeklyMinutes / 60 : ''}
                             disabled={isLocked}
@@ -1153,6 +1155,16 @@ export function AcademicResourceEditor({
                           />
                         </Label>
                       </fieldset>
+
+                      <details className="planning-resource-extra"><summary>Editar carga en minutos</summary>
+                        <Label>Carga semanal máxima (minutos)
+                          <Input type="number" min="0" max="10080" step="1" aria-label="Carga semanal docente"
+                            aria-invalid={!Number.isInteger(currentTeacher.maxWeeklyMinutes) || currentTeacher.maxWeeklyMinutes < 0 || currentTeacher.maxWeeklyMinutes > 10080}
+                            value={Number.isFinite(currentTeacher.maxWeeklyMinutes) ? currentTeacher.maxWeeklyMinutes : ''}
+                            disabled={isLocked}
+                            onChange={(event) => changeTeacher({ maxWeeklyMinutes: event.currentTarget.value === '' ? Number.NaN : Number(event.currentTarget.value) })} />
+                        </Label>
+                      </details>
 
                       {currentTeacher.qualificationSource === 'synthetic' && (
                         <details className="planning-resource-extra"><summary>Metadatos de habilitación</summary><p className="academic-resource-workbench__resource-note">
@@ -1299,12 +1311,12 @@ export function AcademicResourceEditor({
           <PlanningResourceDetail label="Ficha de ambiente" onClose={closeInspector}>
             <div className="academic-resource-workbench__inspector-header">
               <div>
-                
+
                   <span className="planning-resource-eyebrow">Ambiente {inspectedRoom.isIncluded ? 'incorporado' : 'de referencia'} · {inspectedRoom.id}</span>
                   <h2 className="academic-resource-workbench__inspector-title">
                     {inspectedRoom.name || inspectedRoom.id}
                   </h2>
-                
+
                 <details className="planning-resource-extra"><summary>Procedencia</summary><p className="academic-resource-workbench__inspector-subtitle">
                   {inspectedRoom.isIncluded
                     ? `${inspectedRoom.kind === 'laboratory' ? 'Laboratorio' : 'Aula'}${roomReferenceIds[inspectedRoom.id] ? ' · referencia sintética' : ' · ambiente local'}`
@@ -1314,7 +1326,7 @@ export function AcademicResourceEditor({
               <Button
                 type="button"
                 variant="ghost"
-                aria-label="Cerrar detalle"
+                aria-label="Cerrar ficha"
                 onClick={closeInspector}
               >
                 <X size={14} aria-hidden="true" />

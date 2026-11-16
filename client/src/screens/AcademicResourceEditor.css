@@ -45,7 +45,7 @@
 .academic-resource-workbench fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .planning-root .academic-resource-workbench legend { padding: 0 0 8px; font: 500 14px/20px var(--plan-font-sans); }
 .academic-resource-workbench__resource-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.academic-resource-workbench__resource-fields > label:nth-of-type(2) { grid-column: 1 / -1; order: 1; }
+
 .planning-root .academic-resource-workbench [data-slot='label'] { display: flex; flex-direction: column; align-items: stretch; gap: 6px; font: 500 14px/20px var(--plan-font-sans); }
 .planning-root .academic-resource-workbench input:is([type='number'], [type='time'], [aria-label^='Identificación']) { font-family: var(--plan-font-mono); }
 .academic-resource-workbench__course-eligibility, .academic-resource-workbench__course-limits, .academic-resource-workbench__availability { display: flex; flex-direction: column; gap: 8px; }
@@ -85,7 +85,7 @@
 
 .planning-root .planning-resource-detail-sheet { width: 100%; max-height: 85dvh; overflow-y: auto; border-radius: 16px 16px 0 0; }
 .planning-root .academic-resource-workbench__resource-fields > legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-.academic-resource-workbench__resource-fields > .planning-resource-name { grid-column: 1 / -1; }
+.academic-resource-workbench__resource-fields > .planning-resource-name { grid-column: 1 / -1; order: 2; }
 .planning-root .academic-resource-workbench__inspector-header > button { padding: 0; border: 0; width: 32px; height: 32px; flex: none; }
 .academic-resource-workbench__course-eligibility > .planning-resource-extra { order: 1; }
 .planning-root .academic-resource-workbench__inspector-pane > .academic-resource-workbench__inspector-header + .academic-resource-workbench__inspector-body .academic-scheduling__resource-card > .planning-resource-extra { order: 3; }
@@ -93,3 +93,10 @@
 .planning-root .academic-resource-workbench__scroll-region > [data-slot='table-container'] { border: 0; border-radius: 0; }
 .planning-root .academic-resource-table [data-slot='table-row'] { border: 0; }
 .planning-root .academic-resource-workbench .academic-resource-table input[type='checkbox'] { height: 16px; min-height: 0; margin: 0; padding: 0; }
+
+.planning-root .academic-resource-table td .planning-table-name { display: inline; }
+.planning-root .academic-resource-table td code { display: inline; margin-left: 8px; }
+.planning-root .academic-resource-workbench__inspector-header > button { box-shadow: none; }
+.planning-root .academic-resource-workbench__resource-fields { align-items: start; }
+.planning-root .academic-resource-workbench__chip { padding-block: 0; }
+.planning-root .academic-resource-workbench__chip button { border: 0; min-height: 24px; padding: 0; }
