@@ -107,7 +107,7 @@ def test_round_and_call_limits_and_unknown_tools():
         model = FakeModel(replies)
         result = run(sample(), model)
         assert result.source.mode == 'deterministic-fallback'
-        assert len(model.histories) <= 3
+        assert len(model.histories) <= 4
         assert len(result.reasoningSteps) <= 5
 
 

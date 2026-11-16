@@ -323,12 +323,39 @@ def test_requested_variant_pruned_at_zero_and_llm_can_reorder_within_ties() -> N
         ("inspect_diagnosis", {"extra": "arg"}),
     ],
 )
-def test_invalid_kind_scope_or_id_falls_back_cleanly(tool_name: str, args: dict) -> None:
+def test_invalid_kind_scope_or_id_is_rejected_and_model_can_recover(tool_name: str, args: dict) -> None:
     req = _make_exploration_request()
-    result = _run_with_model(req, FakeModel([call(tool_name, args, "bad-call")]))
+    final = AIMessage(content=json.dumps({"summary": "Resumen tras corregir.", "prioritizedIds": []}))
+    model = FakeModel([call(tool_name, args, "bad-call"), final])
+    result = _run_with_model(req, model)
+    # Nothing ran for the rejected call; the model saw the error and answered within budget.
+    assert result.source.mode == "llm-assisted"
+    assert [s.toolName for s in result.reasoningSteps] == ["simulate_patches_cpsat"]
+    rejection = model.histories[1][-1]
+    assert rejection["tool_call_id"] == "bad-call"
+    assert '"error"' in rejection["content"]
+
+
+def test_invalid_scope_error_lists_valid_scopes_and_context_exposes_them() -> None:
+    req = _make_exploration_request()
+    final = AIMessage(content=json.dumps({"summary": "ok", "prioritizedIds": []}))
+    model = FakeModel([
+        call("request_variants", {"kind": "increase_teacher_load", "scope": "teacher"}, "bad"),
+        final,
+    ])
+    _run_with_model(req, model)
+    context = json.loads(model.histories[0][1]["content"])
+    assert context["variantScopes"]["enable_planning_window"] == ["afternoon", "both", "saturday"]
+    assert "all" in context["variantScopes"]["increase_teacher_load"]
+    assert "all" in model.histories[1][-1]["content"]
+
+
+def test_only_invalid_calls_still_exhaust_the_round_budget() -> None:
+    req = _make_exploration_request()
+    bad = [call("request_variants", {"kind": "x", "scope": "y"}, f"b{i}") for i in range(MAX_TOOL_ROUNDS + 2)]
+    result = _run_with_model(req, FakeModel(bad))
     assert result.source.mode == "deterministic-fallback"
     assert result.source.fallbackReason == "invalid_llm_output"
-    assert [s.toolName for s in result.reasoningSteps] == ["simulate_patches_cpsat"]
 
 
 def test_exceeding_calls_rounds_and_simulation_budget_falls_back() -> None:
@@ -342,12 +369,13 @@ def test_exceeding_calls_rounds_and_simulation_budget_falls_back() -> None:
             for i in range(MAX_TOOL_CALLS + 1)
         ],
     )
-    res_calls = _run_with_model(req, FakeModel([five_calls]))
+    res_calls = _run_with_model(req, FakeModel([five_calls, call("inspect_diagnosis", {}, "again")]))
     assert res_calls.source.mode == "deterministic-fallback"
     assert res_calls.source.fallbackReason == "invalid_llm_output"
 
     # 2. Exceeding MAX_TOOL_ROUNDS (attempting a 3rd tool round past MAX_TOOL_ROUNDS=2)
-    too_many_rounds = [call("inspect_diagnosis", {}, f"r{i}") for i in range(MAX_TOOL_ROUNDS + 1)]
+    # The model ignores the final-answer turn and keeps calling tools.
+    too_many_rounds = [call("inspect_diagnosis", {}, f"r{i}") for i in range(MAX_TOOL_ROUNDS + 2)]
     res_rounds = _run_with_model(req, FakeModel(too_many_rounds))
     assert res_rounds.source.mode == "deterministic-fallback"
     assert res_rounds.source.fallbackReason == "invalid_llm_output"
@@ -565,3 +593,16 @@ def test_agentic_exploration_scale_timing_under_25s() -> None:
     assert result.source.mode == "llm-assisted"
     assert len(result.recommendations) <= 8
     assert len(result.reasoningSteps) == 5  # initial selected + 4 agent calls
+
+
+def test_exhausted_tool_budget_gets_one_final_answer_turn() -> None:
+    req = _make_exploration_request()
+    rounds = [call("inspect_diagnosis", {}, f"r{i}") for i in range(MAX_TOOL_ROUNDS + 1)]
+    final = AIMessage(content=json.dumps({"summary": "Respuesta final.", "prioritizedIds": []}))
+    model = FakeModel([*rounds, final])
+    result = _run_with_model(req, model)
+    assert result.source.mode == "llm-assisted"
+    assert result.summary == "Respuesta final."
+    # Only the in-budget rounds executed tools; the over-budget call was dropped.
+    assert [s.toolName for s in result.reasoningSteps].count("inspect_diagnosis") == MAX_TOOL_ROUNDS
+    assert "Presupuesto de herramientas agotado" in model.histories[-1][-1]["content"]
