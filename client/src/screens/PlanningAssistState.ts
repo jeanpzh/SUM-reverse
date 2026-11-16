@@ -42,6 +42,10 @@ export const planningAssist = {
   setSlot(slot: HTMLElement | null) {
     if (snapshot.slot !== slot) update({ slot })
   },
+  /** Clears the slot only if it still is the given element (an unmounting panel never evicts its successor). */
+  clearSlot(slot: HTMLElement) {
+    if (snapshot.slot === slot) update({ slot: null })
+  },
   registerAdvisor() {
     update({ advisors: snapshot.advisors + 1 })
     return () => update({ advisors: snapshot.advisors - 1 })

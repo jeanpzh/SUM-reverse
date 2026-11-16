@@ -22,7 +22,9 @@ const TABS: ReadonlyArray<{ id: PlanningAssistTab; label: string }> = [
 
 // Stable identity: React re-runs a changing ref callback on every render.
 function bindAdvisorSlot(element: HTMLDivElement | null) {
+  if (!element) return
   planningAssist.setSlot(element)
+  return () => planningAssist.clearSlot(element)
 }
 
 export function PlanningContextPanel({ academicPeriod, chat, expanded, onExpandedChange, onClose }: PlanningContextPanelProps) {
