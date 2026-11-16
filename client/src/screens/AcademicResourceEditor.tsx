@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { CircleCheck, CircleAlert, CircleMinus } from 'lucide-react'
+import { CircleCheck, CircleAlert, CircleMinus, X } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs'
 import type { AcademicCatalog } from '../data/academicScheduling.ts'
 import { filterAcademicResources, formatAcademicInterval, PLANNING_LIMITS } from '../data/academicScheduling.ts'
@@ -36,6 +36,7 @@ import { Input } from '../components/ui/Input'
 import { Label } from '../components/ui/Label'
 import { NativeSelect } from '../components/ui/NativeSelect'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table'
+import { PlanningResourceDetail } from './PlanningResourceDetail'
 import { PlanningResourceAvailability } from './PlanningResourceAvailability'
 import './AcademicResourceEditor.css'
 
@@ -208,6 +209,9 @@ export function AcademicResourceEditor({
   }
 
   const closeInspector = () => {
+    const name = inspectedTeacher?.name ?? inspectedRoom?.name
+    const trigger = [...document.querySelectorAll<HTMLButtonElement>('.academic-resource-table button')].find((button) => button.getAttribute('aria-label') === `Abrir ficha de ${name}`)
+    trigger?.focus()
     setInspectedTeacherId(null)
     setInspectedRoomId(null)
     setTeacherIdError('')
@@ -862,7 +866,7 @@ export function AcademicResourceEditor({
                         }}
                       />
                     </TableHead>
-                    <TableHead>{activeTab === 'teachers' ? 'Docente' : 'Ambiente'}</TableHead>
+                    <TableHead>Docente</TableHead>
                     <TableHead>Origen</TableHead>
                     <TableHead className="planning-resource-number">Cursos</TableHead>
                     <TableHead className="planning-resource-number">Carga asignable</TableHead>
@@ -946,7 +950,7 @@ export function AcademicResourceEditor({
                         }}
                       />
                     </TableHead>
-                    <TableHead>{activeTab === 'teachers' ? 'Docente' : 'Ambiente'}</TableHead>
+                    <TableHead>Ambiente</TableHead>
                     <TableHead>Origen</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead className="planning-resource-number">Capacidad</TableHead>
@@ -1016,7 +1020,7 @@ export function AcademicResourceEditor({
 
         {/* Inspector Pane (Only open when a resource is inspected) */}
         {activeTab === 'teachers' && inspectedTeacher && (
-          <aside className="academic-resource-workbench__inspector-pane" aria-label="Ficha de docente" onKeyDown={(event) => { if (event.key === \'Escape\') closeInspector() }}>
+          <PlanningResourceDetail label="Ficha de docente" onClose={closeInspector}>
             <div className="academic-resource-workbench__inspector-header">
               <div>
                 
@@ -1025,21 +1029,21 @@ export function AcademicResourceEditor({
                     {inspectedTeacher.name || inspectedTeacher.id}
                   </h2>
                 
-                <p className="academic-resource-workbench__inspector-subtitle">
+                <details className="planning-resource-extra"><summary>Procedencia</summary><p className="academic-resource-workbench__inspector-subtitle">
                   {inspectedTeacher.isIncluded
                     ? teacherReferenceIds[inspectedTeacher.id]
                       ? 'Docente de referencia · no confirmado para el nuevo periodo'
                       : 'Docente de demostración local'
                     : 'Referencia del catálogo · no incorporado en el borrador'}
-                </p>
+                </p></details>
               </div>
               <Button
                 type="button"
                 variant="ghost"
-                aria-label="Cerrar ficha"
+                aria-label="Cerrar detalle"
                 onClick={closeInspector}
               >
-                Cerrar
+                <X size={14} aria-hidden="true" />
               </Button>
             </div>
 
@@ -1119,6 +1123,7 @@ export function AcademicResourceEditor({
                             </span>
                           )}
                         </Label>
+                        <details className="planning-resource-extra planning-resource-name"><summary>Editar nombre</summary>
                         <Label>
                           Nombre
                           <Input
@@ -1128,20 +1133,21 @@ export function AcademicResourceEditor({
                             onChange={(e) => changeTeacher({ name: e.currentTarget.value })}
                           />
                         </Label>
+                        </details>
                         <Label>
-                          Carga semanal máxima (minutos)
+                          Carga máxima (h)
                           <Input
                             type="number"
                             min="0"
-                            max="10080"
-                            step="1"
+                            max="168"
+                            step={1 / 60}
                             aria-label="Carga semanal docente"
                             aria-invalid={!Number.isInteger(currentTeacher.maxWeeklyMinutes) || currentTeacher.maxWeeklyMinutes < 0 || currentTeacher.maxWeeklyMinutes > 10080}
-                            value={Number.isFinite(currentTeacher.maxWeeklyMinutes) ? currentTeacher.maxWeeklyMinutes : ''}
+                            value={Number.isFinite(currentTeacher.maxWeeklyMinutes) ? currentTeacher.maxWeeklyMinutes / 60 : ''}
                             disabled={isLocked}
                             onChange={(e) =>
                               changeTeacher({
-                                maxWeeklyMinutes: e.currentTarget.value === '' ? Number.NaN : Number(e.currentTarget.value),
+                                maxWeeklyMinutes: e.currentTarget.value === '' ? Number.NaN : Math.round(Number(e.currentTarget.value) * 60),
                               })
                             }
                           />
@@ -1149,10 +1155,10 @@ export function AcademicResourceEditor({
                       </fieldset>
 
                       {currentTeacher.qualificationSource === 'synthetic' && (
-                        <p className="academic-resource-workbench__resource-note">
+                        <details className="planning-resource-extra"><summary>Metadatos de habilitación</summary><p className="academic-resource-workbench__resource-note">
                           Metadatos de habilitación locales sintéticos · {currentTeacher.facultyId ?? 'sin facultad'} · categoría{' '}
                           {currentTeacher.category ?? 'sin especificar'}. No verifican afiliación ni categoría institucional.
-                        </p>
+                        </p></details>
                       )}
 
                       <fieldset className="academic-resource-workbench__course-eligibility">
@@ -1190,7 +1196,7 @@ export function AcademicResourceEditor({
                         <div className="academic-scheduling__course-chips" aria-label="Asignaturas habilitadas">
                           {currentTeacher.courseIds.map((id) => (
                             <Badge variant="secondary" className="academic-resource-workbench__chip" key={id}>
-                              {id}
+                              {catalog.courses.find((course) => course.courseId === id)?.name ?? id}
                               {catalog.courses.some((course) => course.courseId === id) && (
                                 <Button
                                   variant="ghost"
@@ -1286,11 +1292,11 @@ export function AcademicResourceEditor({
                 })()
               )}
             </div>
-          </aside>
+          </PlanningResourceDetail>
         )}
 
         {activeTab === 'rooms' && inspectedRoom && (
-          <aside className="academic-resource-workbench__inspector-pane" aria-label="Ficha de ambiente" onKeyDown={(event) => { if (event.key === \'Escape\') closeInspector() }}>
+          <PlanningResourceDetail label="Ficha de ambiente" onClose={closeInspector}>
             <div className="academic-resource-workbench__inspector-header">
               <div>
                 
@@ -1299,19 +1305,19 @@ export function AcademicResourceEditor({
                     {inspectedRoom.name || inspectedRoom.id}
                   </h2>
                 
-                <p className="academic-resource-workbench__inspector-subtitle">
+                <details className="planning-resource-extra"><summary>Procedencia</summary><p className="academic-resource-workbench__inspector-subtitle">
                   {inspectedRoom.isIncluded
                     ? `${inspectedRoom.kind === 'laboratory' ? 'Laboratorio' : 'Aula'}${roomReferenceIds[inspectedRoom.id] ? ' · referencia sintética' : ' · ambiente local'}`
                     : 'Referencia del catálogo · no incorporado en el borrador'}
-                </p>
+                </p></details>
               </div>
               <Button
                 type="button"
                 variant="ghost"
-                aria-label="Cerrar ficha"
+                aria-label="Cerrar detalle"
                 onClick={closeInspector}
               >
-                Cerrar
+                <X size={14} aria-hidden="true" />
               </Button>
             </div>
 
@@ -1386,6 +1392,7 @@ export function AcademicResourceEditor({
                             </span>
                           )}
                         </Label>
+                        <details className="planning-resource-extra planning-resource-name"><summary>Editar nombre</summary>
                         <Label>
                           Nombre
                           <Input
@@ -1395,6 +1402,7 @@ export function AcademicResourceEditor({
                             onChange={(e) => changeRoom({ name: e.currentTarget.value })}
                           />
                         </Label>
+                        </details>
                         <Label>
                           Tipo
                           <NativeSelect
@@ -1437,7 +1445,7 @@ export function AcademicResourceEditor({
                 })()
               )}
             </div>
-          </aside>
+          </PlanningResourceDetail>
         )}
       </div>
 

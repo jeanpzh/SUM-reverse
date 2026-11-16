@@ -73,7 +73,7 @@ export function PlanningResourceAvailability({ label, intervals, disabled, onCha
                   onFocus={() => setActive(index)}
                   onClick={() => toggle(column + 1, start, end, pressed)}
                   onKeyDown={(event) => {
-                    let target = index
+                    let target: number
                     if (event.key === 'ArrowRight') target = row * days.length + (column + 1) % days.length
                     else if (event.key === 'ArrowLeft') target = row * days.length + (column + days.length - 1) % days.length
                     else if (event.key === 'ArrowDown') target = ((row + 1) % BANDS.length) * days.length + column
