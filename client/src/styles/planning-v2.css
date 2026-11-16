@@ -238,7 +238,9 @@
 .planning-root :where(h1, h2, h3, h4, strong, b) { font-weight: 500; }
 .planning-root .planning-shell-layout { display: flex; flex-direction: column; height: 100dvh; min-height: 0; --sidebar-width: 216px; }
 .planning-shell-body { display: flex; flex: 1; min-height: 0; min-width: 0; }
-.planning-root [data-slot='sidebar-container'] { position: absolute; height: 100%; }
+.planning-root [data-slot='sidebar-container'] { position: absolute; height: 100%; border-right-width: 0; }
+/* Board rail: 216px including its 1px divider, which the nav carries. */
+.planning-root .planning-stage-rail { border-right: 1px solid var(--plan-dove); }
 .planning-shell-body > [data-slot='sidebar'] { position: relative; }
 .planning-root .planning-main-wrapper { height: auto; }
 .planning-root .screen-academic-scheduling { padding: 0; }

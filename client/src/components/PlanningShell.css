@@ -190,11 +190,6 @@
   color: var(--planning-muted);
 }
 
-.planning-root [data-slot='sidebar-group-label'] {
-  color: var(--planning-muted);
-  font-weight: 700;
-}
-
 .planning-root [data-slot='sidebar-menu-button'] {
   height: auto;
   min-height: 32px;
