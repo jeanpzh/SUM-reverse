@@ -146,27 +146,33 @@ export function PlanningWeekView({
   // selection made in Tabla is revealed even when its id has not changed.
   useEffect(() => {
     const pane = root.current?.closest('.planning-view-pane')
+    let frame = 0
     const reveal = () => {
-      if (
-        !root.current ||
-        !pane ||
-        getComputedStyle(pane).display === 'none' ||
-        !selectedSectionId ||
-        revealedSelection.current === selectedSectionId
-      )
-        return
-      setAgendaDay(null)
-      const target = root.current.querySelector<HTMLElement>(
-        `[data-week-grid-section-id="${CSS.escape(selectedSectionId)}"]`,
-      )
-      if (target && getComputedStyle(target).display !== 'none')
-        target.scrollIntoView({ block: 'nearest', inline: 'nearest' })
-      revealedSelection.current = selectedSectionId
+      if (!pane || !selectedSectionId || revealedSelection.current === selectedSectionId) return
+      cancelAnimationFrame(frame)
+      // The host restores each view's saved scroll in its next animation frame.
+      // Reveal a new selection after that restoration, without resetting later switches.
+      frame = requestAnimationFrame(() => {
+        frame = requestAnimationFrame(() => {
+          if (!root.current || getComputedStyle(pane).display === 'none') return
+          setAgendaDay(null)
+          const target = Array.from(
+            root.current.querySelectorAll<HTMLElement>(
+              `[data-week-section-id="${CSS.escape(selectedSectionId)}"]`,
+            ),
+          ).find((element) => element.getClientRects().length > 0)
+          target?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+          revealedSelection.current = selectedSectionId
+        })
+      })
     }
     const observer = new MutationObserver(reveal)
     if (pane) observer.observe(pane, { attributes: true, attributeFilter: ['style'] })
     reveal()
-    return () => observer.disconnect()
+    return () => {
+      observer.disconnect()
+      cancelAnimationFrame(frame)
+    }
   }, [selectedSectionId])
 
   const items = filtered.map((b) => ({
