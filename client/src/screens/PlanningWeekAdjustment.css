@@ -268,3 +268,6 @@
     order: 2;
   }
 }
+@media (min-width: 720px) and (max-width: 1023px) {
+  .planning-root .planning-week-adjustment__resources summary { display: list-item; cursor: pointer; min-height: 24px; }
+}
