@@ -24,7 +24,7 @@
 .planning-root .academic-resource-table tr[aria-selected='true'] td { background: var(--plan-sand); }
 .planning-root .academic-resource-table tr[aria-selected='true'] td:first-child { box-shadow: inset 3px 0 0 var(--plan-ink); }
 .planning-root .academic-resource-table [data-slot='button'] { display: block; padding: 0; min-height: 24px; border: 0; border-radius: 0; text-align: left; font-weight: 400; text-decoration: none; }
-.academic-resource-table code { display: block; color: var(--plan-fog); font: 400 11px/16px var(--plan-font-mono); }
+.academic-resource-table code { display: block; color: var(--plan-fog); font: 400 12px/16px var(--plan-font-mono); }
 .planning-root .academic-resource-table .planning-resource-number { text-align: right; font-family: var(--plan-font-mono); font-variant-numeric: tabular-nums; }
 .academic-resource-table__availability { color: var(--plan-fog); font: 400 12px/16px var(--plan-font-mono); }
 .academic-resource-table__status { display: inline-flex; align-items: center; gap: 6px; white-space: normal; max-width: 160px; font: 400 13px/18px var(--plan-font-sans); }

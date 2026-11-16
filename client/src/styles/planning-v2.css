@@ -271,6 +271,9 @@
 .planning-page-head__panel-actions:empty { display: none; }
 .planning-root :is(.planning-page-head, .planning-scope-bar, .planning-proposal-switcher, .planning-status-bar) [data-slot='button'] { border-radius: 9999px; padding: 6px 14px; min-height: 32px; height: auto; font: 500 var(--text-plan-body)/var(--text-plan-body--line-height) var(--plan-font-sans); box-shadow: none; white-space: normal; }
 .planning-root .planning-scope-bar [data-size='icon'] { padding: 0; width: 32px; height: 32px; }
+/* The planning button rules above remove the ring utility's box-shadow, and controls.css
+   hands outline back to the utility (outline-none); restore the v2 focus outline. */
+.planning-root [data-slot='button'][data-slot]:focus-visible { outline: 2px solid var(--plan-focus); outline-offset: 2px; }
 .planning-root :is(.planning-page-head, .planning-scope-bar) [data-variant='outline'] { background: transparent; border: 1px solid var(--plan-dove); }
 .planning-root #planning-tour-primary { border: 0; background: var(--plan-ink); color: var(--plan-on-ink); }
 .planning-root #planning-tour-save { background: transparent; color: var(--plan-ink); }

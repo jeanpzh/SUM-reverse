@@ -381,7 +381,6 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
               </div>
 
             </section>}
-            {proposalError && <Alert variant="destructive" role="alert"><AlertDescription>{proposalError}</AlertDescription></Alert>}
           </div>
           <Button variant="ghost" popoverTarget="planning-generation-options" popoverTargetAction="hide">Cerrar opciones</Button>
         </div>
@@ -451,6 +450,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
     <ResizablePanel id="planning-schedule-content" minSize="40%" className="planning-workspace__panel">
     <div ref={scrollerRef} className={`planning-workspace__content ${currentStage === 'preparacion' && preparationView === 'cursos' ? 'planning-workspace__content--courses' : ''}`}>
     {draftError && !draftListOpen && <Alert id="planning-draft-error" variant="destructive" role="alert"><AlertDescription>{draftError}</AlertDescription></Alert>}
+    {proposalError && currentStage === 'preparacion' && <Alert id="planning-generation-error" variant="destructive" role="alert"><AlertDescription>{proposalError}</AlertDescription></Alert>}
     {loadingCatalog && preparationView !== 'cursos' && currentStage === 'preparacion' && <PlanningFetchLoading label="Consultando catálogo local…" layout="cards" />}
     {/* Stage 1: Preparación */}
     <section
