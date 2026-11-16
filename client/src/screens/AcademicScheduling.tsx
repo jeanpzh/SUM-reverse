@@ -757,7 +757,7 @@ function PlanningSectionsTable({ proposal, catalog, selectedSectionId, onSelectS
   const previousSelection = useRef(selectedSectionId)
   useEffect(() => {
     if (selectedSectionId && previousSelection.current !== selectedSectionId) {
-      document.querySelector(`tr[data-section-id="${CSS.escape(selectedSectionId)}"]`)?.scrollIntoView({ block: 'nearest' })
+      document.querySelector(`[data-section-id="${CSS.escape(selectedSectionId)}"]`)?.scrollIntoView({ block: 'nearest' })
     }
     previousSelection.current = selectedSectionId
   }, [selectedSectionId])
@@ -773,7 +773,7 @@ function PlanningSectionsTable({ proposal, catalog, selectedSectionId, onSelectS
           aria-pressed={selectedSectionId === section.sectionId}
           aria-label={`Inspeccionar sección ${academicSectionLabel(proposal, section.sectionId)} de ${section.courseName}`}
           onClick={() => onSelectSection(section.sectionId)}>
-          <span className="planning-horario-list__eyebrow">{section.courseId} · Secc. {academicSectionLabel(proposal, section.sectionId)} · {types.join(' + ') || course?.weeklySessions.map((item) => item.type).join(' + ') || 'Componente'}</span>
+          <span className="planning-horario-list__eyebrow">{section.courseId} · Secc. {academicSectionLabel(proposal, section.sectionId)} · {(types.length ? types : course?.weeklySessions.map((item) => item.type) ?? []).map((type) => ({ T: 'Teoría', P: 'Práctica', L: 'Lab.' })[type] ?? type).join(' + ') || 'Componente'}</span>
           <span className="planning-horario-list__name">{section.courseName}</span>
           {status !== 'Completa' && <span className={`planning-horario-status planning-horario-status--${status}`}>{status === 'Parcial' ? '◐' : '○'} {status}</span>}
           {assigned.map((block) => <span className="planning-horario-list__meta" key={block.sessionIds.join('|')}>

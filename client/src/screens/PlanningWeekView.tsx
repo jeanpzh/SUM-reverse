@@ -378,8 +378,7 @@ export function PlanningWeekView({
               .map((item) => (
                 <li key={item.id}>
                   <span className="planning-week__agenda-time">
-                    {short[item.day]}
-                    <br />
+                    {item.day !== visibleDay && <>{short[item.day]}<br /></>}
                     {formatAcademicMinute(item.startMinute)}
                   </span>
                   {renderBlock(item, undefined, true)}

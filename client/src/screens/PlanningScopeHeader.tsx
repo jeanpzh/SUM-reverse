@@ -1,5 +1,6 @@
 import { useContext, type ReactNode, type Ref } from 'react'
 import { createPortal } from 'react-dom'
+import { useMediaQuery } from '../lib/useMediaQuery'
 import { SidebarTrigger } from '../components/ui/Sidebar'
 import { PlanningScopeBarContext } from '../components/planningSlots'
 import { ModeToggle } from '../components/mode-toggle'
@@ -34,6 +35,7 @@ export function PlanningScopeHeader({ eyebrow, title, proposalTitle, version, ne
   proposalActions, scopeSwitcher, generationOptions, actionSlotRef, workspaceDirty, canSave,
   draftBusy, onGuide, onSave, disabledReason, onToggleChat, isChatOpen = false,
 }: PlanningScopeHeaderProps): ReactNode {
+  const narrow = useMediaQuery('(max-width: 719px)')
   const scopeBar = useContext(PlanningScopeBarContext)
   const bar = <header className="planning-scope-bar planning-scope-header" aria-label="Ámbito de planificación">
     <span className="planning-navigation-trigger"><SidebarTrigger aria-label="Mostrar u ocultar el menú" /><span className="planning-navigation-trigger__desktop" aria-hidden="true"><List size={12} /></span><Menu className="planning-navigation-trigger__mobile" size={18} aria-hidden="true" /></span>
@@ -64,7 +66,7 @@ export function PlanningScopeHeader({ eyebrow, title, proposalTitle, version, ne
         <h1 id="planning-page-title">{title}</h1>
         {disabledReason && <p id="planning-save-reason" className="planning-page-head__reason">{disabledReason}</p>}
       </div>
-      {tertiaryAction && <details className="planning-mobile-stage-actions"><summary>Acciones</summary>{tertiaryAction}</details>}
+      {narrow && (tertiaryAction || generationOptions) && <details className="planning-mobile-stage-actions"><summary>Acciones</summary>{tertiaryAction}{generationOptions}</details>}
       <div className="planning-page-head__actions">
         <span className="planning-mobile-provenance">Datos sintéticos · local</span>
         {tertiaryAction && <div className="planning-page-head__tertiary">{tertiaryAction}</div>}
@@ -72,7 +74,7 @@ export function PlanningScopeHeader({ eyebrow, title, proposalTitle, version, ne
           onClick={onSave} aria-describedby={disabledReason ? 'planning-save-reason' : undefined}>
           <Save className="size-4" aria-hidden="true" />{draftBusy ? 'Guardando…' : 'Guardar'}
         </Button>
-        {generationOptions}
+        {!narrow && generationOptions}
         {nextAction}
         <div className="planning-page-head__panel-actions" ref={actionSlotRef} />
       </div>

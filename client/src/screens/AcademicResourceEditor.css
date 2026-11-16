@@ -138,3 +138,6 @@
   .planning-root .academic-resource-workbench .academic-resource-workbench__inspector-header > button,
   .planning-root .academic-resource-workbench .academic-resource-workbench__chip button { min-width: 44px; min-height: 44px; }
 }
+@media (max-width: 719px) {
+  .planning-root .academic-resource-workbench .academic-resource-table input[type='checkbox'] { width: 44px; height: 44px; min-height: 44px; }
+}
