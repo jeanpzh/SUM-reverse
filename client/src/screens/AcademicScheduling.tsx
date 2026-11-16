@@ -32,7 +32,7 @@ import { PlanningPreparationSummary } from './PlanningPreparationSummary'
 import { PlanningStatusBar, PlanningSearchDetails } from './PlanningStatusBar'
 import { PlanningInspector } from './PlanningInspector'
 import { PlanningWeekView } from './PlanningWeekView'
-import { useDefaultLayout } from 'react-resizable-panels'
+import { useDefaultLayout, useGroupRef } from 'react-resizable-panels'
 import { useMediaQuery } from '../lib/useMediaQuery'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '../components/ui/Resizable'
 import { Sheet, SheetContent, SheetTitle } from '../components/ui/Sheet'
@@ -261,6 +261,11 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
     id: 'planning-schedule-detail',
     panelIds: inspectorDocked ? ['planning-schedule-content', 'planning-section-detail'] : ['planning-schedule-content'],
   })
+  // Removing a panel leaves the survivor at its previous share; give it the whole group back.
+  const workspaceGroupRef = useGroupRef()
+  const detailGroupRef = useGroupRef()
+  useLayoutEffect(() => { if (!railOpen) workspaceGroupRef.current?.setLayout({ 'planning-content': 100 }) }, [railOpen, workspaceGroupRef])
+  useLayoutEffect(() => { if (!inspectorDocked) detailGroupRef.current?.setLayout({ 'planning-schedule-content': 100 }) }, [inspectorDocked, detailGroupRef])
   const reviewPending = () => {
     if (!proposal) return
     const sectionId = proposal.pending[0]?.sectionId
@@ -359,7 +364,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       </DialogContent>
     </Dialog>
 
-    <ResizablePanelGroup orientation="horizontal" defaultLayout={defaultLayout} onLayoutChanged={onLayoutChanged} className="planning-workspace">
+    <ResizablePanelGroup groupRef={workspaceGroupRef} orientation="horizontal" defaultLayout={defaultLayout} onLayoutChanged={onLayoutChanged} className="planning-workspace">
     <ResizablePanel id="planning-content" minSize="45%" className="planning-workspace__panel">
     <div className="planning-content-column">
     <PlanningScopeHeader
@@ -447,7 +452,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       }}
       isChatOpen={chatOpen}
     />
-    <ResizablePanelGroup orientation="vertical" defaultLayout={detailLayout} onLayoutChanged={onDetailLayoutChanged} className="planning-schedule-split">
+    <ResizablePanelGroup groupRef={detailGroupRef} orientation="vertical" defaultLayout={detailLayout} onLayoutChanged={onDetailLayoutChanged} className="planning-schedule-split">
     <ResizablePanel id="planning-schedule-content" minSize="40%" className="planning-workspace__panel">
     <div ref={scrollerRef} className={`planning-workspace__content ${currentStage === 'preparacion' && preparationView === 'cursos' ? 'planning-workspace__content--courses' : ''}`}>
     {draftError && !draftListOpen && <Alert id="planning-draft-error" variant="destructive" role="alert"><AlertDescription>{draftError}</AlertDescription></Alert>}
