@@ -4,7 +4,9 @@ import { openProposalMenu, setProposalTitle } from '../planning-v2-helpers.mjs'
 export const route = '/local/programacion-academica'
 export const api = '/api/local/programacion-academica/v1'
 export async function closeChat(page) {
-  if (await page.locator('#planning-toggle-chat').getAttribute('aria-expanded') === 'true') {
+  const toggle = page.locator('#planning-toggle-chat')
+  // v1 toggled aria-expanded; the v2 boards use aria-pressed.
+  if (await toggle.getAttribute('aria-expanded') === 'true' || await toggle.getAttribute('aria-pressed') === 'true') {
     const close = page.getByRole('button', { name: 'Cerrar asistente', exact: true })
     if (await close.isVisible()) await close.click()
     else await page.locator('#planning-toggle-chat').click()

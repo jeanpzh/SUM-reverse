@@ -209,7 +209,7 @@ try {
     await mobile.waitFor({state:'hidden'})
     assert.equal(await menu.evaluate(el => el === document.activeElement),true)
     await menu.click()
-    await mobile.getByRole('link',{name:'Cursos',exact:true}).click()
+    await mobile.getByRole('link',{name:/^Oferta de cursos(?:\s|$)/}).click()
     await mobile.waitFor({state:'hidden'})
     assert.equal(new URL(page.url()).searchParams.get('vista'),'cursos')
     await page.setViewportSize({width:1440,height:1024})

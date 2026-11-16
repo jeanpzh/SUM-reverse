@@ -27,17 +27,25 @@ const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 export const stageLabel = (name) => LEGACY_LABELS[name] ?? name
 
-/** Link in the stage rail; tolerates a trailing count/"completado" in the accessible name. */
+export const RAIL_NAME = 'Etapas de la propuesta'
+
+/** Link in the stage rail (scoped to the rail nav); tolerates a trailing count/"completado" in the name. */
 export function stageLink(page, name) {
   const label = stageLabel(name)
-  return page.locator('.planning-root').getByRole('link', {
+  return page.locator('.planning-root').locator(`nav[aria-label="${RAIL_NAME}"]`).getByRole('link', {
     name: new RegExp(`^(?:✓\\s*)?${escapeRegExp(label)}(?:[\\s,]|$)`),
   }).first()
 }
 
-/** Click a stage in the rail and wait for its `etapa` URL (pass `etapa` to also assert the route). */
+/**
+ * Click a stage in the rail, then wait until that same link is the current page. Oferta de cursos and
+ * Docentes y ambientes share `etapa=preparacion`, so the URL alone cannot tell the navigation finished.
+ * Pass `etapa` to also assert the route.
+ */
 export async function gotoStage(page, name, etapa) {
-  await stageLink(page, name).click()
+  const link = stageLink(page, name)
+  await link.click()
+  await link.and(page.locator('[aria-current="page"]')).waitFor() // re-queried, so it survives a re-render
   if (etapa) await page.waitForURL(new RegExp(`etapa=${etapa}(?:&|$)`))
 }
 

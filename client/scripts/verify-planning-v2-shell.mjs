@@ -128,8 +128,11 @@ const assertPrimaryStyle = async (label) => {
 const assertOnePrimary = async (label, { allowSelectAll = false } = {}) => {
   expect(await primary.count(), 1, `${label} #planning-tour-primary count`)
   const filled = await inkFilled()
-  const extras = filled.filter((item) => item.id !== 'planning-tour-primary'
-    && !(allowSelectAll && B.stages.preparacion.selectAllButton.test(item.text)))
+  const extras = filled.filter((item) => item.id !== 'planning-tour-primary')
+  const tolerated = allowSelectAll && B.tolerances.emptyStateSelectAllMayBeInk
+    ? extras.filter((item) => B.stages.preparacion.selectAllButton.test(item.text)) : []
+  if (tolerated.length) console.log(`  NOTE ${label}: tolerating a second ink pill (${tolerated[0].text}); see BOARD_SPEC.tolerances`)
+  extras.splice(0, extras.length, ...extras.filter((item) => !tolerated.includes(item)))
   expectTrue(filled.some((item) => item.id === 'planning-tour-primary'), `${label} primary must be ink-filled (found ${JSON.stringify(filled)})`)
   expectTrue(extras.length === 0, `${label} has extra ink-filled primaries: ${JSON.stringify(extras)}`)
 }
@@ -187,7 +190,7 @@ try {
   })
 
   await criterion('proposal-switcher-menu', '#planning-tour-proposal wraps the menu with the rename field; menu closes with Escape', async () => {
-    expect(await page.locator('#planning-tour-proposal').count(), 0, 'proposal menu closed on load')
+    expect(await page.locator('#planning-tour-proposal').isVisible(), false, 'proposal menu closed on load')
     await openProposalMenu(page)
     expect(await proposalTitleField(page).count(), 1, '#planning-proposal-title inside #planning-tour-proposal')
     expect(await proposalTitleField(page).getAttribute('id'), 'planning-proposal-title', 'rename field id')

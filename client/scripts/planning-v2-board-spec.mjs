@@ -19,6 +19,11 @@ export const BOARD_SPEC = Object.freeze({
   viewport: { width: 1440, height: 1000 }, // Main/Preparation `$preview`
   overflowWidths: [360, 720, 1440], // handoff §4 acceptance (subset required by this script)
 
+  // Explicit deviations from DESIGN-v2 "one filled pill per view" that the boards themselves show.
+  // States board 03 (empty offer) renders "Seleccionar los n cursos del catálogo" as an ink pill beside the
+  // page primary. Set to false to enforce exactly one ink-filled pressable in every state.
+  tolerances: { emptyStateSelectAllMayBeInk: true },
+
   colors: { ink, white, fog, steel, dove, controlBorder, sand },
 
   // Main: <header style="height:52px; padding:0 16px; border-bottom:1px solid #d5d9e2">
