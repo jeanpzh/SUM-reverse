@@ -1,20 +1,21 @@
 import assert from 'node:assert/strict'
+import { setProposalTitle, readProposalTitle } from '../planning-v2-helpers.mjs'
 import {api,closeChat,nav,response,json,singleCourse,generate,save} from './helpers.mjs'
 export const interactionScenarios = [
   ['empty-workspace-six-destinations',async ({page,record}) => {
     await closeChat(page)
-    for (const [stage,view] of [['preparacion','resumen'],['preparacion','cursos'],['preparacion','recursos'],['horario'],['revision'],['aprobacion']]) {
+    for (const [stage,view] of [['preparacion','cursos'],['preparacion','recursos'],['horario'],['revision'],['aprobacion']]) {
       await nav(page,stage,view)
       assert.equal(await page.locator(`.planning-stage-panel--${stage}`).isVisible(),true)
     }
-    await nav(page,'preparacion','resumen')
+    await nav(page,'preparacion','cursos')
     assert.equal(await page.locator('.planning-status-bar').count(),0)
     assert.equal(await page.locator('#planning-tour-primary').innerText(),'Revisar oferta')
     record({configurationOnlySaveEnabled:await page.locator('#planning-tour-save').isEnabled()})
   }],
   ['generation-failure-can-be-retried-without-fake-proposal',async ({page,base}) => {
     await singleCourse(page,base)
-    await nav(page,'preparacion','resumen')
+    await nav(page,'preparacion','cursos')
     await page.route('**/v1/propuestas',route => route.abort(),{times:1})
     await page.locator('#planning-tour-primary').click()
     await page.getByRole('alert').filter({hasText:/gener|local|fetch|Failed|recuper|solicitud/i}).first().waitFor()
@@ -34,7 +35,7 @@ export const interactionScenarios = [
     await load.fill('600')
     const id=await page.getByLabel('Identificación docente',{exact:true}).inputValue()
     await pane.getByRole('button',{name:'Cerrar ficha',exact:true}).click()
-    await nav(page,'preparacion','resumen');await nav(page,'preparacion','recursos')
+    await nav(page,'preparacion','cursos');await nav(page,'preparacion','recursos')
     await page.getByLabel('Buscar docentes por nombre o código',{exact:true}).fill(id)
     await page.getByRole('region',{name:'Tabla de docentes',exact:true}).getByRole('button',{name:/^Abrir ficha de/}).first().click()
     assert.equal(await page.getByLabel('Carga semanal docente',{exact:true}).inputValue(),'600')
@@ -59,11 +60,11 @@ export const interactionScenarios = [
   ['save-network-error-preserves-work-and-retries',async ({page,base}) => {
     await singleCourse(page,base);const proposal=await generate(page)
     const title=`AUDIT retry save ${Date.now()}`
-    await page.getByLabel('Nombre de la propuesta',{exact:true}).fill(title)
+    await setProposalTitle(page,title)
     await page.route('**/borradores/guardar',r=>r.abort(),{times:1})
     await page.locator('#planning-tour-save').click()
     await page.locator('#planning-draft-error').waitFor()
-    assert.equal(await page.getByLabel('Nombre de la propuesta',{exact:true}).inputValue(),title)
+    assert.equal(await readProposalTitle(page),title)
     assert.equal(await page.locator('.planning-status-bar').getAttribute('data-status'),proposal.status)
     const result=await save(page,title)
     assert.equal(result.draft.title,title)
@@ -74,7 +75,7 @@ export const interactionScenarios = [
     const gate=new Promise(r=>{release=r})
     const started=new Promise(r=>{entered=r})
     await page.route('**/borradores/guardar',async r=>{entered();await gate;await r.continue()})
-    await page.getByLabel('Nombre de la propuesta',{exact:true}).fill(`AUDIT delay ${Date.now()}`)
+    await setProposalTitle(page,`AUDIT delay ${Date.now()}`)
     const pending=response(page,'/borradores/guardar')
     await page.locator('#planning-tour-save').click();await started
     const advisor=page.getByRole('button',{name:'Consultar consejero',exact:true})

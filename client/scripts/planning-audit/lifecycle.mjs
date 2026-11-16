@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { setProposalTitle, readProposalTitle, isProposalTitleDisabled } from '../planning-v2-helpers.mjs'
 import {api,closeChat,nav,response,json,singleCourse,generate,save,resume} from './helpers.mjs'
 export const lifecycleScenarios = [
   ['complete-draft-review-approval-publication-and-fork', async ({page,base,record}) => {
@@ -39,7 +40,7 @@ export const lifecycleScenarios = [
     await page.getByRole('alertdialog').getByRole('button',{name:'Aprobar',exact:true}).click()
     const approved = (await json(await approval)).draft
     assert.equal(approved.state,'approved')
-    assert.equal(await page.getByLabel('Nombre de la propuesta',{exact:true}).isDisabled(),true)
+    assert.equal(await isProposalTitleDisabled(page),true)
     const list = response(page,'/publicaciones','GET')
     await page.getByRole('button',{name:'Actualizar publicaciones',exact:true}).click()
     await json(await list)
@@ -84,7 +85,7 @@ export const lifecycleScenarios = [
     const remote=await page.request.post(`${base}${api}/borradores/guardar`,{data:{...payload,id:draft.id,expectedVersion:draft.version,title:`${draft.title} remote`}})
     assert.equal(remote.status(),200)
     const next=await remote.json()
-    await page.getByLabel('Nombre de la propuesta',{exact:true}).fill(`${draft.title} local`)
+    await setProposalTitle(page,`${draft.title} local`)
     const pending=response(page,'/borradores/guardar')
     await page.locator('#planning-tour-save').click()
     assert.equal((await pending).status(),409)
@@ -92,6 +93,6 @@ export const lifecycleScenarios = [
     const persisted=await json(await page.request.get(`${base}${api}/borradores/${draft.id}/vista-previa`))
     assert.equal(persisted.title,next.title)
     assert.equal(persisted.version,next.version)
-    assert.equal(await page.getByLabel('Nombre de la propuesta',{exact:true}).inputValue(),`${draft.title} local`)
+    assert.equal(await readProposalTitle(page),`${draft.title} local`)
   }],
 ]

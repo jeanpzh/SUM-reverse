@@ -1,5 +1,6 @@
 // Independent synthetic inputs only. All responses come from the owned NestJS process.
 import assert from 'node:assert/strict'
+import { openProposalMenu } from './planning-v2-helpers.mjs'
 
 export async function verifyWeekScenarios({ page, api, catalog, goToStage }) {
   const endpoint = `${api}/local/programacion-academica/v1`
@@ -79,7 +80,7 @@ export async function verifyWeekScenarios({ page, api, catalog, goToStage }) {
   const resume = async (locked = false) => {
     await page.reload()
     await goToStage('Preparación', 'preparacion')
-    await page.locator('#planning-tour-proposals').click()
+    await openProposalMenu(page)
     const row = page.locator('.academic-scheduling__saved-row').filter({ hasText: saved.title })
     const response = page.waitForResponse((res) => res.url().endsWith(`/borradores/${saved.id}/continuar`))
     await row.getByRole('button', { name: locked ? 'Consultar' : 'Continuar edición', exact: true }).click()

@@ -5,6 +5,7 @@ const setTheme = async (page, item) => {
 // Acceptance for the 2026-11-10 internal redesign. Run against a fresh, operator-confirmed
 // synthetic stack only. Never attach to a snapshot-backed server or production.
 import assert from 'node:assert/strict'
+import { openProposalMenu, closeProposalMenu, proposalTitleField } from './planning-v2-helpers.mjs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { chromium } from 'playwright'
@@ -46,14 +47,14 @@ const go = async (search = '') => {
 }
 const navTo = async (stage, view) => {
   // Click the actual router link; use its search contract, not its visual position.
-  const hrefs = await page.locator('#planning-tour-nav a[href]').evaluateAll((links) => links.map((link) => link.getAttribute('href')))
+  const hrefs = await page.locator('#planning-tour-nav a[href], nav[aria-label="Etapas de la propuesta"] a[href]').evaluateAll((links) => links.map((link) => link.getAttribute('href')))
   const href = hrefs.find((value) => {
     const url = new URL(value, 'http://local')
     return url.pathname === '/local/programacion-academica' && url.searchParams.get('etapa') === stage
       && (!view || url.searchParams.get('vista') === view)
   })
   assert.ok(href, `Missing actual navigation destination: ${stage}/${view || ''}`)
-  await page.locator(`#planning-tour-nav a[href="${href}"]:visible`).first().click()
+  await page.locator(`:is(#planning-tour-nav, nav[aria-label="Etapas de la propuesta"]) a[href="${href}"]:visible`).first().click()
   await page.waitForURL((url) => url.searchParams.get('etapa') === stage && (!view || url.searchParams.get('vista') === view))
 }
 const overflow = async () => {
@@ -75,7 +76,10 @@ try {
     await go()
     await page.getByRole('button', {name: /Seleccionar los .* cursos del catálogo/}).waitFor({timeout:45000})
     assert.equal(await page.locator('.planning-root').getAttribute('data-theme'), 'light')
-    assert.equal(await page.locator('#planning-tour-proposal').isVisible(), true)
+    assert.equal(await page.locator('#planning-tour-proposals').isVisible(), true)
+    await openProposalMenu(page)
+    assert.equal(await proposalTitleField(page).isVisible(), true)
+    await closeProposalMenu(page)
     assert.equal(await page.locator('#planning-tour-primary').isVisible(), true)
     assert.equal(await page.getByRole('heading', {name:'Lista de preparación'}).isVisible(), true)
     assert.equal(await page.getByRole('link', {name:'Revisar recursos',exact:true}).count(), 1)
@@ -118,7 +122,7 @@ try {
     await capture('cursos-light-1440')
   })
   await check('row-a-generation-and-result-facts', async () => {
-    await navTo('preparacion', 'resumen')
+    await navTo('preparacion', 'cursos')
     assert.equal(await page.locator('#planning-tour-primary').innerText(), 'Generar propuesta')
     const response = page.waitForResponse(res => /\/propuestas$/.test(new URL(res.url()).pathname) && res.request().method() === 'POST', {timeout:120000})
     await page.locator('#planning-tour-primary').click()
@@ -205,7 +209,7 @@ try {
     await mobile.waitFor({state:'hidden'})
     assert.equal(await menu.evaluate(el => el === document.activeElement),true)
     await menu.click()
-    await mobile.getByRole('link',{name:'Cursos',exact:true}).click()
+    await mobile.getByRole('link',{name:/^Oferta de cursos(?:\s|$)/}).click()
     await mobile.waitFor({state:'hidden'})
     assert.equal(new URL(page.url()).searchParams.get('vista'),'cursos')
     await page.setViewportSize({width:1440,height:1024})
@@ -213,7 +217,7 @@ try {
   await check('all-six-views-no-document-overflow', async () => {
     for (const width of [1440,1100,800,390]) {
       await page.setViewportSize({width,height:1024})
-      for (const [stage,view] of [['preparacion','resumen'],['preparacion','cursos'],['preparacion','recursos'],['horario'],['revision'],['aprobacion']]) {
+      for (const [stage,view] of [['preparacion','cursos'],['preparacion','recursos'],['horario'],['revision'],['aprobacion']]) {
         if (width < 1024) await page.locator('[data-slot=sidebar-trigger]').click()
         await navTo(stage,view)
         await overflow()

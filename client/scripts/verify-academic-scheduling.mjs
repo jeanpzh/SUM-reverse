@@ -1,5 +1,6 @@
 // Synthetic local integration only. Starts dedicated processes, never attaches to existing servers.
 import assert from 'node:assert/strict'
+import { gotoStage } from './planning-v2-helpers.mjs'
 import { setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { spawn } from 'node:child_process'
 import { createServer } from 'node:net'
@@ -183,7 +184,7 @@ try {
   }
   assert.equal(new URL(page.url()).pathname, route)
   const stage = async (name, etapa) => {
-    await page.locator('.planning-root').getByRole('link', { name: name === 'Preparación' ? 'Resumen' : name, exact: true }).click()
+    await gotoStage(page, name)
     await page.waitForURL(new RegExp(`etapa=${etapa}(?:&|$)`))
   }
   let lastRequest

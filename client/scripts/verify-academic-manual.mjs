@@ -1,5 +1,6 @@
 // Run only against our freshly built, independently synthetic Compose acceptance project.
 import assert from 'node:assert/strict'
+import { gotoStage } from './planning-v2-helpers.mjs'
 import { setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
@@ -47,7 +48,7 @@ try {
   const preferenceLabel = 'Preferencias semanales · prioridad blanda'
   const stage = async (name, etapa) => {
     await closeResourceSheet(page)
-    await page.locator('.planning-root').getByRole('link', { name: name === 'Preparación' ? 'Resumen' : name, exact: true }).click()
+    await gotoStage(page, name)
     await page.waitForURL(new RegExp(`etapa=${etapa}(?:&|$)`))
   }
   const setIntervals = async (label, days, start = '18:00', end = '22:00') => {
