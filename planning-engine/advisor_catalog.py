@@ -52,6 +52,16 @@ class RecommendationKind(Protocol):
     ) -> list[AdvisorRecommendation]:
         ...
 
+    def valid_scopes(
+        self, req: AdvisorAnalyzeRequest, diagnosis: BlockerDiagnosis
+    ) -> set[str]:
+        ...
+
+    def variants_for_scope(
+        self, req: AdvisorAnalyzeRequest, diagnosis: BlockerDiagnosis, scope: str
+    ) -> list[AdvisorRecommendation]:
+        ...
+
     def apply(
         self,
         request_copy: AdvisorAnalyzeRequest,
@@ -320,6 +330,78 @@ class IncreaseTeacherLoadKind:
         result = self._evaluate(req, diagnosis)
         return result[1] if result is not None else []
 
+    def valid_scopes(
+        self, req: AdvisorAnalyzeRequest, diagnosis: BlockerDiagnosis
+    ) -> set[str]:
+        courses_by_id = {c.courseId for c in req.courses}
+        pending_courses = set(diagnosis.pendingByCourse.keys()) & courses_by_id
+        if not pending_courses:
+            return set()
+        return pending_courses | {"all"}
+
+    def variants_for_scope(
+        self, req: AdvisorAnalyzeRequest, diagnosis: BlockerDiagnosis, scope: str
+    ) -> list[AdvisorRecommendation]:
+        if scope not in self.valid_scopes(req, diagnosis):
+            raise ValueError(f"Invalid scope '{scope}' for {self.kind}")
+        courses_by_id = {c.courseId: c for c in req.courses}
+        teachers_by_id = {t.id: t for t in req.teachers}
+        assigned_minutes_by_teacher = {
+            ts.teacherId: ts.assignedMinutes for ts in diagnosis.teacherSlack
+        }
+        target_courses = (
+            sorted(diagnosis.pendingByCourse.keys()) if scope == "all" else [scope]
+        )
+        adjustments, labels, unlocked_secs, _, course_names = (
+            _compute_teacher_adjustments_for_courses(
+                target_courses,
+                courses_by_id,
+                teachers_by_id,
+                diagnosis,
+                assigned_minutes_by_teacher,
+            )
+        )
+        if not adjustments:
+            return []
+        sample_teachers = ", ".join(labels[:4])
+        more_teachers = (
+            f" (+{len(labels) - 4} docentes)" if len(labels) > 4 else ""
+        )
+        rationale = (
+            f"Escenario sintético sujeto a autorización externa; no acredita límite reglamentario ({MAX_WEEKLY_MINUTES} min del simulador) para cubrir las secciones pendientes: {sample_teachers}{more_teachers}."
+        )
+        adjusted_ids = {adj.teacherId for adj in adjustments}
+        if any(
+            len(set(ts.eligibleCourseIds) & set(diagnosis.pendingByCourse.keys())) > 1
+            for ts in diagnosis.teacherSlack
+            if ts.teacherId in adjusted_ids
+        ):
+            rationale = (
+                f"{rationale} Alternativa excluyente frente a otras variantes que ajustan al mismo docente."
+            )
+        if scope == "all":
+            return [
+                AdvisorRecommendation(
+                    id="rec-increase-teacher-load-all",
+                    title=f"Ampliar carga máxima semanal de {len(adjustments)} docente(s) habilitados",
+                    rationale=rationale,
+                    impactSummary=f"Destraba hasta {len(unlocked_secs)} sección(es) en {len(course_names)} curso(s)",
+                    recommendedByDefault=False,
+                    patch=IncreaseTeacherLoadPatch(adjustments=adjustments),
+                )
+            ]
+        course_label = course_names[0] if course_names else scope
+        return [
+            AdvisorRecommendation(
+                id=f"rec-increase-teacher-load-{scope}",
+                title=f"Ampliar carga docente solo para {course_label} ({len(adjustments)} docente(s))",
+                rationale=rationale,
+                impactSummary=f"Destraba hasta {len(unlocked_secs)} sección(es) en {course_label}",
+                recommendedByDefault=False,
+                patch=IncreaseTeacherLoadPatch(adjustments=adjustments),
+            )
+        ]
+
     def apply(
         self,
         request_copy: AdvisorAnalyzeRequest,
@@ -474,6 +556,66 @@ class EnablePlanningWindowKind:
         result = self._evaluate(req, diagnosis)
         return result[1] if result is not None else []
 
+    def valid_scopes(
+        self, req: AdvisorAnalyzeRequest, diagnosis: BlockerDiagnosis
+    ) -> set[str]:
+        return {"afternoon", "saturday", "both"}
+
+    def variants_for_scope(
+        self, req: AdvisorAnalyzeRequest, diagnosis: BlockerDiagnosis, scope: str
+    ) -> list[AdvisorRecommendation]:
+        if scope not in self.valid_scopes(req, diagnosis):
+            raise ValueError(f"Invalid scope '{scope}' for {self.kind}")
+        if not req.planningPolicy or diagnosis.totalPendingCount == 0:
+            return []
+        pending_sec_count = len(diagnosis.pendingSectionIds)
+        if scope == "afternoon":
+            if req.planningPolicy.allowAfternoon:
+                return []
+            return [
+                AdvisorRecommendation(
+                    id="rec-enable-planning-window-afternoon",
+                    title="Habilitar excepción solo de turno tarde (14:00–22:00)",
+                    rationale=(
+                        "Alternativa de franja horaria: permite ubicar secciones de ciclos VII–X desde las 14:00 manteniendo el sábado cerrado. Alternativa excluyente entre variantes de franja horaria."
+                    ),
+                    impactSummary=f"Amplía turno tarde para {pending_sec_count} sección(es) pendientes",
+                    recommendedByDefault=False,
+                    patch=EnablePlanningWindowPatch(allowAfternoon=True),
+                )
+            ]
+        if scope == "saturday":
+            if req.planningPolicy.allowSaturday:
+                return []
+            return [
+                AdvisorRecommendation(
+                    id="rec-enable-planning-window-saturday",
+                    title="Habilitar excepción solo de sábado (08:00–13:00)",
+                    rationale=(
+                        "Alternativa de franja horaria: abre la mañana del sábado para absorber colisiones de cohorte y aula sin abrir turno tarde. Alternativa excluyente entre variantes de franja horaria."
+                    ),
+                    impactSummary=f"Amplía mañana del sábado para {pending_sec_count} sección(es) pendientes",
+                    recommendedByDefault=False,
+                    patch=EnablePlanningWindowPatch(allowSaturday=True),
+                )
+            ]
+        if req.planningPolicy.allowAfternoon or req.planningPolicy.allowSaturday:
+            return []
+        return [
+            AdvisorRecommendation(
+                id="rec-enable-planning-window-both",
+                title="Habilitar excepción de turno tarde (14:00–22:00) y sábado (08:00–13:00)",
+                rationale=(
+                    "Permite ubicar secciones de ciclos VII–X desde las 14:00 y abre la mañana del sábado para absorber colisiones de cohorte y aula. Alternativa excluyente entre variantes de franja horaria."
+                ),
+                impactSummary=f"Amplía ventanas para {pending_sec_count} sección(es) pendientes",
+                recommendedByDefault=True,
+                patch=EnablePlanningWindowPatch(
+                    allowAfternoon=True, allowSaturday=True
+                ),
+            )
+        ]
+
     def apply(
         self,
         request_copy: AdvisorAnalyzeRequest,
@@ -491,9 +633,9 @@ class EnablePlanningWindowKind:
 class IncorporateReferenceResourceKind:
     kind = "incorporate_reference_resource"
 
-    def _evaluate(
+    def _find_missing_resources(
         self, req: AdvisorAnalyzeRequest, diagnosis: BlockerDiagnosis
-    ) -> tuple[AdvisorBottleneck, list[AdvisorRecommendation]] | None:
+    ) -> tuple[list[str], list[str], int]:
         workspace_teacher_ids = {t.id for t in req.teachers}
         missing_teacher_ids: list[str] = []
         unqualified_sessions = 0
@@ -522,6 +664,15 @@ class IncorporateReferenceResourceKind:
             for rr in req.referenceRooms:
                 if rr.id not in workspace_room_ids and rr.id not in missing_room_ids:
                     missing_room_ids.append(rr.id)
+
+        return missing_teacher_ids, missing_room_ids, unqualified_sessions
+
+    def _evaluate(
+        self, req: AdvisorAnalyzeRequest, diagnosis: BlockerDiagnosis
+    ) -> tuple[AdvisorBottleneck, list[AdvisorRecommendation]] | None:
+        missing_teacher_ids, missing_room_ids, unqualified_sessions = (
+            self._find_missing_resources(req, diagnosis)
+        )
 
         if not (missing_teacher_ids or missing_room_ids):
             return None
@@ -564,6 +715,57 @@ class IncorporateReferenceResourceKind:
         result = self._evaluate(req, diagnosis)
         return result[1] if result is not None else []
 
+    def valid_scopes(
+        self, req: AdvisorAnalyzeRequest, diagnosis: BlockerDiagnosis
+    ) -> set[str]:
+        return {"all", "teachers", "rooms"}
+
+    def variants_for_scope(
+        self, req: AdvisorAnalyzeRequest, diagnosis: BlockerDiagnosis, scope: str
+    ) -> list[AdvisorRecommendation]:
+        if scope not in self.valid_scopes(req, diagnosis):
+            raise ValueError(f"Invalid scope '{scope}' for {self.kind}")
+        missing_teacher_ids, missing_room_ids, _ = self._find_missing_resources(
+            req, diagnosis
+        )
+        if scope == "teachers":
+            if not missing_teacher_ids:
+                return []
+            return [
+                AdvisorRecommendation(
+                    id="rec-incorporate-reference-resource-teachers",
+                    title="Incorporar solo docentes habilitados del catálogo de referencia",
+                    rationale=(
+                        "Agrega al workspace únicamente docentes de referencia con habilitación oficial para asignaturas sin cobertura."
+                    ),
+                    impactSummary=f"Incorpora {len(missing_teacher_ids)} docente(s)",
+                    recommendedByDefault=False,
+                    patch=IncorporateReferenceResourcePatch(
+                        teacherIds=missing_teacher_ids,
+                        roomIds=[],
+                    ),
+                )
+            ]
+        if scope == "rooms":
+            if not missing_room_ids:
+                return []
+            return [
+                AdvisorRecommendation(
+                    id="rec-incorporate-reference-resource-rooms",
+                    title="Incorporar solo ambientes del catálogo de referencia",
+                    rationale=(
+                        "Agrega al workspace ambientes de referencia compatibles para cubrir el déficit de capacidad o tipo de aula."
+                    ),
+                    impactSummary=f"Incorpora {len(missing_room_ids[:6])} ambiente(s)",
+                    recommendedByDefault=False,
+                    patch=IncorporateReferenceResourcePatch(
+                        teacherIds=[],
+                        roomIds=missing_room_ids[:6],
+                    ),
+                )
+            ]
+        return self.variants(req, diagnosis)
+
     def apply(
         self,
         request_copy: AdvisorAnalyzeRequest,
@@ -601,6 +803,32 @@ class IncorporateReferenceResourceKind:
 class ChangeDeliveryModeKind:
     kind = "change_delivery_mode"
 
+    def _is_long_continuous(self, course: Any) -> bool:
+        total_dur = sum(ws.durationMinutes for ws in course.weeklySessions)
+        return (
+            course.deliveryMode == "continuous"
+            and len(course.weeklySessions) > 1
+            and total_dur >= 240
+        )
+
+    def _build_course_variant(
+        self, course: Any, session_count: int
+    ) -> AdvisorRecommendation:
+        course_name = course.name or course.courseId
+        return AdvisorRecommendation(
+            id=f"rec-change-delivery-mode-{course.courseId}",
+            title=f"Permitir sesiones divididas solo en {course_name}",
+            rationale=(
+                "Conserva al mismo docente responsable por sección, pero permite ubicar teoría y práctica/laboratorio en días u horas separadas."
+            ),
+            impactSummary=f"Flexibiliza {course_name} ({session_count} componentes)",
+            recommendedByDefault=False,
+            patch=ChangeDeliveryModePatch(
+                courseIds=[course.courseId],
+                deliveryMode="split",
+            ),
+        )
+
     def _evaluate(
         self, req: AdvisorAnalyzeRequest, diagnosis: BlockerDiagnosis
     ) -> tuple[AdvisorBottleneck, list[AdvisorRecommendation]] | None:
@@ -611,12 +839,7 @@ class ChangeDeliveryModeKind:
             course = courses_by_id.get(course_id)
             if not course:
                 continue
-            total_dur = sum(ws.durationMinutes for ws in course.weeklySessions)
-            if (
-                course.deliveryMode == "continuous"
-                and len(course.weeklySessions) > 1
-                and total_dur >= 240
-            ):
+            if self._is_long_continuous(course):
                 long_continuous_courses.append(course_id)
                 long_course_sessions += group.sessionCount
 
@@ -637,26 +860,13 @@ class ChangeDeliveryModeKind:
             key=lambda cid: (-diagnosis.pendingByCourse[cid].totalMinutes, cid),
         )
 
-        variants: list[AdvisorRecommendation] = []
-        for course_id in ordered_courses[:MAX_DELIVERY_COURSE_VARIANTS]:
-            course = courses_by_id[course_id]
-            course_name = course.name or course_id
-            course_sessions = diagnosis.pendingByCourse[course_id].sessionCount
-            variants.append(
-                AdvisorRecommendation(
-                    id=f"rec-change-delivery-mode-{course_id}",
-                    title=f"Permitir sesiones divididas solo en {course_name}",
-                    rationale=(
-                        "Conserva al mismo docente responsable por sección, pero permite ubicar teoría y práctica/laboratorio en días u horas separadas."
-                    ),
-                    impactSummary=f"Flexibiliza {course_name} ({course_sessions} componentes)",
-                    recommendedByDefault=False,
-                    patch=ChangeDeliveryModePatch(
-                        courseIds=[course_id],
-                        deliveryMode="split",
-                    ),
-                )
+        variants: list[AdvisorRecommendation] = [
+            self._build_course_variant(
+                courses_by_id[course_id],
+                diagnosis.pendingByCourse[course_id].sessionCount,
             )
+            for course_id in ordered_courses[:MAX_DELIVERY_COURSE_VARIANTS]
+        ]
 
         if len(long_continuous_courses) > 1:
             variants.append(
@@ -692,6 +902,64 @@ class ChangeDeliveryModeKind:
         result = self._evaluate(req, diagnosis)
         return result[1] if result is not None else []
 
+    def valid_scopes(
+        self, req: AdvisorAnalyzeRequest, diagnosis: BlockerDiagnosis
+    ) -> set[str]:
+        courses_by_id = {c.courseId for c in req.courses}
+        pending_courses = set(diagnosis.pendingByCourse.keys()) & courses_by_id
+        if not pending_courses:
+            return set()
+        return pending_courses | {"all"}
+
+    def variants_for_scope(
+        self, req: AdvisorAnalyzeRequest, diagnosis: BlockerDiagnosis, scope: str
+    ) -> list[AdvisorRecommendation]:
+        if scope not in self.valid_scopes(req, diagnosis):
+            raise ValueError(f"Invalid scope '{scope}' for {self.kind}")
+        courses_by_id = {c.courseId: c for c in req.courses}
+        if scope == "all":
+            long_courses = sorted(
+                cid
+                for cid in diagnosis.pendingByCourse
+                if cid in courses_by_id and self._is_long_continuous(courses_by_id[cid])
+            )
+            if not long_courses:
+                return []
+            if len(long_courses) == 1:
+                cid = long_courses[0]
+                return [
+                    self._build_course_variant(
+                        courses_by_id[cid],
+                        diagnosis.pendingByCourse[cid].sessionCount,
+                    )
+                ]
+            long_sessions = sum(
+                diagnosis.pendingByCourse[cid].sessionCount for cid in long_courses
+            )
+            return [
+                AdvisorRecommendation(
+                    id="rec-change-delivery-mode-all",
+                    title=f"Permitir sesiones divididas en {len(long_courses)} curso(s) de alta duración",
+                    rationale=(
+                        "Conserva al mismo docente responsable por sección, pero permite ubicar teoría y práctica/laboratorio en días u horas separadas."
+                    ),
+                    impactSummary=f"Flexibiliza {len(long_courses)} curso(s) ({long_sessions} componentes)",
+                    recommendedByDefault=False,
+                    patch=ChangeDeliveryModePatch(
+                        courseIds=long_courses,
+                        deliveryMode="split",
+                    ),
+                )
+            ]
+        course = courses_by_id[scope]
+        if not self._is_long_continuous(course):
+            return []
+        return [
+            self._build_course_variant(
+                course, diagnosis.pendingByCourse[scope].sessionCount
+            )
+        ]
+
     def apply(
         self,
         request_copy: AdvisorAnalyzeRequest,
@@ -714,6 +982,18 @@ RECOMMENDATION_CATALOG: tuple[RecommendationKind, ...] = (
 CATALOG_BY_KIND: dict[str, RecommendationKind] = {
     handler.kind: handler for handler in RECOMMENDATION_CATALOG
 }
+
+
+def request_variants_for_scope(
+    req: AdvisorAnalyzeRequest,
+    diagnosis: BlockerDiagnosis,
+    kind: str,
+    scope: str,
+) -> list[AdvisorRecommendation]:
+    handler = CATALOG_BY_KIND.get(kind)
+    if handler is None:
+        raise ValueError(f"Unknown recommendation kind: {kind}")
+    return handler.variants_for_scope(req, diagnosis, scope)
 
 
 def patch_change_size(patch: AcademicAdvisorPatch) -> int:
@@ -749,12 +1029,18 @@ def rank_recommendations(
     *,
     max_simulations: int = MAX_DRY_RUN_SIMULATIONS,
     max_recommendations: int = MAX_RECOMMENDATIONS,
+    premeasured_impacts: dict[str, AdvisorVerifiedImpact] | None = None,
+    baseline_impact: AdvisorVerifiedImpact | None = None,
 ) -> list[AdvisorRecommendation]:
     if not recommendations:
         return []
 
-    baseline_impact = dry_run(req, recommendations, [])
-    baseline_sessions = baseline_impact.projectedScheduledSessions
+    baseline = (
+        baseline_impact
+        if baseline_impact is not None
+        else dry_run(req, recommendations, [])
+    )
+    baseline_sessions = baseline.projectedScheduledSessions
 
     broad_recs = [
         rec for rec in recommendations if is_broad_variant(rec, recommendations)
@@ -765,13 +1051,28 @@ def rank_recommendations(
     sim_queue = broad_recs + narrow_recs
 
     variant_budget = max(0, max_simulations - 1)
-    to_simulate = sim_queue[:variant_budget]
-    unsimulated_ids = {rec.id for rec in sim_queue[variant_budget:]}
+    if premeasured_impacts is not None:
+        premeasured_recs = [
+            rec for rec in sim_queue if rec.id in premeasured_impacts
+        ]
+        unmeasured_queue = [
+            rec for rec in sim_queue if rec.id not in premeasured_impacts
+        ]
+        remaining_budget = max(0, variant_budget - len(premeasured_recs))
+        to_simulate = premeasured_recs + unmeasured_queue[:remaining_budget]
+        unsimulated_ids = {rec.id for rec in unmeasured_queue[remaining_budget:]}
+    else:
+        to_simulate = sim_queue[:variant_budget]
+        unsimulated_ids = {rec.id for rec in sim_queue[variant_budget:]}
     unsimulated = [rec for rec in recommendations if rec.id in unsimulated_ids]
 
     unlocked_by_id: dict[str, int] = {}
     for rec in to_simulate:
-        impact = dry_run(req, recommendations, [rec.id])
+        impact = (
+            premeasured_impacts[rec.id]
+            if (premeasured_impacts is not None and rec.id in premeasured_impacts)
+            else dry_run(req, recommendations, [rec.id])
+        )
         unlocked = max(0, impact.projectedScheduledSessions - baseline_sessions)
         unlocked_by_id[rec.id] = unlocked
         if unlocked > 0:

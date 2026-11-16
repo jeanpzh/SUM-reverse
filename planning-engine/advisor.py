@@ -16,6 +16,7 @@ from models import (
     AdvisorBottleneck,
     AdvisorRecommendation,
     AdvisorSource,
+    AdvisorVerifiedImpact,
 )
 
 
@@ -62,6 +63,8 @@ def build_deterministic_analysis(
     req: AdvisorAnalyzeRequest,
     *,
     dry_run: DryRunFn | None = None,
+    dry_run_cache: dict[tuple[str, ...], AdvisorVerifiedImpact] | None = None,
+    diagnosis: object | None = None,
 ) -> tuple[str, list[AdvisorBottleneck], list[AdvisorRecommendation], AdvisorPrivacyCodec]:
     from advisor_agent import run_cpsat_dry_run
 
@@ -72,31 +75,46 @@ def build_deterministic_analysis(
         teacher_names.setdefault(rt.id, rt.name or rt.id)
     codec = AdvisorPrivacyCodec(teacher_names)
 
-    diagnosis = diagnose(req)
+    diag = diagnosis if diagnosis is not None else diagnose(req)
     bottlenecks: list[AdvisorBottleneck] = []
     recommendations: list[AdvisorRecommendation] = []
 
     for handler in RECOMMENDATION_CATALOG:
-        if not handler.applies(req, diagnosis):
+        if not handler.applies(req, diag):
             continue
-        bottleneck = handler.bottleneck(req, diagnosis)
+        bottleneck = handler.bottleneck(req, diag)
         if bottleneck is not None:
             bottlenecks.append(bottleneck)
-        recommendations.extend(handler.variants(req, diagnosis))
+        recommendations.extend(handler.variants(req, diag))
+
+    base_dry_run = dry_run or run_cpsat_dry_run
+    if dry_run_cache is not None:
+        def _cached_dry_run(
+            r: AdvisorAnalyzeRequest,
+            recs: list[AdvisorRecommendation],
+            rec_ids: list[str],
+        ) -> AdvisorVerifiedImpact:
+            key = tuple(rec_ids)
+            if key in dry_run_cache:
+                return dry_run_cache[key]
+            impact = base_dry_run(r, recs, rec_ids)
+            dry_run_cache[key] = impact
+            return impact
+        effective_dry_run: DryRunFn = _cached_dry_run
+    else:
+        effective_dry_run = base_dry_run
 
     recommendations = rank_recommendations(
-        req, recommendations, dry_run or run_cpsat_dry_run
+        req, recommendations, effective_dry_run
     )
 
     scheduled_count = len(req.assignments)
     total_count = len(req.requirements)
     summary = (
-        f"La propuesta cubre {scheduled_count}/{total_count} componentes requeridos y deja {diagnosis.totalPendingCount} componentes pendientes en {len(diagnosis.pendingSectionIds)} sección(es). "
+        f"La propuesta cubre {scheduled_count}/{total_count} componentes requeridos y deja {diag.totalPendingCount} componentes pendientes en {len(diag.pendingSectionIds)} sección(es). "
         f"Se identificaron {len(bottlenecks)} cuello(s) de botella principales y {len(recommendations)} recomendación(es) aplicables sobre el workspace antes de regenerar con el solver CP-SAT."
     )
     return summary, bottlenecks, recommendations, codec
-
-
 
 
 def _extract_json_object(raw_text: str) -> dict:
@@ -120,6 +138,9 @@ def _apply_validated_llm_output(
     summary: str,
     recommendations: list[AdvisorRecommendation],
     codec: AdvisorPrivacyCodec,
+    *,
+    unlocked_by_id: dict[str, int] | None = None,
+    allowed_ids: set[str] | None = None,
 ) -> tuple[AdvisorSource, str, list[AdvisorRecommendation]]:
     if not isinstance(parsed.get("summary"), str) or not parsed["summary"].strip() or len(parsed["summary"]) > 2048:
         return (
@@ -131,10 +152,10 @@ def _apply_validated_llm_output(
             summary,
             recommendations,
         )
-    allowed_ids = {r.id for r in recommendations}
+    valid_ids = allowed_ids if allowed_ids is not None else {r.id for r in recommendations}
     prioritized_ids = parsed.get("prioritizedIds")
     if not isinstance(prioritized_ids, list) or any(
-        not isinstance(x, str) or x not in allowed_ids for x in prioritized_ids
+        not isinstance(x, str) or x not in valid_ids for x in prioritized_ids
     ):
         return (
             AdvisorSource(
@@ -148,20 +169,31 @@ def _apply_validated_llm_output(
 
     rationales = parsed.get("rationalesById") or {}
     rec_map = {r.id: r.model_copy(deep=True) for r in recommendations}
-    ordered_recs: list[AdvisorRecommendation] = []
-    seen: set[str] = set()
+    llm_pos: dict[str, int] = {}
     for r_id in prioritized_ids:
-        if r_id in rec_map and r_id not in seen:
-            seen.add(r_id)
-            item = rec_map[r_id]
-            if item.patch.kind != "increase_teacher_load" and isinstance(rationales, dict) and isinstance(
-                rationales.get(r_id), str
-            ):
-                item.rationale = codec.rehydrate_text(rationales[r_id].strip())
-            ordered_recs.append(item)
-    for r in recommendations:
-        if r.id not in seen:
-            ordered_recs.append(rec_map[r.id])
+        if r_id not in llm_pos:
+            llm_pos[r_id] = len(llm_pos)
+
+    tiered_items: list[tuple[tuple[int, int], tuple[int, int], AdvisorRecommendation]] = []
+    for orig_idx, rec in enumerate(recommendations):
+        item = rec_map[rec.id]
+        if (
+            item.patch.kind != "increase_teacher_load"
+            and isinstance(rationales, dict)
+            and isinstance(rationales.get(item.id), str)
+        ):
+            item.rationale = codec.rehydrate_text(rationales[item.id].strip())
+        if unlocked_by_id is not None and item.id in unlocked_by_id:
+            tier = (0, -unlocked_by_id[item.id])
+        elif unlocked_by_id is not None:
+            tier = (1, 0)
+        else:
+            tier = (0, 0)
+        tie_break = (llm_pos.get(item.id, len(prioritized_ids) + orig_idx), orig_idx)
+        tiered_items.append((tier, tie_break, item))
+
+    tiered_items.sort(key=lambda entry: (entry[0], entry[1]))
+    ordered_recs = [entry[2] for entry in tiered_items]
 
     rehydrated_summary = codec.rehydrate_text(parsed["summary"].strip())
     return (
@@ -182,9 +214,22 @@ async def analyze_proposal_with_advisor(req: AdvisorAnalyzeRequest, env=None, tr
     normative = default_retriever().query(NormativeRequest(question='carga lectiva máximo hora académica excepciones autorización', facultyId='FISI', academicPeriod=period, asOf=date.today().isoformat(), teacherType='unknown'))
     if not req.planningPolicy:
         normative.gaps.append('Periodo de contexto local inferido del año actual; no confirma periodo académico.')
-    summary, bottlenecks, recommendations, codec = build_deterministic_analysis(req)
+    diagnosis = diagnose(req)
+    dry_run_cache: dict[tuple[str, ...], AdvisorVerifiedImpact] = {}
+    summary, bottlenecks, recommendations, codec = build_deterministic_analysis(
+        req, dry_run_cache=dry_run_cache, diagnosis=diagnosis
+    )
     source, final_summary, final_recommendations, impact, steps = await run_advisor_agent(
-        req, summary, bottlenecks, recommendations, codec, env=env, model_factory=model_factory, normative_context=normative.model_dump()
+        req,
+        summary,
+        bottlenecks,
+        recommendations,
+        codec,
+        env=env,
+        model_factory=model_factory,
+        normative_context=normative.model_dump(),
+        diagnosis=diagnosis,
+        dry_run_cache=dry_run_cache,
     )
     return AcademicAdvisorResponse(proposalId=req.proposalId, editVersion=req.editVersion,
         source=source, summary=final_summary, bottlenecks=bottlenecks,
