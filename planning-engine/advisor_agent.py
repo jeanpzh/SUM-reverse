@@ -21,12 +21,13 @@ def run_cpsat_dry_run(req, recommendations, recommendation_ids, *, max_time_seco
     copy = req.model_copy(deep=True)
     for rec_id in recommendation_ids:
         patch = catalog[rec_id].patch
-        CATALOG_BY_KIND[patch.kind].apply(copy, patch)
+        CATALOG_BY_KIND[patch.kind].apply(copy, patch, original_req=req)
     result = solve_academic_schedule(SolveScheduleRequest(
         courses=copy.courses, teachers=copy.teachers, rooms=copy.rooms,
         sections=copy.sections, requirements=copy.requirements,
         windows=copy.windows, startStepMinutes=copy.startStepMinutes,
         planningPolicy=copy.planningPolicy, maxTimeSeconds=max_time_seconds,
+        numSearchWorkers=1, randomSeed=42,
     ))
     def complete_sections(assignments):
         ids = {a.id for a in assignments}

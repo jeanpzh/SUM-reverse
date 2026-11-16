@@ -25,6 +25,15 @@ MAX_WEEKLY_MINUTES = 2400
 MAX_NARROW_LOAD_VARIANTS = 3
 MAX_DELIVERY_COURSE_VARIANTS = 5
 MAX_DRY_RUN_SIMULATIONS = 12
+MAX_RECOMMENDATIONS = 8
+BROAD_RECOMMENDATION_IDS = frozenset(
+    {
+        "rec-increase-teacher-load-all",
+        "rec-enable-planning-window-both",
+        "rec-incorporate-reference-resource",
+        "rec-change-delivery-mode-all",
+    }
+)
 
 
 class RecommendationKind(Protocol):
@@ -43,7 +52,13 @@ class RecommendationKind(Protocol):
     ) -> list[AdvisorRecommendation]:
         ...
 
-    def apply(self, request_copy: AdvisorAnalyzeRequest, patch: Any) -> None:
+    def apply(
+        self,
+        request_copy: AdvisorAnalyzeRequest,
+        patch: Any,
+        *,
+        original_req: AdvisorAnalyzeRequest | None = None,
+    ) -> None:
         ...
 
 
@@ -306,15 +321,32 @@ class IncreaseTeacherLoadKind:
         return result[1] if result is not None else []
 
     def apply(
-        self, request_copy: AdvisorAnalyzeRequest, patch: IncreaseTeacherLoadPatch
+        self,
+        request_copy: AdvisorAnalyzeRequest,
+        patch: IncreaseTeacherLoadPatch,
+        *,
+        original_req: AdvisorAnalyzeRequest | None = None,
     ) -> None:
+        ref_teachers = (
+            original_req.teachers
+            if original_req is not None
+            else request_copy.teachers
+        )
+        orig_by_id = {t.id: t for t in ref_teachers}
         for adjustment in patch.adjustments:
+            orig_teacher = orig_by_id.get(adjustment.teacherId)
+            if orig_teacher is None:
+                orig_teacher = next(
+                    t for t in request_copy.teachers if t.id == adjustment.teacherId
+                )
+            if orig_teacher.maxWeeklyMinutes != adjustment.previousMaxWeeklyMinutes:
+                raise ValueError("Stale teacher load")
             teacher = next(
                 t for t in request_copy.teachers if t.id == adjustment.teacherId
             )
-            if teacher.maxWeeklyMinutes != adjustment.previousMaxWeeklyMinutes:
-                raise ValueError("Stale teacher load")
-            teacher.maxWeeklyMinutes = adjustment.nextMaxWeeklyMinutes
+            teacher.maxWeeklyMinutes = max(
+                teacher.maxWeeklyMinutes, adjustment.nextMaxWeeklyMinutes
+            )
 
 
 class EnablePlanningWindowKind:
@@ -443,7 +475,11 @@ class EnablePlanningWindowKind:
         return result[1] if result is not None else []
 
     def apply(
-        self, request_copy: AdvisorAnalyzeRequest, patch: EnablePlanningWindowPatch
+        self,
+        request_copy: AdvisorAnalyzeRequest,
+        patch: EnablePlanningWindowPatch,
+        *,
+        original_req: AdvisorAnalyzeRequest | None = None,
     ) -> None:
         if request_copy.planningPolicy:
             if patch.allowAfternoon:
@@ -532,6 +568,8 @@ class IncorporateReferenceResourceKind:
         self,
         request_copy: AdvisorAnalyzeRequest,
         patch: IncorporateReferenceResourcePatch,
+        *,
+        original_req: AdvisorAnalyzeRequest | None = None,
     ) -> None:
         reference_windows = [
             TimeInterval(day=d, startMinute=480, endMinute=1320) for d in range(1, 6)
@@ -655,7 +693,11 @@ class ChangeDeliveryModeKind:
         return result[1] if result is not None else []
 
     def apply(
-        self, request_copy: AdvisorAnalyzeRequest, patch: ChangeDeliveryModePatch
+        self,
+        request_copy: AdvisorAnalyzeRequest,
+        patch: ChangeDeliveryModePatch,
+        *,
+        original_req: AdvisorAnalyzeRequest | None = None,
     ) -> None:
         for course in request_copy.courses:
             if course.courseId in patch.courseIds:
@@ -686,6 +728,14 @@ def patch_change_size(patch: AcademicAdvisorPatch) -> int:
     return 0
 
 
+def is_broad_variant(
+    rec: AdvisorRecommendation, recommendations: list[AdvisorRecommendation]
+) -> bool:
+    if rec.id in BROAD_RECOMMENDATION_IDS:
+        return True
+    return sum(1 for item in recommendations if item.patch.kind == rec.patch.kind) == 1
+
+
 DryRunFn = Callable[
     [AdvisorAnalyzeRequest, list[AdvisorRecommendation], list[str]],
     AdvisorVerifiedImpact,
@@ -698,28 +748,50 @@ def rank_recommendations(
     dry_run: DryRunFn,
     *,
     max_simulations: int = MAX_DRY_RUN_SIMULATIONS,
+    max_recommendations: int = MAX_RECOMMENDATIONS,
 ) -> list[AdvisorRecommendation]:
     if not recommendations:
         return []
 
-    to_simulate = recommendations[:max_simulations]
-    unsimulated = recommendations[max_simulations:]
+    baseline_impact = dry_run(req, recommendations, [])
+    baseline_sessions = baseline_impact.projectedScheduledSessions
+
+    broad_recs = [
+        rec for rec in recommendations if is_broad_variant(rec, recommendations)
+    ]
+    narrow_recs = [
+        rec for rec in recommendations if not is_broad_variant(rec, recommendations)
+    ]
+    sim_queue = broad_recs + narrow_recs
+
+    variant_budget = max(0, max_simulations - 1)
+    to_simulate = sim_queue[:variant_budget]
+    unsimulated_ids = {rec.id for rec in sim_queue[variant_budget:]}
+    unsimulated = [rec for rec in recommendations if rec.id in unsimulated_ids]
 
     unlocked_by_id: dict[str, int] = {}
     for rec in to_simulate:
         impact = dry_run(req, recommendations, [rec.id])
-        unlocked = impact.projectedScheduledSessions - impact.currentScheduledSessions
+        unlocked = max(0, impact.projectedScheduledSessions - baseline_sessions)
         unlocked_by_id[rec.id] = unlocked
-        display_unlocked = max(0, unlocked)
-        unit = "componente" if display_unlocked == 1 else "componentes"
-        rec.impactSummary = f"Destraba {display_unlocked} {unit} en simulación"
+        if unlocked > 0:
+            unit = "componente" if unlocked == 1 else "componentes"
+            rec.impactSummary = f"Destraba {unlocked} {unit} en simulación"
+        else:
+            rec.impactSummary = "No destrabó componentes en simulación"
 
     for rec in unsimulated:
         if "impacto no simulado" not in rec.impactSummary:
             rec.impactSummary = f"{rec.impactSummary} (impacto no simulado)"
 
+    kept_simulated = [
+        rec
+        for rec in to_simulate
+        if is_broad_variant(rec, recommendations) or unlocked_by_id[rec.id] > 0
+    ]
+
     ranked_simulated = sorted(
-        to_simulate,
+        kept_simulated,
         key=lambda rec: (
             -unlocked_by_id[rec.id],
             patch_change_size(rec.patch),
@@ -727,27 +799,47 @@ def rank_recommendations(
         ),
     )
 
+    combined = ranked_simulated + unsimulated
+
     window_recs = [
-        rec for rec in ranked_simulated + unsimulated if rec.patch.kind == "enable_planning_window"
+        rec for rec in combined if rec.patch.kind == "enable_planning_window"
     ]
     if window_recs:
-        simulated_windows = [rec for rec in ranked_simulated if rec.patch.kind == "enable_planning_window"]
+        simulated_windows = [
+            rec
+            for rec in ranked_simulated
+            if rec.patch.kind == "enable_planning_window"
+        ]
         if simulated_windows:
             best_unlocked = max(unlocked_by_id[rec.id] for rec in simulated_windows)
             tied_best = [
-                rec for rec in simulated_windows if unlocked_by_id[rec.id] == best_unlocked
+                rec
+                for rec in simulated_windows
+                if unlocked_by_id[rec.id] == best_unlocked
             ]
-            combined = next(
-                (rec for rec in tied_best if rec.id == "rec-enable-planning-window-both"),
+            combined_win = next(
+                (
+                    rec
+                    for rec in tied_best
+                    if rec.id == "rec-enable-planning-window-both"
+                ),
                 None,
             )
-            winner = combined if (len(tied_best) > 1 and combined is not None) else tied_best[0]
+            winner = (
+                combined_win
+                if (len(tied_best) > 1 and combined_win is not None)
+                else tied_best[0]
+            )
         else:
             winner = next(
-                (rec for rec in window_recs if rec.id == "rec-enable-planning-window-both"),
+                (
+                    rec
+                    for rec in window_recs
+                    if rec.id == "rec-enable-planning-window-both"
+                ),
                 window_recs[0],
             )
         for rec in window_recs:
             rec.recommendedByDefault = rec.id == winner.id
 
-    return ranked_simulated + unsimulated
+    return combined[:max_recommendations]
