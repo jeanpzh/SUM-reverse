@@ -1,0 +1,70 @@
+/* Consejero tab of the assistance rail — Main board, right column. */
+.planning-root .planning-assist-advisor { display: flex; flex-direction: column; gap: 20px; min-width: 0; overflow-wrap: anywhere; }
+.planning-root .planning-assist-advisor__head { display: flex; flex-direction: column; gap: 6px; }
+.planning-root .planning-assist-advisor__title { margin: 0; font: 400 var(--text-plan-section)/30px var(--plan-font-sans); letter-spacing: var(--text-plan-section--letter-spacing); color: var(--plan-ink); }
+.planning-root .planning-assist-advisor__note { margin: 0; font-size: var(--text-plan-meta); line-height: var(--text-plan-meta--line-height); color: var(--plan-fog); }
+.planning-root .planning-assist-advisor__actions { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.planning-root .planning-assist-advisor__recs { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.planning-root .planning-assist-advisor__recs > legend { padding: 0 0 8px; float: left; width: 100%; }
+.planning-root .planning-assist-advisor__recs > legend + * { clear: both; }
+.planning-root .planning-assist-advisor__extras { display: flex; flex-direction: column; gap: 16px; padding-top: 16px; border-top: 1px solid var(--plan-row-divider); min-width: 0; }
+
+/* Ghost pill: the page keeps the single primary. */
+.planning-root .planning-assist-btn { font: 500 var(--text-plan-body)/var(--text-plan-body--line-height) var(--plan-font-sans); border: 0; border-radius: 9999px; padding: 6px 14px; min-height: 32px; display: inline-flex; align-items: center; justify-content: center; text-align: center; background: transparent; color: var(--plan-ink); box-shadow: inset 0 0 0 1px var(--plan-dove); cursor: pointer; }
+.planning-root .planning-assist-btn:hover:not(:disabled) { box-shadow: inset 0 0 0 1px var(--plan-control-border); }
+.planning-root .planning-assist-btn:disabled { cursor: not-allowed; color: var(--plan-fog); }
+.planning-root .planning-assist-btn--text { box-shadow: none; padding: 6px 8px; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--plan-dove); }
+.planning-root .planning-assist-btn--text:hover:not(:disabled) { box-shadow: none; text-decoration-color: var(--plan-control-border); }
+
+/* Numbered findings */
+.planning-root .planning-findings { display: flex; flex-direction: column; gap: 12px; }
+.planning-root .planning-findings__list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; }
+.planning-root .planning-findings__item { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 8px; }
+.planning-root .planning-findings__index { font: var(--text-plan-body)/var(--text-plan-body--line-height) var(--plan-font-mono); letter-spacing: -0.01em; color: var(--plan-fog); }
+.planning-root .planning-assist .normative-advice__details { border: 0; margin: 4px 0 0; padding: 0; }
+.planning-root .planning-assist .normative-advice__details-trigger { display: inline-flex; width: auto; min-height: 24px; padding: 2px 0; border-radius: 0; background: transparent; font: 400 var(--text-plan-meta)/var(--text-plan-meta--line-height) var(--plan-font-sans); color: var(--plan-steel); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--plan-dove); cursor: pointer; }
+.planning-root .planning-assist .normative-advice__details-trigger::before { content: none; }
+.planning-root .planning-assist .normative-advice__details-trigger:hover { background: transparent; color: var(--plan-ink); text-decoration-color: var(--plan-control-border); }
+.planning-root .planning-assist .normative-advice__details-content { font-size: var(--text-plan-dense); line-height: var(--text-plan-dense--line-height); color: var(--plan-steel); padding-top: 4px; }
+
+/* Recommendations: checkable cream cards, tagged by kind. The label covers the card. */
+.planning-root .planning-rec { position: relative; display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; padding: 12px; border-radius: var(--radius-plan-strip); background: var(--plan-cream); }
+.planning-root .planning-rec [data-slot='checkbox'] { margin: 2px 0 0; width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--plan-steel); background: var(--plan-paper); }
+.planning-root .planning-rec [data-slot='checkbox'][data-state='checked'] { background: var(--plan-ink); border-color: var(--plan-ink); color: var(--plan-on-ink); }
+.planning-root .planning-rec__body { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.planning-root .planning-rec__kind { display: inline-flex; align-items: center; font: 500 var(--text-plan-meta)/var(--text-plan-meta--line-height) var(--plan-font-mono); letter-spacing: -0.01em; border-radius: 9999px; padding: 2px 8px; background: var(--plan-paper); color: var(--plan-ink); box-shadow: inset 0 0 0 1px var(--plan-dove); }
+.planning-root .planning-rec__title { font-weight: 400; cursor: pointer; }
+.planning-root .planning-rec__title::after { content: ''; position: absolute; inset: 0; border-radius: var(--radius-plan-strip); }
+.planning-root .planning-rec [data-slot='checkbox']:focus-visible { outline: 2px solid var(--plan-focus); outline-offset: 2px; box-shadow: none; }
+.planning-root .planning-rec:has([data-slot='checkbox']:focus-visible) { outline: 0; }
+.planning-root .planning-rec[data-disabled] .planning-rec__title { cursor: default; }
+.planning-root .planning-rec__scope, .planning-root .planning-rec__warning { margin: 0; font-size: var(--text-plan-meta); line-height: var(--text-plan-meta--line-height); color: var(--plan-fog); }
+.planning-root .planning-rec__warning { color: var(--plan-warning); }
+.planning-root .planning-rec .normative-advice__details,
+.planning-root .planning-rec__details { position: relative; z-index: 1; width: 100%; }
+.planning-root .planning-rec [data-slot='checkbox'] { position: relative; z-index: 1; }
+.planning-root .planning-rec__details > summary { cursor: pointer; font-size: var(--text-plan-meta); line-height: var(--text-plan-meta--line-height); color: var(--plan-steel); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--plan-dove); min-height: 24px; padding: 2px 0; }
+.planning-root .planning-rec__details ul { margin: 4px 0 0; padding-left: 20px; font-size: var(--text-plan-dense); line-height: var(--text-plan-dense--line-height); color: var(--plan-steel); overflow-wrap: anywhere; }
+.planning-root .planning-rec__details p { margin: 4px 0 0; font-size: var(--text-plan-dense); color: var(--plan-steel); }
+
+/* Verified impact (the commit needs a current simulation). */
+.planning-root .planning-impact { min-width: 0; padding: 12px 16px; border-radius: var(--radius-plan-strip); background: var(--plan-cream); font-size: var(--text-plan-dense); line-height: var(--text-plan-dense--line-height); color: var(--plan-ink); }
+.planning-root .planning-impact__title { margin: 0 0 8px; font: var(--text-plan-label)/var(--text-plan-label--line-height) var(--plan-font-mono); letter-spacing: 0.04em; text-transform: uppercase; color: var(--plan-fog); font-weight: 400; }
+.planning-root .planning-impact__table { width: 100%; border-collapse: collapse; text-align: left; }
+.planning-root .planning-impact__table th, .planning-root .planning-impact__table td { padding: 6px 0; border-bottom: 1px solid var(--plan-row-divider); font-weight: 400; font-variant-numeric: tabular-nums; background: transparent; }
+.planning-root .planning-impact__table thead th { font: var(--text-plan-label)/var(--text-plan-label--line-height) var(--plan-font-mono); letter-spacing: 0.04em; text-transform: uppercase; color: var(--plan-fog); }
+.planning-root .planning-impact__table :is(thead th:not(:first-child), td) { text-align: right; padding-left: 8px; }
+.planning-root .planning-impact__table td[data-projected] { font-weight: 500; }
+.planning-root .planning-impact__note { margin: 8px 0 0; color: var(--plan-steel); }
+
+/* Result of an applied recommendation set (rendered by the workspace). */
+.planning-root .planning-outcome { margin: 0 0 16px; min-width: 0; padding: 12px 16px; border-radius: var(--radius-plan-strip); background: var(--plan-cream); font-size: var(--text-plan-body); line-height: var(--text-plan-body--line-height); }
+.planning-root .planning-outcome__title { margin: 0 0 8px; font: 500 var(--text-plan-body)/var(--text-plan-body--line-height) var(--plan-font-sans); }
+.planning-root .planning-outcome__facts { margin: 0 0 8px; display: grid; gap: 4px; }
+.planning-root .planning-outcome__facts > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 12px; }
+.planning-root .planning-outcome__facts dd { margin: 0; font-variant-numeric: tabular-nums; }
+.planning-root .planning-outcome__note { margin: 0; font-size: var(--text-plan-meta); line-height: var(--text-plan-meta--line-height); color: var(--plan-fog); }
+
+/* Normative answer inside the rail: v2 weights and radii. */
+.planning-root .planning-assist .normative-advice__conclusion { border: 0; border-radius: var(--radius-plan-strip); background: var(--plan-cream); }
+.planning-root .planning-assist .normative-advice :is(.normative-advice__status-badge, .normative-advice__body strong, .normative-advice__body h3, .normative-advice__subtitle) { font-weight: 500; }
