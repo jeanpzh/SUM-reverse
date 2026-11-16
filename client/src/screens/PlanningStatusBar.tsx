@@ -1,18 +1,14 @@
-import { PlanningFetchLoading } from '../components/PlanningFetchLoading'
 import type { AcademicAdvisorPatch, AcademicAdvisorResponse, AcademicProposal, PlanningPeriod } from '../data/academicScheduling'
 import { academicSectionCoverage, academicSectionLabel, defaultAcademicAdvisorSelection, academicSessionLabel, fetchAcademicProposalAdvice, formatAcademicDuration, hasCurrentAdvisorImpact } from '../data/academicScheduling'
 import { useEffect, useId, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/Dialog'
 import './PlanningStatusBar.css'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../components/ui/Sheet'
+import { PlanningAssistAdvisor } from './PlanningAssistAdvisor'
+import { planningAssist, usePlanningAssist } from './PlanningAssistState'
 import { PlanningResultStrip } from './PlanningResultStrip'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
-import { AdvisorFindings } from '../components/ai-elements/AdvisorFindings'
-import { AdvisorImpact } from '../components/ai-elements/AdvisorImpact'
-import { NormativeAdvice } from '../components/ai-elements/NormativeAdvice'
-import { Reasoning } from '../components/ai-elements/Reasoning'
-import { SuggestionCard } from '../components/ai-elements/SuggestionCard'
 import { Alert, AlertDescription } from '../components/ui/Alert'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../components/ui/Collapsible'
 
@@ -87,7 +83,7 @@ export function PlanningStatusBar({ onRetrySearch, proposal, academicPeriod, onA
   const advisorDisabledReasonId = useId()
   const applyDisabledReasonId = useId()
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
-  const [advisorOpen, setAdvisorOpen] = useState(false)
+  const [advisorRequested, setAdvisorRequested] = useState(false)
   const [advisorLoading, setAdvisorLoading] = useState(false)
   const [advisorError, setAdvisorError] = useState<string | null>(null)
   const [advisorData, setAdvisorData] = useState<AcademicAdvisorResponse | null>(null)
@@ -97,6 +93,8 @@ export function PlanningStatusBar({ onRetrySearch, proposal, academicPeriod, onA
   const requestedSelection = useRef<string[] | undefined>(undefined)
   const editVersion = proposal.editVersion ?? 0
   useEffect(() => () => requestRef.current?.abort(), [proposal.proposalId, editVersion])
+  useEffect(() => planningAssist.registerAdvisor(), [])
+  const { slot: advisorSlot } = usePlanningAssist()
 
   const currentAdvice = advisorData?.proposalId === proposal.proposalId && advisorData.editVersion === editVersion
     ? advisorData : null
@@ -129,8 +127,15 @@ export function PlanningStatusBar({ onRetrySearch, proposal, academicPeriod, onA
   }
 
   const openAdvisor = () => {
-    setAdvisorOpen(true)
+    setAdvisorRequested(true)
+    planningAssist.requestOpen('consejero')
     void requestAdvice()
+  }
+
+  const cancelAdvisor = () => {
+    requestRef.current?.abort()
+    setAdvisorLoading(false)
+    setAdvisorRequested(false)
   }
 
   const toggleRecommendation = (id: string, checked: boolean) => {
@@ -147,7 +152,7 @@ export function PlanningStatusBar({ onRetrySearch, proposal, academicPeriod, onA
     setAdvisorError(null)
     try {
       const applied = await onApplyAdvisorPatches(patches)
-      if (applied !== false) setAdvisorOpen(false)
+      if (applied !== false) planningAssist.requestClose()
     } catch (error) {
       setAdvisorError(error instanceof Error ? error.message : 'No se pudieron aplicar los cambios.')
     } finally {
@@ -254,84 +259,18 @@ export function PlanningStatusBar({ onRetrySearch, proposal, academicPeriod, onA
           </div>
         </DialogContent>
       </Dialog>
-      <Sheet open={advisorOpen} onOpenChange={(open) => {
-        if (applying) return
-        setAdvisorOpen(open)
-        if (!open) { requestRef.current?.abort(); setAdvisorLoading(false) }
-      }}>
-        <SheetContent className="planning-advisor-sheet" showCloseButton={!applying}>
-          <SheetHeader>
-            <SheetTitle>Consejero de planificación</SheetTitle>
-            <SheetDescription className="flex flex-wrap items-center gap-2">
-              <span>Diagnóstico asistido y recomendaciones aplicables para destrabar secciones pendientes.</span>
-              {currentAdvice && (
-                <Badge variant={currentAdvice.source.mode === 'llm-assisted' ? 'default' : 'secondary'}>
-                  {currentAdvice.source.mode === 'llm-assisted'
-                    ? `IA asistida · ${currentAdvice.source.providerLabel ?? 'LLM'}`
-                    : 'Análisis determinista local'}
-                </Badge>
-              )}
-            </SheetDescription>
-          </SheetHeader>
-          {advisorLoading && (
-            <PlanningFetchLoading label="Analizando propuesta y restricciones…" layout="cards" />
-          )}
-          {advisorError && (
-            <Alert variant="destructive">
-              <AlertDescription>{advisorError}</AlertDescription>
-            </Alert>
-          )}
-          {advisorError && !advisorLoading && <Button type="button" variant="outline" onClick={() => void requestAdvice(requestedSelection.current)}>Reintentar consejero</Button>}
-          {(advisorLoading || !currentAdvice) && <Button type="button" variant="outline" onClick={() => {
-            requestRef.current?.abort(); setAdvisorLoading(false); setAdvisorOpen(false)
-          }}>Volver al horario</Button>}
-          {!advisorLoading && currentAdvice && (
-            <div className="grid min-w-0 gap-4">
-              <AdvisorImpact impact={impact} />
-              <AdvisorFindings advice={currentAdvice} />
-              {currentAdvice.recommendations.length > 0 ? (
-                <div className="grid min-w-0 gap-2.5">
-                  <h4 className="m-0 text-sm font-semibold text-foreground">Recomendaciones aplicables</h4>
-                  <p className="m-0 text-sm text-muted-foreground">Los alcances individuales pueden solaparse. Simula la combinación para conocer su cobertura; no sumes las cifras de cada recomendación.</p>
-                  {currentAdvice.recommendations.map((rec) => <SuggestionCard key={rec.id}
-                    recommendation={rec} checked={selectedRecIds.includes(rec.id)} disabled={applying || isLocked}
-                    onCheckedChange={(checked) => toggleRecommendation(rec.id, checked)}
-                    teacherNames={teacherNames} courseNames={courseNames} roomNames={roomNames} />)}
-                </div>
-              ) : (
-                <p className="m-0 text-sm text-muted-foreground">
-                  No se encontraron parches automáticos adicionales para esta configuración.
-                </p>
-              )}
-              {currentAdvice.normativeContext && (currentAdvice.normativeContext.context.academicPeriod === academicPeriod
-                && currentAdvice.normativeContext.context.facultyId === 'FISI'
-                ? <NormativeAdvice advice={currentAdvice.normativeContext} />
-                : <Alert variant="warning"><AlertDescription>El contexto normativo no corresponde al periodo actual. Consulta las fuentes con los filtros de esta propuesta.</AlertDescription></Alert>)}
-              <Reasoning steps={currentAdvice.reasoningSteps} />
-              {applyDisabledReason && <p id={applyDisabledReasonId} role="status"
-                className="m-0 text-sm text-muted-foreground">{applyDisabledReason}</p>}
-              <div className="flex flex-wrap items-center justify-end gap-2 border-0 border-t border-solid border-border pt-3">
-                <Button type="button" variant="outline" disabled={applying} onClick={() => setAdvisorOpen(false)}>
-                  Volver al horario
-                </Button>
-                <Button type="button" variant="outline" disabled={applying || isLocked}
-                  onClick={() => void requestAdvice([...selectedRecIds])}>Simular selección actual</Button>
-                {onApplyAdvisorPatches && currentAdvice.recommendations.length > 0 && (
-                  <Button
-                    type="button"
-                    variant="default"
-                    disabled={selectedRecIds.length === 0 || isLocked || applying || !previewCurrent}
-                    aria-describedby={applyDisabledReason ? applyDisabledReasonId : undefined}
-                    onClick={() => void applySelectedRecommendations()}
-                  >
-                    {applying ? 'Aplicando y regenerando…' : 'Aplicar seleccionadas y regenerar'}
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+      {advisorSlot && createPortal(<PlanningAssistAdvisor
+        academicPeriod={academicPeriod} editVersion={editVersion} openSections={coverage.partial + coverage.pending}
+        requested={advisorRequested} loading={advisorLoading} error={advisorError} advice={currentAdvice} impact={impact}
+        selectedIds={selectedRecIds} applying={applying} isLocked={isLocked} canApply={Boolean(onApplyAdvisorPatches)}
+        previewCurrent={previewCurrent} applyDisabledReason={applyDisabledReason} applyDisabledReasonId={applyDisabledReasonId}
+        canConsult={Boolean(onApplyAdvisorPatches) && !isLocked && coverage.partial + coverage.pending > 0}
+        consultDisabledReason={isLocked ? advisorDisabledReason ?? 'La propuesta está bloqueada para cambios.' : coverage.partial + coverage.pending === 0 ? 'No hay secciones por completar.' : undefined}
+        consultDisabledReasonId={advisorDisabledReasonId + '-rail'}
+        teacherNames={teacherNames} courseNames={courseNames} roomNames={roomNames}
+        onConsult={() => void openAdvisor()} onCancel={cancelAdvisor} onRetry={() => void requestAdvice(requestedSelection.current)}
+        onToggle={toggleRecommendation} onSimulate={() => void requestAdvice([...selectedRecIds])}
+        onApply={() => void applySelectedRecommendations()} />, advisorSlot)}
     </PlanningResultStrip>
   )
 }
