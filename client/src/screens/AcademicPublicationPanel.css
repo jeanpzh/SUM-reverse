@@ -215,3 +215,17 @@
   .planning-root .academic-publication__scope-row > .academic-publication__button,
   .planning-root .academic-publication td .academic-publication__button { min-height: 44px; }
 }
+
+@media (max-width: 719px) {
+  .planning-root .academic-publication table { display: block; min-width: 0; }
+  .planning-root .academic-publication thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .planning-root .academic-publication tbody { display: block; }
+  .planning-root .academic-publication tbody tr { display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; border-bottom: 1px solid var(--plan-row-divider); }
+  .planning-root .academic-publication tbody td { display: block; padding: 0; border: 0; height: auto; min-width: 0; max-width: none; white-space: normal; text-align: left; overflow-wrap: anywhere; }
+  .planning-root .academic-publication tbody td.academic-publication__action { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; text-align: left; }
+  .planning-root .academic-publication table[aria-label='Versiones de la propuesta'] td:nth-child(3)::before { content: 'Guardada: '; }
+  .planning-root .academic-publication table[aria-label='Versiones de la propuesta'] td:nth-child(4)::before { content: 'Cobertura: '; }
+  .planning-root .academic-publication__preview-table td:nth-child(3)::before { content: 'Ciclo: '; }
+  .planning-root .academic-publication__preview-table td:nth-child(4)::before { content: 'Secc. '; }
+  .planning-root .academic-publication__preview-table td:nth-child(5)::before { content: 'Capacidad: '; }
+}

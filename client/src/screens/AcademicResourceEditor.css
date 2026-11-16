@@ -113,3 +113,34 @@
 .planning-root .academic-resource-table td { padding-block: 7px; }
 .planning-root .academic-resource-workbench .academic-resource-workbench__inspector-header > button,
 .planning-root .academic-resource-workbench .academic-resource-workbench__chip button { border: 0; background: transparent; box-shadow: none; padding: 0; }
+
+@media (max-width: 719px) {
+  .planning-root .academic-resource-table { display: block; min-width: 0; }
+  .planning-root .academic-resource-table thead { display: block; }
+  .planning-root .academic-resource-table thead tr { display: flex; align-items: center; }
+  .planning-root .academic-resource-table thead th:not(:first-child) { display: none; }
+  .planning-root .academic-resource-table thead th:first-child { display: flex; align-items: center; gap: 8px; width: 100%; height: auto; }
+  .planning-root .academic-resource-table thead th:first-child::after { content: 'Seleccionar todos'; }
+  .planning-root .academic-resource-table tbody { display: block; }
+  .planning-root .academic-resource-table tbody tr { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 2px 8px; padding: 12px 16px; border-bottom: 1px solid var(--plan-row-divider); }
+  .planning-root .academic-resource-table tbody tr[aria-selected='true'] { background: var(--plan-sand); box-shadow: inset 3px 0 0 var(--plan-ink); }
+  .planning-root .academic-resource-table tbody td { display: block; grid-column: 2; padding: 0; height: auto; min-width: 0; white-space: normal; border: 0; background: transparent; text-align: left; overflow-wrap: anywhere; }
+  .planning-root .academic-resource-table tbody td:first-child { grid-column: 1; grid-row: 1 / span 6; box-shadow: none; }
+  .planning-root .academic-resource-table td code { display: block; margin: 0; }
+  .planning-root .academic-resource-table td .planning-table-name { display: block; min-height: 44px; width: 100%; }
+  .planning-root .academic-resource-table .academic-resource-workbench__native-checkbox { appearance: auto; width: 44px; height: 44px; min-height: 44px; }
+  .planning-root .academic-resource-table .academic-resource-table__status { max-width: none; }
+  .planning-root .academic-resource-table .planning-resource-number { text-align: left; }
+  .planning-root .academic-resource-table[aria-label='Docentes'] td:nth-child(4)::before { content: 'Cursos: '; }
+  .planning-root .academic-resource-table[aria-label='Docentes'] td:nth-child(5)::before { content: 'Carga: '; }
+  .planning-root .academic-resource-table[aria-label='Aulas y laboratorios'] td:nth-child(5)::before { content: 'Capacidad: '; }
+  .planning-root .academic-resource-table[aria-label='Aulas y laboratorios'] td:nth-child(6)::before { content: 'Pabellón: '; }
+  .planning-root .academic-resource-workbench .academic-resource-workbench__inspector-header > button,
+  .planning-root .academic-resource-workbench .academic-resource-workbench__chip button { min-width: 44px; min-height: 44px; }
+}
+@media (max-width: 719px) {
+  .planning-root .academic-resource-workbench .academic-resource-table input[type='checkbox'] { width: 44px; height: 44px; min-height: 44px; }
+}
+@media (max-width: 719px) {
+  .planning-root .academic-resource-table tbody td[colspan] { grid-column: 1 / -1; grid-row: auto; }
+}
