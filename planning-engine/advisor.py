@@ -3,7 +3,12 @@ from __future__ import annotations
 import json
 import re
 
-from advisor_catalog import MAX_WEEKLY_MINUTES, RECOMMENDATION_CATALOG
+from advisor_catalog import (
+    DryRunFn,
+    MAX_WEEKLY_MINUTES,
+    RECOMMENDATION_CATALOG,
+    rank_recommendations,
+)
 from advisor_diagnosis import diagnose
 from models import (
     AcademicAdvisorResponse,
@@ -55,7 +60,11 @@ class AdvisorPrivacyCodec:
 
 def build_deterministic_analysis(
     req: AdvisorAnalyzeRequest,
+    *,
+    dry_run: DryRunFn | None = None,
 ) -> tuple[str, list[AdvisorBottleneck], list[AdvisorRecommendation], AdvisorPrivacyCodec]:
+    from advisor_agent import run_cpsat_dry_run
+
     teacher_names: dict[str, str] = {
         t.id: (t.name or t.id) for t in req.teachers
     }
@@ -74,6 +83,10 @@ def build_deterministic_analysis(
         if bottleneck is not None:
             bottlenecks.append(bottleneck)
         recommendations.extend(handler.variants(req, diagnosis))
+
+    recommendations = rank_recommendations(
+        req, recommendations, dry_run or run_cpsat_dry_run
+    )
 
     scheduled_count = len(req.assignments)
     total_count = len(req.requirements)

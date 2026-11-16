@@ -14,7 +14,7 @@ MAX_TOOL_CALLS = 4
 MAX_TOOL_ROUNDS = 2
 
 
-def run_cpsat_dry_run(req, recommendations, recommendation_ids):
+def run_cpsat_dry_run(req, recommendations, recommendation_ids, *, max_time_seconds: float = 0.8):
     catalog = {r.id: r for r in recommendations}
     if len(set(recommendation_ids)) != len(recommendation_ids) or any(i not in catalog for i in recommendation_ids):
         raise ValueError("Unknown or duplicate recommendation ID")
@@ -26,7 +26,7 @@ def run_cpsat_dry_run(req, recommendations, recommendation_ids):
         courses=copy.courses, teachers=copy.teachers, rooms=copy.rooms,
         sections=copy.sections, requirements=copy.requirements,
         windows=copy.windows, startStepMinutes=copy.startStepMinutes,
-        planningPolicy=copy.planningPolicy, maxTimeSeconds=0.8,
+        planningPolicy=copy.planningPolicy, maxTimeSeconds=max_time_seconds,
     ))
     def complete_sections(assignments):
         ids = {a.id for a in assignments}

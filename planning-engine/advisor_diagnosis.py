@@ -73,6 +73,15 @@ class BlockerDiagnosis(BaseModel):
     diagnosticCodes: list[str]
     causesBySession: dict[str, list[str]]
     unknownCauseSessionIds: list[str]
+    potentialAfternoonFreeMinutes: int = 0
+    weekdayAvailableMinutes: int = 0
+    weekdayUsedMinutes: int = 0
+
+    @property
+    def weekdaySaturationRatio(self) -> float | None:
+        if self.weekdayAvailableMinutes <= 0:
+            return None
+        return self.weekdayUsedMinutes / self.weekdayAvailableMinutes
 
 
 def _merge_intervals(intervals: Iterable[tuple[int, int]]) -> list[tuple[int, int]]:
@@ -182,6 +191,8 @@ def diagnose(req: AdvisorAnalyzeRequest) -> BlockerDiagnosis:
                 used_by_cell[(day, band, room_kind)] += overlap
 
     occupancy: list[BandOccupancy] = []
+    potential_afternoon_available = 0
+    afternoon_used = 0
     for day in DAYS:
         day_windows = windows_by_day[day]
         for band, band_start, band_end in TIME_BANDS:
@@ -191,12 +202,22 @@ def diagnose(req: AdvisorAnalyzeRequest) -> BlockerDiagnosis:
             effective_window_ivs = (
                 _intersect_intervals(day_windows, policy_ivs) if policy_ivs else []
             )
+            raw_afternoon_ivs = (
+                _intersect_intervals(day_windows, [(band_start, band_end)])
+                if 1 <= day <= 5 and band == "tarde"
+                else []
+            )
             for room_kind in ROOM_KINDS:
                 available_minutes = 0
                 if effective_window_ivs:
                     for room_ivs in room_avail_by_kind_and_day[(room_kind, day)]:
                         covered = _intersect_intervals(effective_window_ivs, room_ivs)
                         available_minutes += sum(e - s for s, e in covered)
+                if raw_afternoon_ivs:
+                    for room_ivs in room_avail_by_kind_and_day[(room_kind, day)]:
+                        covered = _intersect_intervals(raw_afternoon_ivs, room_ivs)
+                        potential_afternoon_available += sum(e - s for s, e in covered)
+                    afternoon_used += used_by_cell[(day, band, room_kind)]
                 occupancy.append(
                     BandOccupancy(
                         day=day,
@@ -206,6 +227,13 @@ def diagnose(req: AdvisorAnalyzeRequest) -> BlockerDiagnosis:
                         availableMinutes=available_minutes,
                     )
                 )
+
+    weekday_available = sum(
+        cell.availableMinutes for cell in occupancy if 1 <= cell.day <= 5
+    )
+    weekday_used = sum(
+        cell.usedMinutes for cell in occupancy if 1 <= cell.day <= 5
+    )
 
     low_occupancy_slots = [
         cell
@@ -299,4 +327,7 @@ def diagnose(req: AdvisorAnalyzeRequest) -> BlockerDiagnosis:
         diagnosticCodes=diagnostic_codes,
         causesBySession=causes_by_session,
         unknownCauseSessionIds=unknown_cause_session_ids,
+        potentialAfternoonFreeMinutes=max(0, potential_afternoon_available - afternoon_used),
+        weekdayAvailableMinutes=weekday_available,
+        weekdayUsedMinutes=weekday_used,
     )
