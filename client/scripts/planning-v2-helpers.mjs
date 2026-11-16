@@ -55,6 +55,17 @@ export async function gotoStage(page, name, etapa) {
  */
 export const statusBar = (page) => page.locator('.planning-status-bar[data-status]:visible')
 
+/**
+ * "No result is displayed": the Horario strip stays mounted without a proposal but reports `data-status="empty"`
+ * (it never claims a result). Replaces v1 `.planning-status-bar` `count() === 0` checks, which are no longer meaningful
+ * because the preparation readiness strip and the approval/round strips share the class. Pass the page assert module.
+ */
+export async function noResultDisplayed(page) {
+  const statuses = await page.locator('.planning-stage-panel--horario .planning-status-bar[aria-label="Resultado"]')
+    .evaluateAll((strips) => strips.map((strip) => strip.getAttribute('data-status')))
+  return { statuses, none: statuses.every((status) => status === 'empty') }
+}
+
 /** The proposal switcher's container (`#planning-tour-proposal`); only present while the menu is open. */
 export const proposalMenu = (page) => page.locator('#planning-tour-proposal')
 export const proposalTitleField = (page) => proposalMenu(page).locator('#planning-proposal-title')
@@ -133,6 +144,9 @@ export async function selectOnlyCourse(page, courseId) {
   const cycle = (await table.locator(`tr[data-course-id=${JSON.stringify(courseId)}] td`).nth(2).innerText()).trim()
   const filter = page.getByRole('combobox', { name: 'Filtrar cursos por ciclo', exact: true })
   const remove = page.getByRole('button', { name: 'Quitar selección', exact: true })
+  // The filters sit in the collapsed "Filtros y valores iniciales" disclosure (handoff: advanced controls live in disclosures)
+  if (!await filter.isVisible()) await page.getByText('Filtros y valores iniciales', { exact: true }).click()
+  await filter.waitFor({ state: 'visible' })
   for (const label of await filter.locator('option').allInnerTexts()) {
     if (label === 'Todos' || label === `Ciclo ${cycle}`) continue
     await filter.selectOption({ label })

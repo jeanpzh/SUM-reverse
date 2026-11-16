@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { setProposalTitle, readProposalTitle } from '../planning-v2-helpers.mjs'
+import { setProposalTitle, readProposalTitle, statusBar, noResultDisplayed } from '../planning-v2-helpers.mjs'
 import {api,closeChat,nav,response,json,singleCourse,generate,save} from './helpers.mjs'
 export const interactionScenarios = [
   ['empty-workspace-six-destinations',async ({page,record}) => {
@@ -9,8 +9,9 @@ export const interactionScenarios = [
       assert.equal(await page.locator(`.planning-stage-panel--${stage}`).isVisible(),true)
     }
     await nav(page,'preparacion','cursos')
-    assert.equal(await page.locator('.planning-status-bar').count(),0)
-    assert.equal(await page.locator('#planning-tour-primary').innerText(),'Revisar oferta')
+    const empty=await noResultDisplayed(page);assert.ok(empty.none,`No result before generating: ${JSON.stringify(empty)}`)
+    // v2: with an empty offer the single primary is the catalog selection (handoff §5.1), not "Revisar oferta"
+    assert.match(await page.locator('#planning-tour-primary:visible').innerText(),/^Seleccionar los \d+ cursos del catálogo$/)
     record({configurationOnlySaveEnabled:await page.locator('#planning-tour-save').isEnabled()})
   }],
   ['generation-failure-can-be-retried-without-fake-proposal',async ({page,base}) => {
@@ -19,7 +20,7 @@ export const interactionScenarios = [
     await page.route('**/v1/propuestas',route => route.abort(),{times:1})
     await page.locator('#planning-tour-primary').click()
     await page.getByRole('alert').filter({hasText:/gener|local|fetch|Failed|recuper|solicitud/i}).first().waitFor()
-    assert.equal(await page.locator('.planning-status-bar').count(),0)
+    const empty=await noResultDisplayed(page);assert.ok(empty.none,`A failed generation must not leave a proposal: ${JSON.stringify(empty)}`)
     assert.equal((await generate(page)).status,'complete')
   }],
   ['resource-modal-edit-survives-navigation',async ({page}) => {
@@ -31,14 +32,15 @@ export const interactionScenarios = [
     await pane.waitFor()
     const incorporate=pane.getByRole('button',{name:'Incorporar a la propuesta',exact:true})
     if(await incorporate.isVisible()) await incorporate.click()
-    const load=page.getByLabel('Carga semanal docente',{exact:true})
-    await load.fill('600')
+    // v2: the minutes control lives in the "Editar carga en minutos" disclosure (the visible control is "Carga máxima docente en horas")
+    const minutes=async()=>{const load=pane.getByLabel('Carga semanal docente',{exact:true});if(!await load.isVisible())await pane.getByText('Editar carga en minutos',{exact:true}).click();await load.waitFor();return load}
+    await (await minutes()).fill('660')
     const id=await page.getByLabel('Identificación docente',{exact:true}).inputValue()
     await pane.getByRole('button',{name:'Cerrar ficha',exact:true}).click()
     await nav(page,'preparacion','cursos');await nav(page,'preparacion','recursos')
     await page.getByLabel('Buscar docentes por nombre o código',{exact:true}).fill(id)
     await page.getByRole('region',{name:'Tabla de docentes',exact:true}).getByRole('button',{name:/^Abrir ficha de/}).first().click()
-    assert.equal(await page.getByLabel('Carga semanal docente',{exact:true}).inputValue(),'600')
+    assert.equal(await (await minutes()).inputValue(),'660')
     await page.keyboard.press('Escape')
     await pane.waitFor({state:'hidden'})
     assert.equal(await page.evaluate(()=>document.body.style.pointerEvents),'')
@@ -48,9 +50,9 @@ export const interactionScenarios = [
     const proposal=await generate(page)
     const first=proposal.assignments[0]
     const original=await json(await page.request.get(`${base}${api}/propuestas/${proposal.proposalId}`))
-    await page.locator(`.planning-sections__row[data-section-id=${JSON.stringify(first.sectionId)}]`).getByRole('button',{name:/^Inspeccionar sección/}).click()
+    await page.getByRole('table',{name:'Secciones de la propuesta'}).locator(`tr[data-section-id=${JSON.stringify(first.sectionId)}]`).first().getByRole('button',{name:/^Inspeccionar sección/}).click()
     await page.locator('.planning-inspector').getByRole('button',{name:'Editar horario',exact:true}).click()
-    await page.getByLabel(`Inicio revisión ${first.sectionId}`,{exact:true}).fill('00:00')
+    await page.getByLabel(`Inicio revisión ${first.sectionId}`,{exact:true}).selectOption('0') // v2: start is a select of minutes since midnight; 0 = 00:00, outside every window
     const pending=response(page,'/ajustes')
     await page.getByRole('button',{name:'Aplicar ajuste',exact:true}).click()
     assert.equal((await pending).status(),422)
@@ -65,7 +67,7 @@ export const interactionScenarios = [
     await page.locator('#planning-tour-save').click()
     await page.locator('#planning-draft-error').waitFor()
     assert.equal(await readProposalTitle(page),title)
-    assert.equal(await page.locator('.planning-status-bar').getAttribute('data-status'),proposal.status)
+    assert.equal(await statusBar(page).getAttribute('data-status'),proposal.status)
     const result=await save(page,title)
     assert.equal(result.draft.title,title)
   }],
@@ -86,6 +88,9 @@ export const interactionScenarios = [
     const reasonText=reasonId ? await page.locator(`[id=${JSON.stringify(reasonId)}]`).innerText() : ''
     if(reasonId){
       await page.setViewportSize({width:390,height:844})
+      // v2 (ticket 10): below 720px the stage notices and secondary actions, including the advisor and its reason, sit inside the "Acciones" disclosure
+      const actions=page.locator('details.planning-mobile-stage-actions:visible').first()
+      if(!await actions.evaluate(el=>el.open))await actions.locator('summary').click()
       await page.locator(`[id=${JSON.stringify(reasonId)}]`).waitFor()
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true)
       await capture('advisor-saving-reason-390')
@@ -98,9 +103,10 @@ export const interactionScenarios = [
     assert.equal(await advisor.getAttribute('aria-describedby'),null)
     assert.match(explanation,/Guardando/)
     await advisor.click()
-    await page.getByRole('dialog',{name:'Consejero de planificación',exact:true}).waitFor()
-    await page.keyboard.press('Escape')
-    await page.getByRole('dialog',{name:'Consejero de planificación',exact:true}).waitFor({state:'hidden'})
+    // v2: the advisor is the Consejero tab of the assistance rail, closed with its own button
+    await page.getByRole('tabpanel',{name:'Consejero',exact:true}).waitFor()
+    await page.getByRole('button',{name:'Cerrar asistente',exact:true}).click()
+    await page.locator('#planning-chat-body').waitFor({state:'hidden'})
     assert.equal(await advisor.isEnabled(),true)
   }],
   ['responsive-open-rail-does-not-silently-block-workspace',async ({page,record}) => {
@@ -128,6 +134,8 @@ export const interactionScenarios = [
     await modal.waitFor()
     await page.keyboard.press('Escape');await modal.waitFor({state:'hidden'})
     assert.equal(await toggle.evaluate(el=>el===document.activeElement),true)
+    // v2: the course table only exists once the offer has courses (empty state, States board 03), so select the catalog first
+    await page.getByRole('button',{name:/^Seleccionar los .* cursos del catálogo$/}).click()
     await nav(page,'preparacion','cursos')
     assert.equal(await page.getByRole('region',{name:'Tabla de cursos para planificación',exact:true}).isVisible(),true)
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true)
