@@ -34,7 +34,7 @@ export function PlanningWeekAdjustment({ proposal, proposalResources, catalog, e
   const sectionBlocks = aggregateAcademicBlocks(proposal).filter(b => b.sectionId === section.sectionId)
   const end = editingBlock.startMinute + activeBlock.durationMinutes
   const heading = 'Ajustar bloque'
-  const content = <div className="planning-week-adjustment" onKeyDown={e => { if (e.key === 'Escape' && !adjusting) onCancelEdit() }}>
+  const content = <div className="planning-week-adjustment planning-inspector academic-scheduling__manual-review" onKeyDown={e => { if (e.key === 'Escape' && !adjusting) onCancelEdit() }}>
     <header><div><p className="planning-week-adjustment__eyebrow">{activeBlock.courseId} · Sección {academicSectionLabel(proposal, section.sectionId)} · {activeBlock.componentDetails.map(c => c.type).join(' + ')}</p>{docked || slot ? <h2 id="academic-scheduling-manual-review">{heading}</h2> : <SheetTitle id="academic-scheduling-manual-review">{heading}</SheetTitle>}</div><Button type="button" variant="ghost" size="icon" aria-label="Descartar ajuste" disabled={adjusting} onClick={onCancelEdit}><X size={14} /></Button></header>
     <div className="planning-week-adjustment__comparison" aria-label="Comparación de ubicación del bloque">
       <div><span>Actual</span><p>{dayNames[activeBlock.day].slice(0,3)} {formatAcademicMinute(activeBlock.startMinute)}–{formatAcademicMinute(activeBlock.endMinute)}</p><small>{activeBlock.roomNames.join(', ')}</small></div><ArrowRight size={16} aria-hidden="true" /><div><span>Propuesto</span><p>{dayNames[editingBlock.day].slice(0,3)} {formatAcademicMinute(editingBlock.startMinute)}–{end <= 1440 ? formatAcademicMinute(end) : 'fuera del día'}</p><small>{editingBlock.roomIds.map(id => proposalResources?.rooms.find(r => r.id === id)?.name ?? id).join(', ')}</small></div>
@@ -52,7 +52,7 @@ export function PlanningWeekAdjustment({ proposal, proposalResources, catalog, e
       <p className="planning-week-adjustment__notice">Vista previa local. El servidor valida docente, ambiente y cruces al aplicar; si lo rechaza, el horario guardado no cambia.{section.deliveryMode === 'split' ? ' Cambiar docente modifica la responsabilidad de toda la sección; los demás bloques mantienen sus horarios.' : ''}</p>
       <div className="planning-week-adjustment__actions"><Button type="submit" disabled={adjusting || !(proposalResources?.teachers ?? []).some(t => t.courseIds.includes(activeBlock.courseId))}>{adjusting ? 'Aplicando…' : 'Aplicar ajuste'}</Button><Button type="button" variant="outline" disabled={adjusting} onClick={onCancelEdit}>Descartar</Button></div>
     </form>
-    {adjustmentError && <div className="planning-week-adjustment__error" role="alert"><CircleAlert size={16} aria-hidden="true" /><div><strong>El servidor rechazó el ajuste</strong><p>{adjustmentError}</p><p>Se conserva el horario guardado.</p></div></div>}
+    {adjustmentError && <div className="planning-week-adjustment__error academic-scheduling__manual-error academic-scheduling__inline-error" role="alert"><CircleAlert size={16} aria-hidden="true" /><div><strong>El servidor rechazó el ajuste</strong><p>{adjustmentError}</p><p>Se conserva el horario guardado.</p></div></div>}
   </div>
   if (slot) return createPortal(<aside aria-labelledby="academic-scheduling-manual-review">{content}</aside>, slot)
   if (docked) return content

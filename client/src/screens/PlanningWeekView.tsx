@@ -32,6 +32,7 @@ export function PlanningWeekView({ proposal, catalog, proposalResources, selecte
   const active = blocks.find(b => b.sectionId === editingBlock?.sectionId && blockKey(b) === editingBlock.sessionIds.join('|'))
   const [agendaDay, setAgendaDay] = useState<number | null>(null)
   const root = useRef<HTMLDivElement>(null)
+  const revealedSelection = useRef<string | null>(null)
   const query = normalizeAcademicSearch(searchQuery)
   const matching = new Set(proposal.sections.filter(section => {
     const items = blocks.filter(b => b.sectionId === section.sectionId)
@@ -54,10 +55,11 @@ export function PlanningWeekView({ proposal, catalog, proposalResources, selecte
   useEffect(() => {
     const pane = root.current?.closest('.planning-view-pane')
     const reveal = () => {
-      if (!root.current || !pane || getComputedStyle(pane).display === 'none' || !selectedSectionId) return
+      if (!root.current || !pane || getComputedStyle(pane).display === 'none' || !selectedSectionId || revealedSelection.current === selectedSectionId) return
       setAgendaDay(null)
       const target = root.current.querySelector<HTMLElement>(`[data-week-grid-section-id="${CSS.escape(selectedSectionId)}"]`)
       if (target && getComputedStyle(target).display !== 'none') target.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+      revealedSelection.current = selectedSectionId
     }
     const observer = new MutationObserver(reveal)
     if (pane) observer.observe(pane, { attributes: true, attributeFilter: ['style'] })
@@ -66,14 +68,15 @@ export function PlanningWeekView({ proposal, catalog, proposalResources, selecte
   }, [selectedSectionId])
 
   const items = filtered.map(b => ({ block: b, proposed: false, day: b.day, startMinute: b.startMinute, endMinute: b.endMinute, id: blockKey(b) }))
+  if (active && !filtered.some(b => blockKey(b) === blockKey(active))) items.push({ block: active, proposed: false, day: active.day, startMinute: active.startMinute, endMinute: active.endMinute, id: blockKey(active) })
   if (active && editingBlock) items.push({ block: active, proposed: true, day: editingBlock.day, startMinute: editingBlock.startMinute, endMinute: editingBlock.startMinute + active.durationMinutes, id: '__proposed_preview__' })
   const renderBlock = (item: typeof items[number], style?: CSSProperties) => {
     const b = item.block
     const current = active && blockKey(b) === blockKey(active) && !item.proposed
     const label = `${item.proposed ? 'Propuesto · sin validar' : current ? 'Actual' : 'Bloque'}: ${b.courseName}, Sección ${academicSectionLabel(proposal,b.sectionId)}, ${names[item.day]} ${formatAcademicMinute(item.startMinute)}–${formatAcademicMinute(item.endMinute)}`
-    const content = <><span className="planning-week__type">{item.proposed ? 'Propuesto · sin validar' : `${current ? 'Actual · ' : ''}${b.componentDetails.map(c => typeLabel(c.type)).join(' + ')}`}</span><strong>{b.courseName}</strong><span className="planning-week__meta">Secc. {academicSectionLabel(proposal,b.sectionId)} · {item.proposed ? editingBlock?.roomIds.map(id => proposalResources?.rooms.find(r => r.id === id)?.name ?? id).join(', ') : b.roomNames.join(', ')}</span></>
+    const content = <><span className={`planning-week__type${item.proposed ? ' planning-week__placement-tag planning-week__placement-tag--proposed' : current ? ' planning-week__placement-tag planning-week__placement-tag--current' : ''}`}>{item.proposed ? 'Propuesto · sin validar' : `${current ? 'Actual · ' : ''}${b.componentDetails.map(c => typeLabel(c.type)).join(' + ')}`}</span><strong className="planning-week__block-course">{b.courseName}</strong><span className="planning-week__meta planning-week__block-details">Secc. {academicSectionLabel(proposal,b.sectionId)} · {item.proposed ? editingBlock?.roomIds.map(id => proposalResources?.rooms.find(r => r.id === id)?.name ?? id).join(', ') : b.roomNames.join(', ')}</span></>
     const className = `planning-week__block${item.proposed ? ' planning-week__block--proposed-preview' : ''}${selectedSectionId === b.sectionId && !item.proposed ? ' planning-week__block--selected' : ''}`
-    return item.proposed ? <div key={item.id} role="note" aria-label={label} className={className} style={style}>{content}</div> : <button key={item.id} type="button" data-kind={typeLabel(b.componentDetails[0]?.type ?? '')} data-week-section-id={b.sectionId} data-week-grid-section-id={b.sectionId} data-week-agenda-section-id={b.sectionId} aria-pressed={selectedSectionId === b.sectionId} aria-label={label} title={`${label} · ${b.teacherName}`} className={className} style={style} onClick={() => { onSelectSection(b.sectionId); if (!isLocked) onStartEditBlock(b) }}>{content}</button>
+    return item.proposed ? <div key={item.id} role="note" aria-label={label} className={className} style={style}>{content}</div> : <article key={item.id} role="button" tabIndex={0} data-kind={typeLabel(b.componentDetails[0]?.type ?? '')} data-week-section-id={b.sectionId} data-week-grid-section-id={b.sectionId} data-week-agenda-section-id={b.sectionId} aria-pressed={selectedSectionId === b.sectionId} aria-label={label} title={`${label} · ${b.teacherName}`} className={className} style={style} onClick={() => { onSelectSection(b.sectionId); if (!isLocked) onStartEditBlock(b) }} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelectSection(b.sectionId); if (!isLocked) onStartEditBlock(b) } }}>{content}</article>
   }
   return <div className="planning-week-workspace" ref={root}>
     <section className="planning-week" aria-label="Horario semanal">
@@ -85,7 +88,7 @@ export function PlanningWeekView({ proposal, catalog, proposalResources, selecte
           {days.map(day => {
             const dayItems = items.filter(i => i.day === day)
             const layout = computeWeekDayLayout(dayItems)
-            return <div key={day} className="planning-week__day-col" aria-label={names[day]} style={{ height: hours.length * 40 }}>
+            return <div key={day} className="planning-week__day-col" aria-label={`Horarios del ${names[day]}`} style={{ height: hours.length * 40 }}>
               {hours.map(minute => !windows.some(w => w.day === day && w.startMinute < minute + 60 && w.endMinute > minute) && <div key={minute} className="planning-week__unavailable" title="Fuera de la disponibilidad configurada" style={{ top: (minute-min) / 60 * 40, height: 40 }} />)}
               {dayItems.map(item => { const lane = layout.get(item.id); return renderBlock(item, { top: (item.startMinute-min) / 60 * 40 + 2, height: Math.max(24,(item.endMinute-item.startMinute) / 60 * 40 - 4), left: `calc(${lane?.leftPercent ?? 0}% + 3px)`, width: `calc(${lane?.widthPercent ?? 100}% - 6px)` }) })}
             </div>
