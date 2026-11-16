@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/Toolti
 
 export interface PlanningScopeHeaderProps {
   eyebrow?: string
+  compactWeekLabel?: string
   title: string
   proposalTitle: string
   version: number | null
@@ -32,18 +33,21 @@ export interface PlanningScopeHeaderProps {
   isChatOpen?: boolean
 }
 
-export function PlanningScopeHeader({ eyebrow, title, proposalTitle, version, nextAction, tertiaryAction,
+export function PlanningScopeHeader({ compactWeekLabel, eyebrow, title, proposalTitle, version, nextAction, tertiaryAction,
   proposalActions, scopeSwitcher, generationOptions, actionSlotRef, mobileActionSlotRef, workspaceDirty, canSave,
   draftBusy, onGuide, onSave, disabledReason, onToggleChat, isChatOpen = false,
 }: PlanningScopeHeaderProps): ReactNode {
   const narrow = useMediaQuery('(max-width: 719px)')
   const scopeBar = useContext(PlanningScopeBarContext)
-  const bar = <header className="planning-scope-bar planning-scope-header" aria-label="Ámbito de planificación">
+  const bar = <header className={`planning-scope-bar planning-scope-header${compactWeekLabel ? ' planning-scope-bar--week' : ''}`} aria-label="Ámbito de planificación">
     <span className="planning-navigation-trigger"><SidebarTrigger aria-label="Mostrar u ocultar el menú" /><span className="planning-navigation-trigger__desktop" aria-hidden="true"><List size={12} /></span><Menu className="planning-navigation-trigger__mobile" size={18} aria-hidden="true" /></span>
-    <span className="planning-scope-bar__product">Planificación académica</span>
+    <span className="planning-scope-bar__product" title="Planificación académica">Planificación académica</span>
     <span className="planning-scope-bar__divider" aria-hidden="true" />
-    {scopeSwitcher}
-    {proposalActions}
+    {!compactWeekLabel && scopeSwitcher}
+    {compactWeekLabel ? <div className="planning-week-scope" title={compactWeekLabel}>
+      <span className="planning-week-scope__eyebrow">{compactWeekLabel}</span>
+      <span className="planning-week-scope__title">{title}</span>
+    </div> : proposalActions}
     <div className="planning-scope-bar__tools">
       <Tooltip><TooltipTrigger asChild>
         <Button id="planning-tour-guide" type="button" variant="ghost" size="icon" onClick={onGuide} aria-label="Guía">
@@ -67,7 +71,7 @@ export function PlanningScopeHeader({ eyebrow, title, proposalTitle, version, ne
         <h1 id="planning-page-title">{title}</h1>
         {disabledReason && <p id="planning-save-reason" className="planning-page-head__reason">{disabledReason}</p>}
       </div>
-      {narrow && (tertiaryAction || generationOptions || mobileActionSlotRef) && <details className="planning-mobile-stage-actions"><summary>Acciones</summary>{tertiaryAction}{generationOptions}<div ref={mobileActionSlotRef} /></details>}
+      {narrow && (tertiaryAction || generationOptions || mobileActionSlotRef) && <details className="planning-mobile-stage-actions"><summary>Acciones</summary>{!compactWeekLabel && <>{tertiaryAction}{generationOptions}</>}<div ref={mobileActionSlotRef}>{compactWeekLabel && <div className="planning-week-scope-controls">{scopeSwitcher}{proposalActions}{tertiaryAction}{generationOptions}</div>}</div></details>}
       <div className="planning-page-head__actions">
         <span className="planning-mobile-provenance">Datos sintéticos · local</span>
         {tertiaryAction && <div className="planning-page-head__tertiary">{tertiaryAction}</div>}
