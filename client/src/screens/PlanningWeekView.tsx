@@ -149,13 +149,13 @@ export function PlanningWeekView({
     let frame = 0
     const reveal = () => {
       if (!pane || !selectedSectionId || revealedSelection.current === selectedSectionId) return
+      if (getComputedStyle(pane).display !== 'none') setAgendaDay(null)
       cancelAnimationFrame(frame)
       // The host restores each view's saved scroll in its next animation frame.
       // Reveal a new selection after that restoration, without resetting later switches.
       frame = requestAnimationFrame(() => {
         frame = requestAnimationFrame(() => {
           if (!root.current || getComputedStyle(pane).display === 'none') return
-          setAgendaDay(null)
           const target = Array.from(
             root.current.querySelectorAll<HTMLElement>(
               `[data-week-section-id="${CSS.escape(selectedSectionId)}"]`,
