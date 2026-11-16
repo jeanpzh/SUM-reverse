@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict'
+import { openNormativa } from '../planning-v2-helpers.mjs'
 const input = page => page.getByLabel('Pregunta normativa', { exact: true })
 const send = page => page.getByRole('button', { name: 'Enviar consulta', exact: true })
 const answers = page => page.locator('[data-normative-status]')
 const endpoint = '**/normativa/consultas'
 
-export const chatScenarios = [
+// v2: the assistance rail is closed by default and the question field only exists on the Normativa tab.
+const scenarios = [
   ['chat-real-response-and-scope', async ({ page }) => {
     let count = 0
     page.on('request', request => { if (request.url().includes('/normativa/consultas')) count++ })
@@ -116,3 +118,4 @@ export const chatScenarios = [
     assert.equal(await answers(page).count(), 1)
   }],
 ]
+export const chatScenarios = scenarios.map(([name, run]) => [name, async (context) => { await openNormativa(context.page); await run(context) }])

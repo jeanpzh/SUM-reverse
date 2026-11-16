@@ -99,3 +99,23 @@ export async function savedProposalRow(page, title) {
   await openProposalMenu(page)
   return page.locator('.academic-scheduling__saved-row').filter({ hasText: title })
 }
+
+/**
+ * Opens the assistance rail (≥1280px) or Sheet (<1280px) from the scope bar and selects a tab.
+ * The rail is closed by default (handoff §1) and holds two tabs: "Consejero" and "Normativa". The normative
+ * question field exists only while the Normativa tab is mounted; the advisor only while Consejero is.
+ */
+export async function openAssistance(page, tab) {
+  const body = page.locator('#planning-chat-body')
+  if (!await body.isVisible()) await page.locator('#planning-toggle-chat').click()
+  await body.waitFor({ state: 'visible' })
+  if (tab) {
+    const control = page.getByRole('tab', { name: tab, exact: true })
+    if (await control.getAttribute('aria-selected') !== 'true') await control.click()
+    await control.and(page.locator('[aria-selected="true"]')).waitFor()
+  }
+  return body
+}
+
+export const openNormativa = (page) => openAssistance(page, 'Normativa')
+export const openConsejero = (page) => openAssistance(page, 'Consejero')
