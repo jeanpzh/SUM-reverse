@@ -457,7 +457,8 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
           catalogCourseCount={catalog?.courses.length ?? 0} selectionDisabled={lockedDraft || draftBusy || generating}
           onSelectAllCourses={() => selectCourses(catalog?.courses.map((course) => course.courseId) ?? [])}
           invalidOfferNote={!validDemands ? 'Ingresa demanda válida y capacidad entera positiva para cada curso seleccionado. Sin selección se genera una propuesta vacía.' : undefined}
-          teachers={resources.teachers.length} rooms={resources.rooms.length} offerReady={preparationAction?.id === 'generate'}>
+          teachers={resources.teachers.length} rooms={resources.rooms.length} offerReady={preparationAction?.id === 'generate'}
+          schoolName="Sistemas" planningPeriod={planningPeriod}>
 
         </PlanningPreparationSummary>
 
@@ -468,6 +469,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
             loadingCatalog={loadingCatalog}
             catalogError={catalogError}
             onRetryCatalog={retryCatalog}
+            resources={resources}
             planningPeriod={planningPeriod}
             onApplyPeriodDefaults={applyPeriodDefaults}
             cycleFilter={cycleFilter}
