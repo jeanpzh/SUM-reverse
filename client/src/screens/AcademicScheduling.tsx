@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { AdvisorOutcome } from '../components/ai-elements/AdvisorOutcome'
 import { usePlanningAssistantDisplay } from './usePlanningAssistantDisplay'
 import { PlanningFetchLoading } from '../components/PlanningFetchLoading'
@@ -82,6 +83,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
     previousAssistantDisplay.current = { railLayout, open: chatOpen }
   }, [railLayout, chatOpen])
   const scrollerRef = useRef<HTMLDivElement | null>(null)
+  const [mobileActions, setMobileActions] = useState<HTMLDivElement | null>(null)
   const [headActions, setHeadActions] = useState<HTMLDivElement | null>(null)
   const [scopeOpen, setScopeOpen] = useState(false)
   const [draftListOpen, setDraftListOpen] = useState(false)
@@ -340,6 +342,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       proposalTitle={draftTitle}
       version={draftVersion}
       actionSlotRef={setHeadActions}
+      mobileActionSlotRef={currentStage === 'horario' ? setMobileActions : undefined}
       scopeSwitcher={<Button className="planning-scope-switcher-trigger" variant="ghost" onClick={() => setScopeOpen(true)} aria-haspopup="dialog"><span className="planning-scope-bar__faculty">FISI</span> Sistemas · {planningPeriod}<ChevronDown size={12} aria-hidden="true" /></Button>}
       generationOptions={currentStage === 'preparacion' ? <>
         <Button className="planning-generation-trigger" variant="outline" popoverTarget="planning-generation-options">Opciones de generación</Button>
@@ -535,7 +538,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
           action={generating || applyingAdvisor ? null : <Button asChild variant="link"><Link to="/local/programacion-academica" search={{ etapa: 'preparacion', vista: 'cursos' }}>Ir a Preparación</Link></Button>} />}
 
         {proposal && <>
-          <PlanningStatusBar onRetrySearch={() => void retrySearch()} key={`${proposal.proposalId}:${proposal.editVersion ?? 0}`}
+          <PlanningStatusBar mobileActionContainer={mobileActions} onRetrySearch={() => void retrySearch()} key={`${proposal.proposalId}:${proposal.editVersion ?? 0}`}
             teacherNames={Object.fromEntries([...(catalog?.referenceTeachers ?? []), ...resources.teachers].map((teacher) => [teacher.id, teacher.name]))}
             courseNames={Object.fromEntries((catalog?.courses ?? []).map((course) => [course.courseId, course.name]))}
             roomNames={Object.fromEntries([...(catalog?.referenceRooms ?? []), ...resources.rooms].map((room) => [room.id, room.name]))}
@@ -567,7 +570,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
             && state.advisorOutcome.editVersion === (proposal.editVersion ?? 0)
             && <AdvisorOutcome outcome={state.advisorOutcome} />}
 
-          <PlanningScheduleToolbar proposal={proposal} searchQuery={searchQuery} onSearchChange={setSearchQuery}
+          <PlanningScheduleToolbar mobileActionContainer={mobileActions} proposal={proposal} searchQuery={searchQuery} onSearchChange={setSearchQuery}
             teacherFilter={teacherFilter} onTeacherFilterChange={setTeacherFilter} viewMode={viewMode} onToggleView={handleToggleView} />
           <div className="planning-workbench-container">
             <div className="planning-workbench-main">
@@ -744,6 +747,7 @@ function PlanningSectionsTable({ proposal, catalog, selectedSectionId, onSelectS
   searchQuery: string
   teacherFilter: string
 }) {
+  const narrow = useMediaQuery('(max-width: 719px)')
   const blocks = useMemo(() => aggregateAcademicBlocks(proposal), [proposal])
   const query = normalizeAcademicSearch(searchQuery)
   const sections = proposal.sections.filter((section) => {
@@ -756,10 +760,34 @@ function PlanningSectionsTable({ proposal, catalog, selectedSectionId, onSelectS
   const previousSelection = useRef(selectedSectionId)
   useEffect(() => {
     if (selectedSectionId && previousSelection.current !== selectedSectionId) {
-      document.querySelector(`tr[data-section-id="${CSS.escape(selectedSectionId)}"]`)?.scrollIntoView({ block: 'nearest' })
+      document.querySelector(`[data-section-id="${CSS.escape(selectedSectionId)}"]`)?.scrollIntoView({ block: 'nearest' })
     }
     previousSelection.current = selectedSectionId
   }, [selectedSectionId])
+  if (narrow) return <div className="planning-horario-list" role="list" aria-label="Secciones de la propuesta">
+    {sections.map((section) => {
+      const assigned = blocks.filter((block) => block.sectionId === section.sectionId)
+      const pending = proposal.pending.filter((item) => item.sectionId === section.sectionId)
+      const status = !assigned.length ? 'Pendiente' : pending.length ? 'Parcial' : 'Completa'
+      const course = catalog?.courses.find((item) => item.courseId === section.courseId)
+      const types = [...new Set(assigned.flatMap((block) => block.componentDetails.map((item) => item.type)))]
+      return <div role="listitem" key={section.sectionId}>
+        <button type="button" className="planning-horario-list__row" data-section-id={section.sectionId}
+          aria-pressed={selectedSectionId === section.sectionId}
+          aria-label={`Inspeccionar sección ${academicSectionLabel(proposal, section.sectionId)} de ${section.courseName}`}
+          onClick={() => onSelectSection(section.sectionId)}>
+          <span className="planning-horario-list__eyebrow">{section.courseId} · Secc. {academicSectionLabel(proposal, section.sectionId)} · {(types.length ? types : course?.weeklySessions.map((item) => item.type) ?? []).map((type) => ({ T: 'Teoría', P: 'Práctica', L: 'Lab.' } as Record<string, string>)[type ?? ''] ?? type).join(' + ') || 'Componente'}</span>
+          <span className="planning-horario-list__name">{section.courseName}</span>
+          {status !== 'Completa' && <span className={`planning-horario-status planning-horario-status--${status}`}>{status === 'Parcial' ? '◐' : '○'} {status}</span>}
+          {assigned.map((block) => <span className="planning-horario-list__meta" key={block.sessionIds.join('|')}>
+            {status === 'Completa' ? '✓ ' : ''}{block.teacherName} · {block.roomNames.join(', ')} · {['—', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'][block.day]} {formatAcademicMinute(block.startMinute)}–{formatAcademicMinute(block.endMinute)}
+          </span>)}
+          {proposal.manuallyAdjustedSectionIds?.includes(section.sectionId) && <span className="planning-horario-list__meta">Ajustada</span>}
+        </button>
+      </div>
+    })}
+    {!sections.length && <p>No se encontraron secciones que coincidan con la búsqueda.</p>}
+  </div>
   return <div className="planning-horario-table-scroll">
     <table className="planning-horario-table" aria-label="Secciones de la propuesta">
       <thead><tr>{['Curso', 'Secc.', 'Componente', 'Docente', 'Ambiente', 'Día y hora', 'Estado'].map((label) => <th scope="col" key={label}>{label}</th>)}</tr></thead>
@@ -785,13 +813,14 @@ function PlanningSectionsTable({ proposal, catalog, selectedSectionId, onSelectS
   </div>
 }
 
-function PlanningScheduleToolbar({ proposal, searchQuery, onSearchChange, teacherFilter, onTeacherFilterChange, viewMode, onToggleView }: {
+function PlanningScheduleToolbar({ mobileActionContainer, proposal, searchQuery, onSearchChange, teacherFilter, onTeacherFilterChange, viewMode, onToggleView }: {
   proposal: AcademicProposal
   searchQuery: string
   onSearchChange: (value: string) => void
   teacherFilter: string
   onTeacherFilterChange: (value: string) => void
   viewMode: 'tabla' | 'semana'
+  mobileActionContainer?: HTMLDivElement | null
   onToggleView: (value: 'tabla' | 'semana') => void
 }) {
   const { teachers, unassigned } = useMemo(() => {
@@ -809,11 +838,7 @@ function PlanningScheduleToolbar({ proposal, searchQuery, onSearchChange, teache
     }
   }, [proposal])
 
-  return <div className="planning-schedule-toolbar">
-    <div className="planning-schedule-toolbar__search">
-      <Input type="search" placeholder="Buscar curso, sección o aula" aria-label="Buscar secciones"
-        value={searchQuery} onChange={(event) => onSearchChange(event.currentTarget.value)} />
-    </div>
+  const controls = <>
     <div className="planning-schedule-toolbar__teacher">
       <NativeSelect aria-label="Filtrar por docente" value={teacherFilter} onChange={(event) => onTeacherFilterChange(event.currentTarget.value)}>
         <option value="all">Todos los docentes</option>
@@ -827,5 +852,12 @@ function PlanningScheduleToolbar({ proposal, searchQuery, onSearchChange, teache
       <Button variant="ghost" type="button" aria-pressed={viewMode === 'tabla'} onClick={() => onToggleView('tabla')}>Tabla</Button>
       <Button variant="ghost" type="button" aria-pressed={viewMode === 'semana'} onClick={() => onToggleView('semana')}>Semana</Button>
     </div>
+  </>
+  return <div className="planning-schedule-toolbar">
+    <div className="planning-schedule-toolbar__search">
+      <Input type="search" placeholder="Buscar curso, sección o aula" aria-label="Buscar secciones"
+        value={searchQuery} onChange={(event) => onSearchChange(event.currentTarget.value)} />
+    </div>
+    {mobileActionContainer ? createPortal(<div className="planning-mobile-schedule-controls">{controls}</div>, mobileActionContainer) : controls}
   </div>
 }

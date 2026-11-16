@@ -221,7 +221,7 @@ export function PlanningWeekView({
             ? editingBlock?.roomIds
                 .map((id) => proposalResources?.rooms.find((r) => r.id === id)?.name ?? id)
                 .join(', ')
-            : b.roomNames.join(', ')}
+            : b.roomNames.join(', ')}{agenda && ` · ${b.durationMinutes / 60} h`}
         </span>
       </>
     )
@@ -378,8 +378,7 @@ export function PlanningWeekView({
               .map((item) => (
                 <li key={item.id}>
                   <span className="planning-week__agenda-time">
-                    {short[item.day]}
-                    <br />
+                    {item.day !== visibleDay && <>{short[item.day]}<br /></>}
                     {formatAcademicMinute(item.startMinute)}
                   </span>
                   {renderBlock(item, undefined, true)}

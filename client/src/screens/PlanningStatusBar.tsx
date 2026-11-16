@@ -22,6 +22,7 @@ const diagnosticLabels: Record<string, string> = {
 
 export interface PlanningStatusBarProps {
   onRetrySearch?: () => void
+  mobileActionContainer?: HTMLDivElement | null
   academicPeriod: PlanningPeriod
   proposal: AcademicProposal
   onApplyAdvisorPatches?: (patches: AcademicAdvisorPatch[]) => Promise<boolean | void> | boolean | void
@@ -80,7 +81,7 @@ function resultWording(proposal: AcademicProposal) {
   return { badgeText, headline, subtext, diagnosisText }
 }
 
-export function PlanningStatusBar({ onRetrySearch, proposal, academicPeriod, onApplyAdvisorPatches, teacherNames = {}, courseNames = {}, roomNames = {}, isLocked = false, advisorDisabledReason }: PlanningStatusBarProps) {
+export function PlanningStatusBar({ mobileActionContainer, onRetrySearch, proposal, academicPeriod, onApplyAdvisorPatches, teacherNames = {}, courseNames = {}, roomNames = {}, isLocked = false, advisorDisabledReason }: PlanningStatusBarProps) {
   const advisorDisabledReasonId = useId()
   const applyDisabledReasonId = useId()
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
@@ -174,7 +175,7 @@ export function PlanningStatusBar({ onRetrySearch, proposal, academicPeriod, onA
   const { badgeText, headline, subtext, diagnosisText } = resultWording(proposal)
 
   return (
-    <PlanningResultStrip status={proposal.status} statusId="academic-scheduling-result"
+    <PlanningResultStrip actionContainer={mobileActionContainer} status={proposal.status} statusId="academic-scheduling-result"
       label={proposal.status === 'complete' ? headline : badgeText}
       facts={[<><span className="planning-desktop-fact">{coverage.complete} de {totalSections} secciones completas</span><span className="planning-mobile-fact">{coverage.complete} de {totalSections} completas</span></>, `${coverage.partial + coverage.pending} por completar`, `${conflicts} cruces en lo asignado`]}
       action={<>
