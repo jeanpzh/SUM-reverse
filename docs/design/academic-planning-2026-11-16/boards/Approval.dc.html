@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Aprobación y publicación</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#ffffff}
+a{color:#0a0a0a}a:hover{color:#545454}
+.app{--ink:#0a0a0a;--steel:#545454;--fog:#6b6b6b;--dove:#d5d9e2;--line:#8a8f99;--cream:#f9f8f6;--sand:#f2ede5;font-family:Inter,ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:20px;color:var(--ink);background:#fff}
+.mono{font-family:"Geist Mono",ui-monospace,monospace;letter-spacing:-0.01em}
+.eyebrow{font-family:"Geist Mono",ui-monospace,monospace;font-size:11px;line-height:16px;letter-spacing:0.04em;text-transform:uppercase;color:var(--fog)}
+.btn{font:inherit;font-weight:500;font-size:14px;line-height:20px;border-radius:9999px;padding:6px 14px;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;text-decoration:none}
+.btn-primary{background:var(--ink);color:#fff}
+.btn-ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--dove)}
+.btn[disabled]{color:#6b6b6b;background:#f9f8f6;box-shadow:none;cursor:not-allowed}
+:focus-visible{outline:2px solid #0a0a0a;outline-offset:2px}
+.muted{color:var(--fog)}
+.st{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500}
+.nav a{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:9999px;text-decoration:none;color:var(--steel);font-weight:500}
+.nav a[aria-current="page"]{color:var(--ink);background:var(--sand)}
+table{border-collapse:collapse;width:100%}
+th{font-family:"Geist Mono",ui-monospace,monospace;font-size:11px;line-height:16px;letter-spacing:0.04em;text-transform:uppercase;color:var(--fog);font-weight:400;text-align:left;padding:8px 12px;border-bottom:1px solid var(--dove);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid #eceef2;white-space:nowrap}
+.step{display:flex;flex-direction:column;gap:4px;padding-top:12px;border-top:2px solid #d5d9e2;flex:1 1 140px}
+.step.done{border-top-color:#0a0a0a}
+.step.now{border-top-color:#0a0a0a}
+.check{display:grid;grid-template-columns:20px 1fr auto;gap:10px;align-items:start;padding:12px 0;border-bottom:1px solid #eceef2}
+</style>
+</helmet>
+<div class="app" style="display: flex; flex-direction: column; min-height: 1000px">
+  <header style="height: 52px; display: flex; align-items: center; gap: 16px; padding: 0 16px; border-bottom: 1px solid #d5d9e2">
+    <span style="font-weight: 500">Planificación académica</span>
+    <span style="width: 1px; height: 16px; background: #d5d9e2"></span>
+    <span>Sistemas · 2027-I</span>
+    <span class="muted">/</span>
+    <span>Propuesta base 2027-I <span class="mono muted" style="font-size: 12px">v5 · Lista para aprobación</span></span>
+  </header>
+  <div style="display: flex; flex: 1; flex-wrap: wrap">
+    <nav class="nav" aria-label="Etapas de la propuesta" style="flex: 0 0 216px; padding: 20px 12px; border-right: 1px solid #d5d9e2; display: flex; flex-direction: column; gap: 2px; box-sizing: border-box">
+      <div class="eyebrow" style="padding: 0 10px 8px">Preparación</div>
+      <a href="Preparation.dc.html">Oferta de cursos <span class="muted">✓</span></a>
+      <a href="Resources.dc.html">Docentes y ambientes <span class="muted">✓</span></a>
+      <div class="eyebrow" style="padding: 20px 10px 8px">Programación</div>
+      <a href="Main.dc.html">Horario <span class="muted">✓</span></a>
+      <a href="Review.dc.html">Revisión docente <span class="muted">✓</span></a>
+      <a href="Approval.dc.html" aria-current="page">Aprobación y publicación</a>
+    </nav>
+    <main style="flex: 999 1 560px; min-width: 0; padding: 24px 32px 40px; display: flex; flex-direction: column; gap: 28px; box-sizing: border-box">
+      <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; justify-content: space-between">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span class="eyebrow">Propuesta base 2027-I · versión 5 · guardada</span>
+          <h1 style="margin: 0; font-weight: 400; font-size: 30px; line-height: 36px; letter-spacing: -0.75px">Aprobación y publicación</h1>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap">
+          <button class="btn" disabled aria-describedby="pub-why">Publicar</button>
+          <button class="btn btn-primary" id="planning-tour-primary">Aprobar versión 5</button>
+        </div>
+      </div>
+
+      <ol aria-label="Ciclo de la versión" style="list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px">
+        <li class="step done"><span class="eyebrow">01 · Borrador</span><span>Guardada como v5</span></li>
+        <li class="step done"><span class="eyebrow">02 · Revisión docente</span><span>Ronda 2 · 38 conformes</span></li>
+        <li class="step now" aria-current="step"><span class="eyebrow" style="color: #0a0a0a">03 · Aprobación</span><span style="font-weight: 500">Lista para aprobar</span></li>
+        <li class="step"><span class="eyebrow">04 · Publicación</span><span class="muted" id="pub-why">Primero aprueba la versión</span></li>
+      </ol>
+
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px">
+        <section aria-labelledby="ready-h">
+          <h2 id="ready-h" style="margin: 0 0 4px; font-weight: 400; font-size: 24px; line-height: 32px; letter-spacing: -0.6px">Condiciones para aprobar</h2>
+          <p class="muted" style="margin: 0 0 8px">Calculadas por el servidor sobre la versión 5.</p>
+          <div class="check"><span style="color: #1a7f37">✓</span><span>Cobertura completa de componentes</span><span class="mono">148 / 148</span></div>
+          <div class="check"><span style="color: #1a7f37">✓</span><span>Respuestas docentes vigentes y conformes</span><span class="mono">38 / 38</span></div>
+          <div class="check"><span style="color: #1a7f37">✓</span><span>Sin cambios sin guardar</span><span class="mono">v5</span></div>
+          <div class="check"><span style="color: #1a7f37">✓</span><span>Sin cruces en lo asignado</span><span class="mono">0</span></div>
+          <details style="margin-top: 12px"><summary style="cursor: pointer; font-weight: 500">Ver evidencia de cada condición</summary><p class="muted" style="margin: 8px 0 0">Instantánea revisada, ronda y fecha de cada respuesta.</p></details>
+        </section>
+        <section aria-labelledby="resp-h">
+          <div style="display: flex; justify-content: space-between; align-items: baseline"><h2 id="resp-h" style="margin: 0 0 4px; font-weight: 400; font-size: 24px; line-height: 32px; letter-spacing: -0.6px">Respuestas docentes</h2><a href="#">Abrir revisión</a></div>
+          <p class="muted" style="margin: 0 0 8px">Ronda 2 sobre la instantánea v5.</p>
+          <table aria-label="Respuestas docentes, ronda 2">
+            <thead><tr><th>Docente</th><th>Estado</th><th>Observación</th></tr></thead>
+            <tbody>
+              <tr><td>D. Quispe</td><td><span class="st" style="color: #1a7f37">✓ Conforme</span></td><td class="muted">—</td></tr>
+              <tr><td>R. Salazar</td><td><span class="st" style="color: #1a7f37">✓ Conforme</span></td><td class="muted">—</td></tr>
+              <tr><td>M. Huamán</td><td><span class="st" style="color: #1a7f37">✓ Conforme</span></td><td>Prefiere el laboratorio por la mañana.</td></tr>
+              <tr><td colspan="3" class="muted" style="font-size: 13px">35 más · todas conformes</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+
+      <section aria-labelledby="ver-h">
+        <h2 id="ver-h" style="margin: 0 0 12px; font-weight: 400; font-size: 24px; line-height: 32px; letter-spacing: -0.6px">Versiones</h2>
+        <table aria-label="Versiones de la propuesta">
+          <thead><tr><th>Versión</th><th>Estado</th><th>Guardada</th><th>Cobertura</th><th></th></tr></thead>
+          <tbody>
+            <tr><td class="mono">v5</td><td><span class="st">● Lista para aprobación</span></td><td class="mono muted">14 nov 2026 · 18:20</td><td class="mono">148 / 148</td><td style="text-align: right" class="muted">Actual</td></tr>
+            <tr><td class="mono">v4</td><td><span class="st" style="color: #6b6b6b">○ Revisión invalidada</span></td><td class="mono muted">12 nov 2026 · 11:05</td><td class="mono">142 / 148</td><td></td></tr>
+            <tr><td class="mono">2026-II · v7</td><td><span class="st" style="color: #1a7f37">✓ Publicada · Vigente</span></td><td class="mono muted">03 jul 2026 · 09:40</td><td class="mono">151 / 151</td><td style="text-align: right"><button class="btn btn-ghost" style="padding: 2px 12px; font-size: 13px">Crear nuevo borrador</button></td></tr>
+          </tbody>
+        </table>
+        <p class="muted" style="margin: 8px 0 0; font-size: 12px; line-height: 16px">Una versión publicada es de solo lectura. Para cambiarla se crea un nuevo borrador; la versión anterior permanece intacta.</p>
+      </section>
+
+      <section aria-labelledby="pub-h" style="border-top: 1px solid #d5d9e2; padding-top: 24px; display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+          <h2 id="pub-h" style="margin: 0 16px 0 0; font-weight: 400; font-size: 24px; line-height: 32px; letter-spacing: -0.6px">Publicaciones</h2>
+          <label style="display: flex; align-items: center; gap: 8px"><span class="muted">Consultar publicación</span><select style="font: inherit; height: 32px; border-radius: 6px; border: 1px solid #8a8f99; padding: 0 8px"><option>PUB-0007 · 2026-II · v7</option></select></label>
+          <span style="flex: 1"></span>
+          <button class="btn btn-ghost">Actualizar publicaciones</button>
+          <button class="btn btn-ghost">Actualizar vista previa</button>
+        </div>
+        <details><summary style="cursor: pointer; font-weight: 500">Vista previa de la publicación · 151 secciones</summary><p class="muted" style="margin: 8px 0 0">Tabla de solo lectura: código, asignatura, ciclo, sección, capacidad, docente, ambiente, día, horario y componentes.</p></details>
+        <details open style="background: #f9f8f6; border-radius: 12px; padding: 12px 16px"><summary style="cursor: pointer; font-weight: 500">Alcance de la activación · simulación local</summary>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px">
+            <span style="flex: 1 1 320px; color: #545454">Acciones de la simulación local sobre la publicación seleccionada. Cada una pide confirmación.</span>
+            <button class="btn btn-ghost" style="background: #fff">Actualizar ofertas operativas</button>
+            <button class="btn btn-ghost" style="background: #fff">Activar publicación seleccionada</button>
+          </div>
+        </details>
+      </section>
+
+      <div role="dialog" aria-labelledby="pubdlg-h" style="align-self: flex-end; width: 440px; background: #fff; border-radius: 16px; box-shadow: 0 0 0 1px rgba(0,0,0,0.06), 0 18px 40px -24px rgba(15,23,42,0.18); padding: 24px; display: flex; flex-direction: column; gap: 12px">
+        <span class="eyebrow">Confirmación posterior · ejemplo tras aprobar</span>
+        <h2 id="pubdlg-h" style="margin: 0; font-weight: 400; font-size: 24px; line-height: 30px; letter-spacing: -0.6px">¿Publicar la versión 5?</h2>
+        <p style="margin: 0; color: #545454">La publicación queda disponible para consulta y es inmutable. Publicar es una confirmación distinta de aprobar.</p>
+        <div style="display: flex; gap: 8px; justify-content: flex-end"><button class="btn btn-ghost">Cancelar</button><button class="btn btn-primary">Publicar versión 5</button></div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
