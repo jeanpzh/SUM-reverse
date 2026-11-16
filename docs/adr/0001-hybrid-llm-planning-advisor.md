@@ -7,3 +7,5 @@ El **Consejero de planificación** calcula déficits matemáticos y parches cand
 - **LLM como generador o reparador directo de horarios**: rechazado porque cualquier alucinación violaría restricciones duras de cruce docente/aula, cobertura exacta de componentes y trazabilidad de la **Propuesta**.
 - **Llamadas al proveedor LLM desde el cliente React**: rechazado porque expondría credenciales (`API_KEY`) en el navegador y rompería la frontera de seguridad de `VITE_*`.
 - **Enviar nombres propios al proveedor externo**: rechazado para evitar fuga de datos personales si el entorno local se alimenta con plantillas docentes reales; el servidor reemplaza identidades por alias opacos (`DOCENTE_01`) en tránsito y rehidrata al responder.
+
+> Enmendado por [ADR-0003](./0003-agentic-advisor-exploration.md) (2026-11-16) para habilitar exploración acotada del catálogo de recomendaciones por el agente LLM.
