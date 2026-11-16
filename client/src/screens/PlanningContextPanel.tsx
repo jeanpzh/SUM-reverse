@@ -20,6 +20,11 @@ const TABS: ReadonlyArray<{ id: PlanningAssistTab; label: string }> = [
   { id: 'normativa', label: 'Normativa' },
 ]
 
+// Stable identity: React re-runs a changing ref callback on every render.
+function bindAdvisorSlot(element: HTMLDivElement | null) {
+  planningAssist.setSlot(element)
+}
+
 export function PlanningContextPanel({ academicPeriod, chat, expanded, onExpandedChange, onClose }: PlanningContextPanelProps) {
   const { tab, advisors, openRequests } = usePlanningAssist()
   const tabRefs = useRef<Record<PlanningAssistTab, HTMLButtonElement | null>>({ consejero: null, normativa: null })
@@ -75,10 +80,10 @@ export function PlanningContextPanel({ academicPeriod, chat, expanded, onExpande
         <div role="tabpanel" id="planning-assist-panel-consejero" aria-labelledby="planning-assist-tab-consejero"
           hidden={tab !== 'consejero'} className="planning-assist__panel planning-assist__panel--advisor">
           {tab === 'consejero' && <>
-            <div ref={(element) => { planningAssist.setSlot(element); return () => planningAssist.setSlot(null) }} className="planning-assist__slot" />
+            <div ref={bindAdvisorSlot} className="planning-assist__slot" />
             {advisors === 0 && <div className="planning-assist__empty">
               <span className="planning-eyebrow">Consejero de planificación</span>
-              <p>Genera una propuesta en Horario para consultar al consejero.</p>
+              <p>Selecciona los cursos y revisa los recursos en Preparación para generar una propuesta.</p>
             </div>}
           </>}
         </div>

@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import './PlanningStatusBar.css'
 import { PlanningAssistAdvisor } from './PlanningAssistAdvisor'
 import { planningAssist, usePlanningAssist } from './PlanningAssistState'
+import { usePlanningSessionContext } from '../components/PlanningSessionProvider'
 import { PlanningResultStrip } from './PlanningResultStrip'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
@@ -95,6 +96,7 @@ export function PlanningStatusBar({ onRetrySearch, proposal, academicPeriod, onA
   useEffect(() => () => requestRef.current?.abort(), [proposal.proposalId, editVersion])
   useEffect(() => planningAssist.registerAdvisor(), [])
   const { slot: advisorSlot } = usePlanningAssist()
+  const draftVersion = usePlanningSessionContext().state.draft.version
 
   const currentAdvice = advisorData?.proposalId === proposal.proposalId && advisorData.editVersion === editVersion
     ? advisorData : null
@@ -260,7 +262,7 @@ export function PlanningStatusBar({ onRetrySearch, proposal, academicPeriod, onA
         </DialogContent>
       </Dialog>
       {advisorSlot && createPortal(<PlanningAssistAdvisor
-        academicPeriod={academicPeriod} editVersion={editVersion} openSections={coverage.partial + coverage.pending}
+        academicPeriod={academicPeriod} draftVersion={draftVersion} openSections={coverage.partial + coverage.pending}
         requested={advisorRequested} loading={advisorLoading} error={advisorError} advice={currentAdvice} impact={impact}
         selectedIds={selectedRecIds} applying={applying} isLocked={isLocked} canApply={Boolean(onApplyAdvisorPatches)}
         previewCurrent={previewCurrent} applyDisabledReason={applyDisabledReason} applyDisabledReasonId={applyDisabledReasonId}

@@ -9,7 +9,8 @@ import { Alert, AlertDescription } from '../components/ui/Alert'
 
 export interface PlanningAssistAdvisorProps {
   academicPeriod: PlanningPeriod
-  editVersion: number
+  /** Saved version of the draft being analysed (null before the first save). */
+  draftVersion: number | null
   /** Sections still partial or pending in the proposal being analysed. */
   openSections: number
   /** Whether the advisor was consulted for this proposal version. */
@@ -45,11 +46,12 @@ const sectionsLabel = (count: number) => count === 0 ? 'Sin secciones por comple
 export function PlanningAssistAdvisor(props: PlanningAssistAdvisorProps) {
   const { advice, loading, error, requested, selectedIds, applying, isLocked } = props
   const title = sectionsLabel(props.openSections)
+  const versionLabel = props.draftVersion === null ? 'sin versión' : `v${props.draftVersion}`
 
   if (!requested || (!loading && !error && !advice)) {
     return <div className="planning-assist-advisor" data-advisor-state="idle">
       <div className="planning-assist-advisor__head">
-        <span className="planning-eyebrow">Consejero de planificación · v{props.editVersion}</span>
+        <span className="planning-eyebrow">Consejero de planificación · {versionLabel}</span>
         <h2 className="planning-assist-advisor__title">{title}</h2>
       </div>
       <p className="planning-assist-advisor__note">El consejero analiza qué limita la cobertura y propone recomendaciones que tú confirmas. No asigna horarios.</p>
@@ -71,7 +73,7 @@ export function PlanningAssistAdvisor(props: PlanningAssistAdvisorProps) {
 
   return <div className="planning-assist-advisor" data-advisor-state={loading ? 'loading' : error && !advice ? 'error' : 'ready'} aria-busy={loading}>
     <div className="planning-assist-advisor__head">
-      <span className="planning-eyebrow">{advice ? `${modeLabel} · v${props.editVersion}` : `Consejero de planificación · v${props.editVersion}`}</span>
+      <span className="planning-eyebrow">{advice ? `${modeLabel} · ${versionLabel}` : `Consejero de planificación · ${versionLabel}`}</span>
       <h2 className="planning-assist-advisor__title">{title}</h2>
     </div>
     {loading && <>
