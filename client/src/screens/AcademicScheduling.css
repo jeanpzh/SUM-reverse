@@ -247,3 +247,85 @@
   font-size: var(--planning-text-xs);
   line-height: 16px;
 }
+
+/* Ticket 4: Horario master/detail. Rendering stays local to the planning route. */
+.planning-root .planning-stage-panel--horario .planning-schedule-toolbar { margin: 0; padding: 16px 0 12px; gap: 8px; }
+.planning-root .planning-stage-panel--horario .planning-schedule-toolbar__search { flex: 0 1 280px; min-width: min(192px, 100%); max-width: 100%; }
+.planning-root .planning-stage-panel--horario .planning-schedule-toolbar__search input { padding: 6px 10px; }
+.planning-root .planning-stage-panel--horario .planning-schedule-toolbar__teacher { flex: 0 1 auto; }
+.planning-root .planning-stage-panel--horario .planning-schedule-toolbar :is(input, select) { height: 32px; min-height: 32px; border: 1px solid var(--plan-control-border); border-radius: 6px; background: var(--plan-paper); font: 14px/20px var(--plan-font-sans); color: var(--plan-ink); box-shadow: none; }
+.planning-horario-count { color: var(--plan-fog); font-size: 13px; line-height: 18px; }
+.planning-root .planning-stage-panel--horario .planning-sections__view-toggle { margin-left: 0; padding: 2px; border: 0; border-radius: 9999px; background: var(--plan-cream); }
+.planning-root .planning-stage-panel--horario .planning-sections__view-toggle button { height: 28px; min-height: 28px; padding: 4px 14px; border: 0; border-radius: 9999px; font: 500 14px/20px var(--plan-font-sans); color: var(--plan-steel); }
+.planning-root .planning-stage-panel--horario .planning-sections__view-toggle [aria-pressed='true'] { color: var(--plan-on-ink); background: var(--plan-ink); }
+.planning-root .planning-stage-panel--horario .planning-workbench-container { margin: 0; }
+.planning-horario-table-scroll { min-width: 0; width: 100%; overflow: auto; border-top: 1px solid var(--plan-dove); }
+.planning-root .planning-horario-table { border-collapse: collapse; width: 100%; table-layout: auto; text-align: left; font: 14px/20px var(--plan-font-sans); }
+.planning-root .planning-horario-table :is(th, td) { padding: 7px 12px; white-space: nowrap; border-bottom: 1px solid var(--plan-dove); height: 40px; box-sizing: border-box; }
+.planning-root .planning-horario-table th { position: sticky; top: 0; z-index: 1; color: var(--plan-fog); background: var(--plan-paper); font: 400 11px/16px var(--plan-font-mono); letter-spacing: .04em; text-transform: uppercase; }
+.planning-root .planning-horario-table td { background: var(--plan-paper); }
+.planning-root .planning-horario-table tr:hover td { background: var(--plan-cream); }
+.planning-root .planning-horario-table tr[aria-selected='true'] td { background: var(--plan-sand); }
+.planning-root .planning-horario-table tr[aria-selected='true'] td:first-child { box-shadow: inset 3px 0 0 var(--plan-ink); }
+.planning-root .planning-horario-table td button { min-height: 24px; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; text-align: left; }
+.planning-horario-code { color: var(--plan-fog); font: 12px/16px var(--plan-font-mono); }
+.planning-horario-mono { font-family: var(--plan-font-mono); font-variant-numeric: tabular-nums; }
+.planning-horario-table i { color: var(--plan-fog); }
+.planning-horario-status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; }
+.planning-horario-status--Completa { color: var(--plan-success); }
+.planning-horario-status--Parcial { color: var(--plan-warning); }
+.planning-horario-status--Pendiente { color: var(--plan-danger); }
+.planning-root .planning-detail-divider { flex: none; height: 20px; background: var(--plan-paper); border-top: 1px solid var(--plan-dove); cursor: row-resize; }
+.planning-detail-divider::before { content: ''; width: 32px; height: 3px; background: var(--plan-dove); border-radius: 9999px; }
+.planning-root .planning-workspace__detail { background: var(--plan-paper); }
+.planning-root .planning-section-detail { padding: 0 32px 24px; border: 0; background: var(--plan-paper); color: var(--plan-ink); font: 14px/20px var(--plan-font-sans); }
+.planning-root .planning-section-detail .planning-inspector__header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 0; margin: 0; border: 0; }
+.planning-section-detail .planning-inspector__heading-info { min-width: 0; }
+.planning-root .planning-section-detail .planning-inspector__meta { margin: 0 0 2px; color: var(--plan-fog); font: 11px/16px var(--plan-font-mono); text-transform: uppercase; letter-spacing: .04em; overflow-wrap: anywhere; }
+.planning-root .planning-section-detail .planning-inspector__title { margin: 0; color: var(--plan-ink); font: 400 24px/32px var(--plan-font-sans); letter-spacing: -.025em; overflow-wrap: anywhere; }
+.planning-section-detail .planning-inspector__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.planning-root .planning-section-detail .planning-inspector__actions button { padding: 6px 14px; min-height: 32px; border: 1px solid var(--plan-dove); border-radius: 9999px; background: transparent; color: var(--plan-ink); font: 500 14px/20px var(--plan-font-sans); box-shadow: none; }
+.planning-root .planning-section-detail .planning-inspector__actions .planning-inspector__close-btn { width: 32px; padding: 0; border: 0; }
+.planning-detail-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+.planning-detail-card { display: flex; flex-direction: column; gap: 10px; background: var(--plan-cream); border-radius: 12px; padding: 16px; min-width: 0; overflow-wrap: anywhere; }
+.planning-detail-card header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-weight: 500; }
+.planning-detail-card dl { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 4px 12px; margin: 0; }
+.planning-detail-card dt { color: var(--plan-fog); }
+.planning-detail-card dd, .planning-detail-card p { margin: 0; }
+.planning-detail-card__footnote { color: var(--plan-fog); font-size: 12px; line-height: 16px; }
+.planning-root :is(.planning-inspector, .planning-horario-table, .planning-schedule-toolbar, .planning-detail-divider) :focus-visible,
+.planning-root .planning-detail-divider:focus-visible { outline: 2px solid var(--plan-ink); outline-offset: 2px; }
+.planning-root .planning-inspector--sheet.planning-inspector--sheet { inset: auto 0 0; width: 100%; height: auto; max-height: 80dvh; padding: 20px 24px 24px; border-top: 1px solid var(--plan-dove); border-radius: 16px 16px 0 0; box-shadow: var(--plan-shadow-float); }
+@media (max-width: 1279px) { .planning-root .planning-section-detail { padding-inline: 24px; } }
+@media (max-width: 719px) {
+  .planning-root .planning-section-detail { padding: 16px; }
+  .planning-detail-cards { grid-template-columns: minmax(0, 1fr); }
+  .planning-root .planning-section-detail .planning-inspector__actions button,
+  .planning-root .planning-stage-panel--horario .planning-schedule-toolbar :is(input, select, button) { min-height: 44px; height: auto; }
+  .planning-root .planning-stage-panel--horario .planning-schedule-toolbar__search { flex-basis: 100%; }
+  .planning-root .planning-stage-panel--horario .planning-schedule-toolbar__teacher { flex: 1 1 100%; }
+  .planning-root .planning-stage-panel--horario .planning-sections__view-toggle { margin-left: 0; }
+}
+.planning-root .planning-horario-table :is(th, td) { text-align: left; border-inline: 0; }
+.planning-root .planning-detail-card :is(dt, dd) { width: auto; min-width: 0; margin: 0; padding: 0; font-weight: 400; }
+.planning-root .planning-detail-card dl { width: 100%; }
+.planning-root .planning-detail-card dt { white-space: nowrap; }
+.planning-root .planning-horario-table-scroll { max-height: 360px; }
+
+@media (max-width: 719px) { .planning-root .planning-section-detail .planning-inspector__actions .planning-inspector__close-btn { width: 44px; } }
+.planning-root .planning-stage-panel--horario .planning-workbench-container { margin-inline: -32px; }
+@media (max-width: 1279px) { .planning-root .planning-stage-panel--horario .planning-workbench-container { margin-inline: -24px; } }
+@media (max-width: 719px) { .planning-root .planning-stage-panel--horario .planning-workbench-container { margin-inline: -16px; } }
+/* Override inherited console cell and panel rules at the planning-only seam. */
+.planning-root .planning-horario-table .planning-horario-mono { font-family: var(--plan-font-mono); }
+.planning-root .planning-stage-panel--horario .planning-workbench-container { max-width: none; }
+.planning-root .planning-workspace__detail { padding: 0; }
+.planning-root .planning-section-detail { gap: 0; }
+.planning-root .planning-stage-panel--horario .planning-schedule-toolbar__teacher { flex-basis: 180px; }
+.planning-root .planning-detail-card header > span:last-child { font-size: 13px; }
+@media (max-width: 719px) {
+  .planning-root .planning-stage-panel--horario .planning-schedule-toolbar__teacher { flex-basis: 100%; }
+}
+
+.planning-horario-toolbar-spacer { flex: 1; }
+.planning-root .planning-horario-table td { border-bottom-color: color-mix(in srgb, var(--plan-dove) 45%, var(--plan-paper)); }
