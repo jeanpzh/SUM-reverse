@@ -20,7 +20,7 @@ import {
   formatAcademicDuration,
   formatAcademicMinute,
 } from '../data/academicScheduling'
-import { formatAvailabilitySummary } from '../data/academicResources'
+
 
 export interface PlanningInspectorProps {
   sectionId: string | null
@@ -32,6 +32,7 @@ export interface PlanningInspectorProps {
   adjustmentError: string | null
   docked?: boolean
   isLocked?: boolean
+  onViewWeek: () => void
   onClose: () => void
   onStartEdit: (block: ReturnType<typeof aggregateAcademicBlocks>[number]) => void
   onCancelEdit: () => void
@@ -50,6 +51,7 @@ export function PlanningInspector({
   docked = false,
   isLocked = false,
   onClose,
+  onViewWeek,
   onStartEdit,
   onCancelEdit,
   onSubmitEdit,
@@ -80,36 +82,26 @@ export function PlanningInspector({
       .sort((a, b) => a.startMinute - b.startMinute || a.sessionId.localeCompare(b.sessionId))
     : []
 
-  const eligibleTeachers = (proposalResources?.teachers ?? []).filter(
-    (t: AcademicPlanningResources['teachers'][number]) => t.courseIds.includes(section.courseId)
-  )
-  const course = catalog?.courses.find((c) => c.courseId === section.courseId)
-  const coursePattern = course?.planningPatterns?.[0]
-  const requiresLab = Boolean(
-    coursePattern?.weeklySessions.some((s) => s.type === 'laboratorio') ||
-    course?.weeklySessions.some((s) => s.type === 'laboratorio')
-  )
-
+  const assignedComponents = new Map<string, AcademicProposal['assignments']>()
+  for (const item of proposal.assignments.filter((item) => item.sectionId === sectionId)) {
+    const key = `${item.sessionType ?? 'Componente'}|${item.teacherId}|${item.roomId}`
+    assignedComponents.set(key, [...(assignedComponents.get(key) ?? []), item])
+  }
   const dayNamesFull = ['—', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
   const sLabel = academicSectionLabel(proposal, section.sectionId)
 
-  const title = <h4 className="planning-inspector__title">{section.courseName} · Sección {sLabel}</h4>
+  const title = <h2 id="planning-detail-title" className="planning-inspector__title">{section.courseName}</h2>
   const body = (<>
         <div className="planning-inspector__header">
           <div className="planning-inspector__heading-info">
-            {docked ? title : <SheetTitle asChild>{title}</SheetTitle>}
-            <p className="planning-inspector__meta">
-              {section.courseId} · Capacidad {section.capacity}
-            </p>
+            <p className="planning-inspector__meta">{section.courseId} · Sección {sLabel} · {section.capacity} vacantes</p>
+            {docked ? title : <SheetTitle className="planning-inspector__title">{section.courseName}</SheetTitle>}
           </div>
-          <Button variant="ghost"
-            type="button"
-            className="planning-inspector__close-btn"
-            onClick={onClose}
-            aria-label="Cerrar inspector"
-          >
-            <X size={16} aria-hidden="true" />
-          </Button>
+          <div className="planning-inspector__actions">
+            <Button variant="outline" onClick={onViewWeek}>Ver en Semana</Button>
+            <Button variant="outline" disabled={isLocked || !sectionBlocks.length || adjusting} onClick={() => onStartEdit(sectionBlocks[0])}>Editar horario</Button>
+            <Button variant="ghost" type="button" className="planning-inspector__close-btn" onClick={onClose} aria-label="Cerrar detalle"><X size={14} aria-hidden="true" /></Button>
+          </div>
         </div>
 
         {isEditing && activeBlock && (
@@ -296,117 +288,26 @@ export function PlanningInspector({
           </section>
         )}
 
-        {!isEditing && (
-          <div className="planning-inspector__content">
-            {sectionBlocks.length > 0 && (
-              <div className="planning-inspector__section">
-                <div className="planning-inspector__section-header">
-                  <h5 className="planning-inspector__section-title">Bloques asignados</h5>
-                  <Button variant="outline"
-                    type="button"
-                    className="planning-inspector__edit-trigger "
-                    disabled={isLocked}
-                    onClick={() => onStartEdit(sectionBlocks[0])}
-                  >
-                    Editar horario
-                  </Button>
-                </div>
-                <div className="planning-inspector__blocks-list">
-                  {sectionBlocks.map((b, idx) => (
-                    <div key={`${b.sectionId}-${idx}`} className="planning-inspector__block-card">
-                      <dl className="planning-inspector__block-facts">
-                        <div><dt>Docente</dt><dd>{b.teacherName}</dd></div>
-                        <div><dt>Aula</dt><dd>{b.roomNames.join(', ')}</dd></div>
-                        <div><dt>Día</dt><dd>{dayNamesFull[b.day]}</dd></div>
-                        <div><dt>Horario</dt><dd>{formatAcademicMinute(b.startMinute)}–{formatAcademicMinute(b.endMinute)}</dd></div>
-                      </dl>
-                      <div className="planning-inspector__block-components">
-                        {b.componentDetails.map((c, cIdx) => (
-                          <Badge variant="secondary" key={cIdx} className="planning-inspector__component-tag">
-                            {c.type} · {formatAcademicDuration(c.durationMinutes)}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {pendingComponents.length > 0 && (
-              <div className="planning-inspector__section planning-inspector__section--pending typeset typeset-planning">
-                <div className="not-typeset flex items-center gap-2">
-                  <Badge variant="warning">
-                    {pendingComponents.length} {pendingComponents.length === 1 ? 'componente pendiente' : 'componentes pendientes'}
-                  </Badge>
-                </div>
-                <p className="planning-inspector__explanation">
-                  {proposal.status === 'search-limit'
-                    ? 'La búsqueda alcanzó su límite. No prueba que no exista solución.'
-                    : 'Sin solución completa en el dominio configurado.'}
-                </p>
-                <ul className="planning-inspector__pending-list">
-                  {pendingComponents.map((p, index) => {
-                    const sessionDef = coursePattern?.weeklySessions[index] ?? course?.weeklySessions[index]
-                    const rawType = sessionDef?.type?.trim() ?? ''
-                    const typeMap: Record<string, string> = {
-                      t: 'Teoría',
-                      teoria: 'Teoría',
-                      teoría: 'Teoría',
-                      p: 'Práctica',
-                      practica: 'Práctica',
-                      práctica: 'Práctica',
-                      l: 'Laboratorio',
-                      lab: 'Laboratorio',
-                      laboratorio: 'Laboratorio',
-                    }
-                    const typeLabel = rawType
-                      ? (typeMap[rawType.toLowerCase()] ?? (rawType.charAt(0).toUpperCase() + rawType.slice(1)))
-                      : `Componente ${index + 1}`
-                    return (
-                      <li key={p.sessionId}>
-                        <strong>{typeLabel}</strong> · {formatAcademicDuration(p.durationMinutes)}
-                      </li>
-                    )
-                  })}
-                </ul>
-
-                <h4 className="planning-inspector__section-title">Restricciones de planificación</h4>
-                <ul className="planning-inspector__constraints-list">
-                  <li>Capacidad mínima: <strong>{section.capacity}</strong></li>
-                  {requiresLab && <li>Ambiente requerido: <strong>Laboratorio</strong></li>}
-                  {eligibleTeachers.length > 0 ? (
-                    <li>
-                      {eligibleTeachers.length === 1 ? 'Docente habilitado: ' : 'Docentes habilitados: '}
-                      <strong>{eligibleTeachers.map((t: AcademicPlanningResources['teachers'][number]) => t.name).join(', ')}</strong>
-                    </li>
-                  ) : (
-                    <li>Sin docentes habilitados registrados</li>
-                  )}
-                </ul>
-
-                {eligibleTeachers.length > 0 && (
-                  <div className="planning-inspector__availability not-typeset">
-                    <h6 className="planning-inspector__avail-title">
-                      Disponibilidad ({eligibleTeachers[0].name})
-                    </h6>
-                    <p className="planning-inspector__avail-summary">
-                      {formatAvailabilitySummary(eligibleTeachers[0].availability)} · Disponible
-                    </p>
-                    <p className="planning-inspector__avail-note">
-                      No se asignó docente para esta sección pendiente.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+        {!isEditing && <div className="planning-detail-cards">
+          {[...assignedComponents.values()].map((items) => {
+            const item = items[0]
+            const room = proposalResources?.rooms.find((room) => room.id === item.roomId)
+            return <article className="planning-detail-card" key={item.sessionId}>
+              <header><span>{item.sessionType ?? 'Componente'}</span><span className="planning-horario-status--Completa">✓ Asignada</span></header>
+              <dl><dt>Docente</dt><dd>{item.teacherName}</dd><dt>Ambiente</dt><dd>{item.roomName}{room ? ` · ${room.capacity}` : ''}</dd><dt>Horario</dt><dd className="planning-horario-mono">{items.map((session) => `${dayNamesFull[session.day].slice(0, 3)} ${formatAcademicMinute(session.startMinute)}–${formatAcademicMinute(session.endMinute)}`).join(' · ')}</dd></dl>
+            </article>
+          })}
+          {pendingComponents.map((item) => <article className="planning-detail-card" key={item.sessionId}>
+            <header><span>{catalog?.courses.find((course) => course.courseId === section.courseId)?.weeklySessions.find((session) => item.sessionId === `session:${JSON.stringify([sectionId, session.id])}`)?.type ?? 'Componente'}</span><span className="planning-horario-status--Pendiente">○ Pendiente</span></header>
+            <p>{proposal.diagnostics.filter((diagnostic) => diagnostic.sessionIds.includes(item.sessionId)).map((diagnostic) => diagnostic.message).join(' ') || 'Sin motivo registrado'}</p>
+            <p className="planning-detail-card__footnote">Causa devuelta por el motor. Un límite de búsqueda no prueba que no exista solución.</p>
+          </article>)}
+        </div>}
   </>)
 
   if (docked) {
     return (
-      <section className="planning-inspector planning-inspector--docked"
+      <section className="planning-section-detail planning-inspector planning-inspector--docked"
         aria-label={`Inspector de sección ${sLabel}`}
         onKeyDown={(event) => { if (event.key === 'Escape') onClose() }}>
         {body}
@@ -416,11 +317,13 @@ export function PlanningInspector({
   return (
     <Sheet open modal={false} onOpenChange={(open) => { if (!open) onClose() }}>
       <SheetContent
-        className="planning-inspector planning-inspector--sheet"
+        side="bottom"
+        className="planning-section-detail planning-inspector planning-inspector--sheet"
         aria-label={`Inspector de sección ${sLabel}`}
         aria-describedby={undefined}
         showCloseButton={false}
         onOpenAutoFocus={(event) => event.preventDefault()}
+        onCloseAutoFocus={(event) => event.preventDefault()}
         onInteractOutside={(event) => event.preventDefault()}
       >
         {body}

@@ -2,9 +2,9 @@ import { AdvisorOutcome } from '../components/ai-elements/AdvisorOutcome'
 import { usePlanningAssistantDisplay } from './usePlanningAssistantDisplay'
 import { PlanningFetchLoading } from '../components/PlanningFetchLoading'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { academicSectionCoverage, formatAcademicInterval } from '../data/academicScheduling'
-import type { PlanningPeriod } from '../data/academicScheduling'
+import { useCallback, useMemo, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { academicSectionCoverage, academicSectionLabel, aggregateAcademicBlocks, formatAcademicMinute, normalizeAcademicSearch, formatAcademicInterval } from '../data/academicScheduling'
+import type { AcademicCatalog, AcademicProposal, PlanningPeriod } from '../data/academicScheduling'
 import type { AcademicAdjustment, AcademicAllocationPolicy, AcademicDraftState, AcademicPlanningResources } from '../../../shared/programacion-academica-api.mjs'
 import { usePlanningSessionContext } from '../components/PlanningSessionProvider'
 import type { PlanningPreparationView, PlanningBlock } from '../data/planningSession'
@@ -28,9 +28,7 @@ import { Tour, TourPortal, TourSpotlight, TourSpotlightRing, TourStep, TourHeade
 import { PlanningResultStrip } from './PlanningResultStrip'
 import { PlanningScopeHeader } from './PlanningScopeHeader'
 import { PlanningPreparationSummary } from './PlanningPreparationSummary'
-import { PlanningScheduleToolbar } from './PlanningScheduleToolbar'
 import { PlanningStatusBar, PlanningSearchDetails } from './PlanningStatusBar'
-import { PlanningSectionsTable } from './PlanningSectionsTable'
 import { PlanningInspector } from './PlanningInspector'
 import { PlanningWeekView } from './PlanningWeekView'
 import { useDefaultLayout } from 'react-resizable-panels'
@@ -42,9 +40,9 @@ import { PlanningContextPanel } from './PlanningContextPanel'
 import { ModeToggle } from '../components/mode-toggle'
 import { ChevronDown } from 'lucide-react'
 import type { PlanningStage } from '../routes/local.programacion-academica'
-import './AcademicScheduling.css'
 import './PlanningWorkbench.css'
 import './PlanningSections.css'
+import './AcademicScheduling.css'
 
 const GUIDE_STEPS = [
   ['nav', 'Recorrido', 'El menú sigue el orden del trabajo: preparar la oferta, programar, revisar y publicar.'],
@@ -238,8 +236,12 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
   const chatInSheet = chatOpen && !chatInRail
   const railOpen = chatInRail
   const closeInspector = () => {
+    const selectedRow = selectedSectionId
+      ? document.querySelector<HTMLButtonElement>(`tr[data-section-id="${CSS.escape(selectedSectionId)}"] button`)
+      : null
     setSelectedSectionId(null)
     cancelBlockReview()
+    requestAnimationFrame(() => selectedRow?.focus({ preventScroll: true }))
   }
   const closeChat = () => {
     setChatOpen(false)
@@ -578,13 +580,10 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
                 <PlanningSectionsTable
                   proposal={proposal}
                   catalog={catalog}
-                  demands={demands}
                   selectedSectionId={selectedSectionId}
                   onSelectSection={(sectionId) => {
                     setSelectedSectionId(sectionId)
                   }}
-                  onEditBlock={startBlockReview}
-                  isLocked={lockedDraft || draftBusy}
                   searchQuery={searchQuery}
                   teacherFilter={teacherFilter}
                 />
@@ -628,6 +627,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
                 onCancelEdit={cancelBlockReview}
                 onSubmitEdit={submitBlockReview}
                 onChangeEditingBlock={setEditingBlock}
+                onViewWeek={() => handleToggleView('semana')}
               />
             )}
           </div>
@@ -671,7 +671,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
     </div>
     </ResizablePanel>
     {inspectorDocked && proposal && <>
-      <ResizableHandle withHandle aria-label="Redimensionar detalle de sección" />
+      <ResizableHandle className="planning-detail-divider" aria-label="Redimensionar detalle de sección" />
       <ResizablePanel id="planning-section-detail" defaultSize="35%" minSize="20%" maxSize="60%" className="planning-workspace__panel planning-workspace__detail">
               <PlanningInspector docked
                 sectionId={selectedSectionId}
@@ -687,6 +687,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
                 onCancelEdit={cancelBlockReview}
                 onSubmitEdit={submitBlockReview}
                 onChangeEditingBlock={setEditingBlock}
+                onViewWeek={() => handleToggleView('semana')}
               />
       </ResizablePanel>
     </>}
@@ -730,4 +731,99 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       </TourPortal>
     </Tour>
   </section>
+}
+
+// Planning-only rendering: retains the existing section-level search and teacher predicates.
+function PlanningSectionsTable({ proposal, catalog, selectedSectionId, onSelectSection, searchQuery, teacherFilter }: {
+  proposal: AcademicProposal
+  catalog: AcademicCatalog | null
+  selectedSectionId: string | null
+  onSelectSection: (id: string) => void
+  searchQuery: string
+  teacherFilter: string
+}) {
+  const blocks = useMemo(() => aggregateAcademicBlocks(proposal), [proposal])
+  const query = normalizeAcademicSearch(searchQuery)
+  const sections = proposal.sections.filter((section) => {
+    const sectionBlocks = blocks.filter((block) => block.sectionId === section.sectionId)
+    if (teacherFilter === '__unassigned__' && sectionBlocks.length > 0) return false
+    if (teacherFilter !== 'all' && teacherFilter !== '__unassigned__' && !sectionBlocks.some((block) => block.teacherId === teacherFilter)) return false
+    const label = academicSectionLabel(proposal, section.sectionId)
+    return !query || normalizeAcademicSearch(`${section.courseId} ${section.courseName} ${section.sectionId} ${label} Sección ${label} ${sectionBlocks.map((block) => block.teacherName).join(' ')} ${sectionBlocks.flatMap((block) => block.roomNames).join(' ')}`).includes(query)
+  }).sort((a, b) => Number(proposal.pending.some((item) => item.sectionId === b.sectionId)) - Number(proposal.pending.some((item) => item.sectionId === a.sectionId)))
+  const previousSelection = useRef(selectedSectionId)
+  useEffect(() => {
+    if (selectedSectionId && previousSelection.current !== selectedSectionId) {
+      document.querySelector(`tr[data-section-id="${CSS.escape(selectedSectionId)}"]`)?.scrollIntoView({ block: 'nearest' })
+    }
+    previousSelection.current = selectedSectionId
+  }, [selectedSectionId])
+  return <div className="planning-horario-table-scroll">
+    <table className="planning-horario-table" aria-label="Secciones de la propuesta">
+      <thead><tr>{['Curso', 'Secc.', 'Componente', 'Docente', 'Ambiente', 'Día y hora', 'Estado'].map((label) => <th scope="col" key={label}>{label}</th>)}</tr></thead>
+      <tbody>{sections.flatMap((section) => {
+        const assigned = proposal.assignments.filter((item) => item.sectionId === section.sectionId)
+        const pending = proposal.pending.filter((item) => item.sectionId === section.sectionId)
+        const status = assigned.length === 0 ? 'Pendiente' : pending.length ? 'Parcial' : 'Completa'
+        const rows = [...assigned, ...pending]
+        return (rows.length ? rows : [null]).map((item) => {
+          const assignment = item && 'teacherName' in item ? item : null
+          return <tr key={item?.sessionId ?? section.sectionId} data-section-id={section.sectionId} aria-selected={selectedSectionId === section.sectionId} onClick={() => onSelectSection(section.sectionId)}>
+            <td><span className="planning-horario-code">{section.courseId}</span> <button type="button" aria-label={`Inspeccionar sección ${academicSectionLabel(proposal, section.sectionId)} de ${section.courseName}`} onClick={() => onSelectSection(section.sectionId)}>{section.courseName}</button></td>
+            <td className="planning-horario-mono">{academicSectionLabel(proposal, section.sectionId)}</td>
+            <td>{assignment?.sessionType ?? catalog?.courses.find((course) => course.courseId === section.courseId)?.weeklySessions.find((session) => item?.sessionId === `session:${JSON.stringify([section.sectionId, session.id])}`)?.type ?? 'Componente'}</td>
+            <td>{assignment?.teacherName ?? <i>Por asignar</i>}</td>
+            <td>{assignment?.roomName ?? <i>Por asignar</i>}</td>
+            <td className="planning-horario-mono">{assignment ? `${['—', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'][assignment.day]} ${formatAcademicMinute(assignment.startMinute)}–${formatAcademicMinute(assignment.endMinute)}` : '—'}</td>
+            <td><span className={`planning-horario-status planning-horario-status--${status}`}><span aria-hidden="true">{status === 'Completa' ? '✓' : status === 'Parcial' ? '◐' : '○'}</span> {status}{proposal.manuallyAdjustedSectionIds?.includes(section.sectionId) && <small> · Ajustada</small>}</span></td>
+          </tr>
+        })
+      })}{!sections.length && <tr><td colSpan={7}>No se encontraron secciones que coincidan con la búsqueda.</td></tr>}</tbody>
+    </table>
+  </div>
+}
+
+function PlanningScheduleToolbar({ proposal, searchQuery, onSearchChange, teacherFilter, onTeacherFilterChange, viewMode, onToggleView }: {
+  proposal: AcademicProposal
+  searchQuery: string
+  onSearchChange: (value: string) => void
+  teacherFilter: string
+  onTeacherFilterChange: (value: string) => void
+  viewMode: 'tabla' | 'semana'
+  onToggleView: (value: 'tabla' | 'semana') => void
+}) {
+  const { teachers, unassigned } = useMemo(() => {
+    const blocks = aggregateAcademicBlocks(proposal)
+    const byTeacher = new Map<string, { id: string; name: string; sections: Set<string> }>()
+    for (const block of blocks) {
+      const teacher = byTeacher.get(block.teacherId) ?? { id: block.teacherId, name: block.teacherName, sections: new Set<string>() }
+      teacher.sections.add(block.sectionId)
+      byTeacher.set(teacher.id, teacher)
+    }
+    const assigned = new Set(blocks.map((block) => block.sectionId))
+    return {
+      teachers: [...byTeacher.values()].sort((a, b) => a.name.localeCompare(b.name, 'es')),
+      unassigned: proposal.sections.filter((section) => !assigned.has(section.sectionId)).length,
+    }
+  }, [proposal])
+
+  return <div className="planning-schedule-toolbar">
+    <div className="planning-schedule-toolbar__search">
+      <Input type="search" placeholder="Buscar curso, sección o aula" aria-label="Buscar secciones"
+        value={searchQuery} onChange={(event) => onSearchChange(event.currentTarget.value)} />
+    </div>
+    <div className="planning-schedule-toolbar__teacher">
+      <NativeSelect aria-label="Filtrar por docente" value={teacherFilter} onChange={(event) => onTeacherFilterChange(event.currentTarget.value)}>
+        <option value="all">Todos los docentes</option>
+        {unassigned > 0 && <option value="__unassigned__">Sin docente asignado / Pendientes ({unassigned})</option>}
+        {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name} ({teacher.sections.size})</option>)}
+      </NativeSelect>
+    </div>
+    <span className="planning-horario-count">{proposal.sections.length} secciones · {proposal.sections.filter((section) => proposal.pending.some((item) => item.sectionId === section.sectionId)).length} pendientes primero</span>
+    <span className="planning-horario-toolbar-spacer" aria-hidden="true" />
+    <div className="planning-sections__view-toggle" role="group" aria-label="Vista">
+      <Button variant="ghost" type="button" aria-pressed={viewMode === 'tabla'} onClick={() => onToggleView('tabla')}>Tabla</Button>
+      <Button variant="ghost" type="button" aria-pressed={viewMode === 'semana'} onClick={() => onToggleView('semana')}>Semana</Button>
+    </div>
+  </div>
 }
