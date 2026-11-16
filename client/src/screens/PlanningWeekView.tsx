@@ -85,14 +85,15 @@ export function PlanningWeekView({
         teacherFilter === '__unassigned__' ||
         b.teacherId === teacherFilter),
   )
+  const configuredWindows = [
+    ...(catalog?.windows ?? []),
+    ...(proposalResources?.teachers.flatMap((t) => t.availability) ?? []),
+    ...(proposalResources?.rooms.flatMap((r) => r.availability) ?? []),
+  ]
   const windows =
     teacherFilter !== 'all' && teacherFilter !== '__unassigned__'
       ? (proposalResources?.teachers.find((t) => t.id === teacherFilter)?.availability ?? [])
-      : [
-          ...(catalog?.windows ?? []),
-          ...(proposalResources?.teachers.flatMap((t) => t.availability) ?? []),
-          ...(proposalResources?.rooms.flatMap((r) => r.availability) ?? []),
-        ]
+      : configuredWindows
   const days = [
     ...new Set([
       1,
@@ -100,7 +101,7 @@ export function PlanningWeekView({
       3,
       4,
       5,
-      ...windows.map((w) => w.day),
+      ...configuredWindows.map((w) => w.day),
       ...blocks.map((b) => b.day),
       ...(editingBlock ? [editingBlock.day] : []),
     ]),
@@ -110,7 +111,7 @@ export function PlanningWeekView({
       Math.min(
         480,
         ...blocks.map((b) => b.startMinute),
-        ...windows.map((w) => w.startMinute),
+        ...configuredWindows.map((w) => w.startMinute),
         editingBlock?.startMinute ?? 480,
       ) / 60,
     ) * 60
@@ -120,7 +121,7 @@ export function PlanningWeekView({
       Math.max(
         1200,
         ...blocks.map((b) => b.endMinute),
-        ...windows.map((w) => w.endMinute),
+        ...configuredWindows.map((w) => w.endMinute),
         editingBlock && active ? editingBlock.startMinute + active.durationMinutes : 1200,
       ) / 60,
     ) * 60,
