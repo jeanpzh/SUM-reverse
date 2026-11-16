@@ -208,3 +208,63 @@
     gap: 12px;
   }
 }
+.planning-root .planning-week-adjustment__resources summary,
+.planning-root .planning-week-adjustment__mobile-placement,
+.planning-root .planning-week-adjustment__mobile-validation {
+  display: none;
+}
+.planning-root .planning-week-adjustment__resource-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+@media (max-width: 719px) {
+  .planning-root .planning-week-adjustment__eyebrow,
+  .planning-root .planning-week-adjustment__comparison,
+  .planning-root .planning-week-adjustment__notice,
+  .planning-root .planning-week-adjustment__duration-label {
+    display: none;
+  }
+  .planning-root .planning-week-adjustment__time-fields {
+    order: 1;
+  }
+  .planning-root .planning-week-adjustment__duration {
+    order: 2;
+    border: 0;
+    padding: 0;
+    justify-content: flex-start;
+    gap: 4px;
+    font: 13px/18px var(--plan-font-sans);
+  }
+  .planning-root .planning-week-adjustment__duration output {
+    font: inherit;
+    color: inherit;
+  }
+  .planning-root .planning-week-adjustment__mobile-placement {
+    display: inline;
+  }
+  .planning-root .planning-week-adjustment__resources {
+    order: 3;
+  }
+  .planning-root .planning-week-adjustment__resources summary {
+    display: list-item;
+    cursor: pointer;
+    min-height: 24px;
+    color: var(--plan-steel);
+  }
+  .planning-root .planning-week-adjustment__mobile-validation {
+    display: block;
+    margin: 0;
+    font: 13px/18px var(--plan-font-sans);
+    color: var(--plan-steel);
+  }
+  .planning-root .planning-week-adjustment__resource-fields {
+    padding-top: 8px;
+  }
+  .planning-root .planning-week-adjustment__actions {
+    order: 4;
+  }
+  .planning-root .planning-week-adjustment__actions button[type='submit'] {
+    order: 2;
+  }
+}

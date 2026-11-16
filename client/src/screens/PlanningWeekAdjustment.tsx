@@ -73,7 +73,9 @@ export function PlanningWeekAdjustment({
     }
   }, [])
   useEffect(() => {
-    formRef.current?.querySelector<HTMLElement>('select')?.focus({ preventScroll: true })
+    Array.from(formRef.current?.querySelectorAll<HTMLElement>('select') ?? [])
+      .find((field) => field.getClientRects().length > 0)
+      ?.focus({ preventScroll: true })
   }, [activeBlock.sectionId, slot])
   if (!editingBlock) return null
   const dayNames = ['—', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
@@ -176,55 +178,70 @@ export function PlanningWeekAdjustment({
             </NativeSelect>
           </label>
         )}
-        <label>
-          Docente
-          <NativeSelect
-            aria-label={`Docente revisión ${section.sectionId}`}
-            value={editingBlock.teacherId}
-            disabled={adjusting}
-            onChange={(e) => onChangeEditingBlock({ ...editingBlock, teacherId: e.target.value })}
-          >
-            {(proposalResources?.teachers ?? [])
-              .filter((t) => t.courseIds.includes(activeBlock.courseId))
-              .map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-          </NativeSelect>
-        </label>
-        {assignments.map((assignment, index) => {
-          const originalRoom = proposalResources?.rooms.find((r) => r.id === assignment.roomId)
-          const rooms = (proposalResources?.rooms ?? []).filter(
-            (r) =>
-              r.capacity >= section.capacity &&
-              (!originalRoom?.kind || r.kind === originalRoom.kind),
-          )
-          return (
-            <label key={assignment.sessionId}>
-              Ambiente{assignments.length > 1 ? ` · ${assignment.sessionType ?? index + 1}` : ''}
+        <details
+          className="planning-week-adjustment__resources"
+          open={docked || Boolean(slot) || undefined}
+        >
+          <summary>Docente y ambiente</summary>
+          <div className="planning-week-adjustment__resource-fields">
+            <p className="planning-week-adjustment__mobile-validation">
+              Vista previa local. El servidor valida docente, ambiente y cruces al aplicar; si lo
+              rechaza, el horario guardado no cambia.
+            </p>
+            <label>
+              Docente
               <NativeSelect
-                aria-label={`Ambiente ${assignment.sessionType ?? index + 1} revisión ${section.sectionId}`}
-                value={editingBlock.roomIds[index] ?? ''}
+                aria-label={`Docente revisión ${section.sectionId}`}
+                value={editingBlock.teacherId}
                 disabled={adjusting}
                 onChange={(e) =>
-                  onChangeEditingBlock({
-                    ...editingBlock,
-                    roomIds: editingBlock.roomIds.map((id, i) =>
-                      i === index ? e.target.value : id,
-                    ),
-                  })
+                  onChangeEditingBlock({ ...editingBlock, teacherId: e.target.value })
                 }
               >
-                {rooms.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name} · capacidad {r.capacity}
-                  </option>
-                ))}
+                {(proposalResources?.teachers ?? [])
+                  .filter((t) => t.courseIds.includes(activeBlock.courseId))
+                  .map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
               </NativeSelect>
             </label>
-          )
-        })}
+            {assignments.map((assignment, index) => {
+              const originalRoom = proposalResources?.rooms.find((r) => r.id === assignment.roomId)
+              const rooms = (proposalResources?.rooms ?? []).filter(
+                (r) =>
+                  r.capacity >= section.capacity &&
+                  (!originalRoom?.kind || r.kind === originalRoom.kind),
+              )
+              return (
+                <label key={assignment.sessionId}>
+                  Ambiente
+                  {assignments.length > 1 ? ` · ${assignment.sessionType ?? index + 1}` : ''}
+                  <NativeSelect
+                    aria-label={`Ambiente ${assignment.sessionType ?? index + 1} revisión ${section.sectionId}`}
+                    value={editingBlock.roomIds[index] ?? ''}
+                    disabled={adjusting}
+                    onChange={(e) =>
+                      onChangeEditingBlock({
+                        ...editingBlock,
+                        roomIds: editingBlock.roomIds.map((id, i) =>
+                          i === index ? e.target.value : id,
+                        ),
+                      })
+                    }
+                  >
+                    {rooms.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} · capacidad {r.capacity}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </label>
+              )
+            })}
+          </div>
+        </details>
         <div className="planning-week-adjustment__time-fields">
           <label>
             Día
@@ -272,7 +289,12 @@ export function PlanningWeekAdjustment({
           </label>
         </div>
         <div className="planning-week-adjustment__duration">
-          <span>Duración</span>
+          <span className="planning-week-adjustment__duration-label">Duración</span>
+          <span className="planning-week-adjustment__mobile-placement">
+            {dayNames[activeBlock.day].slice(0, 3)} {formatAcademicMinute(activeBlock.startMinute)}{' '}
+            → {dayNames[editingBlock.day].slice(0, 3)}{' '}
+            {formatAcademicMinute(editingBlock.startMinute)} · duración
+          </span>
           <output aria-label={`Duración ${section.sectionId}`}>
             {formatAcademicDuration(activeBlock.durationMinutes).split(' (')[0]} · no editable
           </output>
