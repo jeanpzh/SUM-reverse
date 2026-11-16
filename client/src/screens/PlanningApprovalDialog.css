@@ -1,0 +1,49 @@
+/* Approval board dialog: paper, 16px radius, float shadow, 24px padding, 12px gap, 440px wide. */
+.planning-root .planning-approval-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+  width: min(440px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  padding: 24px;
+  border: 0;
+  border-radius: var(--radius-plan-float);
+  background: var(--plan-paper);
+  box-shadow: var(--plan-shadow-float);
+  color: var(--plan-ink);
+  font: 400 var(--text-plan-body)/var(--text-plan-body--line-height) var(--plan-font-sans);
+}
+.planning-root .planning-approval-dialog__header { display: flex; flex-direction: column; gap: 12px; }
+.planning-root .planning-approval-dialog__eyebrow {
+  color: var(--plan-fog);
+  font: 400 var(--text-plan-label)/var(--text-plan-label--line-height) var(--plan-font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.planning-root .planning-approval-dialog__title {
+  margin: 0;
+  font: 400 var(--text-plan-section)/30px var(--plan-font-sans);
+  letter-spacing: var(--text-plan-section--letter-spacing);
+  color: var(--plan-ink);
+}
+.planning-root .planning-approval-dialog__description { margin: 0; color: var(--plan-steel); font-size: var(--text-plan-body); line-height: var(--text-plan-body--line-height); }
+.planning-root .planning-approval-dialog__footer { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.planning-root .planning-approval-dialog__cancel,
+.planning-root .planning-approval-dialog__confirm {
+  box-sizing: border-box;
+  min-height: 32px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 9999px;
+  font: 500 var(--text-plan-body)/var(--text-plan-body--line-height) var(--plan-font-sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.planning-root .planning-approval-dialog__cancel { background: transparent; color: var(--plan-ink); box-shadow: inset 0 0 0 1px var(--plan-dove); }
+.planning-root .planning-approval-dialog__confirm { background: var(--plan-ink); color: var(--plan-on-ink); }
+.planning-root .planning-approval-dialog :is(button):focus-visible { outline: 2px solid var(--plan-focus); outline-offset: 2px; }
+@media (max-width: 719px) {
+  .planning-root .planning-approval-dialog__cancel,
+  .planning-root .planning-approval-dialog__confirm { min-height: 44px; }
+}
