@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict'
 const routePattern = '**/propuestas/*/consejero'
 const open = async page => {
-  if (await page.locator('#planning-toggle-chat').getAttribute('aria-expanded') === 'true') await page.locator('#planning-toggle-chat').click()
   await page.getByRole('button', { name: /Seleccionar los .* cursos del catálogo/ }).click()
   const generated = page.waitForResponse(response => /\/propuestas$/.test(new URL(response.url()).pathname) && response.request().method() === 'POST')
   await page.locator('#planning-tour-primary').click()
@@ -10,12 +9,16 @@ const open = async page => {
   await page.locator('[data-advisor-impact="verified"]').waitFor({ timeout: 45000 })
   return proposal
 }
-const sheet = page => page.getByRole('dialog', { name: 'Consejero de planificación', exact: true })
+// v2: the advisor is the "Consejero" tab of the assistance rail (≥1280px) or Sheet; "Consultar consejero" opens it.
+// The tab panel exists in both containers, so it is the stable scope.
+const sheet = page => page.getByRole('tabpanel', { name: 'Consejero', exact: true })
+// The commit button carries the selected count: "Aplicar N seleccionada(s) y regenerar".
+const applyName = /^Aplicar \d+ seleccionad[ao]s? y regenerar$/
 
 export const advisorScenarios = [
   ['advisor-selection-invalidates-impact', async ({ page }) => {
     await open(page)
-    const apply = sheet(page).getByRole('button', { name: 'Aplicar seleccionadas y regenerar', exact: true })
+    const apply = sheet(page).getByRole('button', { name: applyName })
     const check = sheet(page).getByRole('checkbox').first()
     await check.click()
     assert.equal(await apply.isDisabled(), true)
@@ -31,12 +34,12 @@ export const advisorScenarios = [
     const original = await open(page)
     assert.equal(generations.length, 1, 'Consulting advice does not regenerate')
     const pending = page.waitForResponse(response => /\/propuestas$/.test(new URL(response.url()).pathname) && response.request().method() === 'POST')
-    await sheet(page).getByRole('button', { name: 'Aplicar seleccionadas y regenerar', exact: true }).click()
+    await sheet(page).getByRole('button', { name: applyName }).click()
     const response = await pending
     assert.equal(response.status(), 200)
     const regenerated = await response.json()
     assert.notEqual(regenerated.proposalId, original.proposalId)
-    await sheet(page).waitFor({ state: 'hidden' })
+    await page.locator('#planning-chat-body').waitFor({ state: 'hidden' })
     assert.equal(generations.length, 2)
     const drafts = await page.request.get(`${base}/api/local/programacion-academica/v1/borradores`)
     assert.equal(drafts.status(), 200)
