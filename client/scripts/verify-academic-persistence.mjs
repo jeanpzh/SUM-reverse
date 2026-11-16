@@ -151,7 +151,7 @@ try {
     assert.equal(await page.getByLabel(`Demanda ${saved.courseId}`, { exact: true }).inputValue(), String(saved.finalDemand))
     assert.deepEqual(resumed.draft.proposal.manuallyAdjustedSectionIds, saved.manuallyAdjustedSectionIds)
     assert.equal(await page.locator('.planning-scope-header__draft-state').getAttribute('data-draft-state'), 'ready-for-review')
-    await page.getByRole('button', { name: 'Detalles de búsqueda', exact: true }).waitFor()
+    await page.locator('.planning-status-bar[data-status]:visible').waitFor()
     await page.locator('.planning-scope-header').screenshot({ path: outputPath })
 
     // A demand edit invalidates the recovered result and downgrades its state before saving config only.

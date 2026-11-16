@@ -10,7 +10,7 @@ import type {
   AcademicCatalog,
   AcademicProposal,
 } from '../data/academicScheduling'
-import { Sheet, SheetContent, SheetTitle } from '../components/ui/Sheet'
+import { Dialog, DialogContent, DialogTitle } from '../components/ui/Dialog'
 import {
   academicSectionLabel,
   aggregateAcademicBlocks,
@@ -86,12 +86,11 @@ export function PlanningInspector({
   const dayNamesFull = ['—', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
   const sLabel = academicSectionLabel(proposal, section.sectionId)
 
-  const title = <h2 id="planning-detail-title" className="planning-inspector__title">{section.courseName}</h2>
   const body = (<>
         <div className="planning-inspector__header">
           <div className="planning-inspector__heading-info">
             <p className="planning-inspector__meta">{section.courseId} · Sección {sLabel} · {section.capacity} vacantes</p>
-            {docked ? title : <SheetTitle className="planning-inspector__title">{section.courseName}</SheetTitle>}
+            <DialogTitle className="planning-inspector__title">{section.courseName}</DialogTitle>
           </div>
           <div className="planning-inspector__actions">
             <Button variant="outline" onClick={onViewWeek}>Ver en Semana</Button>
@@ -117,29 +116,18 @@ export function PlanningInspector({
         </div>}
   </>)
 
-  if (docked) {
-    return (
-      <section className="planning-section-detail planning-inspector planning-inspector--docked"
-        aria-label={`Inspector de sección ${sLabel}`}
-        onKeyDown={(event) => { if (event.key === 'Escape') onClose() }}>
-        {body}
-      </section>
-    )
-  }
   return (
-    <Sheet open modal={false} onOpenChange={(open) => { if (!open) onClose() }}>
-      <SheetContent
-        side="bottom"
-        className="planning-section-detail planning-inspector planning-inspector--sheet"
+    <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
+      <DialogContent
+        id="planning-section-detail"
+        className="planning-section-detail planning-inspector planning-inspector--dialog"
         aria-label={`Inspector de sección ${sLabel}`}
         aria-describedby={undefined}
         showCloseButton={false}
-        onOpenAutoFocus={(event) => event.preventDefault()}
         onCloseAutoFocus={(event) => event.preventDefault()}
-        onInteractOutside={(event) => event.preventDefault()}
       >
         {body}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }

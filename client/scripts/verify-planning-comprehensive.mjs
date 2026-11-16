@@ -7,6 +7,7 @@ import {route} from './planning-audit/helpers.mjs'
 import {lifecycleScenarios} from './planning-audit/lifecycle.mjs'
 import {extraScenarios} from './planning-audit/extra-scenarios.mjs'
 import {interactionScenarios} from './planning-audit/interactions.mjs'
+import {weekLoadScenarios} from './planning-audit/week-load.mjs'
 if(process.env.SUM_REDESIGN_SYNTHETIC!=='1')throw new Error('Owned synthetic stack required')
 const url=new URL(process.env.SUM_REDESIGN_BASE)
 if(url.protocol!=='http:'||url.hostname!=='127.0.0.1'||url.pathname!=='/'||url.search||url.hash||url.username||url.password)throw new Error('Owned loopback origin required')
@@ -16,7 +17,7 @@ const browser=await chromium.launch()
 const results=[]
 try{
  const selected=process.env.SUM_ASSISTANT_CASES?.split(',').filter(Boolean)
- for(const [name,scenario] of [...interactionScenarios,...lifecycleScenarios,...extraScenarios]){
+ for(const [name,scenario] of [...weekLoadScenarios,...interactionScenarios,...lifecycleScenarios,...extraScenarios]){
   if(selected?.length&&!selected.includes(name))continue
   const context=await browser.newContext({viewport:{width:1440,height:1000}})
   const page=await context.newPage();page.setDefaultTimeout(10000);page.setDefaultNavigationTimeout(45000)

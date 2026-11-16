@@ -253,8 +253,9 @@ try {
   assert.equal(impossible.status, 'impossible')
   assert.ok(impossible.pending.length > 0)
   await page.locator('.planning-status-bar[data-status="impossible"]').waitFor()
-  await page.getByRole('button', { name: 'Detalles de búsqueda', exact: true }).click()
-  await page.getByRole('heading', { name: 'Componentes pendientes', exact: true }).waitFor()
+  await page.getByRole('button', { name: /^Ver avisos/ }).click()
+  await page.getByRole('dialog', { name: 'Avisos de la generación' }).waitFor()
+  await page.keyboard.press('Escape')
   await page.locator('.planning-status-bar').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(evidence, 'impossible.png') })
 

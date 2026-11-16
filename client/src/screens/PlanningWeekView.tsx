@@ -6,12 +6,14 @@ import type {
 } from '../../../shared/programacion-academica-api.mjs'
 import type { AcademicCatalog, AcademicProposal } from '../data/academicScheduling'
 import {
+  indexAcademicProposal,
   academicSectionLabel,
   aggregateAcademicBlocks,
   formatAcademicMinute,
   normalizeAcademicSearch,
 } from '../data/academicScheduling'
-import { computeWeekDayLayout } from '../data/planningWeekLayout'
+import { Button } from '../components/ui/Button'
+import { computeWeekDayLayout, computeWeekLoad } from '../data/planningWeekLayout'
 import './PlanningWeekView.css'
 
 export interface PlanningWeekViewProps {
@@ -22,6 +24,8 @@ export interface PlanningWeekViewProps {
   editingBlock: AcademicAdjustment | null
   searchQuery: string
   teacherFilter?: string
+  roomFilter?: string
+  onShowPending: () => void
   onSelectSection: (sectionId: string) => void
   onStartEditBlock: (block: ReturnType<typeof aggregateAcademicBlocks>[number]) => void
   onChangeEditingBlock?: (adjustment: AcademicAdjustment) => void
@@ -49,52 +53,57 @@ export function PlanningWeekView({
   editingBlock,
   searchQuery,
   teacherFilter = 'all',
+  roomFilter = 'all',
+  onShowPending,
   onSelectSection,
   onStartEditBlock,
   isLocked = false,
 }: PlanningWeekViewProps) {
-  const blocks = useMemo(() => aggregateAcademicBlocks(proposal), [proposal])
+  const { blocks, blocksBySection } = useMemo(() => indexAcademicProposal(proposal), [proposal])
   const active = blocks.find(
     (b) =>
       b.sectionId === editingBlock?.sectionId && blockKey(b) === editingBlock.sessionIds.join('|'),
   )
   const [agendaDay, setAgendaDay] = useState<number | null>(null)
+  const [loadSelection, setLoadSelection] = useState<{ sectionId: string | null; slot: { day: number; startMinute: number } | null }>({ sectionId: null, slot: null })
   const root = useRef<HTMLDivElement>(null)
   const revealedSelection = useRef<string | null>(null)
   const query = normalizeAcademicSearch(searchQuery)
-  const matching = new Set(
-    proposal.sections
-      .filter((section) => {
-        const items = blocks.filter((b) => b.sectionId === section.sectionId)
-        if (
-          teacherFilter === '__unassigned__'
-            ? items.length
-            : teacherFilter !== 'all' && !items.some((b) => b.teacherId === teacherFilter)
-        )
-          return false
-        return normalizeAcademicSearch(
-          `${section.courseId} ${section.courseName} ${section.sectionId} ${academicSectionLabel(proposal, section.sectionId)} Sección ${academicSectionLabel(proposal, section.sectionId)} ${items.map((b) => `${b.teacherName} ${b.roomNames.join(' ')}`).join(' ')}`,
-        ).includes(query)
-      })
-      .map((s) => s.sectionId),
-  )
-  const filtered = blocks.filter(
-    (b) =>
-      matching.has(b.sectionId) &&
-      (teacherFilter === 'all' ||
-        teacherFilter === '__unassigned__' ||
-        b.teacherId === teacherFilter),
-  )
-  const configuredWindows = [
+  const filtered = useMemo(() => {
+    const roomSessions = new Set(proposal.assignments.filter(item => item.roomId === roomFilter).map(item => item.sessionId))
+    const matchesResource = (b: (typeof blocks)[number]) =>
+      (teacherFilter === 'all' || b.teacherId === teacherFilter)
+      && (roomFilter === 'all' || b.sessionIds.some(id => roomSessions.has(id)))
+    const matching = new Set(
+      proposal.sections
+        .filter((section) => {
+          const items = blocksBySection.get(section.sectionId) ?? []
+          if (teacherFilter === '__unassigned__' ? items.length : !items.some(matchesResource)) return false
+          return normalizeAcademicSearch(
+            `${section.courseId} ${section.courseName} ${section.sectionId} ${academicSectionLabel(proposal, section.sectionId)} Sección ${academicSectionLabel(proposal, section.sectionId)} ${items.map((b) => `${b.teacherName} ${b.roomNames.join(' ')}`).join(' ')}`,
+          ).includes(query)
+        })
+        .map((s) => s.sectionId),
+    )
+    return blocks.filter(
+      (b) =>
+        matching.has(b.sectionId) &&
+        matchesResource(b),
+    )
+  }, [proposal, blocks, blocksBySection, teacherFilter, roomFilter, query])
+  const configuredWindows = useMemo(() => [
     ...(catalog?.windows ?? []),
     ...(proposalResources?.teachers.flatMap((t) => t.availability) ?? []),
     ...(proposalResources?.rooms.flatMap((r) => r.availability) ?? []),
-  ]
+  ], [catalog, proposalResources])
   const windows =
     teacherFilter !== 'all' && teacherFilter !== '__unassigned__'
       ? (proposalResources?.teachers.find((t) => t.id === teacherFilter)?.availability ?? [])
-      : configuredWindows
-  const days = [
+      : roomFilter !== 'all'
+        ? (proposalResources?.rooms.find(r => r.id === roomFilter)?.availability ?? [])
+        : configuredWindows
+  const proposedDay = editingBlock?.day
+  const days = useMemo(() => [
     ...new Set([
       1,
       2,
@@ -103,9 +112,9 @@ export function PlanningWeekView({
       5,
       ...configuredWindows.map((w) => w.day),
       ...blocks.map((b) => b.day),
-      ...(editingBlock ? [editingBlock.day] : []),
+      ...(proposedDay === undefined ? [] : [proposedDay]),
     ]),
-  ].sort((a, b) => a - b)
+  ].sort((a, b) => a - b), [configuredWindows, blocks, proposedDay])
   const min =
     Math.floor(
       Math.min(
@@ -141,6 +150,14 @@ export function PlanningWeekView({
   const hours = Array.from({ length: (max - min) / 60 }, (_, i) => min + i * 60)
   const selected = filtered.find((b) => b.sectionId === selectedSectionId)
   const visibleDay = agendaDay ?? selected?.day ?? days[0]
+  const overview = teacherFilter === 'all' && roomFilter === 'all' && !active
+  const loadSlots = useMemo(() => computeWeekLoad(filtered.map(b => ({ ...b, id: blockKey(b) })), days, min, max), [filtered, days, min, max])
+  const selectedSlot = loadSelection.sectionId === selectedSectionId ? loadSelection.slot
+    : selected ? { day: selected.day, startMinute: min + Math.floor((selected.startMinute - min) / 120) * 120 } : null
+  const slot = loadSlots.find(row => row.startMinute === selectedSlot?.startMinute)
+  const slotBlocks = slot?.days.find(cell => cell.day === selectedSlot?.day)?.items ?? []
+  const maxLoad = Math.max(1, ...loadSlots.flatMap(row => row.days.map(cell => cell.items.length)))
+  const unassigned = proposal.sections.filter(section => !blocksBySection.has(section.sectionId)).length
 
   // Both view panes remain mounted: observe the host's visibility change so a
   // selection made in Tabla is revealed even when its id has not changed.
@@ -175,14 +192,30 @@ export function PlanningWeekView({
     }
   }, [selectedSectionId])
 
-  const items = filtered.map((b) => ({
+  const previousActive = useRef(false)
+  useEffect(() => {
+    const returning = previousActive.current && !active
+    previousActive.current = Boolean(active)
+    if (!returning) return
+    const frame = requestAnimationFrame(() => {
+      const visibleBlock = Array.from(root.current?.querySelectorAll<HTMLElement>('[data-week-section-id]') ?? [])
+        .find(element => element.dataset.weekSectionId === selectedSectionId && element.getClientRects().length > 0)
+      const cell = selected && root.current?.querySelector<HTMLButtonElement>(`[data-load-day="${selected.day}"][data-load-start="${min + Math.floor((selected.startMinute - min) / 120) * 120}"]`)
+      const target = visibleBlock ?? cell
+      target?.focus({ preventScroll: true })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [active, min, selected, selectedSectionId])
+
+  const { items, dayLayouts } = useMemo(() => {
+    const items = filtered.map((b) => ({
     block: b,
     proposed: false,
     day: b.day,
     startMinute: b.startMinute,
     endMinute: b.endMinute,
     id: blockKey(b),
-  }))
+  })).filter(item => !active || teacherFilter !== 'all' || roomFilter !== 'all' || item.block.sectionId === active.sectionId)
   if (active && !filtered.some((b) => blockKey(b) === blockKey(active)))
     items.push({
       block: active,
@@ -201,6 +234,15 @@ export function PlanningWeekView({
       endMinute: editingBlock.startMinute + active.durationMinutes,
       id: '__proposed_preview__',
     })
+    const byDay = new Map<number, typeof items>()
+    for (const item of items) {
+      const dayItems = byDay.get(item.day) ?? []
+      dayItems.push(item)
+      byDay.set(item.day, dayItems)
+    }
+    const dayLayouts = new Map(Array.from(byDay, ([day, dayItems]) => [day, { items: dayItems, layout: computeWeekDayLayout(dayItems) }]))
+    return { items, dayLayouts }
+  }, [filtered, active, editingBlock, teacherFilter, roomFilter])
   const renderBlock = (item: (typeof items)[number], style?: CSSProperties, agenda = false) => {
     const b = item.block
     const current = active && blockKey(b) === blockKey(active) && !item.proposed
@@ -223,6 +265,7 @@ export function PlanningWeekView({
                 .join(', ')
             : b.roomNames.join(', ')}{agenda && ` · ${b.durationMinutes / 60} h`}
         </span>
+        {agenda && <span className="planning-week__meta">{b.teacherName} · {formatAcademicMinute(item.startMinute)}–{formatAcademicMinute(item.endMinute)}</span>}
       </>
     )
     const className = `${agenda ? 'planning-week__agenda-card' : 'planning-week__block'}${item.proposed ? ' planning-week__block--proposed-preview' : ''}${selectedSectionId === b.sectionId && !item.proposed ? ' planning-week__block--selected' : ''}`
@@ -262,7 +305,11 @@ export function PlanningWeekView({
   }
   return (
     <div className="planning-week-workspace" ref={root}>
-      <section className="planning-week" aria-label="Horario semanal">
+      <section className="planning-week" aria-label="Horario semanal" data-week-mode={overview ? 'load' : 'detail'}>
+        <div className="planning-week__summary">
+          <span>{overview ? 'Carga de la propuesta' : active && teacherFilter === 'all' && roomFilter === 'all' ? 'Ajuste de la sección seleccionada' : 'Semana del recurso seleccionado'} · {filtered.length} bloques con los filtros actuales</span>
+          {(unassigned > 0 || teacherFilter === '__unassigned__') && <Button variant="ghost" type="button" onClick={onShowPending}>Ver secciones sin horario ({unassigned})</Button>}
+        </div>
         {!filtered.length && (
           <p role="status" className="planning-week__empty">
             {blocks.length
@@ -270,6 +317,46 @@ export function PlanningWeekView({
               : 'Aún no hay bloques asignados. Revisa las secciones pendientes en Tabla.'}
           </p>
         )}
+        {overview && <>
+          <p className="planning-week__load-help" id="planning-week-load-help">Cada celda cuenta los bloques que intersectan la franja; no indica conflictos. Selecciona una para ver sus clases.</p>
+          <div className="planning-week__load-days planning-week__day-tabs" role="group" aria-label="Día del mapa de carga">
+            {days.map(day => <button key={day} type="button" aria-pressed={visibleDay === day} onClick={() => setAgendaDay(day)}>{short[day]}</button>)}
+          </div>
+          <div className="planning-week__load-scroll">
+            <table className="planning-week__load" aria-label="Carga de bloques por franja" aria-describedby="planning-week-load-help">
+              <thead><tr><th scope="col">Hora</th>{days.map(day => <th key={day} scope="col" className={day === visibleDay ? 'is-day-visible' : undefined}>{short[day]}</th>)}</tr></thead>
+              <tbody>{loadSlots.map(row => <tr key={row.startMinute}>
+                <th scope="row">{formatAcademicMinute(row.startMinute)}<span>–{formatAcademicMinute(row.endMinute)}</span></th>
+                {row.days.map(cell => {
+                  const available = dayAvailability(cell.day).some(w => w.startMinute < row.endMinute && w.endMinute > row.startMinute)
+                  return <td key={cell.day} className={cell.day === visibleDay ? 'is-day-visible' : undefined}>
+                    <button type="button" data-load-day={cell.day} data-load-start={row.startMinute} data-load-count={cell.items.length}
+                      data-load-level={!cell.items.length ? 0 : Math.ceil(cell.items.length / maxLoad * 3)}
+                      data-unavailable={!available || undefined}
+                      aria-pressed={selectedSlot?.day === cell.day && selectedSlot.startMinute === row.startMinute}
+                      aria-label={`${names[cell.day]} ${formatAcademicMinute(row.startMinute)}–${formatAcademicMinute(row.endMinute)}: ${cell.items.length} bloques${available ? '' : ', fuera de disponibilidad configurada'}`}
+                      onClick={() => setLoadSelection({ sectionId: selectedSectionId, slot: { day: cell.day, startMinute: row.startMinute } })}>
+                      <span>{cell.items.length || '—'}</span><small>{cell.items.length === 1 ? 'bloque' : cell.items.length ? 'bloques' : 'sin bloques'}</small>
+                    </button>
+                  </td>
+                })}
+              </tr>)}</tbody>
+            </table>
+          </div>
+          <p className="planning-week__load-help">Más intensidad = más bloques en la franja. Un bloque largo puede aparecer en varias franjas.</p>
+          {slot && selectedSlot && <section className="planning-week__load-detail" aria-label="Bloques de la franja seleccionada">
+            <div className="planning-week__summary"><h2>{names[selectedSlot.day]} · {formatAcademicMinute(slot.startMinute)}–{formatAcademicMinute(slot.endMinute)} · {slotBlocks.length} bloques</h2>
+              <Button variant="ghost" type="button" onClick={() => {
+                setLoadSelection({ sectionId: selectedSectionId, slot: null })
+                root.current?.querySelector<HTMLButtonElement>(`[data-load-day="${selectedSlot.day}"][data-load-start="${slot.startMinute}"]`)?.focus()
+              }}>Cerrar franja</Button>
+            </div>
+            <ul>{[...slotBlocks].sort((a, b) => a.startMinute - b.startMinute || a.courseName.localeCompare(b.courseName, 'es')).map(b => <li key={b.id}>{renderBlock({ block: b, proposed: false, day: b.day, startMinute: b.startMinute, endMinute: b.endMinute, id: b.id }, undefined, true)}</li>)}</ul>
+            {!slotBlocks.length && <p className="planning-week__empty">No hay bloques en esta franja con los filtros actuales.</p>}
+          </section>}
+        </>}
+        {!overview && <>
+
         <div
           className="planning-week__grid-wrapper"
           tabIndex={0}
@@ -278,7 +365,11 @@ export function PlanningWeekView({
         >
           <div
             className="planning-week__grid"
-            style={{ gridTemplateColumns: `56px repeat(${days.length}, minmax(108px, 1fr))` }}
+            style={{ gridTemplateColumns: `56px ${days.map(day => {
+              const lanes = dayLayouts.get(day)?.layout
+              const count = Math.max(1, ...Array.from(lanes?.values() ?? [], lane => lane.totalLanes))
+              return `minmax(${count * 164}px, 1fr)`
+            }).join(' ')}` }}
           >
             <div />
             {days.map((day) => (
@@ -308,8 +399,8 @@ export function PlanningWeekView({
                 ))}
             </div>
             {days.map((day) => {
-              const dayItems = items.filter((i) => i.day === day)
-              const layout = computeWeekDayLayout(dayItems)
+              const dayItems = dayLayouts.get(day)?.items ?? []
+              const layout = dayLayouts.get(day)?.layout
               const unavailable: Array<{ startMinute: number; endMinute: number }> = []
               let cursor = min
               for (const window of dayAvailability(day)) {
@@ -340,7 +431,7 @@ export function PlanningWeekView({
                     />
                   ))}
                   {dayItems.map((item) => {
-                    const lane = layout.get(item.id)
+                    const lane = layout?.get(item.id)
                     return renderBlock(item, {
                       top: ((item.startMinute - min) / 60) * 40 + 2,
                       height: Math.max(24, ((item.endMinute - item.startMinute) / 60) * 40 - 4),
@@ -389,6 +480,7 @@ export function PlanningWeekView({
             <p className="planning-week__empty">Sin clases programadas este día.</p>
           )}
         </div>
+        </>}
         <p className="planning-week__footnote">
           {isLocked
             ? 'Solo lectura · selecciona para consultar.'

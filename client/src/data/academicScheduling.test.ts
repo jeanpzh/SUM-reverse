@@ -482,3 +482,16 @@ test('planning errors translate validation paths, API errors and connection fail
   const apiError: typeof fetch = async () => new Response(JSON.stringify({ error: { code: 'INVALID_INPUT', message: 'title: texto inválido' } }), { status: 400 })
   await assert.rejects(fetchAcademicDrafts(apiError), /Escribe un nombre para la propuesta/)
 })
+
+test('proposal render index preserves aggregate blocks, session order and missing-section lookups', async () => {
+  const { indexAcademicProposal } = await import('./academicScheduling.ts')
+  const before = structuredClone(proposal)
+  const index = indexAcademicProposal(proposal)
+  assert.deepEqual(index.blocks, aggregateAcademicBlocks(proposal))
+  assert.deepEqual(index.blocksBySection.get('A'), index.blocks)
+  assert.deepEqual(index.assignmentsBySection.get('A'), proposal.assignments)
+  assert.equal(index.blocksBySection.has('missing'), false)
+  assert.equal(index.pendingBySection.has('missing'), false)
+  assert.equal(index.adjustedSections.size, 0)
+  assert.deepEqual(proposal, before)
+})

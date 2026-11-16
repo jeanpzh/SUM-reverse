@@ -20,7 +20,6 @@ import {
   buildBulkRemovePreview,
   buildUnifiedRooms,
   buildUnifiedTeachers,
-  calculateAssignedTeacherMinutes,
   calculateRoomCounts,
   calculateTeacherCounts,
   filterUnifiedRooms,
@@ -137,6 +136,23 @@ export function AcademicResourceEditor({
       ),
     ),
   )
+
+  const selectedTeacherSet = useMemo(() => new Set(selectedTeacherIds), [selectedTeacherIds])
+  const selectedRoomSet = useMemo(() => new Set(selectedRoomIds), [selectedRoomIds])
+  const teacherReferenceSet = useMemo(() => new Set(Object.values(teacherReferenceIds)), [teacherReferenceIds])
+  const roomReferenceSet = useMemo(() => new Set(Object.values(roomReferenceIds)), [roomReferenceIds])
+  const teacherIds = useMemo(() => new Set(resources.teachers.map(item => item.id)), [resources.teachers])
+  const roomIds = useMemo(() => new Set(resources.rooms.map(item => item.id)), [resources.rooms])
+  const currentTeacherCourseIds = useMemo(() => new Map(resources.teachers.map(teacher => [teacher.id, new Set(teacher.courseIds)])), [resources.teachers])
+
+  const assignedMinutesByTeacher = useMemo(() => {
+    if (!proposal) return null
+    const totals = new Map<string, number>()
+    for (const item of proposal.assignments) {
+      totals.set(item.teacherId, (totals.get(item.teacherId) ?? 0) + item.endMinute - item.startMinute)
+    }
+    return totals
+  }, [proposal])
 
   // Build unified lists
   const unifiedTeachers = useMemo(
@@ -686,8 +702,8 @@ export function AcademicResourceEditor({
                   value={teacher.id}
                   disabled={
                     resources.teachers.length >= PLANNING_LIMITS.teachers &&
-                    !Object.values(teacherReferenceIds).includes(teacher.id) &&
-                    !resources.teachers.some((item) => item.id === teacher.id)
+                    !teacherReferenceSet.has(teacher.id) &&
+                    !teacherIds.has(teacher.id)
                   }
                 >
                   {teacher.name} · {teacher.id}
@@ -709,8 +725,8 @@ export function AcademicResourceEditor({
                   value={room.id}
                   disabled={
                     resources.rooms.length >= PLANNING_LIMITS.rooms &&
-                    !Object.values(roomReferenceIds).includes(room.id) &&
-                    !resources.rooms.some((item) => item.id === room.id)
+                    !roomReferenceSet.has(room.id) &&
+                    !roomIds.has(room.id)
                   }
                 >
                   {room.id} · {room.name} · {room.pavilion}
@@ -860,7 +876,7 @@ export function AcademicResourceEditor({
                         aria-label="Seleccionar todos los docentes visibles"
                         checked={
                           filteredTeachers.length > 0 &&
-                          filteredTeachers.every((t) => selectedTeacherIds.includes(t.id))
+                          filteredTeachers.every((t) => selectedTeacherSet.has(t.id))
                         }
                         onChange={(e) => {
                           if (e.currentTarget.checked) selectAllVisibleTeachers()
@@ -878,9 +894,9 @@ export function AcademicResourceEditor({
                 </TableHeader>
                 <TableBody>
                   {filteredTeachers.map((teacher) => {
-                    const isSelected = selectedTeacherIds.includes(teacher.id)
+                    const isSelected = selectedTeacherSet.has(teacher.id)
                     const isInspected = inspectedTeacherId === teacher.id
-                    const assignedMinutes = calculateAssignedTeacherMinutes(proposal, teacher.id)
+                    const assignedMinutes = (assignedMinutesByTeacher === null ? null : assignedMinutesByTeacher.get(teacher.id) ?? 0)
 
                     return (
                       <TableRow
@@ -944,7 +960,7 @@ export function AcademicResourceEditor({
                         aria-label="Seleccionar todos los ambientes visibles"
                         checked={
                           filteredRooms.length > 0 &&
-                          filteredRooms.every((r) => selectedRoomIds.includes(r.id))
+                          filteredRooms.every((r) => selectedRoomSet.has(r.id))
                         }
                         onChange={(e) => {
                           if (e.currentTarget.checked) selectAllVisibleRooms()
@@ -963,7 +979,7 @@ export function AcademicResourceEditor({
                 </TableHeader>
                 <TableBody>
                   {filteredRooms.map((room) => {
-                    const isSelected = selectedRoomIds.includes(room.id)
+                    const isSelected = selectedRoomSet.has(room.id)
                     const isInspected = inspectedRoomId === room.id
 
                     return (
@@ -1185,7 +1201,7 @@ export function AcademicResourceEditor({
                             <div className="academic-resource-workbench__course-option" key={course.courseId}>
                               <Checkbox
                                 id={`teacher-course-${course.courseId}`}
-                                checked={currentTeacher.courseIds.includes(course.courseId)}
+                                checked={currentTeacherCourseIds.get(currentTeacher.id)?.has(course.courseId) ?? false}
                                 disabled={isLocked}
                                 aria-label={`${currentTeacher.name || 'Docente'} habilitado para ${course.courseId}`}
                                 onCheckedChange={(checked) =>

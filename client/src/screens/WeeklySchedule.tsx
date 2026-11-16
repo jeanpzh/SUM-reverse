@@ -8,6 +8,8 @@ const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', '
 const dayCodes = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const hourHeight = 80
 const timeZone = 'America/Lima'
+const clockFormatter = new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+const dayFormatter = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short' })
 
 function formatTime(minutes: number) {
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(Math.floor(minutes % 60)).padStart(2, '0')}`
@@ -23,12 +25,10 @@ export function WeeklySchedule({ data, displayEvents }: {
     return () => clearInterval(timer)
   }, [])
   const events = displayEvents ?? toScheduleEvents(data ?? [])
-  const clock = new Intl.DateTimeFormat('en-GB', {
-    timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-  }).format(now)
+  const clock = clockFormatter.format(now)
   const [currentHour, currentMinute] = clock.split(':').map(Number)
   const currentTime = currentHour * 60 + currentMinute
-  const currentDay = dayCodes.indexOf(new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short' }).format(now))
+  const currentDay = dayCodes.indexOf(dayFormatter.format(now))
   const firstMinute = events.length ? Math.floor(Math.min(...events.map((event) => event.start)) / 60) * 60 : 0
   const lastMinute = events.length ? Math.ceil(Math.max(...events.map((event) => event.end)) / 60) * 60 : 60
   const height = (lastMinute - firstMinute) / 60 * hourHeight

@@ -426,3 +426,22 @@
   .planning-root [data-compact-week] .planning-horario-toolbar-spacer { display: none; }
   .planning-root [data-compact-week] .planning-week__day-tabs { margin-inline: -4px; padding-inline: 0; }
 }
+
+/* Section consultation sizes to its content, without reserving table height. */
+.planning-root .planning-inspector.planning-inspector--dialog {
+  width: min(840px, calc(100vw - 32px));
+  max-width: none;
+  height: auto;
+  min-height: 0;
+  max-height: calc(100dvh - 32px);
+  padding: 24px;
+  border: 1px solid var(--plan-dove);
+  border-radius: 16px;
+  box-shadow: var(--plan-shadow-float);
+  gap: 0;
+}
+@media (max-width: 719px) {
+  .planning-root .planning-inspector.planning-inspector--dialog {
+    padding: 16px;
+  }
+}

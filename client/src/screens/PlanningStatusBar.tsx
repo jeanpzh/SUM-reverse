@@ -1,5 +1,5 @@
 import type { AcademicAdvisorPatch, AcademicAdvisorResponse, AcademicProposal, PlanningPeriod } from '../data/academicScheduling'
-import { academicSectionCoverage, academicSectionLabel, defaultAcademicAdvisorSelection, academicSessionLabel, fetchAcademicProposalAdvice, formatAcademicDuration, hasCurrentAdvisorImpact } from '../data/academicScheduling'
+import { academicSectionCoverage, academicSectionLabel, defaultAcademicAdvisorSelection, academicSessionLabel, fetchAcademicProposalAdvice, hasCurrentAdvisorImpact } from '../data/academicScheduling'
 import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/Dialog'
@@ -10,7 +10,6 @@ import { usePlanningSessionContext } from '../components/PlanningSessionProvider
 import { PlanningResultStrip } from './PlanningResultStrip'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
-import { Alert, AlertDescription } from '../components/ui/Alert'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../components/ui/Collapsible'
 
 const diagnosticLabels: Record<string, string> = {
@@ -278,93 +277,4 @@ export function PlanningStatusBar({ contextContainer, mobileActionContainer, onR
     </PlanningResultStrip>
   )
   return contextContainer ? createPortal(content, contextContainer) : content
-}
-
-export function PlanningSearchDetails({ proposal }: { proposal: AcademicProposal }) {
-  const coverage = academicSectionCoverage(proposal)
-  const scheduled = proposal.counts.scheduledSessions
-  const required = proposal.counts.requiredSessions
-  const { diagnosisText } = resultWording(proposal)
-  return (
-      <Collapsible className="planning-status-bar__details min-w-0 border-0 border-t border-solid border-border pt-2">
-        <CollapsibleTrigger asChild>
-          <Button type="button" variant="ghost" size="sm">Detalles de búsqueda</Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="planning-status-bar__details-content mt-2 flex min-w-0 flex-col gap-3">
-          {diagnosisText && (
-            <Alert variant={proposal.status === 'invalid-input' ? 'destructive' : 'warning'}>
-              <AlertDescription>{diagnosisText}</AlertDescription>
-            </Alert>
-          )}
-          <dl className="academic-scheduling__counts not-typeset">
-            <div><dt>Secciones</dt><dd>{proposal.counts.sections}</dd></div>
-            <div><dt>Completas</dt><dd>{coverage.complete}</dd></div>
-            <div><dt>Parciales</dt><dd>{coverage.partial}</dd></div>
-            <div><dt>Pendientes</dt><dd>{coverage.pending}</dd></div>
-            <div><dt>Componentes asignados</dt><dd>{scheduled}</dd></div>
-            <div><dt>Componentes requeridos</dt><dd>{required}</dd></div>
-          </dl>
-          <p className="academic-scheduling__stats">
-            Búsqueda local: {proposal.stats.exploredCandidates} candidatos explorados, {proposal.stats.candidateVisits} visitas y {proposal.stats.backtracks} retrocesos.
-            {proposal.stats.limitReason && <> Límite: {proposal.stats.limitReason}.</>}
-          </p>
-          {proposal.pending.length > 0 && (() => {
-            const groupedPending: Array<{
-              courseId: string
-              courseName: string
-              sections: Array<{ sectionId: string; sectionLabel: string; durations: string[] }>
-            }> = []
-            const byCourse = new Map<string, typeof groupedPending[number]>()
-            for (const pending of proposal.pending) {
-              const courseName = proposal.sections.find((s) => s.sectionId === pending.sectionId)?.courseName ?? pending.courseId
-              let courseGroup = byCourse.get(pending.courseId)
-              if (!courseGroup) {
-                courseGroup = { courseId: pending.courseId, courseName, sections: [] }
-                byCourse.set(pending.courseId, courseGroup)
-                groupedPending.push(courseGroup)
-              }
-              let sectionEntry = courseGroup.sections.find((s) => s.sectionId === pending.sectionId)
-              if (!sectionEntry) {
-                sectionEntry = {
-                  sectionId: pending.sectionId,
-                  sectionLabel: academicSectionLabel(proposal, pending.sectionId),
-                  durations: [],
-                }
-                courseGroup.sections.push(sectionEntry)
-              }
-              sectionEntry.durations.push(formatAcademicDuration(pending.durationMinutes))
-            }
-            return (
-              <div className="academic-scheduling__diagnostics typeset typeset-planning">
-                <div className="not-typeset flex flex-wrap items-center justify-between gap-2">
-                  <h4 className="m-0 text-sm font-semibold text-foreground">Componentes pendientes</h4>
-                  <Badge variant="outline">
-                    {proposal.pending.length} {proposal.pending.length === 1 ? 'componente' : 'componentes'} en {groupedPending.reduce((acc, g) => acc + g.sections.length, 0)} {groupedPending.reduce((acc, g) => acc + g.sections.length, 0) === 1 ? 'sección' : 'secciones'}
-                  </Badge>
-                </div>
-                <ul className="planning-status-bar__pending-compact">
-                  {groupedPending.map((group) => (
-                    <li key={group.courseId}>
-                      <strong>{group.courseName}</strong>{' '}
-                      <span className="text-muted-foreground">({group.courseId})</span>:{' '}
-                      {group.sections
-                        .map((sec) => `Sección ${sec.sectionLabel} (${sec.durations.join(' + ')})`)
-                        .join(' · ')}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )
-          })()}
-          {proposal.preferenceReport && (
-            <div className="academic-scheduling__preference-report typeset typeset-planning">
-              <h4>Resultado de preferencias · {proposal.preferenceReport.policy}</h4>
-              <p>
-                {proposal.preferenceReport.withinPreferenceSections} secciones dentro de preferencia, {proposal.preferenceReport.outsidePreferenceSections} fuera y {proposal.preferenceReport.withoutPreferenceSections} sin preferencia evaluable. La búsqueda no demuestra un óptimo global.
-              </p>
-            </div>
-          )}
-        </CollapsibleContent>
-      </Collapsible>
-  )
 }

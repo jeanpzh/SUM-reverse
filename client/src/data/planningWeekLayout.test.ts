@@ -130,3 +130,57 @@ test('planningWeekLayout: proposed preview block coexists with current placement
   assert.notEqual(current.lane, proposed.lane)
   assert.notEqual(current.leftPercent, proposed.leftPercent)
 })
+
+test('week load counts intersecting blocks, preserves weekends and excludes touching endpoints', async () => {
+  const { computeWeekLoad } = await import('./planningWeekLayout.ts')
+  const blocks = [
+    { id: 'ends-at-start', day: 1, startMinute: 420, endMinute: 480 },
+    { id: 'long', day: 1, startMinute: 480, endMinute: 720 },
+    { id: 'partial', day: 1, startMinute: 590, endMinute: 610 },
+    { id: 'next-slot', day: 1, startMinute: 600, endMinute: 660 },
+    { id: 'sunday', day: 7, startMinute: 480, endMinute: 600 },
+  ]
+  const slots = computeWeekLoad(blocks, [1, 7], 480, 730)
+  assert.deepEqual(slots[0].days[0].items.map(item => item.id), ['long', 'partial'])
+  assert.deepEqual(slots[1].days[0].items.map(item => item.id), ['long', 'partial', 'next-slot'])
+  assert.deepEqual(slots[0].days[1].items.map(item => item.id), ['sunday'])
+  assert.equal(slots[2].endMinute, 730)
+  assert.deepEqual(slots[2].days[0].items, [])
+  assert.equal(computeWeekLoad([], [1], 480, 600)[0].days[0].items.length, 0)
+  assert.equal(blocks.length, 5)
+})
+
+test('week load keeps all blocks in a dense slot without counting them as sections', async () => {
+  const { computeWeekLoad } = await import('./planningWeekLayout.ts')
+  const blocks = Array.from({ length: 200 }, (_, index) => ({ id: String(index), day: 1, startMinute: 480, endMinute: 600 }))
+  assert.equal(computeWeekLoad(blocks, [1, 2], 480, 600)[0].days[0].items.length, 200)
+  assert.equal(computeWeekLoad(blocks, [1, 2], 480, 600)[0].days[1].items.length, 0)
+})
+
+test('interval coloring agrees with lowest-free-lane scheduling across seeded mixed intervals', () => {
+  let seed = 42
+  const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed }
+  for (let run = 0; run < 200; run++) {
+    const items = Array.from({ length: 60 }, (_, index) => {
+      const startMinute = (random() % 30) * 15
+      return { id: String(index), startMinute, endMinute: startMinute + 15 + (random() % 8) * 15 }
+    }).sort((a, b) => a.startMinute - b.startMinute || b.endMinute - a.endMinute || a.id.localeCompare(b.id))
+    const result = computeWeekDayLayout(items)
+    let ends: number[] = []
+    let clusterEnd = -1
+    let cluster: typeof items = []
+    const verifyWidths = () => {
+      for (const item of cluster) assert.equal(result.get(item.id)?.totalLanes, ends.length)
+    }
+    for (const item of items) {
+      if (item.startMinute >= clusterEnd) { verifyWidths(); ends = []; cluster = [] }
+      let lane = ends.findIndex(end => end <= item.startMinute)
+      if (lane < 0) lane = ends.length
+      ends[lane] = item.endMinute
+      clusterEnd = Math.max(item.endMinute, cluster.length ? clusterEnd : -1)
+      cluster.push(item)
+      assert.equal(result.get(item.id)?.lane, lane)
+    }
+    verifyWidths()
+  }
+})

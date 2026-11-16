@@ -475,6 +475,31 @@ export function aggregateAcademicBlocks(proposal: Pick<AcademicProposal, 'sectio
   return blocks
 }
 
+// Render indexes share the existing aggregate and API identities; no alternate contracts.
+export function indexAcademicProposal(proposal: AcademicProposal) {
+  const blocks = aggregateAcademicBlocks(proposal)
+  const blocksBySection = new Map<string, typeof blocks>()
+  const assignmentsBySection = new Map<string, AcademicProposal['assignments']>()
+  const pendingBySection = new Map<string, AcademicProposal['pending']>()
+  for (const block of blocks) {
+    const section = blocksBySection.get(block.sectionId) ?? []
+    section.push(block)
+    blocksBySection.set(block.sectionId, section)
+  }
+  for (const assignment of proposal.assignments) {
+    const section = assignmentsBySection.get(assignment.sectionId) ?? []
+    section.push(assignment)
+    assignmentsBySection.set(assignment.sectionId, section)
+  }
+  for (const item of proposal.pending) {
+    const section = pendingBySection.get(item.sectionId) ?? []
+    section.push(item)
+    pendingBySection.set(item.sectionId, section)
+  }
+  return { blocks, blocksBySection, assignmentsBySection, pendingBySection,
+    adjustedSections: new Set(proposal.manuallyAdjustedSectionIds ?? []) }
+}
+
 export function academicSectionCoverage(proposal: AcademicProposal) {
   return proposal.sections.reduce((counts, section) => {
     const assigned = proposal.assignments.filter((assignment) => assignment.sectionId === section.sectionId).length
