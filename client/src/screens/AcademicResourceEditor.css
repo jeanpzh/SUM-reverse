@@ -1,430 +1,115 @@
-/* Internal resource workbench: layout only; controls use planning UI primitives. */
-.academic-resource-workbench {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  color: var(--planning-text);
-  font-size: var(--planning-text-sm);
-  font-variant-numeric: tabular-nums;
+/* Ticket 8: resources share the planning table's density and token vocabulary. */
+.planning-root .academic-resource-workbench { display: flex; flex-direction: column; gap: 0; width: 100%; min-width: 0; color: var(--plan-ink); font: 400 14px/20px var(--plan-font-sans); }
+.academic-resource-workbench *, .academic-resource-modal * { box-sizing: border-box; min-width: 0; }
+.planning-root .academic-resource-workbench__tab-content { display: flex; flex-direction: column; gap: 12px; margin: 0; }
+.planning-root .academic-resource-workbench__tabs { display: inline-flex; flex: none; align-self: start; padding: 2px; height: 32px; border: 0; border-radius: 9999px; background: var(--plan-cream); gap: 0; }
+.planning-root .academic-resource-workbench__tabs [role='tab'] { height: 28px; border: 0; border-radius: 9999px; padding: 4px 14px; color: var(--plan-steel); background: transparent; box-shadow: none; font: 500 14px/20px var(--plan-font-sans); }
+.planning-root .academic-resource-workbench__tabs [data-state='active'] { color: var(--plan-on-ink); background: var(--plan-ink); }
+.academic-resource-workbench__tabs span { margin-left: 6px; font-family: var(--plan-font-mono); }
+.academic-resource-workbench__toolbar-row, .academic-resource-workbench__toolbar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.academic-resource-workbench__search-field { flex: 1 1 200px; max-width: 280px; }
+.academic-resource-workbench__filter-field { flex: 0 1 200px; }
+.planning-root .academic-resource-workbench :is([data-slot='input'], [data-slot='native-select']) { height: 32px; width: 100%; border: 1px solid var(--plan-control-border); border-radius: 6px; padding: 0 10px; color: var(--plan-ink); background: var(--plan-paper); box-shadow: none; font: 400 14px/20px var(--plan-font-sans); }
+.planning-root .academic-resource-workbench [data-slot='button'], .planning-root .academic-resource-modal [data-slot='button'] { height: auto; min-height: 32px; padding: 6px 14px; border: 1px solid var(--plan-dove); border-radius: 9999px; background: transparent; color: var(--plan-ink); box-shadow: none; font: 500 14px/20px var(--plan-font-sans); white-space: normal; }
+.planning-root .academic-resource-workbench :is(button, input, select, summary):focus-visible, .planning-root .academic-resource-modal :is(button, input):focus-visible { outline: 2px solid var(--plan-ink); outline-offset: 2px; }
+.academic-resource-workbench__counters { margin: 0; color: var(--plan-fog); font: 400 12px/16px var(--plan-font-mono); }
+.academic-resource-workbench__split { display: flex; flex-wrap: wrap; border-top: 1px solid var(--plan-dove); min-width: 0; }
+.academic-resource-workbench__table-pane { flex: 999 1 520px; min-width: 0; max-width: 100%; }
+.academic-resource-workbench__scroll-region, .academic-resource-workbench__scroll-region > [data-slot='table-container'] { max-width: 100%; overflow: auto; }
+.planning-root .academic-resource-table { width: 100%; min-width: 650px; border-collapse: collapse; table-layout: auto; font: 400 14px/20px var(--plan-font-sans); }
+.planning-root .academic-resource-table :is(th, td) { padding: 9px 12px; height: 40px; white-space: nowrap; border-bottom: 1px solid var(--plan-row-divider); }
+.planning-root .academic-resource-table th { position: sticky; top: 0; color: var(--plan-fog); background: var(--plan-paper); font: 400 11px/16px var(--plan-font-mono); letter-spacing: .04em; text-transform: uppercase; padding-block: 8px; border-color: var(--plan-dove); }
+.planning-root .academic-resource-table td { background: var(--plan-paper); }
+.planning-root .academic-resource-table tr:hover td { background: var(--plan-cream); }
+.planning-root .academic-resource-table tr[aria-selected='true'] td { background: var(--plan-sand); }
+.planning-root .academic-resource-table tr[aria-selected='true'] td:first-child { box-shadow: inset 3px 0 0 var(--plan-ink); }
+.planning-root .academic-resource-table [data-slot='button'] { display: block; padding: 0; min-height: 24px; border: 0; border-radius: 0; text-align: left; font-weight: 400; text-decoration: none; }
+.academic-resource-table code { display: block; color: var(--plan-fog); font: 400 11px/16px var(--plan-font-mono); }
+.planning-root .academic-resource-table .planning-resource-number { text-align: right; font-family: var(--plan-font-mono); font-variant-numeric: tabular-nums; }
+.academic-resource-table__availability { color: var(--plan-fog); font: 400 12px/16px var(--plan-font-mono); }
+.academic-resource-table__status { display: inline-flex; align-items: center; gap: 6px; white-space: normal; max-width: 160px; font: 400 13px/18px var(--plan-font-sans); }
+.academic-resource-table__status svg { flex: none; }
+.academic-resource-badge--included { color: var(--plan-success); }
+.planning-root .academic-resource-table .academic-resource-workbench__native-checkbox { appearance: auto; display: block; width: 16px; height: 16px; padding: 0; accent-color: var(--plan-ink); border-color: var(--plan-steel); }
+.academic-resource-workbench__row--inspected input { border-color: var(--plan-steel); }
+.planning-resource-meter { display: inline-block; vertical-align: middle; width: 64px; height: 4px; margin-left: 8px; overflow: hidden; border-radius: 9999px; background: var(--plan-row-divider); }
+.planning-resource-meter i { display: block; height: 100%; background: var(--plan-ink); }
+.planning-root .academic-resource-workbench__inspector-pane { flex: 1 1 380px; max-width: 420px; min-width: 0; border-left: 1px solid var(--plan-dove); padding: 20px 24px; color: var(--plan-ink); background: var(--plan-paper); }
+.academic-resource-workbench__inspector-header { display: flex; justify-content: space-between; align-items: start; gap: 8px; margin-bottom: 18px; }
+.planning-root .academic-resource-workbench__inspector-title { margin: 4px 0 0; font: 400 24px/30px var(--plan-font-sans); letter-spacing: -.025em; overflow-wrap: anywhere; }
+.planning-resource-eyebrow { color: var(--plan-fog); font: 400 11px/16px var(--plan-font-mono); letter-spacing: .04em; text-transform: uppercase; }
+.academic-resource-workbench__inspector-subtitle { margin: 4px 0 0; color: var(--plan-fog); font: 400 12px/16px var(--plan-font-sans); }
+.academic-resource-workbench__inspector-body { display: flex; flex-direction: column; gap: 18px; }
+.planning-root .academic-resource-workbench__form.academic-scheduling__resource-card { display: flex; flex-direction: column; gap: 18px; padding: 0; margin: 0; border: 0; border-radius: 0; background: transparent; }
+.academic-resource-workbench__resource-card-heading { order: 10; }
+.academic-resource-workbench fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.planning-root .academic-resource-workbench legend { padding: 0 0 8px; font: 500 14px/20px var(--plan-font-sans); }
+.academic-resource-workbench__resource-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+
+.planning-root .academic-resource-workbench [data-slot='label'] { display: flex; flex-direction: column; align-items: stretch; gap: 6px; font: 500 14px/20px var(--plan-font-sans); }
+.planning-root .academic-resource-workbench input:is([type='number'], [type='time'], [aria-label^='Identificación']) { font-family: var(--plan-font-mono); }
+.academic-resource-workbench__course-eligibility, .academic-resource-workbench__course-limits, .academic-resource-workbench__availability { display: flex; flex-direction: column; gap: 8px; }
+.academic-resource-workbench .academic-scheduling__course-options { display: flex; flex-direction: column; gap: 12px; max-height: 240px; overflow: auto; padding: 4px; }
+.academic-resource-workbench__course-option { display: flex; align-items: center; gap: 8px; }
+.academic-resource-workbench .academic-scheduling__course-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.planning-root .academic-resource-workbench__chip { display: inline-flex; gap: 6px; padding: 2px 8px; border-radius: 9999px; border: 1px solid var(--plan-dove); background: var(--plan-cream); color: var(--plan-ink); font: 500 12px/16px var(--plan-font-sans); }
+.planning-root .academic-resource-workbench__chip button { padding: 0; min-height: 24px; min-width: 24px; border: 0; }
+.planning-resource-extra summary, .academic-resource-workbench__header summary { cursor: pointer; min-height: 24px; color: var(--plan-steel); font: 400 12px/16px var(--plan-font-sans); text-decoration: underline; text-underline-offset: 3px; padding: 4px 0; }
+.planning-resource-extra[open] > :not(summary) { margin-top: 8px; }
+.academic-resource-workbench__toolbar-row > .planning-resource-extra { order: 5; }
+.academic-resource-workbench__toolbar-row > .planning-resource-extra[open] { flex-basis: 100%; }
+.academic-resource-workbench__toolbar-row > button { margin-left: auto; }
+.academic-resource-workbench__subtitle, .academic-resource-workbench__resource-note, .academic-resource-workbench__reference-rooms, .academic-resource-modal__subtitle { margin: 0; color: var(--plan-fog); font: 400 12px/16px var(--plan-font-sans); }
+.academic-resource-workbench__availability-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 12px 0; }
+.academic-resource-workbench__inline-error { display: block; padding: 10px 12px; border-radius: 8px; background: var(--plan-danger-bg); color: var(--plan-danger); font: 400 13px/18px var(--plan-font-sans); }
+.academic-resource-workbench [aria-invalid='true'] { border-color: var(--plan-danger); }
+.academic-resource-workbench__ref-grid { display: grid; gap: 8px; margin: 0 0 16px; }
+.academic-resource-workbench__ref-grid dt { color: var(--plan-fog); }
+.academic-resource-workbench__ref-grid dd { margin: 0; overflow-wrap: anywhere; }
+.planning-root .academic-resource-modal { width: min(640px, calc(100% - 32px)); max-height: 85dvh; overflow: auto; padding: 20px; border: 1px solid var(--plan-dove); border-radius: 16px; background: var(--plan-paper); color: var(--plan-ink); font: 400 14px/20px var(--plan-font-sans); }
+.academic-resource-modal__header, .academic-resource-modal__footer, .academic-resource-modal__summary { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; }
+.academic-resource-modal__title { margin: 0; font: 400 24px/32px var(--plan-font-sans); }
+.academic-resource-modal__body { padding-block: 16px; }
+.academic-resource-modal__item { padding: 12px 0; border-bottom: 1px solid var(--plan-dove); }
+@media (max-width: 1023px) {
+  .planning-root .academic-resource-workbench__inspector-pane { max-width: none; border-left: 0; border-top: 1px solid var(--plan-dove); }
+}
+@media (max-width: 719px) {
+  .planning-root .academic-resource-workbench :is([data-slot='button'], [data-slot='input'], [data-slot='native-select']) { min-height: 44px; }
+  .planning-root .academic-resource-workbench__tabs { height: 48px; }
+  .planning-root .academic-resource-workbench__tabs [role='tab'] { height: 44px; }
+  .academic-resource-workbench__search-field, .academic-resource-workbench__filter-field { flex: 1 1 100%; max-width: none; }
+  .planning-root .academic-resource-workbench__inspector-pane { padding: 16px; }
+  .academic-resource-workbench__toolbar-row > button { margin-left: 0; }
 }
 
-.academic-resource-workbench > *,
-.academic-resource-workbench__inspector-pane *,
-.academic-resource-modal * {
-  min-width: 0;
-  box-sizing: border-box;
+.planning-root .planning-resource-detail-sheet { width: 100%; max-height: 85dvh; overflow-y: auto; border-radius: 16px 16px 0 0; }
+.planning-root .academic-resource-workbench__resource-fields > legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.academic-resource-workbench__resource-fields > .planning-resource-name { grid-column: 1 / -1; order: 2; }
+.planning-root .academic-resource-workbench__inspector-header > button { padding: 0; border: 0; width: 32px; height: 32px; flex: none; }
+.academic-resource-workbench__course-eligibility > .planning-resource-extra { order: 1; }
+.planning-root .academic-resource-workbench__inspector-pane > .academic-resource-workbench__inspector-header + .academic-resource-workbench__inspector-body .academic-scheduling__resource-card > .planning-resource-extra { order: 3; }
+.planning-root .academic-resource-table .academic-resource-workbench__native-checkbox { min-height: 0; }
+.planning-root .academic-resource-workbench__scroll-region > [data-slot='table-container'] { border: 0; border-radius: 0; }
+.planning-root .academic-resource-table [data-slot='table-row'] { border: 0; }
+.planning-root .academic-resource-workbench .academic-resource-table input[type='checkbox'] { height: 16px; min-height: 0; margin: 0; padding: 0; }
+
+.planning-root .academic-resource-table td .planning-table-name { display: inline; }
+.planning-root .academic-resource-table td code { display: inline; margin-left: 8px; }
+.planning-root .academic-resource-workbench__inspector-header > button { box-shadow: none; }
+.planning-root .academic-resource-workbench__resource-fields { align-items: start; }
+.planning-root .academic-resource-workbench__chip { padding-block: 0; }
+.planning-root .academic-resource-workbench__chip button { border: 0; min-height: 24px; padding: 0; }
+.academic-resource-workbench__form > .academic-resource-workbench__inline-error { order: 2; }
+/* Like the reference board, the master-detail divider meets the workspace edges. */
+.academic-resource-workbench__split { margin-inline: -32px; width: calc(100% + 64px); }
+@media (max-width: 1279px) {
+  .academic-resource-workbench__split { margin-inline: -24px; width: calc(100% + 48px); }
 }
-
-.academic-resource-workbench__tabs,
-.academic-resource-workbench__counters,
-.academic-resource-workbench__toolbar-row,
-.academic-resource-workbench__toolbar-actions,
-.academic-resource-modal__summary,
-.academic-resource-modal__footer {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
+@media (max-width: 719px) {
+  .academic-resource-workbench__split { margin-inline: -16px; width: calc(100% + 32px); }
 }
-
-.academic-resource-workbench__tabs {
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--planning-border);
-}
-
-.academic-resource-workbench__tab--active {
-  background: var(--planning-selected);
-  color: var(--planning-text);
-}
-
-.academic-resource-workbench__header,
-.academic-resource-workbench__toolbar,
-.academic-resource-workbench__search-field,
-.academic-resource-workbench__filter-field {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-}
-
-.academic-resource-workbench__title,
-.academic-resource-workbench__inspector-title,
-.academic-resource-modal__title {
-  margin: 0;
-  font-size: var(--planning-text-lg);
-  line-height: 1.4;
-  font-weight: 700;
-  overflow-wrap: anywhere;
-}
-
-.academic-resource-workbench__subtitle,
-.academic-resource-workbench__inspector-subtitle,
-.academic-resource-workbench__resource-note,
-.academic-resource-modal__subtitle,
-.academic-resource-modal__item-details {
-  margin: 0;
-  color: var(--planning-muted);
-  font-size: var(--planning-text-sm);
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-}
-
-.academic-resource-workbench__inspector-subtitle,
-.academic-resource-modal__subtitle {
-  margin-top: 4px;
-}
-
-.academic-resource-workbench__counters {
-  gap: 8px 16px;
-  font-size: var(--planning-text-sm);
-  color: var(--planning-muted);
-}
-
-.academic-resource-workbench__counter-item {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.academic-resource-workbench__counter-value {
-  color: var(--planning-text);
-  font-weight: 700;
-}
-
-.academic-resource-workbench__toolbar-row {
-  align-items: end;
-}
-
-.academic-resource-workbench__search-field {
-  flex: 1 1 240px;
-}
-
-.academic-resource-workbench__filter-field {
-  flex: 1 1 200px;
-}
-
-.academic-resource-workbench__toolbar-row > [data-slot='native-select-wrapper'] {
-  flex: 1 1 240px;
-}
-
-.academic-resource-workbench__split,
-.academic-resource-workbench__table-pane,
-.academic-resource-workbench__scroll-region {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-}
-
-/* Table owns the only scroll container, in both axes; focus stays keyboard accessible. */
-.academic-resource-table {
-  min-width: 48rem;
-}
-
-.academic-resource-table:focus-visible {
-  outline: 2px solid var(--planning-primary);
-  outline-offset: -2px;
-}
-
-.academic-resource-table [data-slot].academic-resource-table__td-checkbox {
-  width: 48px;
-  text-align: center;
-}
-
-.academic-resource-table [data-slot].academic-resource-table__td-actions {
-  width: 112px;
-  text-align: right;
-}
-
-.academic-resource-table .academic-resource-workbench__native-checkbox {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  padding: 0;
-  margin: 0;
-  vertical-align: middle;
-  accent-color: var(--planning-primary);
-}
-
-.academic-resource-workbench__row--inspected {
-  outline: 2px solid var(--planning-primary);
-  outline-offset: -2px;
-}
-
-.academic-resource-table [data-slot='table-cell'].academic-resource-workbench__empty {
-  padding: 24px 16px;
-  text-align: center;
-  color: var(--planning-muted);
-}
-
-/* Position, focus trap and shadow belong to Sheet/Dialog. */
-.academic-resource-workbench__inspector-pane.academic-resource-workbench__inspector-pane {
-  width: min(36rem, 100%);
-  max-width: 100%;
-  padding: 0;
-  gap: 0;
-  overflow: hidden;
-  font-size: var(--planning-text-sm);
-  font-variant-numeric: tabular-nums;
-}
-
-.academic-resource-workbench__inspector-header,
-.academic-resource-modal__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 16px;
-  border-bottom: 1px solid var(--planning-border);
-}
-
-.academic-resource-workbench__inspector-body,
-.academic-resource-modal__body {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-height: 0;
-  padding: 16px;
-  overflow-y: auto;
-  overflow-wrap: anywhere;
-}
-
-.academic-resource-workbench__inspector-body {
-  flex: 1 1 auto;
-}
-
-/* Keep legacy form hooks for verification, with a flat white surface inside the sheet. */
-.academic-resource-workbench__form.academic-scheduling__resource-card {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: var(--planning-surface);
-}
-
-.academic-resource-workbench__resource-card-heading {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.academic-resource-workbench__resource-fields,
-.academic-resource-workbench__course-eligibility,
-.academic-resource-workbench__course-limits,
-.academic-resource-workbench__availability {
-  display: grid;
-  gap: 12px;
-  min-width: 0;
-  margin: 0;
-  padding: 12px 0 0;
-  border: 0;
-  border-top: 1px solid var(--planning-border);
-}
-
-.academic-resource-workbench__form legend,
-.academic-resource-workbench__availability legend {
-  max-width: 100%;
-  padding: 0 8px 0 0;
-  font-size: var(--planning-text-sm);
-  font-weight: 700;
-}
-
-.academic-resource-workbench__resource-fields,
-.academic-resource-workbench__course-limits {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
-}
-
-.academic-resource-workbench__resource-fields > label,
-.academic-resource-workbench__course-limits > label,
-.academic-resource-workbench__availability-row > label {
-  display: grid;
-  gap: 4px;
-}
-
-.academic-resource-workbench__inspector-pane .academic-scheduling__course-options {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
-  max-height: 240px;
-  overflow: auto;
-  padding: 4px;
-}
-
-.academic-resource-workbench__course-option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.academic-resource-workbench__inspector-pane .academic-scheduling__course-chips {
-  gap: 8px;
-}
-
-.academic-resource-workbench__chip {
-  gap: 4px;
-}
-
-.academic-resource-workbench__chip > button {
-  padding: 4px 8px;
-  min-height: 32px;
-}
-
-.academic-resource-workbench__availability-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(0, 1fr)) auto;
-  align-items: end;
-  gap: 8px;
-}
-
-.academic-resource-workbench__inline-error {
-  color: var(--planning-error);
-  font-size: var(--planning-text-sm);
-}
-
-.academic-resource-workbench__draft-note {
-  padding: 12px;
-  border: 1px solid var(--planning-border);
-  font-size: var(--planning-text-sm);
-}
-
-.academic-resource-workbench__ref-view,
-.academic-resource-workbench__ref-grid {
-  display: grid;
-  gap: 12px;
-}
-
-.academic-resource-workbench__ref-grid {
-  margin: 0;
-}
-
-.academic-resource-workbench__ref-grid dt {
-  color: var(--planning-muted);
-  font-size: var(--planning-text-sm);
-}
-
-.academic-resource-workbench__ref-grid dd {
-  margin: -8px 0 0;
-  font-size: var(--planning-text-sm);
-  overflow-wrap: anywhere;
-}
-
-.academic-resource-workbench__reference-rooms {
-  color: var(--planning-muted);
-  font-size: var(--planning-text-sm);
-}
-
-.academic-resource-workbench__disclosure-trigger {
-  justify-content: flex-start;
-  text-align: left;
-}
-
-.academic-resource-workbench__reference-rooms ul {
-  max-height: 240px;
-  overflow: auto;
-  padding-left: 24px;
-}
-
-.academic-resource-modal.academic-resource-modal {
-  width: min(640px, calc(100% - 32px));
-  max-width: 640px;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding: 0;
-  overflow: hidden;
-  font-size: var(--planning-text-sm);
-  font-variant-numeric: tabular-nums;
-}
-
-.academic-resource-modal__summary {
-  gap: 8px 16px;
-  font-size: var(--planning-text-sm);
-}
-
-.academic-resource-modal__item-list {
-  display: flex;
-  flex-direction: column;
-  max-height: 40vh;
-  overflow-y: auto;
-}
-
-.academic-resource-modal__item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--planning-border);
-}
-
-.academic-resource-modal__item-header {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-
-.academic-resource-modal__footer {
-  justify-content: flex-end;
-  padding: 16px;
-  border-top: 1px solid var(--planning-border);
-}
-
-@media (max-width: 480px) {
-  .academic-resource-workbench__availability-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--planning-border);
-  }
-
-  .academic-resource-workbench__availability-row > label:first-child {
-    grid-column: 1 / -1;
-  }
-
-  .academic-resource-workbench__availability-row > button {
-    grid-column: 1 / -1;
-    justify-self: end;
-  }
-}
-
-/* A single surface: toolbar, metadata, then the table's own scrolling region. */
-.academic-resource-workbench__tab-content { display: flex; flex-direction: column; gap: 12px; margin: 0; }
-.academic-resource-workbench__tabs { align-self: flex-start; padding: 4px; border: 1px solid var(--planning-border); border-radius: 8px; background: var(--planning-surface-subtle); }
-.academic-resource-workbench__toolbar-row { align-items: center; gap: 12px; }
-.academic-resource-workbench__search-field { flex: 1 1 12rem; min-width: min(100%, 12rem); }
-.academic-resource-workbench__filter-field { flex: 0 1 12rem; }
-.academic-resource-workbench__toolbar-row > [data-slot='native-select-wrapper'] { flex: 0 1 16rem; max-width: 100%; }
-.academic-resource-workbench__toolbar-actions { margin-left: auto; gap: 8px; }
-.academic-resource-workbench__subtitle, .academic-resource-workbench__counters { margin: 0; color: var(--planning-muted); font-size: var(--planning-text-xs); line-height: 16px; }
-.academic-resource-workbench__scroll-region { overflow: auto; }
-.academic-resource-workbench__scroll-region > [data-slot='table-container'] { max-width: 100%; overflow: auto; }
-.planning-root .academic-resource-table [data-slot='table-head'] { padding: 8px; font-size: var(--planning-text-sm); }
-.planning-root .academic-resource-table [data-slot='table-cell'] { height: 40px; padding: 4px 8px; font-size: var(--planning-text-sm); }
-.academic-resource-table code { white-space: nowrap; font-family: monospace; font-size: var(--planning-text-xs); }
-.academic-resource-table :is(th, td):nth-child(3) { width: auto; min-width: 10rem; }
-.academic-resource-table :is(th, td):is(:nth-child(5), :nth-child(6), :nth-child(7)) { white-space: nowrap; }
-.academic-resource-table__availability { display: block; max-width: 5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.academic-resource-table__status { display: inline-flex; align-items: center; gap: 4px; font-size: var(--planning-text-xs); }
-.academic-resource-table__status > svg { flex-shrink: 0; color: var(--planning-muted); }
-.academic-resource-table__status.academic-resource-badge--included > svg { color: var(--planning-success); }
-.planning-root .academic-resource-table .academic-resource-workbench__row--selected { background: var(--planning-selected); }
-.academic-resource-workbench__inspector-title, .academic-resource-modal__title { font-size: var(--planning-text-xl); line-height: 22px; font-weight: 700; }
-
-/* The code sits under the name; below 620px the table scrolls inside its own container. */
-.academic-resource-table { width: 100%; min-width: 620px; table-layout: fixed; }
-.planning-root .academic-resource-table :is(th, td) { overflow-wrap: normal; white-space: normal; }
-.planning-root .academic-resource-table [data-slot='table-cell'],
-.planning-root .academic-resource-table [data-slot='table-head'] { padding: 4px 8px; }
-.academic-resource-table :is(th, td):first-child { width: 40px; }
-.academic-resource-table :is(th, td):nth-child(2) { width: auto; }
-.academic-resource-table :is(th, td):nth-child(3) { width: 128px; min-width: 0; }
-.academic-resource-table :is(th, td):is(:nth-child(4), :nth-child(5), :nth-child(6)) { width: 80px; white-space: nowrap; }
-.academic-resource-table :is(th, td):nth-child(7) { width: 168px; white-space: normal; }
-.academic-resource-table code { display: block; color: var(--planning-muted); }
-.academic-resource-table__availability { max-width: none; }
-.academic-resource-table__status { flex-wrap: nowrap; }
+/* A 24px name target plus 14px cell padding keeps the specified 40px row. */
+.planning-root .academic-resource-table td { padding-block: 7px; }
+.planning-root .academic-resource-workbench .academic-resource-workbench__inspector-header > button,
+.planning-root .academic-resource-workbench .academic-resource-workbench__chip button { border: 0; background: transparent; box-shadow: none; padding: 0; }
