@@ -1,12 +1,14 @@
+import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
 import { CircleAlert, CircleCheck } from 'lucide-react'
 
-export function PlanningResultStrip({ status, label, facts, action, children, statusId, className = '', ariaLabel = 'Resultado' }: {
+export function PlanningResultStrip({ status, label, facts, action, actionContainer, children, statusId, className = '', ariaLabel = 'Resultado' }: {
   ariaLabel?: string
   status: string
   label: ReactNode
   facts?: readonly ReactNode[]
   action?: ReactNode
+  actionContainer?: HTMLDivElement | null
   children?: ReactNode
   statusId?: string
   className?: string
@@ -18,7 +20,7 @@ export function PlanningResultStrip({ status, label, facts, action, children, st
         {success ? <CircleCheck size={16} aria-hidden="true" /> : <CircleAlert size={16} aria-hidden="true" />}{label}
       </strong>
       {facts && <div className="planning-status-bar__facts">{facts.map((fact, index) => <span className="planning-status-bar__fact" key={index}>{fact}</span>)}</div>}
-      {action && <div className="planning-status-bar__actions">{action}</div>}
+      {action && (actionContainer ? createPortal(<div className="planning-status-bar__actions">{action}</div>, actionContainer) : <div className="planning-status-bar__actions">{action}</div>)}
     </div>
     {children}
   </section>

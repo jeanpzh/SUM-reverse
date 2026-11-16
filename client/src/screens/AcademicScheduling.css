@@ -378,3 +378,17 @@
   .planning-root .planning-mobile-stage-actions summary { min-height: 44px; }
   .planning-root .planning-inspector--sheet.planning-inspector--sheet { padding: 8px 16px 16px; }
 }
+@media (max-width: 719px) {
+  .planning-root .planning-mobile-stage-actions { position: relative; }
+  .planning-root .planning-mobile-stage-actions[open] { z-index: 35; }
+  .planning-root .planning-mobile-stage-actions > :not(summary) { background: var(--plan-paper); }
+  .planning-root .planning-mobile-stage-actions > div { position: absolute; right: 0; top: 44px; width: min(340px, calc(100vw - 32px)); padding: 16px; border: 1px solid var(--plan-dove); border-radius: 16px; box-shadow: var(--plan-shadow-float); }
+  .planning-root .planning-mobile-schedule-controls { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+  .planning-root .planning-mobile-schedule-controls .planning-schedule-toolbar__teacher { flex: auto; }
+  .planning-root .planning-mobile-schedule-controls select { width: 100%; max-width: 100%; height: 44px; }
+  .planning-root .planning-mobile-schedule-controls .planning-horario-toolbar-spacer { display: none; }
+  .planning-root .planning-stage-panel--horario .planning-status-bar__strip { row-gap: 0; }
+  .planning-root .planning-stage-panel--horario .planning-status-bar__facts { min-height: 20px; }
+  .planning-root .planning-page-head:has(.planning-mobile-stage-actions) { align-items: center; }
+  .planning-root .planning-stage-panel--horario .planning-schedule-toolbar { padding-top: 0; }
+}
