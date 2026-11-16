@@ -392,3 +392,38 @@
   .planning-root .planning-page-head:has(.planning-mobile-stage-actions) { align-items: center; }
   .planning-root .planning-stage-panel--horario .planning-schedule-toolbar { padding-top: 0; }
 }
+
+/* Follow-up: a scope is one row; long proposal labels give way to its tools. */
+@media (min-width: 720px) {
+  .planning-root .planning-scope-bar.planning-scope-header { flex-wrap: nowrap; height: 52px; min-height: 52px; }
+  .planning-root .planning-scope-bar > :is(.planning-scope-bar__product, .planning-scope-bar__divider, .planning-scope-switcher-trigger, .planning-scope-bar__tools) { flex-shrink: 0; }
+  .planning-root .planning-scope-bar .planning-proposal-trigger { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+  .planning-root .planning-scope-bar #planning-tour-proposals { max-width: 100%; min-width: 0; }
+  .planning-root .planning-scope-bar .planning-proposal-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .planning-root .planning-scope-bar :is(.planning-scope-header__draft-state, #planning-tour-proposals > svg) { flex-shrink: 0; white-space: nowrap; }
+}
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .planning-root .planning-scope-bar.planning-scope-header { gap: 8px; }
+  .planning-root .planning-scope-bar__product { max-width: 120px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+}
+@media (max-width: 719px) {
+  .planning-root .planning-week-scope { flex: 1; min-width: 0; padding: 0 84px 0 4px; }
+  .planning-week-scope > span { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .planning-week-scope__eyebrow { color: var(--plan-fog); font: 11px/16px var(--plan-font-mono); letter-spacing: .04em; text-transform: uppercase; }
+  .planning-week-scope__title { color: var(--plan-ink); font: 500 14px/20px var(--plan-font-sans); }
+  .planning-root [data-compact-week] .planning-page-head { padding: 0; min-height: 0; height: 0; gap: 0; }
+  .planning-root [data-compact-week] .planning-page-head__text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .planning-root [data-compact-week] .planning-mobile-stage-actions { position: fixed; z-index: 40; top: 4px; right: 52px; }
+  .planning-root [data-compact-week] .planning-mobile-stage-actions > div { max-height: calc(100dvh - 160px); overflow: auto; }
+  .planning-root [data-compact-week] .planning-mobile-stage-actions > [data-slot='button'] { display: none; }
+  .planning-root [data-compact-week] .planning-week-scope-controls { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .planning-root [data-compact-week] .planning-week-scope-controls .planning-scope-switcher-trigger { display: flex; }
+  .planning-root [data-compact-week] .planning-week-scope-controls #planning-tour-proposals { align-items: flex-start; text-align: left; white-space: normal; }
+  .planning-root [data-compact-week] .planning-schedule-toolbar { display: flex; flex-direction: column; align-items: stretch; gap: 12px; padding: 0; }
+  .planning-root [data-compact-week] .planning-schedule-toolbar__search,
+  .planning-root [data-compact-week] .planning-schedule-toolbar__teacher { flex: auto; }
+  .planning-root [data-compact-week] .planning-schedule-toolbar input,
+  .planning-root [data-compact-week] .planning-schedule-toolbar select { width: 100%; max-width: 100%; }
+  .planning-root [data-compact-week] .planning-horario-toolbar-spacer { display: none; }
+  .planning-root [data-compact-week] .planning-week__day-tabs { margin-inline: -4px; padding-inline: 0; }
+}

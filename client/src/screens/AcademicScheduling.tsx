@@ -71,6 +71,8 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
   const [tourOpen, setTourOpen] = useState(false)
   const [tourStep, setTourStep] = useState(0)
   const [guideSteps, setGuideSteps] = useState<ReadonlyArray<readonly [string, string, string]>>([])
+  const narrowLayout = useMediaQuery('(max-width: 719px)')
+  const compactWeek = narrowLayout && currentStage === 'horario' && viewMode === 'semana'
   const wideLayout = useMediaQuery('(min-width: 1024px)')
   const railLayout = useMediaQuery('(min-width: 1280px)')
   const { open: chatOpen, expanded: chatExpanded, setOpen: setChatOpen, setExpanded: setChatExpanded } = usePlanningAssistantDisplay(railLayout)
@@ -321,10 +323,11 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
     }
   }
 
-  return <section className="screen-academic-scheduling">
+  return <section className="screen-academic-scheduling" data-compact-week={compactWeek || undefined}>
     {confirmElement}
     <PlanningScopeHeader
       title={pageTitle}
+      compactWeekLabel={compactWeek ? `Semana · ${teacherFilter === 'all' ? 'Todos los docentes' : teacherFilter === '__unassigned__' ? 'Sin docente asignado' : resources.teachers.find((teacher) => teacher.id === teacherFilter)?.name ?? proposal?.assignments.find((item) => item.teacherId === teacherFilter)?.teacherName ?? 'Docente'}` : undefined}
       eyebrow={currentStage === 'preparacion' ? `Paso 1 de 4 · ${draftVersion ? workspaceDirty ? 'cambios sin guardar' : 'guardada' : 'cambios en memoria hasta guardar'}` : undefined}
       nextAction={nextAction}
       tertiaryAction={currentStage === 'horario' ? <>           {!lockedDraft && view.proposalComplete && view.displayedDraftState === 'draft' && (
@@ -384,7 +387,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
         </div>
       </> : null}
       proposalActions={<div className="planning-proposal-trigger">
-        <Button variant="ghost" id="planning-tour-proposals" aria-haspopup="dialog" aria-expanded={draftListOpen}
+        <Button variant="ghost" id="planning-tour-proposals" title={`${draftTitle} · ${draftVersion ? `v${draftVersion}` : 'sin versión'} · ${view.draftLabel}`} aria-haspopup="dialog" aria-expanded={draftListOpen}
           onClick={() => { setDraftListOpen(true); void refreshDraftList() }}>
           <span className="planning-proposal-mobile-scope">Sistemas · {planningPeriod}{draftVersion ? ` · v${draftVersion}` : ''}</span><span className="planning-proposal-name">{draftTitle}</span>
           <span className="planning-scope-header__draft-state" data-draft-state={view.displayedDraftState} data-dirty={workspaceDirty || undefined} role="status">
@@ -538,7 +541,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
           action={generating || applyingAdvisor ? null : <Button asChild variant="link"><Link to="/local/programacion-academica" search={{ etapa: 'preparacion', vista: 'cursos' }}>Ir a Preparación</Link></Button>} />}
 
         {proposal && <>
-          <PlanningStatusBar mobileActionContainer={mobileActions} onRetrySearch={() => void retrySearch()} key={`${proposal.proposalId}:${proposal.editVersion ?? 0}`}
+          <PlanningStatusBar contextContainer={compactWeek ? mobileActions : null} mobileActionContainer={compactWeek ? null : mobileActions} onRetrySearch={() => void retrySearch()} key={`${proposal.proposalId}:${proposal.editVersion ?? 0}`}
             teacherNames={Object.fromEntries([...(catalog?.referenceTeachers ?? []), ...resources.teachers].map((teacher) => [teacher.id, teacher.name]))}
             courseNames={Object.fromEntries((catalog?.courses ?? []).map((course) => [course.courseId, course.name]))}
             roomNames={Object.fromEntries([...(catalog?.referenceRooms ?? []), ...resources.rooms].map((room) => [room.id, room.name]))}
@@ -570,7 +573,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
             && state.advisorOutcome.editVersion === (proposal.editVersion ?? 0)
             && <AdvisorOutcome outcome={state.advisorOutcome} />}
 
-          <PlanningScheduleToolbar mobileActionContainer={mobileActions} proposal={proposal} searchQuery={searchQuery} onSearchChange={setSearchQuery}
+          <PlanningScheduleToolbar contextContainer={compactWeek ? mobileActions : null} mobileActionContainer={compactWeek ? null : mobileActions} proposal={proposal} searchQuery={searchQuery} onSearchChange={setSearchQuery}
             teacherFilter={teacherFilter} onTeacherFilterChange={setTeacherFilter} viewMode={viewMode} onToggleView={handleToggleView} />
           <div className="planning-workbench-container">
             <div className="planning-workbench-main">
@@ -813,7 +816,7 @@ function PlanningSectionsTable({ proposal, catalog, selectedSectionId, onSelectS
   </div>
 }
 
-function PlanningScheduleToolbar({ mobileActionContainer, proposal, searchQuery, onSearchChange, teacherFilter, onTeacherFilterChange, viewMode, onToggleView }: {
+function PlanningScheduleToolbar({ contextContainer, mobileActionContainer, proposal, searchQuery, onSearchChange, teacherFilter, onTeacherFilterChange, viewMode, onToggleView }: {
   proposal: AcademicProposal
   searchQuery: string
   onSearchChange: (value: string) => void
@@ -821,6 +824,7 @@ function PlanningScheduleToolbar({ mobileActionContainer, proposal, searchQuery,
   onTeacherFilterChange: (value: string) => void
   viewMode: 'tabla' | 'semana'
   mobileActionContainer?: HTMLDivElement | null
+  contextContainer?: HTMLDivElement | null
   onToggleView: (value: 'tabla' | 'semana') => void
 }) {
   const { teachers, unassigned } = useMemo(() => {
@@ -853,11 +857,12 @@ function PlanningScheduleToolbar({ mobileActionContainer, proposal, searchQuery,
       <Button variant="ghost" type="button" aria-pressed={viewMode === 'semana'} onClick={() => onToggleView('semana')}>Semana</Button>
     </div>
   </>
-  return <div className="planning-schedule-toolbar">
+  const toolbar = <div className="planning-schedule-toolbar">
     <div className="planning-schedule-toolbar__search">
       <Input type="search" placeholder="Buscar curso, sección o aula" aria-label="Buscar secciones"
         value={searchQuery} onChange={(event) => onSearchChange(event.currentTarget.value)} />
     </div>
     {mobileActionContainer ? createPortal(<div className="planning-mobile-schedule-controls">{controls}</div>, mobileActionContainer) : controls}
   </div>
+  return contextContainer ? createPortal(toolbar, contextContainer) : toolbar
 }
