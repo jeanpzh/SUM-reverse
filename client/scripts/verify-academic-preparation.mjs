@@ -1,6 +1,7 @@
 // Synthetic local acceptance script for Planning Preparation Scale (P96-UI).
 // Implements tests for P1-P7 (simulated 96-course catalog) and P9 (real own NestJS backend with built-in catalog).
 import assert from 'node:assert/strict'
+import { openProposalMenu, setProposalTitle } from './planning-v2-helpers.mjs'
 import { isPlanningCheckboxChecked, setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { spawn } from 'node:child_process'
 import { mkdtemp, rm } from 'node:fs/promises'
@@ -531,7 +532,7 @@ try {
 
   // Save draft
   const draftTitle = `Borrador P9 Verificación ${Date.now()}`
-  await realPage.getByLabel('Nombre de la propuesta').fill(draftTitle)
+  await setProposalTitle(realPage, draftTitle)
   const savePromise = realPage.waitForResponse((res) => res.url().endsWith('/borradores/guardar') && res.request().method() === 'POST')
   await realPage.locator('#planning-tour-save').click()
   const saveRes = await savePromise
@@ -540,14 +541,14 @@ try {
   assert.equal(savedData.title, draftTitle)
 
   // Resume draft via draft list
-  await realPage.locator('#planning-tour-proposals').click()
+  await openProposalMenu(realPage)
   const savedProposals = realPage.locator('#academic-scheduling-saved-proposals')
   await savedProposals.waitFor()
   const savedRow = savedProposals.locator('.academic-scheduling__saved-row').filter({ hasText: draftTitle })
   assert.equal(await savedRow.count(), 1, 'P9: Propuesta guardada listada en Mis propuestas')
 
   await realPage.reload()
-  await realPage.locator('#planning-tour-proposals').click()
+  await openProposalMenu(realPage)
   const resumedRow = realPage.locator('.academic-scheduling__saved-row').filter({ hasText: draftTitle })
   const resumeResponse = realPage.waitForResponse((res) => res.url().endsWith(`/borradores/${savedData.id}/continuar`))
   await resumedRow.getByRole('button', { name: 'Continuar edición', exact: true }).click()
@@ -575,7 +576,7 @@ try {
   saved = (await post(`borradores/${saved.id}/aprobar`, { expectedVersion: saved.version })).draft
   assert.equal(saved.state, 'approved')
   await realPage.reload()
-  await realPage.locator('#planning-tour-proposals').click()
+  await openProposalMenu(realPage)
   const approvedRow = realPage.locator('.academic-scheduling__saved-row').filter({ hasText: draftTitle })
   const approvedResume = realPage.waitForResponse((res) => res.url().endsWith(`/borradores/${saved.id}/continuar`))
   await approvedRow.getByRole('button', { name: 'Consultar', exact: true }).click()

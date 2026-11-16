@@ -3,6 +3,7 @@
 // Does NOT attach to, reuse, or interfere with user demo on 3210/5176.
 
 import assert from 'node:assert/strict'
+import { gotoStage, openProposalMenu, setProposalTitle } from './planning-v2-helpers.mjs'
 import { setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
@@ -378,7 +379,7 @@ try {
 
   // Guardar propuesta
   const draftTitle = `Borrador-RUI-${Date.now()}`
-  await page.getByLabel('Nombre de la propuesta').fill(draftTitle)
+  await setProposalTitle(page, draftTitle)
   const saveResponse = page.waitForResponse(
     (res) => res.url().endsWith('/borradores/guardar') && res.request().method() === 'POST',
   )
@@ -391,7 +392,7 @@ try {
   // Recargar y continuar edición
   await page.reload()
   await page.locator('#academic-scheduling-resource-editor').waitFor()
-  await page.locator('#planning-tour-proposals').click()
+  await openProposalMenu(page)
   const savedProposals = page.locator('#academic-scheduling-saved-proposals')
   await savedProposals.waitFor()
   const savedRow = savedProposals.locator('.academic-scheduling__saved-row').filter({ hasText: draftTitle })
@@ -408,7 +409,7 @@ try {
   // -------------------------------------------------------------
   console.log('[RUI8] Verificando aprobación por API real y consulta de recursos en versión congelada...')
   const stage = async (name, etapa) => {
-    await page.locator('.planning-root').getByRole('link', { name: name === 'Preparación' ? 'Resumen' : name, exact: true }).click()
+    await gotoStage(page, name)
     await page.waitForURL(new RegExp(`etapa=${etapa}(?:&|$)`))
   }
 
@@ -445,7 +446,7 @@ try {
   await stage('Preparación', 'preparacion')
   await page.reload()
   await page.locator('#academic-scheduling-resource-editor').waitFor()
-  await page.locator('#planning-tour-proposals').click()
+  await openProposalMenu(page)
   const approvedSavedRow = page.locator('.academic-scheduling__saved-row').filter({ hasText: draftTitle })
 
   const consultResponse = page.waitForResponse((res) => res.url().endsWith(`/borradores/${savedData.id}/continuar`))
