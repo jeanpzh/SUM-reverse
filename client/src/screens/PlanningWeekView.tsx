@@ -55,6 +55,7 @@ export function PlanningWeekView({ proposal, catalog, proposalResources, selecte
     const pane = root.current?.closest('.planning-view-pane')
     const reveal = () => {
       if (!root.current || !pane || getComputedStyle(pane).display === 'none' || !selectedSectionId) return
+      setAgendaDay(null)
       const target = root.current.querySelector<HTMLElement>(`[data-week-grid-section-id="${CSS.escape(selectedSectionId)}"]`)
       if (target && getComputedStyle(target).display !== 'none') target.scrollIntoView({ block: 'nearest', inline: 'nearest' })
     }
@@ -69,7 +70,7 @@ export function PlanningWeekView({ proposal, catalog, proposalResources, selecte
   const renderBlock = (item: typeof items[number], style?: CSSProperties) => {
     const b = item.block
     const current = active && blockKey(b) === blockKey(active) && !item.proposed
-    const label = `${item.proposed ? 'Proposé · sin validar' : current ? 'Actual' : 'Bloque'}: ${b.courseName}, Sección ${academicSectionLabel(proposal,b.sectionId)}, ${names[item.day]} ${formatAcademicMinute(item.startMinute)}–${formatAcademicMinute(item.endMinute)}`
+    const label = `${item.proposed ? 'Propuesto · sin validar' : current ? 'Actual' : 'Bloque'}: ${b.courseName}, Sección ${academicSectionLabel(proposal,b.sectionId)}, ${names[item.day]} ${formatAcademicMinute(item.startMinute)}–${formatAcademicMinute(item.endMinute)}`
     const content = <><span className="planning-week__type">{item.proposed ? 'Propuesto · sin validar' : `${current ? 'Actual · ' : ''}${b.componentDetails.map(c => typeLabel(c.type)).join(' + ')}`}</span><strong>{b.courseName}</strong><span className="planning-week__meta">Secc. {academicSectionLabel(proposal,b.sectionId)} · {item.proposed ? editingBlock?.roomIds.map(id => proposalResources?.rooms.find(r => r.id === id)?.name ?? id).join(', ') : b.roomNames.join(', ')}</span></>
     const className = `planning-week__block${item.proposed ? ' planning-week__block--proposed-preview' : ''}${selectedSectionId === b.sectionId && !item.proposed ? ' planning-week__block--selected' : ''}`
     return item.proposed ? <div key={item.id} role="note" aria-label={label} className={className} style={style}>{content}</div> : <button key={item.id} type="button" data-kind={typeLabel(b.componentDetails[0]?.type ?? '')} data-week-section-id={b.sectionId} data-week-grid-section-id={b.sectionId} data-week-agenda-section-id={b.sectionId} aria-pressed={selectedSectionId === b.sectionId} aria-label={label} title={`${label} · ${b.teacherName}`} className={className} style={style} onClick={() => { onSelectSection(b.sectionId); if (!isLocked) onStartEditBlock(b) }}>{content}</button>

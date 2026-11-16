@@ -1,9 +1,6 @@
 import { X } from 'lucide-react'
+import { PlanningWeekAdjustment } from './PlanningWeekAdjustment'
 import { Button } from '../components/ui/Button'
-import { Badge } from '../components/ui/Badge'
-import { Input } from '../components/ui/Input'
-import { NativeSelect } from '../components/ui/NativeSelect'
-import { Label } from '../components/ui/Label'
 import { useMemo } from 'react'
 import type {
   AcademicAdjustment,
@@ -17,7 +14,6 @@ import { Sheet, SheetContent, SheetTitle } from '../components/ui/Sheet'
 import {
   academicSectionLabel,
   aggregateAcademicBlocks,
-  formatAcademicDuration,
   formatAcademicMinute,
 } from '../data/academicScheduling'
 
@@ -76,11 +72,11 @@ export function PlanningInspector({
     ) ?? sectionBlocks[0]
     : null
 
-  const activeAssignments = activeBlock
-    ? proposal.assignments
-      .filter((a) => activeBlock.sessionIds.includes(a.sessionId))
-      .sort((a, b) => a.startMinute - b.startMinute || a.sessionId.localeCompare(b.sessionId))
-    : []
+  if (isEditing && activeBlock) return <PlanningWeekAdjustment
+    proposal={proposal} proposalResources={proposalResources} catalog={catalog}
+    editingBlock={editingBlock} activeBlock={activeBlock} adjusting={adjusting}
+    adjustmentError={adjustmentError} docked={docked} onCancelEdit={onCancelEdit}
+    onSubmitEdit={onSubmitEdit} onChangeEditingBlock={onChangeEditingBlock} onStartEdit={onStartEdit} />
 
   const assignedComponents = new Map<string, AcademicProposal['assignments']>()
   for (const item of proposal.assignments.filter((item) => item.sectionId === sectionId)) {
@@ -103,190 +99,6 @@ export function PlanningInspector({
             <Button variant="ghost" type="button" className="planning-inspector__close-btn" onClick={onClose} aria-label="Cerrar detalle"><X size={14} aria-hidden="true" /></Button>
           </div>
         </div>
-
-        {isEditing && activeBlock && (
-          <section
-            id="academic-scheduling-manual-editor"
-            className="academic-scheduling__manual-review"
-            aria-labelledby="academic-scheduling-manual-review"
-          >
-            <header className="academic-scheduling__manual-heading">
-              <div>
-                <h4 id="academic-scheduling-manual-review">
-                  Editar horario · {activeBlock.courseName} · Sección {sLabel}
-                </h4>
-                <p>
-                  El ajuste usa los recursos originales de esta propuesta. Las preferencias ordenan alternativas, pero no garantizan un óptimo global.
-                </p>
-              </div>
-              {sectionBlocks.length > 1 && (
-                <Label className="academic-scheduling__block-select">
-                  Bloque horario
-                  <NativeSelect
-                    aria-label={`Bloque horario ${activeBlock.sectionId}`}
-                    value={activeBlock.sessionIds.join('|')}
-                    disabled={adjusting}
-                    onChange={(e) => {
-                      const next = sectionBlocks.find((b) => b.sessionIds.join('|') === e.currentTarget.value)
-                      if (next) onStartEdit(next)
-                    }}
-                  >
-                    {sectionBlocks.map((b) => (
-                      <option key={b.sessionIds.join('|')} value={b.sessionIds.join('|')}>
-                        {dayNamesFull[b.day]} {formatAcademicMinute(b.startMinute)}–{formatAcademicMinute(b.endMinute)} · {b.componentDetails.map((c) => c.type).join(' + ')}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                </Label>
-              )}
-            </header>
-
-            <div className="academic-scheduling__manual-fields">
-              {adjustmentError && (
-                <p className="academic-scheduling__inline-error academic-scheduling__manual-error" role="alert">
-                  {adjustmentError}
-                </p>
-              )}
-              <div className="planning-inspector__placement-comparison" aria-label="Comparación de ubicación del bloque">
-                <div className="planning-inspector__placement-item">
-                  <Badge variant="outline" className="planning-inspector__placement-badge planning-inspector__placement-badge--current">
-                    Ubicación actual
-                  </Badge>
-                  <span className="planning-inspector__placement-val">
-                    {dayNamesFull[activeBlock.day]} {formatAcademicMinute(activeBlock.startMinute)}–{formatAcademicMinute(activeBlock.endMinute)}
-                  </span>
-                </div>
-                <div className="planning-inspector__placement-item">
-                  <Badge variant="outline" className="planning-inspector__placement-badge planning-inspector__placement-badge--proposed">
-                    Ubicación propuesta
-                  </Badge>
-                  <span className="planning-inspector__placement-val">
-                    {dayNamesFull[editingBlock.day]} {formatAcademicMinute(editingBlock.startMinute)}–{editingBlock.startMinute + activeBlock.durationMinutes <= 1440 ? formatAcademicMinute(editingBlock.startMinute + activeBlock.durationMinutes) : 'fuera del día'}
-                  </span>
-                </div>
-              </div>
-
-              <p className="academic-scheduling__manual-preview">
-                Vista previa: {dayNamesFull[editingBlock.day]} {formatAcademicMinute(editingBlock.startMinute)}–{editingBlock.startMinute + activeBlock.durationMinutes <= 1440 ? formatAcademicMinute(editingBlock.startMinute + activeBlock.durationMinutes) : 'fuera del día'} · duración conservada {formatAcademicDuration(activeBlock.durationMinutes)}.{section.deliveryMode === 'split' ? ' Cambiar docente modifica la responsabilidad de toda la sección; los demás bloques mantienen sus horarios.' : ' Se conserva el bloque continuo completo.'}
-              </p>
-
-              <Label>
-                Duración (solo lectura)
-                <Input
-                  type="text"
-                  readOnly
-                  disabled
-                  value={formatAcademicDuration(activeBlock.durationMinutes)}
-                  aria-label={`Duración ${activeBlock.sectionId}`}
-                />
-              </Label>
-
-              <Label>
-                Docente responsable
-                <NativeSelect
-                  aria-label={`Docente revisión ${activeBlock.sectionId}`}
-                  value={editingBlock.teacherId}
-                  disabled={adjusting}
-                  onChange={(e) => onChangeEditingBlock({ ...editingBlock, teacherId: e.currentTarget.value })}
-                >
-                  {(proposalResources?.teachers ?? [])
-                    .filter((teacher: AcademicPlanningResources['teachers'][number]) => teacher.courseIds.includes(activeBlock.courseId))
-                    .map((teacher: AcademicPlanningResources['teachers'][number]) => (
-                      <option key={teacher.id} value={teacher.id}>
-                        {teacher.name}
-                      </option>
-                    ))}
-                </NativeSelect>
-              </Label>
-
-              <Label>
-                Día
-                <NativeSelect
-                  aria-label={`Día revisión ${activeBlock.sectionId}`}
-                  value={editingBlock.day}
-                  disabled={adjusting}
-                  onChange={(e) => onChangeEditingBlock({ ...editingBlock, day: Number(e.currentTarget.value) })}
-                >
-                  {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map((day, idx) => (
-                    <option key={day} value={idx + 1}>
-                      {day}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </Label>
-
-              <Label>
-                Hora de inicio
-                <Input
-                  aria-label={`Inicio revisión ${activeBlock.sectionId}`}
-                  type="time"
-                  step={catalog?.startStepMinutes ? catalog.startStepMinutes * 60 : 1800}
-                  value={formatAcademicMinute(editingBlock.startMinute)}
-                  disabled={adjusting}
-                  onChange={(e) => {
-                    const [hours, minutes] = e.currentTarget.value.split(':').map(Number)
-                    if (Number.isFinite(hours) && Number.isFinite(minutes)) {
-                      onChangeEditingBlock({ ...editingBlock, startMinute: hours * 60 + minutes })
-                    }
-                  }}
-                />
-              </Label>
-
-              <div className="academic-scheduling__manual-components">
-                {activeAssignments.map((assignment, index) => {
-                  const originalRoom = proposalResources?.rooms.find((room: AcademicPlanningResources['rooms'][number]) => room.id === assignment.roomId)
-                  const rooms = (proposalResources?.rooms ?? []).filter(
-                    (room: AcademicPlanningResources['rooms'][number]) =>
-                      room.capacity >= section.capacity &&
-                      (!originalRoom?.kind || room.kind === originalRoom.kind)
-                  )
-                  return (
-                    <Label key={assignment.sessionId}>
-                      {assignment.sessionType ?? 'Componente'} · {formatAcademicDuration(assignment.endMinute - assignment.startMinute)}
-                      <NativeSelect
-                        aria-label={`Ambiente ${assignment.sessionType ?? index + 1} revisión ${activeBlock.sectionId}`}
-                        value={editingBlock.roomIds[index] ?? ''}
-                        disabled={adjusting}
-                        onChange={(e) =>
-                          onChangeEditingBlock({
-                            ...editingBlock,
-                            roomIds: editingBlock.roomIds.map((id: string, rIdx: number) => (rIdx === index ? e.currentTarget.value : id)),
-                          })
-                        }
-                      >
-                        {rooms.map((room: AcademicPlanningResources['rooms'][number]) => (
-                          <option key={room.id} value={room.id}>
-                            {room.name} · capacidad {room.capacity}
-                          </option>
-                        ))}
-                      </NativeSelect>
-                    </Label>
-                  )
-                })}
-              </div>
-
-              <div className="academic-scheduling__manual-actions">
-                <Button variant="outline"
-                  type="button"
-                  disabled={
-                    adjusting ||
-                    !(proposalResources?.teachers ?? []).some((t: AcademicPlanningResources['teachers'][number]) => t.courseIds.includes(activeBlock.courseId))
-                  }
-                  onClick={() => void onSubmitEdit()}
-                >
-                  {adjusting ? 'Aplicando…' : 'Aplicar ajuste'}
-                </Button>
-                <Button variant="outline"
-                  type="button"
-                  disabled={adjusting}
-                  onClick={onCancelEdit}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </div>
-          </section>
-        )}
 
         {!isEditing && <div className="planning-detail-cards">
           {[...assignedComponents.values()].map((items) => {
