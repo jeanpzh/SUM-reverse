@@ -21,10 +21,11 @@
 .planning-root .planning-findings__list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; }
 .planning-root .planning-findings__item { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 8px; }
 .planning-root .planning-findings__index { font: var(--text-plan-body)/var(--text-plan-body--line-height) var(--plan-font-mono); letter-spacing: -0.01em; color: var(--plan-fog); }
-.planning-root .planning-findings .normative-advice__details-trigger,
-.planning-root .planning-rec .normative-advice__details-trigger { font-size: var(--text-plan-meta); line-height: var(--text-plan-meta--line-height); color: var(--plan-steel); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--plan-dove); cursor: pointer; padding: 2px 0; min-height: 24px; }
-.planning-root .planning-findings .normative-advice__details-content,
-.planning-root .planning-rec .normative-advice__details-content { font-size: var(--text-plan-dense); line-height: var(--text-plan-dense--line-height); color: var(--plan-steel); }
+.planning-root .planning-assist .normative-advice__details { border: 0; margin: 4px 0 0; padding: 0; }
+.planning-root .planning-assist .normative-advice__details-trigger { display: inline-flex; width: auto; min-height: 24px; padding: 2px 0; border-radius: 0; background: transparent; font: 400 var(--text-plan-meta)/var(--text-plan-meta--line-height) var(--plan-font-sans); color: var(--plan-steel); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--plan-dove); cursor: pointer; }
+.planning-root .planning-assist .normative-advice__details-trigger::before { content: none; }
+.planning-root .planning-assist .normative-advice__details-trigger:hover { background: transparent; color: var(--plan-ink); text-decoration-color: var(--plan-control-border); }
+.planning-root .planning-assist .normative-advice__details-content { font-size: var(--text-plan-dense); line-height: var(--text-plan-dense--line-height); color: var(--plan-steel); padding-top: 4px; }
 
 /* Recommendations: checkable cream cards, tagged by kind. The label covers the card. */
 .planning-root .planning-rec { position: relative; display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; padding: 12px; border-radius: var(--radius-plan-strip); background: var(--plan-cream); }
@@ -41,6 +42,7 @@
 .planning-root .planning-rec__warning { color: var(--plan-warning); }
 .planning-root .planning-rec .normative-advice__details,
 .planning-root .planning-rec__details { position: relative; z-index: 1; width: 100%; }
+.planning-root .planning-rec [data-slot='checkbox'] { position: relative; z-index: 1; }
 .planning-root .planning-rec__details > summary { cursor: pointer; font-size: var(--text-plan-meta); line-height: var(--text-plan-meta--line-height); color: var(--plan-steel); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--plan-dove); min-height: 24px; padding: 2px 0; }
 .planning-root .planning-rec__details ul { margin: 4px 0 0; padding-left: 20px; font-size: var(--text-plan-dense); line-height: var(--text-plan-dense--line-height); color: var(--plan-steel); overflow-wrap: anywhere; }
 .planning-root .planning-rec__details p { margin: 4px 0 0; font-size: var(--text-plan-dense); color: var(--plan-steel); }
@@ -54,7 +56,6 @@
 .planning-root .planning-impact__table :is(thead th:not(:first-child), td) { text-align: right; padding-left: 8px; }
 .planning-root .planning-impact__table td[data-projected] { font-weight: 500; }
 .planning-root .planning-impact__note { margin: 8px 0 0; color: var(--plan-steel); }
-.planning-root .planning-impact .normative-advice__details-trigger { font-size: var(--text-plan-meta); color: var(--plan-steel); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--plan-dove); cursor: pointer; min-height: 24px; }
 
 /* Result of an applied recommendation set (rendered by the workspace). */
 .planning-root .planning-outcome { margin: 0 0 16px; min-width: 0; padding: 12px 16px; border-radius: var(--radius-plan-strip); background: var(--plan-cream); font-size: var(--text-plan-body); line-height: var(--text-plan-body--line-height); }
