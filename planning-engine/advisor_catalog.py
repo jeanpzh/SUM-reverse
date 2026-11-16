@@ -1,6 +1,8 @@
 """Ordered catalog of recommendation-kind modules and simulation-based ranker."""
 from __future__ import annotations
 
+import re
+
 from collections import Counter, defaultdict
 from datetime import date
 from typing import Any, Callable, Literal, Protocol
@@ -1210,6 +1212,17 @@ def _bounded_normative_gaps(gaps: list[str], *, limit: int = 4) -> list[str]:
     return (prioritized + infra)[:limit]
 
 
+# Preamble articles (purpose/scope) match every query lexically but never bear on a
+# specific recommendation; better no citation than an irrelevant one.
+_PREAMBLE_CITATION = re.compile(
+    r"^Art[ií]culo\s+\d+\.\s*(Finalidad|Objeto|Alcance|Base legal)\b", re.IGNORECASE
+)
+
+
+def _relevant_citations(citations: list[NormativeCitation]) -> list[NormativeCitation]:
+    return [c for c in citations if not _PREAMBLE_CITATION.match(c.excerpt.strip())]
+
+
 def query_kind_normative_contrast(
     req: AdvisorAnalyzeRequest,
     kind: str,
@@ -1244,7 +1257,7 @@ def query_kind_normative_contrast(
     contrast = AdvisorNormativeContrast(
         topic=handler.normative_topic,
         status=response.status,
-        citations=response.citations[:3],
+        citations=_relevant_citations(response.citations)[:3],
         gaps=_bounded_normative_gaps(gaps, limit=4),
         requiresExternalAuthorization=handler.requires_external_authorization,
         authorizationNote=(
