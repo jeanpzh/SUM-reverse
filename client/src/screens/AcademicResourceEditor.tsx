@@ -596,7 +596,7 @@ export function AcademicResourceEditor({
         <div className="academic-resource-workbench__toolbar-row">
       <TabsList className="academic-resource-workbench__tabs" aria-label="Vistas de recursos">
         <TabsTrigger value="teachers">Docentes <span>{teacherCounts.included}</span></TabsTrigger>
-        <TabsTrigger value="rooms">Ambientes <span>{roomCounts.included}</span></TabsTrigger>
+        <TabsTrigger value="rooms" aria-label="Ambientes · Aulas y laboratorios">Ambientes <span>{roomCounts.included}</span></TabsTrigger>
       </TabsList>
 
           {activeTab === 'teachers' ? (
@@ -770,7 +770,7 @@ export function AcademicResourceEditor({
                 onClick={addTeacher}
                 disabled={isLocked || resources.teachers.length >= PLANNING_LIMITS.teachers}
               >
-                Agregar docente
+                Agregar demostración
               </Button>
             </>
           ) : (
@@ -1119,11 +1119,7 @@ export function AcademicResourceEditor({
                             disabled={isLocked}
                             onChange={(e) => changeTeacher({ id: e.currentTarget.value })}
                           />
-                          {teacherIdError && (
-                            <span id="teacher-id-error" role="alert" className="academic-resource-workbench__inline-error">
-                              {teacherIdError}
-                            </span>
-                          )}
+
                         </Label>
                         <details className="planning-resource-extra planning-resource-name"><summary>Editar nombre</summary>
                         <Label>
@@ -1279,6 +1275,11 @@ export function AcademicResourceEditor({
                         disabled={isLocked}
                         onChange={(availability) => changeTeacher({ availability })}
                       />
+                          {teacherIdError && (
+                            <span id="teacher-id-error" role="alert" className="academic-resource-workbench__inline-error">
+                              {teacherIdError}
+                            </span>
+                          )}
                       <details className="planning-resource-extra"><summary>Preferencias y prioridad</summary>
                       <AvailabilityEditor
                         label="Preferencias semanales · prioridad blanda"
@@ -1398,11 +1399,7 @@ export function AcademicResourceEditor({
                             disabled={isLocked}
                             onChange={(e) => changeRoom({ id: e.currentTarget.value })}
                           />
-                          {roomIdError && (
-                            <span id="room-id-error" role="alert" className="academic-resource-workbench__inline-error">
-                              {roomIdError}
-                            </span>
-                          )}
+
                         </Label>
                         <details className="planning-resource-extra planning-resource-name"><summary>Editar nombre</summary>
                         <Label>
@@ -1452,6 +1449,11 @@ export function AcademicResourceEditor({
                         disabled={isLocked}
                         onChange={(availability) => changeRoom({ availability })}
                       />
+                          {roomIdError && (
+                            <span id="room-id-error" role="alert" className="academic-resource-workbench__inline-error">
+                              {roomIdError}
+                            </span>
+                          )}
                     </article>
                   )
                 })()
