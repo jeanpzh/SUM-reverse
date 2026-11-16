@@ -262,3 +262,16 @@
   .planning-root .academic-teacher-review__name { min-height: 44px; }
   .planning-root .academic-teacher-review__role select { height: 44px; }
 }
+
+@media (max-width: 719px) {
+  .planning-root .academic-teacher-review__split { display: block; }
+  .planning-root .academic-teacher-review table { display: block; min-width: 0; width: 100%; }
+  .planning-root .academic-teacher-review thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .planning-root .academic-teacher-review tbody { display: block; }
+  .planning-root .academic-teacher-review tbody tr { display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; border-bottom: 1px solid var(--plan-row-divider); }
+  .planning-root .academic-teacher-review tbody tr[data-selected] { background: var(--plan-sand); box-shadow: inset 3px 0 0 var(--plan-ink); }
+  .planning-root .academic-teacher-review tbody td { display: block; padding: 0; border: 0; min-width: 0; max-width: none; white-space: normal; background: transparent; overflow-wrap: anywhere; }
+  .planning-root .academic-teacher-review__name { width: 100%; text-align: left; }
+  .planning-root .academic-teacher-review__pane { padding: 16px; }
+  .planning-root .academic-teacher-review__blocks td:nth-child(2)::before { content: 'Secc. '; }
+}

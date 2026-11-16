@@ -196,3 +196,10 @@
 .planning-root .planning-week__day-heading span {
   text-transform: none;
 }
+
+@media (max-width: 719px) {
+  .planning-root .planning-week__agenda-card { font: 14px/20px var(--plan-font-sans); box-shadow: none; }
+  .planning-root .planning-week__agenda-card .planning-week__meta { font: 13px/18px var(--plan-font-sans); }
+  .planning-root .planning-week__agenda-card .planning-week__type { font: 11px/16px var(--plan-font-mono); }
+  .planning-root .planning-week__agenda-card.planning-week__block--selected { box-shadow: inset 0 0 0 2px var(--plan-ink); }
+}

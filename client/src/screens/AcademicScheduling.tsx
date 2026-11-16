@@ -744,6 +744,7 @@ function PlanningSectionsTable({ proposal, catalog, selectedSectionId, onSelectS
   searchQuery: string
   teacherFilter: string
 }) {
+  const narrow = useMediaQuery('(max-width: 719px)')
   const blocks = useMemo(() => aggregateAcademicBlocks(proposal), [proposal])
   const query = normalizeAcademicSearch(searchQuery)
   const sections = proposal.sections.filter((section) => {
@@ -760,6 +761,30 @@ function PlanningSectionsTable({ proposal, catalog, selectedSectionId, onSelectS
     }
     previousSelection.current = selectedSectionId
   }, [selectedSectionId])
+  if (narrow) return <div className="planning-horario-list" role="list" aria-label="Secciones de la propuesta">
+    {sections.map((section) => {
+      const assigned = blocks.filter((block) => block.sectionId === section.sectionId)
+      const pending = proposal.pending.filter((item) => item.sectionId === section.sectionId)
+      const status = !assigned.length ? 'Pendiente' : pending.length ? 'Parcial' : 'Completa'
+      const course = catalog?.courses.find((item) => item.courseId === section.courseId)
+      const types = [...new Set(assigned.flatMap((block) => block.componentDetails.map((item) => item.type)))]
+      return <div role="listitem" key={section.sectionId}>
+        <button type="button" className="planning-horario-list__row" data-section-id={section.sectionId}
+          aria-pressed={selectedSectionId === section.sectionId}
+          aria-label={`Inspeccionar sección ${academicSectionLabel(proposal, section.sectionId)} de ${section.courseName}`}
+          onClick={() => onSelectSection(section.sectionId)}>
+          <span className="planning-horario-list__eyebrow">{section.courseId} · Secc. {academicSectionLabel(proposal, section.sectionId)} · {types.join(' + ') || course?.weeklySessions.map((item) => item.type).join(' + ') || 'Componente'}</span>
+          <span className="planning-horario-list__name">{section.courseName}</span>
+          {status !== 'Completa' && <span className={`planning-horario-status planning-horario-status--${status}`}>{status === 'Parcial' ? '◐' : '○'} {status}</span>}
+          {assigned.map((block) => <span className="planning-horario-list__meta" key={block.sessionIds.join('|')}>
+            {status === 'Completa' ? '✓ ' : ''}{block.teacherName} · {block.roomNames.join(', ')} · {['—', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'][block.day]} {formatAcademicMinute(block.startMinute)}–{formatAcademicMinute(block.endMinute)}
+          </span>)}
+          {proposal.manuallyAdjustedSectionIds?.includes(section.sectionId) && <span className="planning-horario-list__meta">Ajustada</span>}
+        </button>
+      </div>
+    })}
+    {!sections.length && <p>No se encontraron secciones que coincidan con la búsqueda.</p>}
+  </div>
   return <div className="planning-horario-table-scroll">
     <table className="planning-horario-table" aria-label="Secciones de la propuesta">
       <thead><tr>{['Curso', 'Secc.', 'Componente', 'Docente', 'Ambiente', 'Día y hora', 'Estado'].map((label) => <th scope="col" key={label}>{label}</th>)}</tr></thead>
