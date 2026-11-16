@@ -94,6 +94,24 @@ export type AcademicAdvisorBottleneck = {
   detail: string
   affectedSessionCount: number
 }
+export type AcademicAdvisorNormativeContrast = {
+  topic: 'teacher_load' | 'planning_window' | 'delivery_mode' | 'reference_resource'
+  status: 'supported' | 'not-determined' | 'conflict'
+  citations: AcademicNormativeCitation[]
+  gaps: string[]
+  requiresExternalAuthorization: boolean
+  authorizationNote: string | null
+}
+export type AcademicAdvisorManagementAction = {
+  id: string
+  kind: 'negotiate_teacher_availability' | 'request_external_room' | 'process_load_authorization' | 'review_room_requirement' | 'review_section_demand'
+  title: string
+  detail: string
+  relatedCategory: AcademicAdvisorBottleneck['category']
+  affectedSessionCount: number
+  citations: AcademicNormativeCitation[]
+  executable: false
+}
 export type AcademicAdvisorRecommendation = {
   id: string
   title: string
@@ -101,6 +119,7 @@ export type AcademicAdvisorRecommendation = {
   impactSummary: string
   recommendedByDefault: boolean
   patch: AcademicAdvisorPatch
+  normativeContrast?: AcademicAdvisorNormativeContrast
 }
 export type AcademicAdvisorVerifiedImpact = {
   currentScheduledSessions: number
@@ -127,6 +146,7 @@ export type AcademicAdvisorResponse = {
   summary: string
   bottlenecks: AcademicAdvisorBottleneck[]
   recommendations: AcademicAdvisorRecommendation[]
+  managementActions?: AcademicAdvisorManagementAction[]
 }
 export function validateAcademicAdvisorRequest(value: unknown): asserts value is AcademicAdvisorRequest
 export function validateAcademicAdvisorPatch(value: unknown): asserts value is AcademicAdvisorPatch

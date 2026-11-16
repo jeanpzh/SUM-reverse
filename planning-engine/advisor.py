@@ -7,6 +7,8 @@ from advisor_catalog import (
     DryRunFn,
     MAX_WEEKLY_MINUTES,
     RECOMMENDATION_CATALOG,
+    attach_normative_contrasts,
+    build_management_actions,
     rank_recommendations,
 )
 from advisor_diagnosis import diagnose
@@ -14,6 +16,7 @@ from models import (
     AcademicAdvisorResponse,
     AdvisorAnalyzeRequest,
     AdvisorBottleneck,
+    AdvisorNormativeContrast,
     AdvisorRecommendation,
     AdvisorSource,
     AdvisorVerifiedImpact,
@@ -65,6 +68,8 @@ def build_deterministic_analysis(
     dry_run: DryRunFn | None = None,
     dry_run_cache: dict[tuple[str, ...], AdvisorVerifiedImpact] | None = None,
     diagnosis: object | None = None,
+    normative_cache: dict[str, AdvisorNormativeContrast] | None = None,
+    retriever: object | None = None,
 ) -> tuple[str, list[AdvisorBottleneck], list[AdvisorRecommendation], AdvisorPrivacyCodec]:
     from advisor_agent import run_cpsat_dry_run
 
@@ -106,6 +111,9 @@ def build_deterministic_analysis(
 
     recommendations = rank_recommendations(
         req, recommendations, effective_dry_run
+    )
+    attach_normative_contrasts(
+        req, recommendations, cache=normative_cache, retriever=retriever
     )
 
     scheduled_count = len(req.assignments)
@@ -216,8 +224,9 @@ async def analyze_proposal_with_advisor(req: AdvisorAnalyzeRequest, env=None, tr
         normative.gaps.append('Periodo de contexto local inferido del año actual; no confirma periodo académico.')
     diagnosis = diagnose(req)
     dry_run_cache: dict[tuple[str, ...], AdvisorVerifiedImpact] = {}
+    normative_cache: dict[str, AdvisorNormativeContrast] = {}
     summary, bottlenecks, recommendations, codec = build_deterministic_analysis(
-        req, dry_run_cache=dry_run_cache, diagnosis=diagnosis
+        req, dry_run_cache=dry_run_cache, diagnosis=diagnosis, normative_cache=normative_cache
     )
     source, final_summary, final_recommendations, impact, steps = await run_advisor_agent(
         req,
@@ -230,7 +239,13 @@ async def analyze_proposal_with_advisor(req: AdvisorAnalyzeRequest, env=None, tr
         normative_context=normative.model_dump(),
         diagnosis=diagnosis,
         dry_run_cache=dry_run_cache,
+        normative_cache=normative_cache,
+    )
+    attach_normative_contrasts(req, final_recommendations, cache=normative_cache)
+    management_actions = build_management_actions(
+        req, diagnosis, contrast_cache=normative_cache
     )
     return AcademicAdvisorResponse(proposalId=req.proposalId, editVersion=req.editVersion,
         source=source, summary=final_summary, bottlenecks=bottlenecks,
-        recommendations=final_recommendations, verifiedImpact=impact, reasoningSteps=steps, normativeContext=normative)
+        recommendations=final_recommendations, managementActions=management_actions,
+        verifiedImpact=impact, reasoningSteps=steps, normativeContext=normative)

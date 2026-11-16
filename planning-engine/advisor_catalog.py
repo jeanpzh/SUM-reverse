@@ -2,13 +2,16 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from typing import Any, Callable, Protocol
+from datetime import date
+from typing import Any, Callable, Literal, Protocol
 
 from advisor_diagnosis import BlockerDiagnosis
 from models import (
     AcademicAdvisorPatch,
     AdvisorAnalyzeRequest,
     AdvisorBottleneck,
+    AdvisorManagementAction,
+    AdvisorNormativeContrast,
     AdvisorRecommendation,
     AdvisorVerifiedImpact,
     ChangeDeliveryModePatch,
@@ -20,12 +23,14 @@ from models import (
     TeacherLoadAdjustment,
     TimeInterval,
 )
+from normative import NormativeCitation, NormativeRequest, NormativeResponse, default_retriever
 
 MAX_WEEKLY_MINUTES = 2400
 MAX_NARROW_LOAD_VARIANTS = 3
 MAX_DELIVERY_COURSE_VARIANTS = 5
 MAX_DRY_RUN_SIMULATIONS = 12
 MAX_RECOMMENDATIONS = 8
+MAX_MANAGEMENT_ACTIONS = 5
 BROAD_RECOMMENDATION_IDS = frozenset(
     {
         "rec-increase-teacher-load-all",
@@ -38,6 +43,11 @@ BROAD_RECOMMENDATION_IDS = frozenset(
 
 class RecommendationKind(Protocol):
     kind: str
+    normative_topic: Literal["teacher_load", "planning_window", "delivery_mode", "reference_resource"]
+    normative_question: str
+    # LOCAL design decision (not a verified SUM/UNMSM rule).
+    requires_external_authorization: bool
+    authorization_note: str | None
 
     def applies(self, req: AdvisorAnalyzeRequest, diagnosis: BlockerDiagnosis) -> bool:
         ...
@@ -178,6 +188,17 @@ def _compute_teacher_adjustments_for_courses(
 
 class IncreaseTeacherLoadKind:
     kind = "increase_teacher_load"
+    normative_topic: Literal["teacher_load", "planning_window", "delivery_mode", "reference_resource"] = "teacher_load"
+    normative_question = (
+        "¿Cuál es el límite máximo de carga lectiva semanal y qué excepciones requieren autorización?"
+    )
+    # LOCAL design decision (not a verified SUM/UNMSM rule):
+    # increase_teacher_load and enable_planning_window set requiresExternalAuthorization=True;
+    # change_delivery_mode and incorporate_reference_resource set requiresExternalAuthorization=False.
+    requires_external_authorization = True
+    authorization_note = (
+        "Escenario sujeto a autorización externa del departamento o facultad; el contraste documental no concede esta excepción."
+    )
 
     def _evaluate(
         self, req: AdvisorAnalyzeRequest, diagnosis: BlockerDiagnosis
@@ -433,6 +454,15 @@ class IncreaseTeacherLoadKind:
 
 class EnablePlanningWindowKind:
     kind = "enable_planning_window"
+    normative_topic: Literal["teacher_load", "planning_window", "delivery_mode", "reference_resource"] = "planning_window"
+    normative_question = (
+        "¿Qué normas regulan la coordinación de horarios, franjas y turnos de la actividad lectiva?"
+    )
+    # LOCAL design decision (not a verified SUM/UNMSM rule).
+    requires_external_authorization = True
+    authorization_note = (
+        "Requiere autorización externa o acuerdo académico para habilitar excepciones de franja horaria; la consulta documental no concede autorización."
+    )
 
     def _evaluate(
         self, req: AdvisorAnalyzeRequest, diagnosis: BlockerDiagnosis
@@ -632,6 +662,13 @@ class EnablePlanningWindowKind:
 
 class IncorporateReferenceResourceKind:
     kind = "incorporate_reference_resource"
+    normative_topic: Literal["teacher_load", "planning_window", "delivery_mode", "reference_resource"] = "reference_resource"
+    normative_question = (
+        "¿Qué requisitos normativos aplican al registro y habilitación de docentes y recursos en el departamento académico?"
+    )
+    # LOCAL design decision (not a verified SUM/UNMSM rule).
+    requires_external_authorization = False
+    authorization_note = None
 
     def _find_missing_resources(
         self, req: AdvisorAnalyzeRequest, diagnosis: BlockerDiagnosis
@@ -802,6 +839,13 @@ class IncorporateReferenceResourceKind:
 
 class ChangeDeliveryModeKind:
     kind = "change_delivery_mode"
+    normative_topic: Literal["teacher_load", "planning_window", "delivery_mode", "reference_resource"] = "delivery_mode"
+    normative_question = (
+        "¿Cómo se asigna la actividad lectiva según la naturaleza de la asignatura, teoría, práctica y laboratorio?"
+    )
+    # LOCAL design decision (not a verified SUM/UNMSM rule).
+    requires_external_authorization = False
+    authorization_note = None
 
     def _is_long_continuous(self, course: Any) -> bool:
         total_dur = sum(ws.durationMinutes for ws in course.weeklySessions)
@@ -1144,3 +1188,302 @@ def rank_recommendations(
             rec.recommendedByDefault = rec.id == winner.id
 
     return combined[:max_recommendations]
+
+
+def infer_normative_teacher_type(
+    req: AdvisorAnalyzeRequest,
+) -> Literal["ordinario", "unknown"]:
+    if req.teachers and all(
+        t.category in ("principal", "asociado", "auxiliar") for t in req.teachers
+    ):
+        return "ordinario"
+    return "unknown"
+
+
+def _bounded_normative_gaps(gaps: list[str], *, limit: int = 4) -> list[str]:
+    deduped = list(dict.fromkeys(gaps))
+    if len(deduped) <= limit:
+        return deduped
+    # Keep corpus/regime/vigencia gaps ahead of lexical-only infrastructure notices when truncating.
+    prioritized = [g for g in deduped if not g.startswith("Repositorio vectorial ")]
+    infra = [g for g in deduped if g.startswith("Repositorio vectorial ")]
+    return (prioritized + infra)[:limit]
+
+
+def query_kind_normative_contrast(
+    req: AdvisorAnalyzeRequest,
+    kind: str,
+    *,
+    cache: dict[str, AdvisorNormativeContrast] | None = None,
+    retriever: Any | None = None,
+) -> AdvisorNormativeContrast:
+    if cache is not None and kind in cache:
+        return cache[kind]
+    handler = CATALOG_BY_KIND.get(kind)
+    if handler is None:
+        raise ValueError(f"Unknown recommendation kind: {kind}")
+
+    active_retriever = retriever if retriever is not None else default_retriever()
+    period = req.planningPolicy.period if req.planningPolicy else f"{date.today().year}-II"
+    teacher_type = infer_normative_teacher_type(req)
+    response: NormativeResponse = active_retriever.query(
+        NormativeRequest(
+            question=handler.normative_question,
+            facultyId="FISI",
+            academicPeriod=period,
+            asOf=date.today().isoformat(),
+            teacherType=teacher_type,
+        )
+    )
+    gaps = list(response.gaps)
+    if not req.planningPolicy:
+        gaps.insert(
+            0,
+            "Periodo de contexto local inferido del año actual; no confirma periodo académico.",
+        )
+    contrast = AdvisorNormativeContrast(
+        topic=handler.normative_topic,
+        status=response.status,
+        citations=response.citations[:3],
+        gaps=_bounded_normative_gaps(gaps, limit=4),
+        requiresExternalAuthorization=handler.requires_external_authorization,
+        authorizationNote=(
+            handler.authorization_note if handler.requires_external_authorization else None
+        ),
+    )
+    if cache is not None:
+        cache[kind] = contrast
+    return contrast
+
+
+def attach_normative_contrasts(
+    req: AdvisorAnalyzeRequest,
+    recommendations: list[AdvisorRecommendation],
+    *,
+    cache: dict[str, AdvisorNormativeContrast] | None = None,
+    retriever: Any | None = None,
+) -> dict[str, AdvisorNormativeContrast]:
+    normative_cache = cache if cache is not None else {}
+    for rec in recommendations:
+        contrast = query_kind_normative_contrast(
+            req,
+            rec.patch.kind,
+            cache=normative_cache,
+            retriever=retriever,
+        )
+        rec.normativeContrast = contrast.model_copy(deep=True)
+    return normative_cache
+
+
+def build_management_actions(
+    req: AdvisorAnalyzeRequest,
+    diagnosis: BlockerDiagnosis,
+    *,
+    contrast_cache: dict[str, AdvisorNormativeContrast] | None = None,
+    retriever: Any | None = None,
+) -> list[AdvisorManagementAction]:
+    if diagnosis.totalPendingCount == 0 and not diagnosis.diagnosticCodes:
+        return []
+
+    cache = contrast_cache if contrast_cache is not None else {}
+    courses_by_id = {c.courseId: c for c in req.courses}
+    teachers_by_id = {t.id: t for t in req.teachers}
+    req_by_id = {r.id: r for r in req.requirements}
+    pending_course_ids = set(diagnosis.pendingByCourse.keys())
+
+    def _citations_for(kind: str) -> list[NormativeCitation]:
+        contrast = query_kind_normative_contrast(
+            req, kind, cache=cache, retriever=retriever
+        )
+        return [c.model_copy(deep=True) for c in contrast.citations[:2]]
+
+    actions: list[AdvisorManagementAction] = []
+
+    # 1. Teachers at top of load / slack deficit with pending -> process_load_authorization / negotiate_teacher_availability
+    eligible_course_ids_with_teachers: set[str] = set()
+    for ts in diagnosis.teacherSlack:
+        eligible_course_ids_with_teachers.update(
+            cid for cid in ts.eligibleCourseIds if cid in pending_course_ids
+        )
+
+    at_top_teachers = [
+        ts
+        for ts in diagnosis.teacherSlack
+        if ts.slackMinutes <= 0 and (set(ts.eligibleCourseIds) & pending_course_ids)
+    ]
+    load_deficit_courses = [
+        cid
+        for cid in sorted(pending_course_ids)
+        if cid in eligible_course_ids_with_teachers
+        and sum(
+            max(0, ts.slackMinutes)
+            for ts in diagnosis.teacherSlack
+            if cid in ts.eligibleCourseIds
+        )
+        < diagnosis.pendingByCourse[cid].totalMinutes
+    ]
+
+    if load_deficit_courses or at_top_teachers:
+        affected_courses = set(load_deficit_courses)
+        for ts in at_top_teachers:
+            affected_courses.update(set(ts.eligibleCourseIds) & pending_course_ids)
+        load_sessions = sum(
+            diagnosis.pendingByCourse[cid].sessionCount for cid in affected_courses
+        )
+        course_labels = [
+            courses_by_id[cid].name or cid
+            if cid in courses_by_id
+            else cid
+            for cid in sorted(affected_courses)[:3]
+        ]
+        more_label = (
+            f" y {len(affected_courses) - 3} más"
+            if len(affected_courses) > 3
+            else ""
+        )
+        actions.append(
+            AdvisorManagementAction(
+                id="mgmt-process-load-authorization",
+                kind="process_load_authorization",
+                title="Gestionar autorización externa de carga lectiva",
+                detail=(
+                    f"{load_sessions} componente(s) pendiente(s) en {', '.join(course_labels)}{more_label} "
+                    "exceden el saldo semanal actual de los docentes habilitados. "
+                    "Cualquier ampliación de tope requiere trámite administrativo externo fuera del motor."
+                ),
+                relatedCategory="teacher_load",
+                affectedSessionCount=load_sessions,
+                citations=_citations_for("increase_teacher_load"),
+                executable=False,
+            )
+        )
+
+    restricted_availability = any(
+        len({iv.day for iv in teachers_by_id[ts.teacherId].availability}) < 5
+        for ts in diagnosis.teacherSlack
+        if ts.teacherId in teachers_by_id and (set(ts.eligibleCourseIds) & pending_course_ids)
+    )
+    slack_positive_pending = any(
+        ts.slackMinutes > 0 and (set(ts.eligibleCourseIds) & pending_course_ids)
+        for ts in diagnosis.teacherSlack
+    )
+    if eligible_course_ids_with_teachers and (
+        at_top_teachers or load_deficit_courses or slack_positive_pending or restricted_availability
+    ):
+        avail_sessions = sum(
+            diagnosis.pendingByCourse[cid].sessionCount
+            for cid in eligible_course_ids_with_teachers
+        )
+        actions.append(
+            AdvisorManagementAction(
+                id="mgmt-negotiate-teacher-availability",
+                kind="negotiate_teacher_availability",
+                title="Coordinar disponibilidad horaria o reasignación docente",
+                detail=(
+                    f"{avail_sessions} componente(s) pendiente(s) en {len(eligible_course_ids_with_teachers)} curso(s) "
+                    "dependen de disponibilidad semanal o redistribución entre docentes habilitados antes de regenerar el horario."
+                ),
+                relatedCategory="teacher_load",
+                affectedSessionCount=avail_sessions,
+                citations=_citations_for("increase_teacher_load"),
+                executable=False,
+            )
+        )
+
+    # 2. Laboratory saturation or NO_COMPATIBLE_ROOM / ROOM_CAPACITY -> request_external_room / review_room_requirement
+    lab_cells = [
+        cell
+        for cell in diagnosis.occupancy
+        if cell.roomKind == "laboratory" and cell.availableMinutes > 0
+    ]
+    total_lab_avail = sum(cell.availableMinutes for cell in lab_cells)
+    total_lab_used = sum(cell.usedMinutes for cell in lab_cells)
+    lab_saturated = any(
+        cell.usedMinutes * 4 >= cell.availableMinutes * 3 for cell in lab_cells
+    ) or (total_lab_avail > 0 and total_lab_used * 4 >= total_lab_avail * 3)
+    room_diag_sessions = {
+        sid
+        for sid, codes in diagnosis.causesBySession.items()
+        if any(code in ("NO_COMPATIBLE_ROOM", "ROOM_CAPACITY") for code in codes)
+    }
+    has_room_diag = any(
+        code in ("NO_COMPATIBLE_ROOM", "ROOM_CAPACITY")
+        for code in diagnosis.diagnosticCodes
+    )
+    pending_lab_sessions = {
+        item.sessionId
+        for item in req.pending
+        if (req_by_id.get(item.sessionId) and req_by_id[item.sessionId].type == "L")
+    }
+    if (lab_saturated and diagnosis.totalPendingCount > 0) or has_room_diag:
+        room_affected = (
+            len(room_diag_sessions | pending_lab_sessions) or diagnosis.totalPendingCount
+        )
+        actions.append(
+            AdvisorManagementAction(
+                id="mgmt-request-external-room",
+                kind="request_external_room",
+                title="Solicitar ambientes o laboratorios externos en préstamo",
+                detail=(
+                    f"Se detectan restricciones de compatibilidad, aforo o saturación de laboratorio que afectan a "
+                    f"{room_affected} componente(s). Gestionar asignación temporal de ambientes fuera del catálogo actual."
+                ),
+                relatedCategory="missing_resource",
+                affectedSessionCount=room_affected,
+                citations=_citations_for("incorporate_reference_resource"),
+                executable=False,
+            )
+        )
+        actions.append(
+            AdvisorManagementAction(
+                id="mgmt-review-room-requirement",
+                kind="review_room_requirement",
+                title="Revisar requerimiento de tipo de ambiente y capacidad por sección",
+                detail=(
+                    f"Evaluar con coordinación académica si {room_affected} componente(s) requieren laboratorio exclusivo "
+                    "o pueden ajustar aforo y modalidad de ambiente antes de reintentar."
+                ),
+                relatedCategory="missing_resource",
+                affectedSessionCount=room_affected,
+                citations=_citations_for("incorporate_reference_resource"),
+                executable=False,
+            )
+        )
+
+    # 3. Large pending in one course -> review_section_demand
+    large_pending_courses = sorted(
+        (
+            (cid, group)
+            for cid, group in diagnosis.pendingByCourse.items()
+            if group.sessionCount >= 3
+            or group.totalMinutes >= 360
+            or len(group.sectionIds) >= 2
+        ),
+        key=lambda item: (-item[1].sessionCount, -item[1].totalMinutes, item[0]),
+    )
+    if large_pending_courses:
+        top_cid, top_group = large_pending_courses[0]
+        top_name = (
+            courses_by_id[top_cid].name or top_cid
+            if top_cid in courses_by_id
+            else top_cid
+        )
+        actions.append(
+            AdvisorManagementAction(
+                id="mgmt-review-section-demand",
+                kind="review_section_demand",
+                title=f"Revisar demanda y partición de secciones en {top_name}",
+                detail=(
+                    f"{top_name} concentra {top_group.sessionCount} componente(s) pendiente(s) "
+                    f"({top_group.totalMinutes} min en {len(top_group.sectionIds)} sección(es)). "
+                    "Evaluar desdoblamiento, fusión de secciones o ajuste de demanda en Preparación."
+                ),
+                relatedCategory="other",
+                affectedSessionCount=top_group.sessionCount,
+                citations=_citations_for("change_delivery_mode"),
+                executable=False,
+            )
+        )
+
+    actions.sort(key=lambda action: (-action.affectedSessionCount, action.id))
+    return actions[:MAX_MANAGEMENT_ACTIONS]

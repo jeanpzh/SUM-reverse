@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 from pydantic import BaseModel, Field
-from normative import NormativeResponse
+from normative import NormativeCitation, NormativeResponse
 
 
 class TimeInterval(BaseModel):
@@ -173,17 +173,46 @@ AcademicAdvisorPatch = (
 )
 
 
+AdvisorCategory = Literal[
+    "teacher_load",
+    "planning_window",
+    "missing_resource",
+    "delivery_mode",
+    "other",
+]
+
+
 class AdvisorBottleneck(BaseModel):
-    category: Literal[
-        "teacher_load",
-        "planning_window",
-        "missing_resource",
-        "delivery_mode",
-        "other",
-    ]
+    category: AdvisorCategory
     title: str
     detail: str
     affectedSessionCount: int = Field(ge=0)
+
+
+class AdvisorNormativeContrast(BaseModel):
+    topic: Literal["teacher_load", "planning_window", "delivery_mode", "reference_resource"]
+    status: Literal["supported", "not-determined", "conflict"]
+    citations: list[NormativeCitation] = Field(max_length=3)
+    gaps: list[str] = Field(max_length=4)
+    requiresExternalAuthorization: bool
+    authorizationNote: str | None = None
+
+
+class AdvisorManagementAction(BaseModel):
+    id: str
+    kind: Literal[
+        "negotiate_teacher_availability",
+        "request_external_room",
+        "process_load_authorization",
+        "review_room_requirement",
+        "review_section_demand",
+    ]
+    title: str
+    detail: str
+    relatedCategory: AdvisorCategory
+    affectedSessionCount: int = Field(ge=0)
+    citations: list[NormativeCitation] = Field(max_length=2)
+    executable: Literal[False] = False
 
 
 class AdvisorRecommendation(BaseModel):
@@ -197,6 +226,9 @@ class AdvisorRecommendation(BaseModel):
         | EnablePlanningWindowPatch
         | ChangeDeliveryModePatch
         | IncorporateReferenceResourcePatch
+    )
+    normativeContrast: AdvisorNormativeContrast | None = Field(
+        default=None, exclude_if=lambda value: value is None
     )
 
 
@@ -266,6 +298,9 @@ class AcademicAdvisorResponse(BaseModel):
     summary: str
     bottlenecks: list[AdvisorBottleneck]
     recommendations: list[AdvisorRecommendation]
+    managementActions: list[AdvisorManagementAction] | None = Field(
+        default=None, max_length=5, exclude_if=lambda value: value is None
+    )
 
     verifiedImpact: AdvisorVerifiedImpact | None = Field(default=None, exclude_if=lambda value: value is None)
     reasoningSteps: list[AdvisorReasoningStep] = Field(default_factory=list)

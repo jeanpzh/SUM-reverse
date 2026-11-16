@@ -58,6 +58,41 @@ test('synthetic advisor selection propagation, unknown IDs, stale version and ou
     release()
     await assert.rejects(pending, (e) => e.getStatus() === 409)
 
+    // Verify backend pass-through preserves additive normativeContrast and managementActions.
+    const proposal2 = service.createProposal({ revision: catalog.revision, demands: [{ courseId: course.courseId, estimatedDemand: 1 }] })
+    const enrichedPayload = {
+      ...fallback,
+      proposalId: proposal2.proposalId,
+      editVersion: proposal2.editVersion ?? 0,
+      recommendations: fallback.recommendations.map((rec, index) => index === 0 ? {
+        ...rec,
+        normativeContrast: {
+          topic: 'planning_window',
+          status: 'not-determined',
+          citations: [],
+          gaps: ['Verificar franja con autoridad académica.'],
+          requiresExternalAuthorization: true,
+          authorizationNote: 'Requiere autorización académica externa.',
+        },
+      } : rec),
+      managementActions: [{
+        id: 'mgmt-request-external-room',
+        kind: 'request_external_room',
+        title: 'Solicitar aulas adicionales',
+        detail: 'Gestionar disponibilidad adicional con dirección.',
+        relatedCategory: 'missing_resource',
+        affectedSessionCount: 2,
+        citations: [],
+        executable: false,
+      }],
+    }
+    globalThis.fetch = async () => new Response(JSON.stringify(enrichedPayload), { status: 200 })
+    const forwarded = await service.adviseProposal(proposal2.proposalId, { expectedEditVersion: proposal2.editVersion ?? 0, selectedRecommendationIds: [] })
+    assert.equal(forwarded.managementActions?.length, 1)
+    assert.equal(forwarded.managementActions?.[0].executable, false)
+    if (forwarded.recommendations.length > 0) {
+      assert.equal(forwarded.recommendations[0].normativeContrast?.topic, 'planning_window')
+    }
   } finally {
     globalThis.fetch = oldFetch
     if (oldUrl === undefined) delete process.env.SUM_PLANNING_ENGINE_URL

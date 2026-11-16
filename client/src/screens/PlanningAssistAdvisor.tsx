@@ -1,3 +1,4 @@
+import { ExternalLink } from 'lucide-react'
 import { PlanningFetchLoading } from '../components/PlanningFetchLoading'
 import type { AcademicAdvisorResponse, PlanningPeriod } from '../data/academicScheduling'
 import { AdvisorFindings } from '../components/ai-elements/AdvisorFindings'
@@ -43,6 +44,14 @@ export interface PlanningAssistAdvisorProps {
 const sectionsLabel = (count: number) => count === 0 ? 'Sin secciones por completar'
   : `${count} ${count === 1 ? 'sección' : 'secciones'} por completar`
 
+const managementCategoryLabel = {
+  teacher_load: 'Carga docente',
+  planning_window: 'Franja horaria',
+  missing_resource: 'Ambientes y recursos',
+  delivery_mode: 'Modalidad',
+  other: 'Demanda y secciones',
+} as const
+
 export function PlanningAssistAdvisor(props: PlanningAssistAdvisorProps) {
   const { advice, loading, error, requested, selectedIds, applying, isLocked } = props
   const title = sectionsLabel(props.openSections)
@@ -67,6 +76,7 @@ export function PlanningAssistAdvisor(props: PlanningAssistAdvisorProps) {
     ? `IA asistida · ${advice.source.providerLabel ?? 'LLM'}`
     : 'Análisis determinista local'
   const recommendations = advice?.recommendations ?? []
+  const managementActions = advice?.managementActions ?? []
   const applyLabel = applying ? 'Aplicando y regenerando…'
     : selectedIds.length === 0 ? 'Aplicar seleccionadas y regenerar'
     : `Aplicar ${selectedIds.length} ${selectedIds.length === 1 ? 'seleccionada' : 'seleccionadas'} y regenerar`
@@ -99,6 +109,45 @@ export function PlanningAssistAdvisor(props: PlanningAssistAdvisorProps) {
         </fieldset>
       ) : (
         <p className="planning-assist-advisor__note">No se encontraron parches automáticos adicionales para esta configuración.</p>
+      )}
+      {managementActions.length > 0 && (
+        <section className="planning-mgmt" aria-label="Acciones de gestión">
+          <div className="planning-mgmt__head">
+            <h3 className="planning-eyebrow">Acciones de gestión</h3>
+            <span className="planning-mgmt__badge">No ejecutable por el motor</span>
+          </div>
+          <p className="planning-assist-advisor__note">
+            Gestiones administrativas externas sugeridas por el diagnóstico. No modifican el workspace ni se simulan ni aplican automáticamente.
+          </p>
+          <ul className="planning-mgmt__list">
+            {managementActions.slice(0, 5).map((action) => (
+              <li key={action.id} className="planning-mgmt__item">
+                <div className="planning-mgmt__meta">
+                  <span className="planning-rec__kind">{managementCategoryLabel[action.relatedCategory]}</span>
+                  <span className="planning-mgmt__count">
+                    {action.affectedSessionCount} {action.affectedSessionCount === 1 ? 'componente afectado' : 'componentes afectados'}
+                  </span>
+                </div>
+                <p className="planning-mgmt__title">{action.title}</p>
+                <p className="planning-mgmt__detail">{action.detail}</p>
+                {action.citations.length > 0 && (
+                  <ul className="planning-rec__contrast-citations">
+                    {action.citations.slice(0, 2).map((citation) => (
+                      <li key={citation.id}>
+                        <a href={citation.url} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer"
+                          className="planning-rec__contrast-link">
+                          <span>{citation.title} · {citation.article} · p. {citation.page}</span>
+                          <ExternalLink className="size-3 shrink-0 opacity-70" aria-hidden="true" />
+                          <span className="sr-only"> (abre en otra pestaña)</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
       <AdvisorImpact impact={props.impact} />
       <div className="planning-assist-advisor__actions">

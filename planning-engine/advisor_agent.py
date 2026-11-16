@@ -12,11 +12,13 @@ from typing import Any, Callable
 from advisor_catalog import (
     CATALOG_BY_KIND,
     MAX_DRY_RUN_SIMULATIONS,
+    attach_normative_contrasts,
     rank_recommendations,
     request_variants_for_scope,
 )
 from advisor_diagnosis import BlockerDiagnosis, diagnose
 from models import (
+    AdvisorNormativeContrast,
     AdvisorReasoningStep,
     AdvisorRecommendation,
     AdvisorSource,
@@ -325,6 +327,7 @@ async def run_advisor_agent(
     *,
     diagnosis: BlockerDiagnosis | None = None,
     dry_run_cache: dict[tuple[str, ...], AdvisorVerifiedImpact] | None = None,
+    normative_cache: dict[str, AdvisorNormativeContrast] | None = None,
 ):
     from langchain_core.messages import ToolMessage
     from advisor import _apply_validated_llm_output, _extract_json_object
@@ -460,6 +463,9 @@ async def run_advisor_agent(
                             premeasured_impacts=premeasured_impacts,
                             baseline_impact=baseline,
                             max_simulations=1 + len(premeasured_impacts) + unused_initial_slots,
+                        )
+                        attach_normative_contrasts(
+                            req, final_catalog_recs, cache=normative_cache
                         )
                     if () in cache:
                         baseline_sessions = cache[()].projectedScheduledSessions
