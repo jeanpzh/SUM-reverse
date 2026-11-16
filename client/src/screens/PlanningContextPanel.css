@@ -125,3 +125,7 @@
   flex: 1;
   min-height: 0;
 }
+
+/* The page head lives in the content column so the assistant rail spans the full height below the scope bar (Main board). */
+.planning-root .planning-content-column { display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0; }
+.planning-root .planning-content-column > .planning-schedule-split { flex: 1; min-height: 0; }

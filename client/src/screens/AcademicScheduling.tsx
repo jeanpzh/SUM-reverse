@@ -325,6 +325,43 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
 
   return <section className="screen-academic-scheduling" data-compact-week={compactWeek || undefined}>
     {confirmElement}
+    <Dialog open={scopeOpen} onOpenChange={setScopeOpen}>
+      <DialogContent className="planning-scope-switcher"><DialogHeader><DialogTitle>Escuela y periodo</DialogTitle><DialogDescription>Ámbito local de la propuesta.</DialogDescription></DialogHeader>
+        <Label htmlFor="planning-school">Escuela</Label><NativeSelect id="planning-school" value="SISTEMAS" disabled><option value="SISTEMAS">Sistemas</option></NativeSelect>
+        <Label htmlFor="planning-scope-period">Periodo</Label><NativeSelect id="planning-scope-period" value={planningPeriod} disabled={lockedDraft || draftBusy} onChange={(event) => { applyPeriodDefaults(event.currentTarget.value as PlanningPeriod); setScopeOpen(false) }}>
+          <option value="2026-II">2026-II</option><option value="2027-I">2027-I</option>
+        </NativeSelect>
+      </DialogContent>
+    </Dialog>
+    <Dialog modal={false} open={draftListOpen} onOpenChange={setDraftListOpen}>
+      <DialogContent id="planning-tour-proposal" aria-modal={false} className="planning-proposal-switcher">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Propuesta</DialogTitle>
+          <DialogDescription>Almacenamiento local compartido; no está asociado a una cuenta.</DialogDescription>
+        </DialogHeader>
+        <Label htmlFor="planning-proposal-title">Nombre de la propuesta</Label>
+          <Input id="planning-proposal-title" aria-label="Nombre de la propuesta" aria-invalid={invalidDraftTitle} aria-describedby={invalidDraftTitle ? 'planning-proposal-title-error' : draftError ? 'planning-proposal-error' : undefined} maxLength={100} value={draftTitle} disabled={lockedDraft || draftBusy}
+            onChange={(event) => markTitle(event.currentTarget.value)} />
+        {invalidDraftTitle && <p id="planning-proposal-title-error" role="alert">El nombre de la propuesta debe tener entre 1 y 100 caracteres, sin espacios al inicio ni al final.</p>}
+        <p className="planning-proposal-rename-note">Se guarda con la propuesta al pulsar Guardar.</p>
+        {draftError && <Alert id="planning-proposal-error" variant="destructive" role="alert"><AlertDescription>{draftError}</AlertDescription></Alert>}
+        {draftBusy && <PlanningFetchLoading label="Consultando propuestas guardadas…" layout="table" />}
+        <div className="planning-mobile-tools"><Button variant="ghost" onClick={() => { setDraftListOpen(false); setScopeOpen(true) }}>Escuela y periodo</Button><Button variant="ghost" onClick={() => { setDraftListOpen(false); openGuide() }}>Guía</Button><ModeToggle /></div>
+        <div id="academic-scheduling-saved-proposals" className="academic-scheduling__saved-proposals">
+          {draftList?.unavailableCount ? <p role="status">{draftList.unavailableCount} propuesta(s) no se pudieron leer.</p> : null}
+          {draftList?.items.length === 0 && <p>No hay propuestas guardadas.</p>}
+          <p className="planning-eyebrow">Otras propuestas · Sistemas {planningPeriod}</p>
+          <ul className="academic-scheduling__saved-list">{draftList && draftList.items.map((item) => <li className="academic-scheduling__saved-row" data-current={item.id === draftId || undefined} key={item.id}>
+            <div className="planning-proposal-option"><span>{item.title}</span><span className="planning-proposal-option__version">v{item.version} · {item.state === 'draft' ? 'Borrador' : item.state === 'published' ? 'Publicada' : item.state === 'approved' ? 'Aprobada' : 'Guardada'}</span></div>
+            <div className="planning-proposal-option__actions"><Button type="button" variant="ghost" disabled={draftBusy} onClick={() => void resumeDraft(item.id, item.version)}>Continuar edición</Button><Button type="button" variant="link" disabled={draftBusy} onClick={() => void resumeDraft(item.id, item.version)}>Consultar</Button></div>
+          </li>)}</ul>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    <ResizablePanelGroup orientation="horizontal" defaultLayout={defaultLayout} onLayoutChanged={onLayoutChanged} className="planning-workspace">
+    <ResizablePanel id="planning-content" minSize="45%" className="planning-workspace__panel">
+    <div className="planning-content-column">
     <PlanningScopeHeader
       title={pageTitle}
       compactWeekLabel={compactWeek ? `Semana · ${teacherFilter === 'all' ? 'Todos los docentes' : teacherFilter === '__unassigned__' ? 'Sin docente asignado' : resources.teachers.find((teacher) => teacher.id === teacherFilter)?.name ?? proposal?.assignments.find((item) => item.teacherId === teacherFilter)?.teacherName ?? 'Docente'}` : undefined}
@@ -410,42 +447,6 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       }}
       isChatOpen={chatOpen}
     />
-    <Dialog open={scopeOpen} onOpenChange={setScopeOpen}>
-      <DialogContent className="planning-scope-switcher"><DialogHeader><DialogTitle>Escuela y periodo</DialogTitle><DialogDescription>Ámbito local de la propuesta.</DialogDescription></DialogHeader>
-        <Label htmlFor="planning-school">Escuela</Label><NativeSelect id="planning-school" value="SISTEMAS" disabled><option value="SISTEMAS">Sistemas</option></NativeSelect>
-        <Label htmlFor="planning-scope-period">Periodo</Label><NativeSelect id="planning-scope-period" value={planningPeriod} disabled={lockedDraft || draftBusy} onChange={(event) => { applyPeriodDefaults(event.currentTarget.value as PlanningPeriod); setScopeOpen(false) }}>
-          <option value="2026-II">2026-II</option><option value="2027-I">2027-I</option>
-        </NativeSelect>
-      </DialogContent>
-    </Dialog>
-    <Dialog modal={false} open={draftListOpen} onOpenChange={setDraftListOpen}>
-      <DialogContent id="planning-tour-proposal" aria-modal={false} className="planning-proposal-switcher">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Propuesta</DialogTitle>
-          <DialogDescription>Almacenamiento local compartido; no está asociado a una cuenta.</DialogDescription>
-        </DialogHeader>
-        <Label htmlFor="planning-proposal-title">Nombre de la propuesta</Label>
-          <Input id="planning-proposal-title" aria-label="Nombre de la propuesta" aria-invalid={invalidDraftTitle} aria-describedby={invalidDraftTitle ? 'planning-proposal-title-error' : draftError ? 'planning-proposal-error' : undefined} maxLength={100} value={draftTitle} disabled={lockedDraft || draftBusy}
-            onChange={(event) => markTitle(event.currentTarget.value)} />
-        {invalidDraftTitle && <p id="planning-proposal-title-error" role="alert">El nombre de la propuesta debe tener entre 1 y 100 caracteres, sin espacios al inicio ni al final.</p>}
-        <p className="planning-proposal-rename-note">Se guarda con la propuesta al pulsar Guardar.</p>
-        {draftError && <Alert id="planning-proposal-error" variant="destructive" role="alert"><AlertDescription>{draftError}</AlertDescription></Alert>}
-        {draftBusy && <PlanningFetchLoading label="Consultando propuestas guardadas…" layout="table" />}
-        <div className="planning-mobile-tools"><Button variant="ghost" onClick={() => { setDraftListOpen(false); setScopeOpen(true) }}>Escuela y periodo</Button><Button variant="ghost" onClick={() => { setDraftListOpen(false); openGuide() }}>Guía</Button><ModeToggle /></div>
-        <div id="academic-scheduling-saved-proposals" className="academic-scheduling__saved-proposals">
-          {draftList?.unavailableCount ? <p role="status">{draftList.unavailableCount} propuesta(s) no se pudieron leer.</p> : null}
-          {draftList?.items.length === 0 && <p>No hay propuestas guardadas.</p>}
-          <p className="planning-eyebrow">Otras propuestas · Sistemas {planningPeriod}</p>
-          <ul className="academic-scheduling__saved-list">{draftList && draftList.items.map((item) => <li className="academic-scheduling__saved-row" data-current={item.id === draftId || undefined} key={item.id}>
-            <div className="planning-proposal-option"><span>{item.title}</span><span className="planning-proposal-option__version">v{item.version} · {item.state === 'draft' ? 'Borrador' : item.state === 'published' ? 'Publicada' : item.state === 'approved' ? 'Aprobada' : 'Guardada'}</span></div>
-            <div className="planning-proposal-option__actions"><Button type="button" variant="ghost" disabled={draftBusy} onClick={() => void resumeDraft(item.id, item.version)}>Continuar edición</Button><Button type="button" variant="link" disabled={draftBusy} onClick={() => void resumeDraft(item.id, item.version)}>Consultar</Button></div>
-          </li>)}</ul>
-        </div>
-      </DialogContent>
-    </Dialog>
-
-    <ResizablePanelGroup orientation="horizontal" defaultLayout={defaultLayout} onLayoutChanged={onLayoutChanged} className="planning-workspace">
-    <ResizablePanel id="planning-content" minSize="45%" className="planning-workspace__panel">
     <ResizablePanelGroup orientation="vertical" defaultLayout={detailLayout} onLayoutChanged={onDetailLayoutChanged} className="planning-schedule-split">
     <ResizablePanel id="planning-schedule-content" minSize="40%" className="planning-workspace__panel">
     <div ref={scrollerRef} className={`planning-workspace__content ${currentStage === 'preparacion' && preparationView === 'cursos' ? 'planning-workspace__content--courses' : ''}`}>
@@ -700,6 +701,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       </ResizablePanel>
     </>}
     </ResizablePanelGroup>
+    </div>
     </ResizablePanel>
     {railOpen && <>
       <ResizableHandle withHandle aria-label="Redimensionar asistente" />
