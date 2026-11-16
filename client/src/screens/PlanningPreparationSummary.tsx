@@ -13,12 +13,14 @@ export interface PlanningPreparationSummaryProps {
   catalogCourseCount: number
   onSelectAllCourses: () => void
   selectionDisabled: boolean
+  schoolName?: string
+  planningPeriod?: string
   invalidOfferNote?: string
   children?: ReactNode
 }
 
 export function PlanningPreparationSummary({ selectedCourses, invalidCourses, teachers, rooms, offerReady,
-  catalogCourseCount, onSelectAllCourses, selectionDisabled, invalidOfferNote, children,
+  catalogCourseCount, onSelectAllCourses, selectionDisabled, invalidOfferNote, children, schoolName, planningPeriod,
 }: PlanningPreparationSummaryProps): ReactNode {
   const checks = [
     `${selectedCourses} cursos seleccionados`,
@@ -29,7 +31,7 @@ export function PlanningPreparationSummary({ selectedCourses, invalidCourses, te
   if (selectedCourses === 0 && catalogCourseCount > 0) return <section className="planning-status-bar planning-preparation-empty" data-status="incomplete" aria-label="Lista de preparación">
     <span className="planning-eyebrow">03 · Sin cursos</span>
     <h2>Aún no hay cursos en la oferta</h2>
-    <p>El catálogo tiene {catalogCourseCount} cursos para la oferta.</p>
+    <p>El catálogo{schoolName ? ` de ${schoolName}` : ''} tiene {catalogCourseCount} cursos{planningPeriod ? ` para ${planningPeriod}` : ' para la oferta'}.</p>
     <Button id="planning-tour-primary" disabled={selectionDisabled} onClick={onSelectAllCourses}>Seleccionar los {catalogCourseCount} cursos del catálogo</Button>
     <p className="planning-preparation-empty__note">Una propuesta vacía no está lista para revisión.</p>
     {children}
@@ -40,7 +42,7 @@ export function PlanningPreparationSummary({ selectedCourses, invalidCourses, te
       <div className="planning-status-bar__facts">
         <span className="planning-status-bar__fact">{ready ? `${selectedCourses} cursos · demanda y capacidad completas` : checks[0]}</span>
         {!ready && <span className="planning-status-bar__fact"><Link to="/local/programacion-academica" search={{ etapa: 'preparacion', vista: 'cursos' }}>{checks[1]}</Link></span>}
-        <span className="planning-status-bar__fact"><Link to="/local/programacion-academica" search={{ etapa: 'preparacion', vista: 'recursos' }}>{checks[2]}</Link></span>
+        <span className="planning-status-bar__fact">{ready ? checks[2] : <Link to="/local/programacion-academica" search={{ etapa: 'preparacion', vista: 'recursos' }}>{checks[2]}</Link>}</span>
       </div>
       {ready && <Collapsible className="planning-readiness-disclosure planning-status-bar__actions"><CollapsibleTrigger asChild><Button variant="link">Ver resumen</Button></CollapsibleTrigger><CollapsibleContent><ul>{checks.map((check) => <li key={check}>✓ {check}</li>)}</ul></CollapsibleContent></Collapsible>}
     </div>

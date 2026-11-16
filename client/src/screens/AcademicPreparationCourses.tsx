@@ -223,11 +223,15 @@ export function AcademicPreparationCourses({
       </p>
       <dl className="academic-preparation__detail-facts academic-preparation__detail-components">
         <dt>Secciones</dt><dd>{calculatePresentedSections(demandValue, capacityValue) ?? '—'} × {capacityValue || '—'} vacantes</dd>
-        <dt>Componentes</dt><dd>{sessionsFor(inspectedCourse).map((session) => `${session.type ?? 'Sesión'} ${session.durationMinutes / 60} h`).join(' · ')}</dd>
+        <dt>Componentes</dt><dd>{sessionsFor(inspectedCourse).map((session) => `${session.type === 'Laboratorio' ? 'Lab.' : session.type ?? 'Sesión'} ${session.durationMinutes / 60} h`).join(' · ')}</dd>
         <dt>Docentes habilitados</dt><dd>{(resources ?? catalog)?.teachers.filter((teacher) => teacher.courseIds.includes(inspectedCourse.courseId)).length ?? '—'}</dd>
       </dl>
       <Button variant="outline" type="button" className="academic-preparation__estimate" disabled={planningPeriod !== '2027-I'} onClick={() => setDemandOpen(true)}>Estimar demanda</Button>
       <details className="academic-preparation__inspector-body"><summary>Configuración del curso</summary>
+        <dl className="academic-preparation__detail-facts">
+          <dt>Créditos</dt><dd>{inspectedCourse.credits ?? '—'}</dd>
+          <dt>Secciones de la propuesta</dt><dd>{proposal?.status === 'invalid-input' ? 'Entrada inválida' : proposal ? proposal.sections.filter((section) => section.courseId === inspectedCourse.courseId).length : '—'}</dd>
+        </dl>
         {!selectedCourses.includes(inspectedCourse.courseId) && <p className="academic-preparation__detail-help" role="note">Curso no incluido en la propuesta. Marca su casilla para habilitar sus opciones de configuración.</p>}
         <Label>Vacantes por sección
           <Input type="number" min="1" step="1" inputMode="numeric" value={capacityValue}
@@ -327,79 +331,16 @@ export function AcademicPreparationCourses({
         </div>
       )}
 
-      {catalog && selectedCourses.length > 0 && (
+      {catalog && (
         <div className="academic-preparation">
-          <details className="academic-preparation__settings">
-            <summary>Filtros y valores iniciales</summary>
-            <div className="academic-preparation__settings-body">
-              <Input type="search" placeholder="Buscar curso" aria-label="Buscar curso por código o nombre" value={searchQuery} onChange={(event) => setSearchQuery(event.currentTarget.value)} />
-              <span>{visibleCourses.length} cursos visibles · {selectedCourses.length} seleccionados</span>
-          <div className="academic-preparation__period">
-            <Label>
-              <span className="sr-only">Periodo de planificación</span>
-              <NativeSelect
-                title="Al cambiar de periodo se aplican los valores iniciales a demanda y capacidad. Los ajustes requieren confirmación si hay cambios pendientes."
-                aria-label="Periodo de planificación"
-                value={planningPeriod}
-                disabled={isLocked}
-                onChange={(event) => onApplyPeriodDefaults(event.currentTarget.value as PlanningPeriod)}
-              >
-                {!['2026-I', '2026-II', '2027-I', '2027-II'].includes(planningPeriod) && (
-                  <option value={planningPeriod}>{planningPeriod}</option>
-                )}
-                <option value="2026-I">2026-I</option>
-                <option value="2026-II">2026-II</option>
-                <option value="2027-I">2027-I</option>
-                <option value="2027-II">2027-II</option>
-              </NativeSelect>
-            </Label>
-            <Button
-              variant="link"
-              type="button"
-              disabled={isLocked}
-              onClick={() => onApplyPeriodDefaults(planningPeriod, true)}
-              aria-label="Aplicar valores iniciales del periodo"
-              className="gap-2 text-sm font-normal"
-            >
-              <RotateCcw className="size-3.5" aria-hidden="true" />
-              <span>Valores iniciales</span>
-            </Button>
-
-          </div>
-
-              <div className="academic-preparation__cycle-filter">
-                <Label className="sr-only" htmlFor={cycleSelectId}>Filtrar cursos por ciclo</Label>
-                <NativeSelect
-                  id={cycleSelectId}
-                  aria-label="Filtrar cursos por ciclo"
-                  value={cycleFilter}
-                  onChange={(e) => onCycleFilterChange(e.currentTarget.value)}
-                >
-                  <option value="all">Todos</option>
-                  {Array.from({ length: 10 }, (_, index) => index + 1).map((cycle) => (
-                    <option key={cycle} value={String(cycle)}>
-                      Ciclo {cycle}
-                    </option>
-                  ))}
-                  {courses.some((c) => c.cycle === undefined) && (
-                    <option value="unspecified">Sin ciclo especificado</option>
-                  )}
-                </NativeSelect>
-                {availableCycles.length === 0 && <span>El catálogo no especifica ciclos.</span>}
-              </div>
-            </div>
-          </details>
-          {selectedCourses.length > 0 ? <div className="academic-preparation__bulk-bar" role="toolbar" aria-label="Acciones en lote">
+          {selectedCourses.length > 0 && <>
+          <div className="academic-preparation__bulk-bar" role="toolbar" aria-label="Acciones en lote">
             <span>{selectedCourses.length} cursos seleccionados</span>
             <Button variant="outline" disabled={planningPeriod !== '2027-I'} onClick={() => setDemandOpen(true)}>Estimar demanda</Button>
             <Button variant="outline" disabled={isLocked} onClick={handleOpenBulkModal} aria-haspopup="dialog">Editar en lote</Button>
             <Button variant="outline" disabled={isLocked || visibleCourses.length === 0} onClick={handleSelectVisible}>Seleccionar visibles</Button>
-            <Button variant="outline" disabled={isLocked} onClick={handleDeselectVisible}>Quitar selección</Button>
-          </div> : <div className="academic-preparation__toolbar">
-            <Label className="sr-only" htmlFor={searchInputId}>Buscar curso por código o nombre</Label>
-            <Input id={searchInputId} type="search" placeholder="Buscar curso" value={searchQuery} onChange={(event) => setSearchQuery(event.currentTarget.value)} />
-            <span>{counts.totalIncluded} cursos seleccionados</span>
-          </div>}
+            <Button variant="outline" disabled={isLocked || visibleCourses.every((course) => !selectedCourses.includes(course.courseId))} onClick={handleDeselectVisible}>Quitar selección</Button>
+          </div>
           <div className="sr-only" role="status" aria-label="Contadores de preparación">
             <span data-testid="count-catalog">{counts.totalCatalog}</span> en catálogo · <span data-testid="count-included">{counts.totalIncluded}</span> incluidos · <span data-testid="count-visible">{counts.totalVisible}</span> visibles · máximo {PLANNING_LIMITS.courses}
           </div>
@@ -675,6 +616,67 @@ export function AcademicPreparationCourses({
                 </div>
               </DialogContent>
           </Dialog>
+          </>}
+          <details className="academic-preparation__settings">
+            <summary>Filtros y valores iniciales</summary>
+            <div className="academic-preparation__settings-body">
+              <Input type="search" placeholder="Buscar curso" aria-label="Buscar curso por código o nombre" value={searchQuery} onChange={(event) => setSearchQuery(event.currentTarget.value)} />
+              <span title={catalog.revision}>{visibleCourses.length} cursos visibles · {selectedCourses.length} seleccionados · máximo {PLANNING_LIMITS.courses}</span>
+          <div className="academic-preparation__period">
+            <Label>
+              <span className="sr-only">Periodo de planificación</span>
+              <NativeSelect
+                title="Al cambiar de periodo se aplican los valores iniciales a demanda y capacidad. Los ajustes requieren confirmación si hay cambios pendientes."
+                aria-label="Periodo de planificación"
+                value={planningPeriod}
+                disabled={isLocked}
+                onChange={(event) => onApplyPeriodDefaults(event.currentTarget.value as PlanningPeriod)}
+              >
+                {!['2026-I', '2026-II', '2027-I', '2027-II'].includes(planningPeriod) && (
+                  <option value={planningPeriod}>{planningPeriod}</option>
+                )}
+                <option value="2026-I">2026-I</option>
+                <option value="2026-II">2026-II</option>
+                <option value="2027-I">2027-I</option>
+                <option value="2027-II">2027-II</option>
+              </NativeSelect>
+            </Label>
+            <Button
+              variant="link"
+              type="button"
+              disabled={isLocked}
+              onClick={() => onApplyPeriodDefaults(planningPeriod, true)}
+              aria-label="Aplicar valores iniciales del periodo"
+              className="gap-2 text-sm font-normal"
+            >
+              <RotateCcw className="size-3.5" aria-hidden="true" />
+              <span>Valores iniciales</span>
+            </Button>
+
+          </div>
+
+              <div className="academic-preparation__cycle-filter">
+                <Label className="sr-only" htmlFor={cycleSelectId}>Filtrar cursos por ciclo</Label>
+                <NativeSelect
+                  id={cycleSelectId}
+                  aria-label="Filtrar cursos por ciclo"
+                  value={cycleFilter}
+                  onChange={(e) => onCycleFilterChange(e.currentTarget.value)}
+                >
+                  <option value="all">Todos</option>
+                  {Array.from({ length: 10 }, (_, index) => index + 1).map((cycle) => (
+                    <option key={cycle} value={String(cycle)}>
+                      Ciclo {cycle}
+                    </option>
+                  ))}
+                  {courses.some((c) => c.cycle === undefined) && (
+                    <option value="unspecified">Sin ciclo especificado</option>
+                  )}
+                </NativeSelect>
+                {availableCycles.length === 0 && <span>El catálogo no especifica ciclos.</span>}
+              </div>
+            </div>
+          </details>
         </div>
       )}
     </section>
