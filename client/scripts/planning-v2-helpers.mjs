@@ -119,3 +119,42 @@ export async function openAssistance(page, tab) {
 
 export const openNormativa = (page) => openAssistance(page, 'Normativa')
 export const openConsejero = (page) => openAssistance(page, 'Consejero')
+
+const coursesTable = (page) => page.getByRole('table', { name: 'Cursos de la oferta' })
+
+/**
+ * Leaves exactly one course in the offer. v2 hides the course table until the offer has courses (empty state, handoff §5.1
+ * and States board 03), so the only way in is the catalog button; narrow down with the cycle filter and "Quitar selección".
+ */
+export async function selectOnlyCourse(page, courseId) {
+  const table = coursesTable(page)
+  if (!await table.isVisible()) await page.getByRole('button', { name: /^Seleccionar los .* cursos del catálogo$/ }).click()
+  await table.waitFor({ state: 'visible' })
+  const cycle = (await table.locator(`tr[data-course-id=${JSON.stringify(courseId)}] td`).nth(2).innerText()).trim()
+  const filter = page.getByRole('combobox', { name: 'Filtrar cursos por ciclo', exact: true })
+  const remove = page.getByRole('button', { name: 'Quitar selección', exact: true })
+  for (const label of await filter.locator('option').allInnerTexts()) {
+    if (label === 'Todos' || label === `Ciclo ${cycle}`) continue
+    await filter.selectOption({ label })
+    if (await remove.isEnabled()) await remove.click()
+  }
+  await filter.selectOption({ label: 'Todos' })
+  for (const name of await table.getByRole('checkbox', { checked: true }).evaluateAll((boxes) => boxes.map((box) => box.getAttribute('aria-label')))) {
+    if (name !== `Seleccionar ${courseId}` && name !== 'Seleccionar cursos visibles') await table.getByRole('checkbox', { name, exact: true }).click()
+  }
+  await page.getByRole('checkbox', { name: `Seleccionar ${courseId}`, exact: true }).and(page.locator('[aria-checked="true"]')).waitFor()
+}
+
+/**
+ * Per-course fields live in the course detail pane (v2): "Demanda final", then the "Configuración del curso" disclosure
+ * for "Capacidad", "Patrón" and "Modalidad de sesiones". `kind` is that label; the control's accessible name is `${kind} ${courseId}`.
+ */
+export async function courseControl(page, kind, courseId) {
+  const inspector = page.getByRole('complementary', { name: `Inspector de curso ${courseId}`, exact: true })
+  if (!await inspector.isVisible()) await page.getByRole('button', { name: `Inspeccionar ${courseId}`, exact: true }).click()
+  await inspector.waitFor({ state: 'visible' })
+  const control = inspector.getByLabel(`${kind} ${courseId}`, { exact: true })
+  if (!await control.isVisible()) await inspector.getByText('Configuración del curso', { exact: true }).click()
+  await control.waitFor({ state: 'visible' })
+  return control
+}

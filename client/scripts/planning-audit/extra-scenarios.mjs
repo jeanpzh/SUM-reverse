@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import {nav,response,json,singleCourse,generate,save,resume,closeChat} from './helpers.mjs'
+import {courseControl} from '../planning-v2-helpers.mjs'
 export const extraScenarios = [
   ['demand-two-sources-preserve-manual-demand',async ({page,base,record}) => {
     const course=await singleCourse(page,base)
@@ -16,7 +17,7 @@ export const extraScenarios = [
       record({source,population:result.source.populationSize})
     }
     await page.keyboard.press('Escape');await modal.waitFor({state:'hidden'})
-    assert.equal(await page.getByLabel(`Demanda ${course.courseId}`,{exact:true}).inputValue(),'1')
+    assert.equal(await (await courseControl(page,'Demanda final',course.courseId)).inputValue(),'1')
   }],
   ['manual-valid-slot-updates-version-and-preserves-duration',async ({page,base}) => {
     await singleCourse(page,base);const proposal=await generate(page)
@@ -40,7 +41,7 @@ export const extraScenarios = [
     const course=await singleCourse(page,base);await generate(page)
     const {draft}=await save(page,`AUDIT config ${Date.now()}`)
     await nav(page,'preparacion','cursos')
-    await page.getByLabel(`Demanda ${course.courseId}`,{exact:true}).fill('2')
+    await (await courseControl(page,'Demanda final',course.courseId)).fill('2')
     assert.equal(await page.locator('.planning-status-bar').count(),0)
     const {draft:changed,payload}=await save(page,draft.title)
     assert.equal(payload.proposalId,null)
@@ -50,6 +51,6 @@ export const extraScenarios = [
     const restored=await resume(page,changed)
     assert.equal(restored.proposal,null)
     await nav(page,'preparacion','cursos')
-    assert.equal(await page.getByLabel(`Demanda ${course.courseId}`,{exact:true}).inputValue(),'2')
+    assert.equal(await (await courseControl(page,'Demanda final',course.courseId)).inputValue(),'2')
   }],
 ]

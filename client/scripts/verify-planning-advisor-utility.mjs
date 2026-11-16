@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import {mkdir,writeFile} from 'node:fs/promises'
 import {resolve} from 'node:path'
 import {chromium} from 'playwright'
-import {setPlanningCheckbox} from './planning-checkboxes.mjs'
 import {api,generate,response,json,save,resume,closeChat,nav} from './planning-audit/helpers.mjs'
+import {statusBar,selectOnlyCourse,courseControl} from './planning-v2-helpers.mjs'
 if(process.env.SUM_REDESIGN_SYNTHETIC!=='1')throw new Error('Owned synthetic stack required')
 const base=new URL(process.env.SUM_REDESIGN_BASE)
 if(base.protocol!=='http:'||base.hostname!=='127.0.0.1'||base.pathname!=='/'||base.search||base.hash||base.username||base.password)throw new Error('Owned loopback origin required')
@@ -34,9 +34,9 @@ try{
   assert.ok(course,'Reviewed synthetic catalog needs a senior continuous block longer than the normal evening window')
   const pattern=course.planningPatterns.find(p=>p.weeklySessions.reduce((sum,s)=>sum+s.durationMinutes,0)>240)
   await nav(page,'preparacion','cursos')
-  await setPlanningCheckbox(page.getByRole('checkbox',{name:`Seleccionar ${course.courseId}`,exact:true}))
-  await page.getByLabel(`Demanda ${course.courseId}`,{exact:true}).fill('1')
-  await page.getByLabel(`Patrón ${course.courseId}`,{exact:true}).selectOption(pattern.id)
+  await selectOnlyCourse(page,course.courseId)
+  await (await courseControl(page,'Demanda final',course.courseId)).fill('1')
+  await (await courseControl(page,'Patrón',course.courseId)).selectOption(pattern.id)
   observed.scenario={kind:'single-course-window-bottleneck',courseId:course.courseId}
  }
  const original=await generate(page,!constrained)
@@ -45,7 +45,7 @@ try{
  await page.getByRole('button',{name:'Consultar consejero',exact:true}).click()
  const initial=await json(await requested)
  observed.defaultSimulation=initial.verifiedImpact
- const panel=page.getByRole('dialog',{name:'Consejero de planificación',exact:true})
+ const panel=page.getByRole('tabpanel',{name:'Consejero',exact:true}) // v2: Consejero tab of the assistance rail (or Sheet)
  await panel.locator('[data-advisor-impact=verified]').waitFor()
  const selected=initial.recommendations.filter(r=>(constrained?['enable_planning_window']:['enable_planning_window','change_delivery_mode']).includes(r.patch.kind))
  assert.equal(selected.length,constrained?1:2)
@@ -56,7 +56,7 @@ try{
  }
  const firstChoice=panel.getByRole('checkbox',{name:selected[0].title,exact:true})
  await firstChoice.click();await firstChoice.click()
- const apply=panel.getByRole('button',{name:'Aplicar seleccionadas y regenerar',exact:true})
+ const apply=panel.getByRole('button',{name:/^Aplicar \d+ seleccionad[ao]s? y regenerar$/})
  observed.invalidated={applyDisabled:await apply.isDisabled(),describedBy:await apply.getAttribute('aria-describedby'),selectedIds:selected.map(r=>r.id)}
  await page.screenshot({path:resolve(evidence,'selection-before-simulation.png')})
  const simulate=response(page,'/consejero')
@@ -74,8 +74,8 @@ try{
  observed.changedTeacherLoads=generationRequests[1].resources.teachers.filter(t=>generationRequests[0].resources.teachers.find(p=>p.id===t.id)?.maxWeeklyMinutes!==t.maxWeeklyMinutes).map(t=>t.id)
  assert.deepEqual(observed.changedTeacherLoads,[],'Safe window/delivery recommendations must not raise teacher load')
  observed.gain={components:observed.after.components-observed.before.components,completeSections:observed.after.completeSections-observed.before.completeSections}
- await panel.waitFor({state:'hidden'})
- await page.locator('.planning-status-bar').waitFor()
+ await page.locator('#planning-chat-body').waitFor({state:'hidden'})
+ await statusBar(page).waitFor()
  observed.visibleOutcome=await page.locator('[data-advisor-outcome]').count()
  await page.screenshot({path:resolve(evidence,'actual-regenerated.png')})
  const drafts=await json(await page.request.get(`${base.origin}${api}/borradores`))

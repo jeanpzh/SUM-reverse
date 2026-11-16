@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict'
-import { setPlanningCheckbox } from '../planning-checkboxes.mjs'
-import { openProposalMenu, setProposalTitle } from '../planning-v2-helpers.mjs'
+import { openProposalMenu, setProposalTitle, statusBar, selectOnlyCourse, courseControl } from '../planning-v2-helpers.mjs'
 export const route = '/local/programacion-academica'
 export const api = '/api/local/programacion-academica/v1'
 export async function closeChat(page) {
@@ -35,8 +34,8 @@ export async function singleCourse(page, base) {
   const course = catalog.courses.find(c => c.planningPatterns?.some(p => p.weeklySessions.length > 0) && catalog.teachers.some(t => t.courseIds.includes(c.courseId)) && catalog.rooms.some(r => r.capacity >= c.targetCapacity))
   assert.ok(course)
   await nav(page, 'preparacion', 'cursos')
-  await setPlanningCheckbox(page.getByRole('checkbox', {name:`Seleccionar ${course.courseId}`,exact:true}))
-  await page.getByLabel(`Demanda ${course.courseId}`,{exact:true}).fill('1')
+  await selectOnlyCourse(page, course.courseId)
+  await (await courseControl(page, 'Demanda final', course.courseId)).fill('1')
   return course
 }
 export async function generate(page, all = false) {
@@ -46,7 +45,7 @@ export async function generate(page, all = false) {
   const pending = response(page, '/propuestas')
   await page.locator('#planning-tour-primary').click()
   const proposal = await json(await pending)
-  await page.locator('.planning-status-bar').waitFor()
+  await statusBar(page).waitFor() // all stages stay mounted: scope to the visible (current stage) strip
   return proposal
 }
 export async function save(page, title) {
