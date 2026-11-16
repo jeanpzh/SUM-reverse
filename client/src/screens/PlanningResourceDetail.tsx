@@ -15,7 +15,7 @@ export function PlanningResourceDetail({ label, onClose, children }: {
 }) {
   const narrow = useSyncExternalStore(subscribe, isNarrow, () => false)
   if (narrow) return <Sheet open onOpenChange={(open) => { if (!open) onClose() }}>
-    <SheetContent side="bottom" className="academic-resource-workbench__inspector-pane planning-resource-detail-sheet" aria-describedby={undefined} showCloseButton={false}>
+    <SheetContent side="bottom" className="academic-resource-workbench academic-resource-workbench__inspector-pane planning-resource-detail-sheet" aria-describedby={undefined} showCloseButton={false}>
       <SheetTitle className="sr-only">{label}</SheetTitle>
       {children}
     </SheetContent>
