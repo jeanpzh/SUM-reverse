@@ -101,3 +101,11 @@
 .planning-root .academic-resource-workbench__chip { padding-block: 0; }
 .planning-root .academic-resource-workbench__chip button { border: 0; min-height: 24px; padding: 0; }
 .academic-resource-workbench__form > .academic-resource-workbench__inline-error { order: 2; }
+/* Like the reference board, the master-detail divider meets the workspace edges. */
+.academic-resource-workbench__split { margin-inline: -32px; width: calc(100% + 64px); }
+@media (max-width: 1279px) {
+  .academic-resource-workbench__split { margin-inline: -24px; width: calc(100% + 48px); }
+}
+@media (max-width: 719px) {
+  .academic-resource-workbench__split { margin-inline: -16px; width: calc(100% + 32px); }
+}
