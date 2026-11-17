@@ -147,5 +147,16 @@ test('component grouping preserves legacy section ownership by default and suppo
   const splitTP = structuredClone(proposal)
   splitTP.assignments[1].teacherId = 'TB'
   assert.throws(() => validateAcademicProposal(splitTP))
-  assert.doesNotThrow(() => validateAcademicAdvisorPatch({ kind: 'change_teacher_assignment_mode', courseIds: ['C1'], teacherAssignmentMode: 'tp-grouped-l-independent' }))
+  assert.doesNotThrow(() => validateAcademicAdvisorPatch({ kind: 'change_delivery_mode', courseIds: ['C1'], teacherAssignmentMode: 'tp-grouped-l-independent' }))
+})
+
+
+test('delivery recommendations retain four classes and require an explicit delivery or assignment change', () => {
+  const patch = { kind: 'change_delivery_mode', courseIds: ['C'] }
+  assert.throws(() => validateAcademicAdvisorPatch(patch), /cambio explícito/)
+  assert.doesNotThrow(() => validateAcademicAdvisorPatch({ ...patch, deliveryMode: 'split' }))
+  assert.doesNotThrow(() => validateAcademicAdvisorPatch({ ...patch, teacherAssignmentMode: 'per-session' }))
+  assert.doesNotThrow(() => validateAcademicAdvisorPatch({ ...patch, deliveryMode: 'split', teacherAssignmentMode: 'tp-grouped-l-independent' }))
+  assert.throws(() => validateAcademicAdvisorPatch({ ...patch, deliveryMode: 'split', teacherAssignmentMode: 'unknown' }))
+  assert.throws(() => validateAcademicAdvisorPatch({ ...patch, kind: 'change_teacher_assignment_mode', teacherAssignmentMode: 'per-session' }))
 })

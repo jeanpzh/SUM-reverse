@@ -23,7 +23,7 @@
 6. **Tests unitarios y SSR**
    - `client/src/data/academicScheduling.test.ts`: clonado profundo de `PlanningPolicy` con `facultyId`, `source` y `exceptions`.
    - `client/src/data/planningSession.test.ts`: envío de `teacherAssignmentMode`, invalidación de propuesta/estado de revisión, limpieza de modos obsoletos al reanudar/bifurcar, preservación de `facultyId`/`source`/`exceptions` y limpieza segura de excepción de sábado al desmarcar `allowSaturday`.
-   - `client/src/components/ai-elements/advisor.test.mjs` y `client/scripts/test-normative-components.mjs`: render SSR de `SuggestionCard` (`change_teacher_assignment_mode`, `change_delivery_mode`, `enable_planning_window` con y sin `exceptions`) y humo SSR de `AcademicPreparationCourses`.
+   - `client/src/components/ai-elements/advisor.test.mjs` y `client/scripts/test-normative-components.mjs`: render SSR de `SuggestionCard` (`change_delivery_mode` con `teacherAssignmentMode`, `change_delivery_mode`, `enable_planning_window` con y sin `exceptions`) y humo SSR de `AcademicPreparationCourses`.
 7. **Runner E2E sintético sin LLM**
    - `client/scripts/verify-planning-completion.mjs` + allowlist mínima en `client/scripts/verify-planning-redesign-stack.mjs`.
 

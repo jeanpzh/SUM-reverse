@@ -344,11 +344,8 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
           if (patch.allowSaturday) nextPolicy = { ...nextPolicy, allowSaturday: true }
         } else if (patch.kind === 'change_delivery_mode') {
           for (const courseId of patch.courseIds) {
-            nextDeliveryModes[courseId] = 'split'
-          }
-        } else if (patch.kind === 'change_teacher_assignment_mode') {
-          for (const courseId of patch.courseIds) {
-            nextTeacherAssignmentModes[courseId] = patch.teacherAssignmentMode
+            if (patch.deliveryMode) nextDeliveryModes[courseId] = patch.deliveryMode
+            if (patch.teacherAssignmentMode) nextTeacherAssignmentModes[courseId] = patch.teacherAssignmentMode
           }
         } else if (patch.kind === 'incorporate_reference_resource' && state.catalog) {
           const existingTeacherIds = new Set(nextResources.teachers.map((t) => t.id))

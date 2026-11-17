@@ -88,12 +88,14 @@ export function validateAcademicDraftResume(value: unknown): asserts value is Ac
 export type AcademicAdvisorPatch =
   | { kind: 'increase_teacher_load'; adjustments: Array<{ teacherId: string; previousMaxWeeklyMinutes: number; nextMaxWeeklyMinutes: number }> }
   | { kind: 'enable_planning_window'; allowAfternoon?: true; allowSaturday?: true }
-  | { kind: 'change_delivery_mode'; courseIds: string[]; deliveryMode: 'split' }
-  | { kind: 'change_teacher_assignment_mode'; courseIds: string[]; teacherAssignmentMode: 'tp-grouped-l-independent' | 'per-session' }
+  | ({ kind: 'change_delivery_mode'; courseIds: string[] } & (
+      | { deliveryMode: 'split'; teacherAssignmentMode?: 'tp-grouped-l-independent' | 'per-session' }
+      | { deliveryMode?: 'split'; teacherAssignmentMode: 'tp-grouped-l-independent' | 'per-session' }
+    ))
   | { kind: 'incorporate_reference_resource'; teacherIds: string[]; roomIds: string[] }
 export type AcademicAdvisorRequest = { expectedEditVersion: number; selectedRecommendationIds?: string[] }
 export type AcademicAdvisorBottleneck = {
-  category: 'teacher_load' | 'planning_window' | 'missing_resource' | 'delivery_mode' | 'teacher_assignment_mode' | 'other'
+  category: 'teacher_load' | 'planning_window' | 'missing_resource' | 'delivery_mode' | 'other'
   title: string
   detail: string
   affectedSessionCount: number

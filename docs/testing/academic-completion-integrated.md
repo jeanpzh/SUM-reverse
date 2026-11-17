@@ -54,11 +54,11 @@ Esta variable selecciona una prueba local, **no otorga autorización institucion
 | Criterio | Comprobación | Resultado |
 | --- | --- | --- |
 | Asignación T/P + L independiente, docente por sesión y legacy | Python y backend, casos anónimos con franjas incompatibles para un docente único | Pasa |
-| Ajuste acotado al grupo y responsable determinista | Backend `programacion-academica-session-assignment.spec.ts` | 8/8 pasan |
+| Ajuste acotado al grupo y responsable determinista | Backend `programacion-academica-session-assignment.spec.ts` | 10/10 pasan |
 | Revisión, aprobación y publicación con docentes participantes | Prueba backend del ciclo completo sintético | Pasa |
-| Políticas y contratos compartidos | Node tests `shared/academic-planning-policy.test.mjs` y `shared/programacion-academica*.test.mjs` | 61/61 pasan |
-| Regresiones backend | `vitest run programacion-academica` | 346/346 pasan |
-| Motor y selección exacta del consejero | `pytest test_engine.py test_advisor_agent.py` | 34/34 pasan |
+| Políticas y contratos compartidos | Node tests `shared/academic-planning-policy.test.mjs` y `shared/programacion-academica*.test.mjs` | 62/62 pasan |
+| Regresiones backend | `vitest run programacion-academica` | 348/348 pasan |
+| Motor y selección exacta del consejero | `pytest test_engine.py test_advisor_agent.py` | 41/41 pasan |
 | Estado cliente, hidratación y edición por grupos | `pnpm --dir client test:data` | 312/312 pasan |
 | Presentación y selectores accesibles | SSR consejero y componentes normativos | 9/9 y 16/16 pasan |
 | Compilación y lint | Backend y cliente | Pasan; advertencias existentes de chunks y lint ajeno al módulo |
@@ -76,3 +76,15 @@ Los límites de búsqueda y preferencias no son normas. Los ensayos unitarios no
 
 
 Evidencia mínima: [sin ampliar carga](../../evidence/local/academic-completion-2026-11-17/without-load.json) y [con ampliación seleccionada](../../evidence/local/academic-completion-2026-11-17/with-explicit-load.json). La ejecución final de completitud también verifica habilitación por curso, disponibilidad, aforo, tipo laboratorio, suma de minutos por docente y límites de secciones únicas contra la configuración realmente enviada. Todas esas verificaciones pasaron.
+
+
+## Cierre de hallazgos de auditoría
+
+La revisión independiente del checkpoint b7347fe encontró dos P1 y dos P2, sin P0. Se resolvieron mediante regresiones dirigidas:
+
+- Se conservan cuatro clases de parche. Las tarjetas de distribución horaria y asignación docente siguen separadas, pero ambas usan `change_delivery_mode`, con `deliveryMode` y/o `teacherAssignmentMode` opcionales y al menos un cambio requerido. La forma legacy con `deliveryMode: split` sigue aceptándose; no se publica un quinto `kind`.
+- El consejero Python y el local TypeScript usan el perfil para describir ventanas con minutos exactos y solo proponen abrir las que están cerradas. Sábado habilitado de 08:30–13:30 no se describe como cerrado ni como 08:00–13:00.
+- El cálculo determinista local de carga recorre cursos en el mismo orden lexicográfico que Python, independiente del orden de los pendientes.
+- Python valida el periodo `20xx-I` / `20xx-II`; ambos validadores rechazan periodos mal formados o con espacios/saltos de línea.
+
+Correcciones realizadas por el integrador; no se atribuye una segunda revisión independiente inexistente. La evidencia E2E adjunta se regenera tras estas correcciones con el contrato definitivo.

@@ -73,14 +73,13 @@ def patched_request(req, initial, split, *, teacher_mode=False, include_load=Tru
         elif patch.kind == 'enable_planning_window':
             copy.planningPolicy.allowAfternoon = bool(patch.allowAfternoon)
             copy.planningPolicy.allowSaturday = bool(patch.allowSaturday)
-        elif split and patch.kind == 'change_delivery_mode':
+        elif patch.kind == 'change_delivery_mode':
             for c in copy.courses:
                 if c.courseId in patch.courseIds:
-                    c.deliveryMode = 'split'
-        elif teacher_mode and patch.kind == 'change_teacher_assignment_mode':
-            for c in copy.courses:
-                if c.courseId in patch.courseIds:
-                    c.teacherAssignmentMode = patch.teacherAssignmentMode
+                    if split and patch.deliveryMode:
+                        c.deliveryMode = patch.deliveryMode
+                    if teacher_mode and patch.teacherAssignmentMode:
+                        c.teacherAssignmentMode = patch.teacherAssignmentMode
     copy.windows = get_effective_planning_windows(copy.windows, copy.planningPolicy)
     return copy
 

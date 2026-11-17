@@ -26,9 +26,10 @@ export function SuggestionCard({ recommendation, checked, disabled, index, measu
   const details = patch.kind === 'increase_teacher_load'
     ? patch.adjustments.map((row) => `${teacherNames[row.teacherId] ?? row.teacherId} (${row.teacherId}): ${row.previousMaxWeeklyMinutes} → ${row.nextMaxWeeklyMinutes} min semanales`)
     : patch.kind === 'change_delivery_mode'
-      ? patch.courseIds.map((courseId) => `${courseNames[courseId] ?? courseId} (${courseId}): componentes en franjas independientes (respeta la asignación docente del curso)`)
-      : patch.kind === 'change_teacher_assignment_mode'
-        ? patch.courseIds.map((courseId) => `${courseNames[courseId] ?? courseId} (${courseId}): ${patch.teacherAssignmentMode === 'per-session' ? 'docente independiente por sesión' : 'teoría/práctica juntas y laboratorio independiente'}`)
+      ? patch.courseIds.map((courseId) => `${courseNames[courseId] ?? courseId} (${courseId}): ${[
+        patch.deliveryMode && 'componentes en franjas independientes (respeta la asignación docente del curso)',
+        patch.teacherAssignmentMode && (patch.teacherAssignmentMode === 'per-session' ? 'docente independiente por sesión' : 'teoría/práctica juntas y laboratorio independiente'),
+      ].filter(Boolean).join('; ')}`)
         : patch.kind === 'enable_planning_window'
           ? [
             patch.allowAfternoon && (profile && afternoonStart !== null
@@ -45,7 +46,6 @@ export function SuggestionCard({ recommendation, checked, disabled, index, measu
     incorporate_reference_resource: 'Habilitación',
     enable_planning_window: 'Excepción horaria',
     change_delivery_mode: 'Modalidad',
-    change_teacher_assignment_mode: 'Asignación docente',
   }[patch.kind]
   return <article className="planning-rec" data-checked={checked || undefined} data-disabled={disabled || undefined}>
     <Checkbox id={id} checked={checked} disabled={disabled} onCheckedChange={(value) => onCheckedChange(value === true)} />

@@ -313,3 +313,25 @@ pregunta. Los extractos completos permanecen en `citations`. Los consumidores
 anteriores siguen siendo válidos; cliente/backend y motor deben desplegarse
 juntos antes de enviar el nuevo campo. Generación con modelo sigue exigiendo
 estado `supported`, sin modificar vigencias del corpus.
+
+### Extensión aditiva: asignación docente por grupos o sesión (2026-11-17)
+
+Decisión local autorizada por el usuario, contrastada con su referencia pública oficial de Sistemas 2025-II. Los ejemplos se prueban con datos sintéticos independientes. No incorpora nombres, habilitaciones vigentes ni disponibilidad de aquel documento como entradas operativas para otro periodo.
+
+`demands[].teacherAssignmentMode?` admite:
+
+- `single-teacher-section`: predeterminado legacy; un docente para toda la sección.
+- `tp-grouped-l-independent`: los componentes no laboratorio comparten docente; cada componente `L` es independiente. La continuidad de `deliveryMode: continuous` se exige dentro de cada grupo, no entre teoría/práctica y laboratorio.
+- `per-session`: cada sesión tiene asignación independiente.
+
+La salida conserva `assignments[].teacherId` por sesión y puede incluir `sections[].teacherAssignmentMode` y `responsibleTeacherId`. Este último se deriva del primer componente no laboratorio en el orden declarado, con fallback al primer componente asignado; no sustituye al docente que dicta cada sesión. La salida agrupada exige `sessionType` explícito. Se conservan duración, habilitación, disponibilidad, capacidad, tipo de ambiente, carga por docente, límite de secciones únicas y ausencia de cruces, incluidos los de una misma sección.
+
+Los ajustes manuales afectan al grupo docente tocado, sin modificar otros grupos; la continuidad y orden se verifican según el modo declarado. Los bloques visuales respetan esos grupos aunque sean contiguos y compartan docente. Revisión docente incluye a todos los participantes; un cambio invalida únicamente las conformidades cuya huella cambió. Borradores legacy mantienen el modo anterior por omisión.
+
+El consejero conserva **cuatro clases**. `change_delivery_mode` acepta `courseIds` y uno o ambos de `deliveryMode: split` y `teacherAssignmentMode: tp-grouped-l-independent | per-session`. Debe declarar al menos un cambio; omitir un atributo conserva su valor vigente. Se mantienen tarjetas/IDs independientes para distribución horaria y asignación docente. No se incorpora un quinto `kind` ni se permite que el modelo autorice cambios.
+
+`planningPolicy` conserva su forma legacy y admite `facultyId?: FISI`, `source?: string` y `exceptions?: { saturdayStartMinute?: number, saturdayEndMinute?: number }`. Son parámetros del perfil local, no una norma oficial universal. Los periodos admitidos tienen forma `20xx-I` o `20xx-II`. Una facultad no admitida o una excepción inválida se rechaza; los límites de sábado requieren `allowSaturday`. Generación, simulación y ajuste resuelven las mismas ventanas, reemplazando cualquier sábado base por el intervalo explícito. No se añade disponibilidad a docentes ni ambientes.
+
+Esta extensión requiere desplegar juntos los validadores y consumidores de la revisión; un consumidor anterior con validación estricta no conoce los nuevos campos. No hay migración automática que cambie los grupos de un borrador existente. La simulación conserva exactamente selección y versión; aplicar regenera, no guarda ni publica.
+
+Evidencia y comandos: [aceptación integrada](../../../testing/academic-completion-integrated.md). La completitud observada de 332/332 usa aumentos de carga sintéticos seleccionados explícitamente; no acredita autorización normativa o institucional de esos límites.

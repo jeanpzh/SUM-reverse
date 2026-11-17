@@ -151,7 +151,7 @@ try {
   check('select-new-options-without-silent-load-increase', () => {
     assert.ok(selectedIds.length > 0)
     assert.equal(selectedRecommendations.some((rec) => rec.patch.kind === 'increase_teacher_load'), includeLoad)
-    assert.ok(selectedRecommendations.some((rec) => rec.patch.kind === 'change_teacher_assignment_mode'))
+    assert.ok(selectedRecommendations.some((rec) => rec.patch.kind === 'change_delivery_mode' && rec.patch.teacherAssignmentMode))
   })
   await page.screenshot({ path: resolve(evidence, 'completion-selection.png') })
 
@@ -258,11 +258,9 @@ try {
         if (patch.allowSaturday) assert.equal(generationInputs[1].planningPolicy?.allowSaturday, true)
       } else if (patch.kind === 'change_delivery_mode') {
         for (const courseId of patch.courseIds) {
-          assert.equal(generationInputs[1].demands.find((item) => item.courseId === courseId)?.deliveryMode, 'split')
-        }
-      } else if (patch.kind === 'change_teacher_assignment_mode') {
-        for (const courseId of patch.courseIds) {
-          assert.equal(generationInputs[1].demands.find((item) => item.courseId === courseId)?.teacherAssignmentMode, patch.teacherAssignmentMode)
+          const demand = generationInputs[1].demands.find(item => item.courseId === courseId)
+          if (patch.deliveryMode) assert.equal(demand?.deliveryMode, patch.deliveryMode)
+          if (patch.teacherAssignmentMode) assert.equal(demand?.teacherAssignmentMode, patch.teacherAssignmentMode)
         }
       } else if (patch.kind === 'incorporate_reference_resource') {
         const teacherIds = new Set(generationInputs[1].resources.teachers.map((t) => t.id))

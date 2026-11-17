@@ -96,7 +96,7 @@
         "increase_teacher_load",
         "enable_planning_window",
         "change_delivery_mode",
-        "change_teacher_assignment_mode"
+        "change_delivery_mode"
       ],
       "simulated": false
     },
@@ -227,16 +227,10 @@
           "delta": 660
         },
         {
-          "teacherId": "REF-TEACHER-040",
-          "previousMaxWeeklyMinutes": 600,
-          "nextMaxWeeklyMinutes": 780,
-          "delta": 180
-        },
-        {
           "teacherId": "REF-TEACHER-041",
           "previousMaxWeeklyMinutes": 600,
-          "nextMaxWeeklyMinutes": 1200,
-          "delta": 600
+          "nextMaxWeeklyMinutes": 1380,
+          "delta": 780
         },
         {
           "teacherId": "REF-TEACHER-059",
@@ -309,7 +303,7 @@
         "increase_teacher_load",
         "enable_planning_window",
         "change_delivery_mode",
-        "change_teacher_assignment_mode"
+        "change_delivery_mode"
       ],
       "policy": {
         "revision": "FISI-PLANNING-1",

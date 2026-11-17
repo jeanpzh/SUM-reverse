@@ -172,7 +172,7 @@ test('teacher assignment mode patch and manual update stay preserved and forward
   }, reducePlanningSession(initialPlanningSessionState(), { type: 'catalog/succeeded', catalog }))
   session.commands.edit({ type: 'selectCourses', courseIds: ['SYN1', 'SYN2'] })
   session.commands.edit({ type: 'applyAdvisorPatches', patches: [
-    { kind: 'change_teacher_assignment_mode', courseIds: ['SYN1'], teacherAssignmentMode: 'tp-grouped-l-independent' },
+    { kind: 'change_delivery_mode', courseIds: ['SYN1'], teacherAssignmentMode: 'tp-grouped-l-independent' },
   ] })
   assert.equal(session.getState().teacherAssignmentModes.SYN1, 'tp-grouped-l-independent')
   assert.equal(await session.commands.generate(), true)

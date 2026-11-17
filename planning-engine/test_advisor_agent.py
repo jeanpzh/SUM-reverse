@@ -315,7 +315,7 @@ def test_advisor_emits_and_simulates_change_teacher_assignment_mode():
         'planningPolicy': {'period': '2027-I', 'facultyId': 'FISI'},
     })
     recs = build_deterministic_analysis(req)[2]
-    tpl_rec = next(r for r in recs if r.patch.kind == 'change_teacher_assignment_mode')
+    tpl_rec = next(r for r in recs if r.patch.kind == 'change_delivery_mode' and r.patch.teacherAssignmentMode)
     assert tpl_rec.recommendedByDefault is False
     assert tpl_rec.patch.teacherAssignmentMode == 'tp-grouped-l-independent'
     impact = run_cpsat_dry_run(req, recs, [tpl_rec.id])
@@ -324,7 +324,7 @@ def test_advisor_emits_and_simulates_change_teacher_assignment_mode():
     assert impact.solverStatus == 'complete'
 
 
-def _five_class_request():
+def _five_recommendation_request():
     windows = [{'day': d, 'startMinute': 480, 'endMinute': 1320} for d in range(1, 6)]
     return AdvisorAnalyzeRequest.model_validate({
         'proposalId': 'synthetic-five-classes',
@@ -398,10 +398,10 @@ def _five_class_request():
     })
 
 
-def test_advisor_fifth_class_preserves_deterministic_order_exact_selection_and_no_consultation_sim(monkeypatch):
+def test_advisor_four_classes_preserves_deterministic_order_exact_selection_and_no_consultation_sim(monkeypatch):
     import advisor_agent
 
-    req = _five_class_request()
+    req = _five_recommendation_request()
     recs = build_deterministic_analysis(req)[2]
     expected_ids = [
         'rec-increase-teacher-load',
@@ -411,6 +411,7 @@ def test_advisor_fifth_class_preserves_deterministic_order_exact_selection_and_n
         'rec-change-teacher-assignment-mode',
     ]
     assert [r.id for r in recs] == expected_ids
+    assert {r.patch.kind for r in recs} == {'increase_teacher_load', 'enable_planning_window', 'incorporate_reference_resource', 'change_delivery_mode'}
 
     # Consultation mode (selectedRecommendationIds is None) must never execute CP-SAT even if model asks.
     monkeypatch.setattr(advisor_agent, 'run_cpsat_dry_run', lambda *a, **kw: (_ for _ in ()).throw(AssertionError('Consultation must not simulate')))
@@ -419,8 +420,8 @@ def test_advisor_fifth_class_preserves_deterministic_order_exact_selection_and_n
     assert [r.id for r in consult_res.recommendations] == expected_ids
 
 
-def test_advisor_fifth_class_keeps_deterministic_order_under_llm_reorder_and_exact_selection():
-    req = _five_class_request()
+def test_advisor_four_classes_keeps_deterministic_order_under_llm_reorder_and_exact_selection():
+    req = _five_recommendation_request()
     recs = build_deterministic_analysis(req)[2]
     expected_ids = [r.id for r in recs]
 
@@ -442,7 +443,7 @@ def test_simulation_vs_regeneration_parity_with_assignment_mode_and_saturday_non
     from models import PendingSessionItem, RoomInput, TeacherInput, TimeInterval
     from solver import get_effective_planning_windows
 
-    req = _five_class_request()
+    req = _five_recommendation_request()
     # Match pending strictly to actual requirements for exact regeneration parity.
     req.pending = [
         PendingSessionItem(sessionId=r.id, sectionId=r.sectionId, courseId=r.courseId, durationMinutes=r.durationMinutes)
@@ -468,11 +469,10 @@ def test_simulation_vs_regeneration_parity_with_assignment_mode_and_saturday_non
         elif patch.kind == 'change_delivery_mode':
             for c in regen.courses:
                 if c.courseId in patch.courseIds:
-                    c.deliveryMode = 'split'
-        elif patch.kind == 'change_teacher_assignment_mode':
-            for c in regen.courses:
-                if c.courseId in patch.courseIds:
-                    c.teacherAssignmentMode = patch.teacherAssignmentMode
+                    if patch.deliveryMode:
+                        c.deliveryMode = patch.deliveryMode
+                    if patch.teacherAssignmentMode:
+                        c.teacherAssignmentMode = patch.teacherAssignmentMode
         elif patch.kind == 'incorporate_reference_resource':
             for rt in regen.referenceTeachers:
                 if rt.id in patch.teacherIds:
@@ -502,3 +502,44 @@ def test_simulation_vs_regeneration_parity_with_assignment_mode_and_saturday_non
     assert body['status'] == impact.solverStatus == 'complete'
     assert all(a['interval']['day'] != 6 for a in body['assignments'])
 
+
+
+def test_delivery_class_accepts_either_change_and_rejects_empty_or_fifth_kind():
+    from pydantic import ValidationError, TypeAdapter
+    from models import AcademicAdvisorPatch, ChangeDeliveryModePatch
+    legacy = ChangeDeliveryModePatch(courseIds=['C'], deliveryMode='split')
+    assignment = ChangeDeliveryModePatch(courseIds=['C'], teacherAssignmentMode='tp-grouped-l-independent')
+    assert legacy.model_dump() == {'kind': 'change_delivery_mode', 'courseIds': ['C'], 'deliveryMode': 'split'}
+    assert 'deliveryMode' not in assignment.model_dump()
+    with pytest.raises(ValidationError):
+        ChangeDeliveryModePatch(courseIds=['C'])
+    with pytest.raises(ValidationError):
+        TypeAdapter(AcademicAdvisorPatch).validate_python({'kind': 'change_teacher_assignment_mode', 'courseIds': ['C'], 'teacherAssignmentMode': 'per-session'})
+
+
+def test_advisor_window_wording_preserves_minutes_and_describes_only_closed_windows():
+    from models import PlanningPolicyInput
+    req = _five_recommendation_request()
+    req.planningPolicy = PlanningPolicyInput(period='2027-I', allowSaturday=True,
+        exceptions={'saturdayStartMinute': 510, 'saturdayEndMinute': 810})
+    _, bottlenecks, recs, _ = build_deterministic_analysis(req)
+    rec = next(r for r in recs if r.patch.kind == 'enable_planning_window')
+    assert 'turno tarde (14:00–22:00)' in rec.title
+    assert 'sábado' not in rec.title
+    assert rec.patch.allowSaturday is None
+    detail = next(b.detail for b in bottlenecks if b.category == 'planning_window')
+    assert 'Sábado: habilitado (08:30–13:30)' in detail
+    req.planningPolicy = PlanningPolicyInput(period='2027-I', allowAfternoon=True)
+    _, bottlenecks, recs, _ = build_deterministic_analysis(req)
+    rec = next(r for r in recs if r.patch.kind == 'enable_planning_window')
+    assert 'turno tarde' not in rec.title
+    assert rec.patch.allowAfternoon is None
+    assert 'Ciclos VII–X: 14:00–22:00' in next(b.detail for b in bottlenecks if b.category == 'planning_window')
+
+
+@pytest.mark.parametrize('period', ['2027-X', '2027-1', '1999-I', '', '2027-I\n'])
+def test_policy_rejects_invalid_period_at_python_boundary(period):
+    from models import PlanningPolicyInput
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        PlanningPolicyInput(period=period)

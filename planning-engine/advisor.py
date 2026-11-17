@@ -11,13 +11,12 @@ from models import (
     AdvisorRecommendation,
     AdvisorSource,
     ChangeDeliveryModePatch,
-    ChangeTeacherAssignmentModePatch,
     EnablePlanningWindowPatch,
     IncorporateReferenceResourcePatch,
     IncreaseTeacherLoadPatch,
     TeacherLoadAdjustment,
 )
-from solver import is_eligible_for_course
+from solver import is_eligible_for_course, resolve_planning_time_profile
 
 MAX_WEEKLY_MINUTES = 2400
 
@@ -215,28 +214,36 @@ def build_deterministic_analysis(
         need_saturday = not req.planningPolicy.allowSaturday and len(req.pending) > 6
         if need_afternoon or need_saturday:
             win_sessions = len(senior_pending) if need_afternoon else len(req.pending)
+            profile = resolve_planning_time_profile(req.planningPolicy)
+            afternoon_profile = resolve_planning_time_profile(req.planningPolicy.model_copy(update={"allowAfternoon": True}))
+            clock = lambda value: f"{value // 60:02d}:{value % 60:02d}"
+            afternoon = f"{clock(afternoon_profile['seniorStartMinute'])}–{clock(profile['weekdayEndMinute'])}"
+            saturday = f"{clock(profile['saturdayStartMinute'])}–{clock(profile['saturdayEndMinute'])}"
+            changes = []
+            if need_afternoon:
+                changes.append(f"turno tarde ({afternoon})")
+            if need_saturday:
+                changes.append(f"sábado ({saturday})")
+            current_senior = f"{clock(profile['seniorStartMinute'])}–{clock(profile['weekdayEndMinute'])}"
+            saturday_state = f"habilitado ({saturday})" if req.planningPolicy.allowSaturday else "cerrado"
             bottlenecks.append(
                 AdvisorBottleneck(
                     category="planning_window",
                     title="Restricción de franja horaria en ciclos superiores / semana",
-                    detail=(
-                        f"Los cursos de ciclo VII–X están restringidos a 18:00–22:00 ({len(senior_pending)} componentes pendientes) y el sábado permanece cerrado."
-                    ),
+                    detail=f"Ciclos VII–X: {current_senior} ({len(senior_pending)} componentes pendientes). Sábado: {saturday_state}.",
                     affectedSessionCount=win_sessions,
                 )
             )
             recommendations.append(
                 AdvisorRecommendation(
                     id="rec-enable-planning-window",
-                    title="Habilitar excepción de turno tarde (14:00–22:00) y sábado (08:00–13:00)",
-                    rationale=(
-                        "Permite ubicar secciones de ciclos VII–X desde las 14:00 y abre la mañana del sábado para absorber colisiones de cohorte y aula."
-                    ),
+                    title="Habilitar excepción de " + " y ".join(changes),
+                    rationale="Amplía las franjas seleccionadas según el perfil vigente; conserva disponibilidad y exige autorización externa.",
                     impactSummary=f"Amplía ventanas para {len(pending_sections)} sección(es) pendientes",
                     recommendedByDefault=True,
                     patch=EnablePlanningWindowPatch(
-                        allowAfternoon=True if not req.planningPolicy.allowAfternoon else None,
-                        allowSaturday=True if not req.planningPolicy.allowSaturday else None,
+                        allowAfternoon=True if need_afternoon else None,
+                        allowSaturday=True if need_saturday else None,
                     ),
                 )
             )
@@ -360,7 +367,7 @@ def build_deterministic_analysis(
     if split_assignment_courses:
         bottlenecks.append(
             AdvisorBottleneck(
-                category="teacher_assignment_mode",
+                category="delivery_mode",
                 title=f"{len(split_assignment_courses)} curso(s) con teoría/práctica y laboratorio atados a un solo docente",
                 detail=(
                     "Exigir un único docente para teoría/práctica y laboratorio impide aprovechar saldos parciales de carga entre docentes habilitados."
@@ -377,7 +384,7 @@ def build_deterministic_analysis(
                 ),
                 impactSummary=f"Habilita asignación T/P + L separada en {len(split_assignment_courses)} curso(s) ({split_assignment_sessions} componentes)",
                 recommendedByDefault=False,
-                patch=ChangeTeacherAssignmentModePatch(
+                patch=ChangeDeliveryModePatch(
                     courseIds=sorted(split_assignment_courses),
                     teacherAssignmentMode="tp-grouped-l-independent",
                 ),

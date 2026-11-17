@@ -82,7 +82,7 @@ class PlanningPolicyExceptionsInput(BaseModel):
 
 class PlanningPolicyInput(BaseModel):
     revision: str = "FISI-PLANNING-1"
-    period: str
+    period: str = Field(pattern=r"^20\d{2}-(I|II)$")
     allowAfternoon: bool = False
     allowSaturday: bool = False
     facultyId: str | None = Field(default=None, exclude_if=lambda v: v is None)
@@ -193,13 +193,14 @@ class EnablePlanningWindowPatch(BaseModel):
 class ChangeDeliveryModePatch(BaseModel):
     kind: Literal["change_delivery_mode"] = "change_delivery_mode"
     courseIds: list[str]
-    deliveryMode: Literal["split"] = "split"
+    deliveryMode: Literal["split"] | None = Field(default=None, exclude_if=lambda value: value is None)
+    teacherAssignmentMode: Literal["tp-grouped-l-independent", "per-session"] | None = Field(default=None, exclude_if=lambda value: value is None)
 
-
-class ChangeTeacherAssignmentModePatch(BaseModel):
-    kind: Literal["change_teacher_assignment_mode"] = "change_teacher_assignment_mode"
-    courseIds: list[str]
-    teacherAssignmentMode: Literal["tp-grouped-l-independent", "per-session"] = "tp-grouped-l-independent"
+    @model_validator(mode="after")
+    def _require_change(self) -> ChangeDeliveryModePatch:
+        if self.deliveryMode is None and self.teacherAssignmentMode is None:
+            raise ValueError("Modalidad requiere cambio de distribución o asignación docente")
+        return self
 
 
 class IncorporateReferenceResourcePatch(BaseModel):
@@ -212,7 +213,6 @@ AcademicAdvisorPatch = (
     IncreaseTeacherLoadPatch
     | EnablePlanningWindowPatch
     | ChangeDeliveryModePatch
-    | ChangeTeacherAssignmentModePatch
     | IncorporateReferenceResourcePatch
 )
 
@@ -223,7 +223,6 @@ class AdvisorBottleneck(BaseModel):
         "planning_window",
         "missing_resource",
         "delivery_mode",
-        "teacher_assignment_mode",
         "other",
     ]
     title: str
@@ -241,7 +240,6 @@ class AdvisorRecommendation(BaseModel):
         IncreaseTeacherLoadPatch
         | EnablePlanningWindowPatch
         | ChangeDeliveryModePatch
-        | ChangeTeacherAssignmentModePatch
         | IncorporateReferenceResourcePatch
     )
 

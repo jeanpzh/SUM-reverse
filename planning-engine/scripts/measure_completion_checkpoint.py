@@ -283,11 +283,10 @@ def apply_patches(
         elif patch.kind == "change_delivery_mode":
             for c in copy.courses:
                 if c.courseId in patch.courseIds:
-                    c.deliveryMode = "split"
-        elif patch.kind == "change_teacher_assignment_mode":
-            for c in copy.courses:
-                if c.courseId in patch.courseIds:
-                    c.teacherAssignmentMode = patch.teacherAssignmentMode
+                    if patch.deliveryMode:
+                        c.deliveryMode = patch.deliveryMode
+                    if patch.teacherAssignmentMode:
+                        c.teacherAssignmentMode = patch.teacherAssignmentMode
     copy.windows = get_effective_planning_windows(copy.windows, copy.planningPolicy)
     copy.maxTimeSeconds = budget
     return copy

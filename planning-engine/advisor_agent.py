@@ -36,11 +36,10 @@ def run_cpsat_dry_run(req, recommendations, recommendation_ids):
         elif patch.kind == 'change_delivery_mode':
             for course in copy.courses:
                 if course.courseId in patch.courseIds:
-                    course.deliveryMode = 'split'
-        elif patch.kind == 'change_teacher_assignment_mode':
-            for course in copy.courses:
-                if course.courseId in patch.courseIds:
-                    course.teacherAssignmentMode = patch.teacherAssignmentMode
+                    if patch.deliveryMode:
+                        course.deliveryMode = patch.deliveryMode
+                    if patch.teacherAssignmentMode:
+                        course.teacherAssignmentMode = patch.teacherAssignmentMode
         elif patch.kind == 'incorporate_reference_resource':
             for teacher in copy.referenceTeachers:
                 if teacher.id in patch.teacherIds and not any(t.id == teacher.id for t in copy.teachers):

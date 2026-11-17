@@ -109,10 +109,10 @@ test('SuggestionCard renders teacher assignment modes and non-legacy delivery co
       rationale: 'Permite otro docente en laboratorio',
       impactSummary: 'Desbloquea laboratorio',
       recommendedByDefault: true,
-      patch: { kind: 'change_teacher_assignment_mode', courseIds: ['CS101'], teacherAssignmentMode: 'tp-grouped-l-independent' },
+      patch: { kind: 'change_delivery_mode', courseIds: ['CS101'], teacherAssignmentMode: 'tp-grouped-l-independent' },
     },
   })
-  assert.match(grouped, /Asignación docente/)
+  assert.match(grouped, /Modalidad/)
   assert.match(grouped, /Curso sintético \(CS101\): teoría\/práctica juntas y laboratorio independiente/)
 
   const perSession = render(SuggestionCard, {
@@ -128,7 +128,7 @@ test('SuggestionCard renders teacher assignment modes and non-legacy delivery co
       rationale: 'Permite docente independiente',
       impactSummary: 'Desbloquea sesiones',
       recommendedByDefault: false,
-      patch: { kind: 'change_teacher_assignment_mode', courseIds: ['CS102'], teacherAssignmentMode: 'per-session' },
+      patch: { kind: 'change_delivery_mode', courseIds: ['CS102'], teacherAssignmentMode: 'per-session' },
     },
   })
   assert.match(perSession, /Curso dos \(CS102\): docente independiente por sesión/)

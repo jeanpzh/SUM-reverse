@@ -1,7 +1,7 @@
 # Diseño arquitectónico: asignación docente por sesión, franjas por facultad/periodo y completitud de programación académica
 
 Fecha: 2026-11-17
-Estado: Integrado localmente en `feat/session-assignment-completion`, validación independiente pendiente. Resultados reales y límites: [aceptación integrada](../../testing/academic-completion-integrated.md).
+Estado: Integrado localmente en `feat/session-assignment-completion`, auditoría independiente y correcciones completadas. Resultados reales y límites: [aceptación integrada](../../testing/academic-completion-integrated.md).
 
 ## 1. Diagnóstico de incompatibilidades y causas raíz actuales
 
@@ -29,10 +29,10 @@ Todos los cambios de esquema son **aditivos con propiedades opcionales**; omitir
 
 | Contrato | Campos nuevos (opcionales) | Default legacy si se omite | Regla de validación / incompatibilidad |
 | --- | --- | --- | --- |
-| `PlanningPolicy` (`shared/academic-planning-policy.mjs`) | `facultyId?: string`, `source?: string`, `exceptions?: { saturdayEndMinute?: number }` | `facultyId: 'FISI'`, `source: 'synthetic-local-default'`, `saturdayEndMinute: 780` (13:00) | Si `facultyId` está presente y `!== 'FISI'`, rechaza explícitamente con `TypeError` (sin respaldo silencioso a otra facultad). `exceptions.saturdayEndMinute` entero `780..1440` exige `allowSaturday: true`. |
+| `PlanningPolicy` (`shared/academic-planning-policy.mjs`) | `facultyId?: string`, `source?: string`, `exceptions?: { saturdayStartMinute?: number; saturdayEndMinute?: number }` | `facultyId: 'FISI'`, `source: 'synthetic-local-default'`, `saturdayEndMinute: 780` (13:00) | Si `facultyId` está presente y `!== 'FISI'`, rechaza explícitamente con `TypeError` (sin respaldo silencioso a otra facultad). Las excepciones de inicio/fin deben formar un intervalo válido dentro del día y exigen `allowSaturday: true`. |
 | `AcademicRequest.demands[]` & `GeneratorCourse` | `teacherAssignmentMode?: 'single-teacher-section' \| 'tp-grouped-l-independent' \| 'per-session'` | `'single-teacher-section'` | Preserva unicidad de docente por sección cuando se omite o es `'single-teacher-section'`. |
 | `AcademicProposal.sections[]` & `AcademicSection` | `teacherAssignmentMode?: ...`, `responsibleTeacherId?: string` | `teacherAssignmentMode: 'single-teacher-section'` | `responsibleTeacherId` identifica al responsable de sección (grupo `T`/`T+P` o primer dictante asignado) sin crear una entidad nueva ni duplicar catálogos. |
-| `AcademicAdvisorPatch` | `kind: 'change_teacher_assignment_mode'`, `courseIds: string[]`, `teacherAssignmentMode: 'tp-grouped-l-independent' \| 'per-session'` | — | Permite al consejero determinista proponer separación docente `T+P` / `L` cuando la capacidad fragmentada o duración bloquea pendientes. |
+| `AcademicAdvisorPatch` | `kind: 'change_delivery_mode'` (extensión de modalidad), `courseIds: string[]`, `teacherAssignmentMode: 'tp-grouped-l-independent' \| 'per-session'` | — | Permite al consejero determinista proponer separación docente `T+P` / `L` cuando la capacidad fragmentada o duración bloquea pendientes. |
 | `AdvisorAnalyzeRequest` (`planning-engine/models.py`) | `allocationPolicy?: 'preferences' \| 'balanced' \| 'first-feasible'` | `'preferences'` | Asegura paridad entre `run_cpsat_dry_run` y `/v1/propuestas`. |
 
 ## 3. Reglas de agrupamiento docente y continuidad (`getSectionComponentGroups`)
@@ -73,9 +73,9 @@ En el ajuste manual (`POST .../ajustes`):
   - `'balanced'`: combina calidad de preferencias/franja y penalización lineal acotada sobre la carga máxima/acumulada por docente (`max_teacher_minutes` y exceso sobre umbral promedio) para reducir concentración sin sacrificar sesiones programadas.
   - `'first-feasible'`: elimina el sesgo de preferencias (`pref_bonus = 1` uniforme) priorizando únicamente cobertura máxima y factibilidad determinista.
 - **Paridad de simulación (`run_cpsat_dry_run`):**
-  - Propaga `allocationPolicy`, extiende `copy.windows` con la ventana de sábado resuelta del perfil cuando `allowSaturday` está activo, soporta `change_teacher_assignment_mode` y homologa `maxTimeSeconds=2.5` con `/v1/propuestas`.
+  - Propaga `allocationPolicy`, extiende `copy.windows` con la ventana de sábado resuelta del perfil cuando `allowSaturday` está activo, soporta `change_delivery_mode` con `teacherAssignmentMode` y homologa `maxTimeSeconds=2.5` con `/v1/propuestas`.
 - **Orden determinista del consejero (ADR-0001 / ADR-0002):**
-  - El catálogo determinista mantiene su autoridad total (el LLM nunca cambia cargas ni autoriza excepciones); se añade recomendación tipada `change_teacher_assignment_mode` cuando existen cursos multi-componente pendientes en `'single-teacher-section'`.
+  - El catálogo determinista mantiene su autoridad total (el LLM nunca cambia cargas ni autoriza excepciones); se añade tarjeta independiente de modalidad `change_delivery_mode` con `teacherAssignmentMode` cuando existen cursos multi-componente pendientes en `'single-teacher-section'`.
 
 ## 6. Criterios de verificación
 

@@ -585,15 +585,10 @@ export function validateAcademicAdvisorPatch(value) {
     return
   }
   if (value.kind === 'change_delivery_mode') {
-    object(value, ['kind', 'courseIds', 'deliveryMode'], 'patch')
-    if (value.deliveryMode !== 'split') throw new TypeError('deliveryMode debe ser split')
-    strings(value.courseIds, 'courseIds')
-    if (!value.courseIds.length) throw new TypeError('courseIds vacío')
-    return
-  }
-  if (value.kind === 'change_teacher_assignment_mode') {
-    object(value, ['kind', 'courseIds', 'teacherAssignmentMode'], 'patch')
-    if (!['tp-grouped-l-independent', 'per-session'].includes(value.teacherAssignmentMode)) throw new TypeError('teacherAssignmentMode inválido')
+    object(value, ['kind', 'courseIds'], 'patch', ['deliveryMode', 'teacherAssignmentMode'])
+    if (Object.hasOwn(value, 'deliveryMode') && value.deliveryMode !== 'split') throw new TypeError('deliveryMode debe ser split')
+    if (Object.hasOwn(value, 'teacherAssignmentMode') && !['tp-grouped-l-independent', 'per-session'].includes(value.teacherAssignmentMode)) throw new TypeError('teacherAssignmentMode inválido')
+    if (!value.deliveryMode && !value.teacherAssignmentMode) throw new TypeError('Modalidad requiere un cambio explícito')
     strings(value.courseIds, 'courseIds')
     if (!value.courseIds.length) throw new TypeError('courseIds vacío')
     return
@@ -644,7 +639,7 @@ export function validateAcademicAdvisorResponse(value) {
   string(value.summary, 'summary')
   array(value.bottlenecks, 'bottlenecks').forEach((row) => {
     object(row, ['category', 'title', 'detail', 'affectedSessionCount'], 'bottleneck')
-    if (!['teacher_load', 'planning_window', 'missing_resource', 'delivery_mode', 'teacher_assignment_mode', 'other'].includes(row.category)) {
+    if (!['teacher_load', 'planning_window', 'missing_resource', 'delivery_mode', 'other'].includes(row.category)) {
       throw new TypeError('bottleneck.category inválido')
     }
     string(row.title, 'title')

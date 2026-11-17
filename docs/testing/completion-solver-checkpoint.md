@@ -41,7 +41,7 @@ Se añadieron pruebas unitarias y de paridad en [test_engine.py](file:///home/ub
 - **Excepciones de sábado y no-invención**: validación estricta de `allowSaturday` requerido para `exceptions`, rechazo de rangos inválidos (`start >= end`) y de `facultyId` desconocido, tope por defecto `780` (13:00), ventana explícita `840..1080` y garantía de 0 asignaciones en sábado cuando los recursos solo tienen disponibilidad L–V.
 - **Compatibilidad legacy**: omitir `teacherAssignmentMode`, `facultyId`, `source`, `exceptions` y `allocationPolicy` conserva exactamente `"single-teacher-section"`, `"FISI"`, `780` y `"preferences"`.
 - **Diferenciación real de `allocationPolicy`**: contraste verificable entre `"preferences"` (concentra en docente con preferencias, carga máxima 240 min), `"balanced"` (equilibra a 120 min máx.) y `"first-feasible"`.
-- **Consejero 5.ª clase y paridad**: orden determinista de las 5 recomendaciones preservado incluso si el LLM reordena `prioritizedIds`, respeto estricto de `selectedRecommendationIds`, cero ejecuciones CP-SAT en consulta (`selectedRecommendationIds=None`) y paridad exacta entre `run_cpsat_dry_run` y `POST /v1/solve` (`maxTimeSeconds=2.5`) sin inventar disponibilidad de sábado.
+- **Consejero: cinco tarjetas en cuatro clases y paridad**: orden determinista de las 5 recomendaciones preservado incluso si el LLM reordena `prioritizedIds`, respeto estricto de `selectedRecommendationIds`, cero ejecuciones CP-SAT en consulta (`selectedRecommendationIds=None`) y paridad exacta entre `run_cpsat_dry_run` y `POST /v1/solve` (`maxTimeSeconds=2.5`) sin inventar disponibilidad de sábado.
 
 ---
 

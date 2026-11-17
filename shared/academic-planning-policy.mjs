@@ -15,7 +15,7 @@ export const FACULTY_PLANNING_PROFILES = Object.freeze({
   }),
 })
 export function isPlanningPeriod(value) {
-  return typeof value === 'string' && /^(20\d{2})-(I|II)$/.test(value)
+  return typeof value === 'string' && value.trim() === value && /^(20\d{2})-(I|II)$/.test(value)
 }
 const allowedPolicyKeys = ['allowAfternoon', 'allowSaturday', 'exceptions', 'facultyId', 'period', 'revision', 'source']
 export function validatePlanningPolicy(value) {

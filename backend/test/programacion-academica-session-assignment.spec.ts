@@ -264,7 +264,7 @@ describe('component-group teacher assignment, time profile exceptions and adviso
     const rec = advisor.recommendations.find((r) => r.id === 'rec-change-teacher-assignment-mode')
     expect(rec).toBeDefined()
     expect(rec?.patch).toEqual({
-      kind: 'change_teacher_assignment_mode',
+      kind: 'change_delivery_mode',
       courseIds: [tplCourseId],
       teacherAssignmentMode: 'tp-grouped-l-independent',
     })
@@ -608,4 +608,39 @@ describe('component-group teacher assignment, time profile exceptions and adviso
       }
     }
   })
+})
+
+it('advisor preserves half-hour Saturday ranges without reopening enabled windows', () => {
+  const policy = { revision: 'FISI-PLANNING-1' as const, period: '2027-I' as const,
+    allowAfternoon: false, allowSaturday: true, exceptions: { saturdayStartMinute: 510, saturdayEndMinute: 810 } }
+  const resources = {
+    teachers: [{ id: 'DOC-A', name: 'Docente A', courseIds: [seniorCourseId], maxWeeklyMinutes: 600, availability: workWindows }],
+    rooms: [{ id: 'LAB-A', name: 'Laboratorio', capacity: 45, kind: 'laboratory' as const, availability: workWindows }],
+  }
+  const service = new DemoProposalService()
+  const proposal = service.createProposal({ revision: catalog.revision, demands: [{ courseId: seniorCourseId, estimatedDemand: 180, targetCapacity: 30 }], resources, planningPolicy: policy })
+  const advice = buildLocalDeterministicAdvisor(proposal, {
+    courses: [{ ...catalog.courses.find(c => c.courseId === seniorCourseId)!, estimatedDemand: 180, targetCapacity: 30 }],
+    ...resources, compatibleGroups: [], windows: workWindows, startStepMinutes: 60, maxExplorations: 100, planningPolicy: policy,
+  }, resources, catalog)
+  const recommendation = advice.recommendations.find(r => r.patch.kind === 'enable_planning_window')!
+  expect(recommendation.title).toContain('turno tarde (14:00–22:00)')
+  expect(recommendation.title).not.toContain('sábado')
+  expect(recommendation.patch).toEqual({ kind: 'enable_planning_window', allowAfternoon: true })
+  expect(advice.bottlenecks.find(b => b.category === 'planning_window')?.detail).toContain('habilitado (08:30–13:30)')
+})
+
+it('advisor load allocation is independent of pending-course insertion order', () => {
+  const resources = {
+    teachers: [{ id: 'DOC-A', name: 'Docente A', courseIds: [tplCourseId, seniorCourseId], maxWeeklyMinutes: 0, availability: workWindows }],
+    rooms: [{ id: 'LAB-A', name: 'Laboratorio', capacity: 45, kind: 'laboratory' as const, availability: workWindows }],
+  }
+  const service = new DemoProposalService()
+  const proposal = service.createProposal({ revision: catalog.revision, demands: [tplCourseId, seniorCourseId].map(courseId => ({ courseId, estimatedDemand: 25, targetCapacity: 30 })), resources })
+  const input = { courses: [tplCourseId, seniorCourseId].map(courseId => ({ ...catalog.courses.find(c => c.courseId === courseId)!, estimatedDemand: 25, targetCapacity: 30 })),
+    ...resources, compatibleGroups: [], windows: workWindows, startStepMinutes: 60, maxExplorations: 100 }
+  const original = buildLocalDeterministicAdvisor(proposal, input, resources, catalog)
+  const reversed = buildLocalDeterministicAdvisor({ ...proposal, pending: [...proposal.pending].reverse() }, input, resources, catalog)
+  expect(reversed.recommendations.find(r => r.patch.kind === 'increase_teacher_load')?.patch)
+    .toEqual(original.recommendations.find(r => r.patch.kind === 'increase_teacher_load')?.patch)
 })

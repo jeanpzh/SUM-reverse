@@ -21,7 +21,7 @@ test('planning policy is optional, preserves legacy shape, supports explicit pro
   assert.doesNotThrow(() => validateAcademicRequest(request))
   assert.doesNotThrow(() => validateAcademicRequest({ ...request, planningPolicy: policy }))
   for (const change of [
-    { revision: 'unknown' }, { allowSaturday: 1 }, { period: '2027-1' }, { unknown: true },
+    { revision: 'unknown' }, { allowSaturday: 1 }, { period: '2027-1' }, { period: '2027-I\n' }, { unknown: true },
     { facultyId: 'FIEE' }, { facultyId: 'UNKNOWN' }, { source: '' },
     { exceptions: { saturdayEndMinute: 840 } }, // requires allowSaturday: true
     { allowSaturday: true, exceptions: { saturdayStartMinute: 900, saturdayEndMinute: 840 } },

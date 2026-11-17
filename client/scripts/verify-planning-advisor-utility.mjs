@@ -48,7 +48,7 @@ try{
  observed.initialAnalysis={recommendations:initial.recommendations.length,hasImpact:false}
  const panel=page.getByRole('tabpanel',{name:'Consejero',exact:true}) // v2: Consejero tab of the assistance rail (or Sheet)
  await panel.locator('[data-advisor-impact=pending]').waitFor()
- const selected=initial.recommendations.filter(r=>(constrained?['enable_planning_window']:['enable_planning_window','change_delivery_mode']).includes(r.patch.kind))
+ const selected=initial.recommendations.filter(r=>(constrained?['enable_planning_window']:['enable_planning_window','change_delivery_mode']).includes(r.patch.kind)&&!r.patch.teacherAssignmentMode)
  assert.equal(selected.length,constrained?1:2)
  for(const r of initial.recommendations){
   const checkbox=panel.getByRole('checkbox',{name:r.title,exact:true})
