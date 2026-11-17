@@ -658,7 +658,10 @@ export function derivePlanningDraftLabel(state: Pick<PlanningSessionState, 'draf
     draft: 'Borrador', 'ready-for-review': 'Lista para revisión', 'in-review': 'En revisión docente',
     'ready-for-approval': 'Lista para aprobación', approved: 'Aprobada (simulada)', published: 'Publicada (simulada)',
   }
-  return `${labels[draft.savedState]} r${draft.version} · Guardado`
+  const round = (draft.savedState === 'in-review' || draft.savedState === 'ready-for-approval')
+    && typeof draft.review?.round === 'number' && Number.isSafeInteger(draft.review.round) && draft.review.round >= 1
+    ? `ronda ${draft.review.round} · ` : ''
+  return `${labels[draft.savedState]} · ${round}versión ${draft.version} · Guardado`
 }
 
 export function derivePlanningView(state: PlanningSessionState) {
