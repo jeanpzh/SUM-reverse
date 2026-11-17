@@ -595,9 +595,10 @@ export type PlanningPrimaryAction = { id: PlanningPrimaryActionId; label: string
 
 // D7 (local-only). Decisions beyond the plan table, recorded here:
 // - Horario counts as pending every section that is not complete (partial + pending coverage).
-// - Revisión docente without a review, or with changes requested/outdated teachers, sends back to Horario.
-// - Aprobación before 'ready-for-approval' sends back to Revisión docente; approve is primary.
-//   Approved/published versions have no primary action; publishing remains secondary with confirmation.
+// - Revisión docente without a review round offers 'submit-review' only when saved, clean,
+//   complete coverage, and unlocked; with changes requested/outdated teachers it sends back to Horario.
+// - Aprobación before 'ready-for-approval' sends back to Revisión docente; approve is primary,
+//   then publish is primary once approved. Published versions have no primary action.
 export function derivePlanningPrimaryAction(state: PlanningSessionState, stage: PlanningStageId): PlanningPrimaryAction | null {
   switch (stage) {
     case 'preparacion': {
@@ -617,7 +618,23 @@ export function derivePlanningPrimaryAction(state: PlanningSessionState, stage: 
     }
     case 'revision': {
       const teachers = state.draft.review?.teachers ?? []
-      if (!teachers.length) return { id: 'back-schedule', label: 'Volver a Horario' }
+      if (!teachers.length) {
+        if (
+          !state.draft.review &&
+          state.draft.id &&
+          state.draft.version !== null &&
+          !state.dirty &&
+          !isPlanningDraftLocked(state) &&
+          (state.draft.savedState === 'draft' || state.draft.savedState === 'ready-for-review') &&
+          proposalComplete(state.proposal)
+        ) {
+          const coverage = academicSectionCoverage(state.proposal!)
+          if (coverage.partial + coverage.pending === 0 && coverage.complete > 0) {
+            return { id: 'submit-review', label: 'Enviar a revisión docente' }
+          }
+        }
+        return { id: 'back-schedule', label: 'Volver a Horario' }
+      }
       const pending = teachers.filter((teacher) => teacher.status === 'pending').length
       if (pending > 0) return { id: 'record-response', label: `Registrar respuesta (${pending})`, count: pending }
       if (teachers.every((teacher) => teacher.status === 'conformity')) return { id: 'to-approval', label: 'Ir a aprobación' }

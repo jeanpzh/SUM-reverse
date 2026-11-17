@@ -52,6 +52,53 @@ const GUIDE_STEPS = [
   ['primary', 'Siguiente paso', 'Este botón indica la acción que sigue según el estado de la propuesta.'],
 ] as const
 
+export function PlanningProposalTrigger({
+  draftTitle,
+  draftVersion,
+  planningPeriod,
+  displayedDraftState,
+  draftLabel,
+  workspaceDirty,
+  draftListOpen,
+  onOpen,
+}: {
+  draftTitle: string
+  draftVersion: number | null
+  planningPeriod: string
+  displayedDraftState: string
+  draftLabel: string
+  workspaceDirty: boolean
+  draftListOpen: boolean
+  onOpen: () => void
+}) {
+  return (
+    <div className="planning-proposal-trigger">
+      <Button
+        variant="ghost"
+        id="planning-tour-proposals"
+        title={`${draftTitle} · ${draftLabel}`}
+        aria-haspopup="dialog"
+        aria-expanded={draftListOpen}
+        onClick={onOpen}
+      >
+        <span className="planning-proposal-mobile-scope">
+          Sistemas · {planningPeriod}{draftVersion ? ` · v${draftVersion}` : ''}
+        </span>
+        <span className="planning-proposal-name">{draftTitle}</span>
+        <span
+          className="planning-scope-header__draft-state"
+          data-draft-state={displayedDraftState}
+          data-dirty={workspaceDirty || undefined}
+          role="status"
+        >
+          {draftLabel}
+        </span>
+        <ChevronDown size={12} aria-hidden="true" />
+      </Button>
+    </div>
+  )
+}
+
 export function AcademicScheduling({ currentStage = 'preparacion', preparationView: requestedPreparationView = 'cursos', onPreparationViewChange }: {
   currentStage?: PlanningStage
   preparationView?: PlanningPreparationView
@@ -154,6 +201,33 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       : currentStage === 'aprobacion' ? 'Aprobación y publicación'
         : preparationView === 'cursos' ? 'Oferta de cursos'
           : preparationView === 'recursos' ? 'Docentes y ambientes' : 'Resumen de preparación'
+  const suppressSecondarySubmitReview = currentStage === 'revision' && reviewAction?.id === 'submit-review'
+  useLayoutEffect(() => {
+    if (!headActions) return
+    const syncHeadActions = () => {
+      for (const child of Array.from(headActions.children)) {
+        if (!(child instanceof HTMLButtonElement) || child.id === 'planning-tour-primary') continue
+        if (child.textContent?.trim() === 'Enviar a revisión') {
+          child.hidden = suppressSecondarySubmitReview
+          if (suppressSecondarySubmitReview) child.setAttribute('aria-hidden', 'true')
+          else child.removeAttribute('aria-hidden')
+        }
+      }
+    }
+    syncHeadActions()
+    const observer = new MutationObserver(syncHeadActions)
+    observer.observe(headActions, { childList: true })
+    return () => {
+      observer.disconnect()
+      for (const child of Array.from(headActions.children)) {
+        if (!(child instanceof HTMLButtonElement) || child.id === 'planning-tour-primary') continue
+        if (child.textContent?.trim() === 'Enviar a revisión') {
+          child.hidden = false
+          child.removeAttribute('aria-hidden')
+        }
+      }
+    }
+  }, [headActions, suppressSecondarySubmitReview])
 
   useEffect(() => {
     if (!draftMessage) return
@@ -435,15 +509,16 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
           <Button variant="ghost" popoverTarget="planning-generation-options" popoverTargetAction="hide">Cerrar opciones</Button>
         </div>
       </> : null}
-      proposalActions={<div className="planning-proposal-trigger">
-        <Button variant="ghost" id="planning-tour-proposals" title={`${draftTitle} · ${draftVersion ? `v${draftVersion}` : 'sin versión'} · ${view.draftLabel}`} aria-haspopup="dialog" aria-expanded={draftListOpen}
-          onClick={() => { setDraftListOpen(true); void refreshDraftList() }}>
-          <span className="planning-proposal-mobile-scope">Sistemas · {planningPeriod}{draftVersion ? ` · v${draftVersion}` : ''}</span><span className="planning-proposal-name">{draftTitle}</span>
-          <span className="planning-scope-header__draft-state" data-draft-state={view.displayedDraftState} data-dirty={workspaceDirty || undefined} role="status">
-            {draftVersion ? `v${draftVersion}` : 'sin versión'} · {view.displayedDraftState === 'draft' ? 'Borrador' : view.draftLabel}
-          </span><ChevronDown size={12} aria-hidden="true" />
-        </Button>
-      </div>}
+      proposalActions={<PlanningProposalTrigger
+        draftTitle={draftTitle}
+        draftVersion={draftVersion}
+        planningPeriod={planningPeriod}
+        displayedDraftState={view.displayedDraftState}
+        draftLabel={view.draftLabel}
+        workspaceDirty={workspaceDirty}
+        draftListOpen={draftListOpen}
+        onOpen={() => { setDraftListOpen(true); void refreshDraftList() }}
+      />}
       onGuide={openGuide}
       draftStateText={view.draftLabel}
       workspaceDirty={workspaceDirty}
@@ -685,7 +760,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       hidden={currentStage !== 'aprobacion'}
       aria-label="Etapa de aprobación"
     >
-      <AcademicPublicationPanel actionContainer={currentStage === 'aprobacion' ? headActions : null} primaryActionId={approvalAction?.id} draftId={draftId} draftVersion={draftVersion} draftTitle={draftTitle}
+      <AcademicPublicationPanel active={currentStage === 'aprobacion'} actionContainer={currentStage === 'aprobacion' ? headActions : null} primaryActionId={approvalAction?.id} draftId={draftId} draftVersion={draftVersion} draftTitle={draftTitle}
         draftState={savedDraftState} dirty={workspaceDirty} busy={draftBusy || generating || adjusting || demandLoading} onApprove={approveDraft}
         onPublish={publishDraft} onFork={forkDraft}
         onError={(message) => commands.edit({ type: 'setDraftError', message })}

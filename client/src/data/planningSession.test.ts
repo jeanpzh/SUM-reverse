@@ -350,6 +350,41 @@ test('primary action follows every D7 row', () => {
   assert.equal(derivePlanningPrimaryAction(withDraft({ savedState: 'published' }), 'aprobacion'), null)
 })
 
+test('revision without round offers submit-review only when saved, clean, complete coverage and unlocked', () => {
+  const base = baseState()
+  const savedComplete = (patch: Partial<PlanningSessionState['draft']> = {}, extra: Partial<PlanningSessionState> = {}): PlanningSessionState => ({
+    ...base,
+    proposal: makeProposal(),
+    dirty: false,
+    ...extra,
+    draft: { ...base.draft, id: draftId, version: 2, savedState: 'draft', ...patch },
+  })
+
+  assert.equal(derivePlanningPrimaryAction(savedComplete(), 'revision')?.id, 'submit-review')
+  assert.equal(derivePlanningPrimaryAction(savedComplete({ savedState: 'ready-for-review' }), 'revision')?.id, 'submit-review')
+
+  // Unsaved changes, missing draft id/version, incomplete coverage, or locked states never offer submit-review.
+  assert.equal(derivePlanningPrimaryAction(savedComplete({}, { dirty: true }), 'revision')?.id, 'back-schedule')
+  assert.equal(derivePlanningPrimaryAction(savedComplete({ id: null }), 'revision')?.id, 'back-schedule')
+  assert.equal(derivePlanningPrimaryAction(savedComplete({ version: null }), 'revision')?.id, 'back-schedule')
+
+  const incomplete = makeProposal({
+    status: 'search-limit',
+    coverageComplete: false,
+    assignments: [],
+    pending: [{ sessionId: 'CS101-L1', sectionId: 'A' }] as AcademicProposal['pending'],
+  })
+  assert.equal(derivePlanningPrimaryAction(savedComplete({}, { proposal: incomplete }), 'revision')?.id, 'back-schedule')
+
+  const emptyAssignments = makeProposal({ assignments: [] })
+  assert.equal(derivePlanningPrimaryAction(savedComplete({}, { proposal: emptyAssignments }), 'revision')?.id, 'back-schedule')
+
+  assert.equal(derivePlanningPrimaryAction(savedComplete({ savedState: 'approved' }), 'revision')?.id, 'back-schedule')
+  assert.equal(derivePlanningPrimaryAction(savedComplete({ savedState: 'published' }), 'revision')?.id, 'back-schedule')
+  assert.equal(derivePlanningPrimaryAction(savedComplete({ savedState: 'in-review' }), 'revision')?.id, 'back-schedule')
+})
+
+
 
 test('draft label distinguishes unsaved work from every persisted lifecycle state without inventing rounds', () => {
   const state = initialPlanningSessionState()
