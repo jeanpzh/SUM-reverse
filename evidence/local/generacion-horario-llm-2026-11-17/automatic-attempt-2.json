@@ -1,0 +1,114 @@
+{
+  "source": "Own synthetic React/NestJS/Python, public corpus, real Bedrock; no mocked provider or private snapshots",
+  "checks": [
+    {
+      "name": "initial-schedule-is-a-real-partial-proposal",
+      "passed": true
+    },
+    {
+      "name": "mount-does-not-consult",
+      "passed": true
+    },
+    {
+      "name": "initial-response-is-real-llm-assisted",
+      "passed": true
+    },
+    {
+      "name": "consultation-does-not-simulate",
+      "passed": true
+    },
+    {
+      "name": "model-narrative-renders-in-ui",
+      "passed": true
+    },
+    {
+      "name": "apply-disabled-before-simulation",
+      "passed": true
+    },
+    {
+      "name": "simulation-is-llm-assisted-with-exact-selection",
+      "passed": true
+    },
+    {
+      "name": "apply-regenerates-once-without-saving",
+      "passed": true
+    },
+    {
+      "name": "actual-regeneration-improves-coverage-without-resource-conflicts",
+      "passed": true
+    },
+    {
+      "name": "no-browser-exceptions",
+      "passed": true
+    }
+  ],
+  "observations": [
+    {
+      "phase": "initial-generation",
+      "metrics": {
+        "status": "search-limit",
+        "requiredSessions": 332,
+        "scheduledSessions": 211,
+        "pendingSessions": 121,
+        "totalSections": 166,
+        "completeSections": 108,
+        "resourceConflicts": 0
+      },
+      "courses": 56,
+      "period": "2027-I",
+      "revision": "PA-DEMO-1"
+    },
+    {
+      "phase": "consultation",
+      "mode": "llm-assisted",
+      "provider": "bedrock_converse / us.amazon.nova-lite-v1:0",
+      "recommendations": 3,
+      "narrativeCharacters": 254,
+      "simulated": false,
+      "latencyMs": 3597
+    },
+    {
+      "phase": "simulation",
+      "mode": "llm-assisted",
+      "provider": "bedrock_converse / us.amazon.nova-lite-v1:0",
+      "recommendations": 3,
+      "narrativeCharacters": 572,
+      "simulated": true,
+      "impact": {
+        "currentScheduledSessions": 211,
+        "projectedScheduledSessions": 243,
+        "requiredSessions": 332,
+        "currentCompleteSections": 108,
+        "projectedCompleteSections": 124,
+        "totalSections": 166,
+        "recommendationIds": [
+          "rec-enable-planning-window"
+        ],
+        "solverStatus": "search-limit"
+      }
+    },
+    {
+      "phase": "actual-regeneration",
+      "metrics": {
+        "status": "search-limit",
+        "requiredSessions": 332,
+        "scheduledSessions": 243,
+        "pendingSessions": 89,
+        "totalSections": 166,
+        "completeSections": 124,
+        "resourceConflicts": 0
+      },
+      "gains": {
+        "scheduledSessions": 32,
+        "completeSections": 16
+      },
+      "policy": {
+        "revision": "FISI-PLANNING-1",
+        "period": "2027-I",
+        "allowAfternoon": true,
+        "allowSaturday": true
+      }
+    }
+  ],
+  "passed": true
+}

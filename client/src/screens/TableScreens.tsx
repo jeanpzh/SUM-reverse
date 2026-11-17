@@ -108,12 +108,12 @@ function Programming({ response }: { response: ApiResponseMap['programacion'] })
         <table>
           <thead><tr>{headers.map((header, index) => <th key={`${header}-${index}`}>{header}</th>)}</tr></thead>
           <tbody>
-            {matching.length ? matching.map(({ course, value, cycleLabel }, index) => <Fragment key={`${course.codAsignatura}-${course.codSeccion}-${index}`}>
+            {matching.length ? matching.map(({ course, value, cycleLabel }, index) => <Fragment key={`${course.ciclo}-${course.codAsignatura}-${course.codSeccion}`}>
               {matching[index - 1]?.course.ciclo !== course.ciclo &&
                 <tr key={`cycle-${index}`}><th scope="colgroup" colSpan={8}>{cycleLabel}</th></tr>}
-              <tr key={`course-${course.codAsignatura}-${course.codSeccion}-${index}`}>
+              <tr key={`course-${course.ciclo}-${course.codAsignatura}-${course.codSeccion}`}>
                 {[...value.slice(0, -1),
-                  <button className="schedule-button" aria-label={`Horarios de ${course.desAsignatura}, sección ${course.codSeccion}`}
+                  <button key="schedule-action" className="schedule-button" aria-label={`Horarios de ${course.desAsignatura}, sección ${course.codSeccion}`}
                     onClick={() => setSelected(course)} title="Ver horarios"><span aria-hidden="true">▦</span></button>]
                   .map((cell, column) => <td key={column}>{cell}</td>)}
               </tr>

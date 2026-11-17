@@ -76,20 +76,20 @@ def run(req, model, env=None):
 
 def test_two_round_tool_loop_sanitizes_all_envelopes_and_preserves_selection():
     req = sample()
-    req.selectedRecommendationIds = []
     ids = [r.id for r in build_deterministic_analysis(req)[2]]
-    model = FakeModel([call('inspect_bottlenecks'), call('simulate_patches_cpsat', {'recommendation_ids': ids}, 'call2'), AIMessage(content=json.dumps({'summary': 'Revisar DOCENTE_001', 'prioritizedIds': ids}))])
+    req.selectedRecommendationIds = ids
+    model = FakeModel([call('inspect_bottlenecks'), AIMessage(content=json.dumps({'summary': 'Revisar DOCENTE_001', 'prioritizedIds': ids}))])
     result = run(req, model)
     assert result.source.mode == 'llm-assisted'
-    assert len(model.histories) == 3
+    assert len(model.histories) == 2
     payload = json.dumps(model.histories)
     assert 'Synthetic Teacher Name' not in payload
     assert 'synthetic-teacher-id' not in payload
     assert 'DOCENTE_001' in payload
     assert result.summary == 'Revisar Synthetic Teacher Name'
-    assert result.verifiedImpact.recommendationIds == []
-    assert result.verifiedImpact.projectedCompleteSections == 0
-    assert [s.toolName for s in result.reasoningSteps] == ['simulate_patches_cpsat', 'inspect_bottlenecks', 'simulate_patches_cpsat']
+    assert result.verifiedImpact.recommendationIds == ids
+    assert result.verifiedImpact.projectedCompleteSections == 1
+    assert [s.toolName for s in result.reasoningSteps] == ['simulate_patches_cpsat', 'inspect_bottlenecks']
 
 
 @pytest.mark.parametrize('error,reason', [(TimeoutError(), 'timeout'), (RuntimeError('secret upstream response'), 'upstream_error')])
@@ -97,8 +97,8 @@ def test_provider_failure_fallback_only_executed_steps(error, reason):
     result = run(sample(), FakeModel([error]))
     assert result.source.mode == 'deterministic-fallback'
     assert result.source.fallbackReason == reason
-    assert len(result.reasoningSteps) == 1
-    assert result.reasoningSteps[0].toolName == 'simulate_patches_cpsat'
+    assert result.reasoningSteps == []
+    assert result.verifiedImpact is None
     assert 'secret' not in result.model_dump_json()
 
 
@@ -215,7 +215,7 @@ def test_http_fallback_keeps_null_provider_label(monkeypatch):
         result = client.post('/v1/advisor', json=sample().model_dump())
     assert result.status_code == 200
     assert result.json()['source']['providerLabel'] is None
-    assert result.json()['verifiedImpact']['solverStatus'] in ('complete', 'impossible', 'search-limit')
+    assert result.json().get('verifiedImpact') is None
 
 
 def test_split_preserves_cohort_constraints_across_courses():
@@ -257,4 +257,23 @@ def test_http_partial_window_patch_omits_absent_flags_but_keeps_provider_null(mo
     patch = next(r['patch'] for r in body['recommendations'] if r['patch']['kind'] == 'enable_planning_window')
     assert patch == {'kind': 'enable_planning_window', **expected}
     assert body['source']['providerLabel'] is None
-    assert body['verifiedImpact']['solverStatus'] in ('complete', 'impossible', 'search-limit')
+    assert body.get('verifiedImpact') is None
+
+
+def test_initial_consultation_never_runs_solver_even_on_model_tool_request(monkeypatch):
+    import advisor_agent
+    def forbidden(*args, **kwargs):
+        raise AssertionError('Consultation must not run CP-SAT')
+    monkeypatch.setattr(advisor_agent, 'run_cpsat_dry_run', forbidden)
+    req = sample()
+    for model in [None, FakeModel([call('simulate_patches_cpsat', {'recommendation_ids': []})])]:
+        result = run(req, model)
+        assert result.verifiedImpact is None
+        assert not any(s.toolName == 'simulate_patches_cpsat' for s in result.reasoningSteps)
+
+
+def test_narrative_preserves_deterministic_order():
+    req = sample()
+    ids = [r.id for r in build_deterministic_analysis(req)[2]]
+    result = run(req, FakeModel([AIMessage(content=json.dumps({'summary': 'Texto sintético', 'prioritizedIds': list(reversed(ids))}))]))
+    assert [r.id for r in result.recommendations] == ids

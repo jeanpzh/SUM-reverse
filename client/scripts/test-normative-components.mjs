@@ -11,6 +11,7 @@ after(() => vite.close())
 const { NormativeAdvice, NormativeQuestionForm } = await vite.ssrLoadModule('/src/components/ai-elements/NormativeAdvice.tsx')
 const { NormativeMarkdown } = await vite.ssrLoadModule('/src/components/ai-elements/NormativeMarkdown.tsx')
 const { SuggestionCard } = await vite.ssrLoadModule('/src/components/ai-elements/SuggestionCard.tsx')
+const { AdvisorOutcome } = await vite.ssrLoadModule('/src/components/ai-elements/AdvisorOutcome.tsx')
 const { AdvisorImpact } = await vite.ssrLoadModule('/src/components/ai-elements/AdvisorImpact.tsx')
 const { AdvisorFindings } = await vite.ssrLoadModule('/src/components/ai-elements/AdvisorFindings.tsx')
 const { uniqueNormativeCitations } = await vite.ssrLoadModule('/src/components/ai-elements/normativePresentation.ts')
@@ -123,16 +124,31 @@ test('verified impact renders actual before/after counters and honest solver lim
   for (const text of ['Simulación verificada en CP-SAT', 'Actual', 'Simulada', '1/3', '2/3', '2/4', '3/4', 'Búsqueda inconclusa', 'Alcance de la simulación']) assert.ok(html.includes(text), text)
   assert.doesNotMatch(html, /imposible|puede obtener otra cobertura/)
   const pending = render(AdvisorImpact, {})
-  assert.ok(pending.includes('Sin vista previa vigente'))
+  assert.ok(pending.includes('Impacto no simulado.'))
+  assert.ok(pending.includes('Simular selección actual'))
   assert.doesNotMatch(pending, /<table|Simulación verificada/)
 })
 
-test('advisor prioritizes measured bottlenecks while full diagnosis remains behind disclosure', () => {
+test('advisor exposes bottleneck counts and keeps supporting evidence behind disclosure', () => {
   const html = render(AdvisorFindings, { advice: { summary: 'Explicación sintética completa.', bottlenecks: [
     { category: 'teacher_load', title: 'Carga insuficiente', detail: 'Detalle sintético del cuello.', affectedSessionCount: 5 },
   ] } })
-  for (const text of ['Qué limita la cobertura', 'Carga insuficiente', '5 componentes afectados', 'Ver explicación completa']) assert.ok(html.includes(text), text)
+  const visibleText = html.replace(/<[^>]*>/g, '')
+  for (const text of ['Qué limita la cobertura', 'Carga insuficiente', '5 componentes afectados:', 'Ver evidencia y motivos']) assert.ok(visibleText.includes(text), text)
+  assert.ok(html.includes('aria-expanded="false"'))
   assert.doesNotMatch(html, /Explicación sintética completa|Detalle sintético del cuello/)
   const noFindings = render(AdvisorFindings, { advice: { summary: 'Diagnóstico sin cuellos identificados.', bottlenecks: [] } })
   assert.ok(noFindings.includes('Diagnóstico sin cuellos identificados.'))
+})
+
+
+test('actual advisor outcome reports a decline honestly instead of reusing projected improvement', () => {
+  const html = render(AdvisorOutcome, { outcome: { sourceProposalId: 'synthetic-before', proposalId: 'synthetic-after', editVersion: 0,
+    recommendationCount: 2, before: { components: 10, completeSections: 5 }, after: { components: 8, completeSections: 4 },
+    requiredComponents: 12, totalSections: 6 } })
+  assert.ok(html.includes('data-advisor-outcome'))
+  assert.ok(html.includes('10 → 8/12 (-2)'))
+  assert.ok(html.includes('5 → 4/6 (-1)'))
+  assert.ok(html.includes('Quedan 4 componentes pendientes'))
+  assert.doesNotMatch(html, /Simulada|mejor[oó]|resuelt[oa]|complet[oó] la cobertura/)
 })

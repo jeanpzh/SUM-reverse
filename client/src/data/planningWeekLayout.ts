@@ -59,39 +59,21 @@ export function computeWeekDayLayout<T extends WeekLayoutItem>(
   // 3. For each cluster, assign lanes using greedy interval coloring
   for (const cluster of clusters) {
     const laneAssignments = new Map<string, number>()
-
+    const active = new MinHeap<{ end: number; lane: number }>((a, b) => a.end - b.end || a.lane - b.lane)
+    const available = new MinHeap<number>((a, b) => a - b)
+    let totalLanes = 0
     for (const item of cluster) {
-      // Find lanes occupied by any overlapping items already assigned in this cluster
-      const occupiedLanes = new Set<number>()
-      for (const assignedItem of cluster) {
-        if (assignedItem.id === item.id) continue
-        const assignedLane = laneAssignments.get(assignedItem.id)
-        if (assignedLane === undefined) continue
-
-        // Check if intervals overlap: [startA, endA) and [startB, endB)
-        const overlaps =
-          Math.max(item.startMinute, assignedItem.startMinute) <
-          Math.min(item.endMinute, assignedItem.endMinute)
-
-        if (overlaps) {
-          occupiedLanes.add(assignedLane)
-        }
+      // Intervals are half-open: a lane becomes free exactly at its end.
+      let earliest = active.peek()
+      while (earliest && earliest.end <= item.startMinute) {
+        active.pop()
+        available.push(earliest.lane)
+        earliest = active.peek()
       }
-
-      // Find first available lane index >= 0
-      let lane = 0
-      while (occupiedLanes.has(lane)) {
-        lane++
-      }
+      const lane = available.pop() ?? totalLanes++
       laneAssignments.set(item.id, lane)
+      active.push({ end: item.endMinute, lane })
     }
-
-    // Total lanes needed for this cluster is max(lane) + 1
-    let maxLane = 0
-    for (const lane of laneAssignments.values()) {
-      if (lane > maxLane) maxLane = lane
-    }
-    const totalLanes = maxLane + 1
 
     for (const item of cluster) {
       const lane = laneAssignments.get(item.id) ?? 0
@@ -108,4 +90,54 @@ export function computeWeekDayLayout<T extends WeekLayoutItem>(
   }
 
   return result
+}
+
+/** Blocks intersecting each half-open time slot. This is load, not a conflict diagnosis. */
+export function computeWeekLoad<T extends WeekLayoutItem & { day: number }>(
+  items: T[], days: number[], startMinute: number, endMinute: number
+) {
+  const slots: Array<{ startMinute: number; endMinute: number; days: Array<{ day: number; items: T[] }> }> = []
+  for (let start = startMinute; start < endMinute; start += 120) {
+    const end = Math.min(start + 120, endMinute)
+    slots.push({
+      startMinute: start,
+      endMinute: end,
+      days: days.map(day => ({ day, items: items.filter(item => item.day === day && item.startMinute < end && item.endMinute > start) })),
+    })
+  }
+  return slots
+}
+
+// Two heaps keep interval coloring O(n log n), with deterministic lowest-free-lane reuse.
+class MinHeap<T> {
+  private values: T[] = []
+  private compare: (a: T, b: T) => number
+  constructor(compare: (a: T, b: T) => number) { this.compare = compare }
+  peek() { return this.values[0] }
+  push(value: T) {
+    let index = this.values.length
+    this.values.push(value)
+    while (index > 0) {
+      const parent = Math.floor((index - 1) / 2)
+      if (this.compare(this.values[parent], value) <= 0) break
+      this.values[index] = this.values[parent]
+      index = parent
+    }
+    this.values[index] = value
+  }
+  pop(): T | undefined {
+    const first = this.values[0]
+    const last = this.values.pop()
+    if (!this.values.length || last === undefined) return first
+    let index = 0
+    while (index * 2 + 1 < this.values.length) {
+      let child = index * 2 + 1
+      if (child + 1 < this.values.length && this.compare(this.values[child + 1], this.values[child]) < 0) child++
+      if (this.compare(last, this.values[child]) <= 0) break
+      this.values[index] = this.values[child]
+      index = child
+    }
+    this.values[index] = last
+    return first
+  }
 }

@@ -1,0 +1,14 @@
+.planning-resource-availability { min-width: 0; }
+.planning-resource-availability__scroll { overflow-x: auto; padding: 4px; margin: -4px; }
+.planning-resource-availability__grid { display: grid; grid-template-columns: 48px repeat(7, minmax(30px, 1fr)); gap: 3px; align-items: center; }
+.planning-resource-availability__grid > span { font: 400 11px/16px var(--plan-font-mono); color: var(--plan-fog); }
+.planning-root .planning-resource-availability__grid > button { padding: 0; height: 28px; min-width: 0; border-radius: 6px; border: 1px solid var(--plan-steel); background: var(--plan-cream); color: var(--plan-fog); font: 400 11px/16px var(--plan-font-sans); cursor: pointer; }
+.planning-root .planning-resource-availability__grid > button[aria-pressed='true'] { background: var(--plan-ink); border-color: var(--plan-ink); color: var(--plan-on-ink); }
+.planning-root .planning-resource-availability__grid > button[aria-pressed='mixed'] { background: var(--plan-sand); color: var(--plan-ink); }
+.planning-resource-availability p { margin: 8px 0 0; color: var(--plan-fog); font: 400 12px/16px var(--plan-font-sans); }
+.planning-resource-availability p[role='alert'] { color: var(--plan-danger); }
+.planning-root .planning-resource-availability button:focus-visible { outline: 2px solid var(--plan-ink); outline-offset: 2px; }
+@media (max-width: 719px) {
+  .planning-resource-availability__grid { grid-template-columns: 48px repeat(7, minmax(44px, 1fr)); }
+  .planning-root .planning-resource-availability__grid > button { height: 44px; }
+}

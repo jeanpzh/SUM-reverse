@@ -5,6 +5,7 @@ const setTheme = async (page, item) => {
 // Acceptance for the 2026-11-10 internal redesign. Run against a fresh, operator-confirmed
 // synthetic stack only. Never attach to a snapshot-backed server or production.
 import assert from 'node:assert/strict'
+import { openProposalMenu, closeProposalMenu, proposalTitleField, statusBar } from './planning-v2-helpers.mjs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { chromium } from 'playwright'
@@ -42,18 +43,18 @@ const go = async (search = '') => {
   // Lazy route readiness is not catalog readiness. Await actual loaded configuration,
   // including when its preparation stage is hidden by the current stage.
   await page.locator('#planning-page-title').waitFor({timeout:45000})
-  await page.evaluate(() => document.fonts.load('400 14px "Open Sans"', 'Programación académica: áéíóú ü ñ ¿¡'))
+  await page.evaluate(() => document.fonts.load('400 14px "Inter"', 'Programación académica: áéíóú ü ñ ¿¡'))
 }
 const navTo = async (stage, view) => {
   // Click the actual router link; use its search contract, not its visual position.
-  const hrefs = await page.locator('#planning-tour-nav a[href]').evaluateAll((links) => links.map((link) => link.getAttribute('href')))
+  const hrefs = await page.locator('#planning-tour-nav a[href], nav[aria-label="Etapas de la propuesta"] a[href]').evaluateAll((links) => links.map((link) => link.getAttribute('href')))
   const href = hrefs.find((value) => {
     const url = new URL(value, 'http://local')
     return url.pathname === '/local/programacion-academica' && url.searchParams.get('etapa') === stage
       && (!view || url.searchParams.get('vista') === view)
   })
   assert.ok(href, `Missing actual navigation destination: ${stage}/${view || ''}`)
-  await page.locator(`#planning-tour-nav a[href="${href}"]:visible`).first().click()
+  await page.locator(`:is(#planning-tour-nav, nav[aria-label="Etapas de la propuesta"]) a[href="${href}"]:visible`).first().click()
   await page.waitForURL((url) => url.searchParams.get('etapa') === stage && (!view || url.searchParams.get('vista') === view))
 }
 const overflow = async () => {
@@ -75,10 +76,14 @@ try {
     await go()
     await page.getByRole('button', {name: /Seleccionar los .* cursos del catálogo/}).waitFor({timeout:45000})
     assert.equal(await page.locator('.planning-root').getAttribute('data-theme'), 'light')
-    assert.equal(await page.locator('#planning-tour-proposal').isVisible(), true)
+    assert.equal(await page.locator('#planning-tour-proposals').isVisible(), true)
+    await openProposalMenu(page)
+    assert.equal(await proposalTitleField(page).isVisible(), true)
+    await closeProposalMenu(page)
     assert.equal(await page.locator('#planning-tour-primary').isVisible(), true)
-    assert.equal(await page.getByRole('heading', {name:'Lista de preparación'}).isVisible(), true)
-    assert.equal(await page.getByRole('link', {name:'Revisar recursos',exact:true}).count(), 1)
+    assert.equal(await page.getByRole('region', {name:'Lista de preparación'}).isVisible(), true) // v2: the readiness strip is a labelled region, not a heading (handoff §5.1)
+    // v2: the empty state offers only the catalog selection; "Revisar recursos" links no longer exist (the readiness strip links the counts when incomplete)
+    assert.equal(await page.getByRole('button', {name:/Seleccionar los .* cursos del catálogo/}).count(), 1)
     assert.equal(await page.getByRole('link', {name:'Corregir',exact:true}).count(), 0)
     assert.equal(requests.filter(({path}) => /normativa|consejero/.test(path)).length, 0)
     await capture('resumen-light-1440')
@@ -97,6 +102,11 @@ try {
     await page.getByRole('button', {name:/Seleccionar los .* cursos del catálogo/}).click()
     const catalog = await (await context.request.get(`${base.origin}/api/local/programacion-academica/v1/catalogo`)).json()
     await navTo('preparacion', 'cursos')
+    const strip = page.getByRole('region', {name:'Lista de preparación'})
+    assert.equal(await strip.getAttribute('data-status'), 'ready')
+    assert.equal(await strip.getByRole('status').innerText(), '✓ Oferta lista para generar')
+    await strip.getByRole('button', {name:'Ver resumen',exact:true}).click()
+    assert.match(await strip.innerText(), /Demanda y capacidad completas/)
     assert.equal(Number(await page.getByTestId('count-included').innerText()), catalog.courses.length)
     const table = page.getByRole('region', {name:'Tabla de cursos para planificación'})
     const box = await table.boundingBox()
@@ -114,11 +124,11 @@ try {
     await page.keyboard.press('Enter')
     await page.locator('.academic-preparation__inspector').waitFor()
     assert.equal(await table.locator('tr[aria-selected="true"]').count(),1)
-    await page.getByRole('button',{name:'Cerrar inspector',exact:true}).click()
+    await page.getByRole('button',{name:'Cerrar detalle',exact:true}).click()
     await capture('cursos-light-1440')
   })
   await check('row-a-generation-and-result-facts', async () => {
-    await navTo('preparacion', 'resumen')
+    await navTo('preparacion', 'cursos')
     assert.equal(await page.locator('#planning-tour-primary').innerText(), 'Generar propuesta')
     const response = page.waitForResponse(res => /\/propuestas$/.test(new URL(res.url()).pathname) && res.request().method() === 'POST', {timeout:120000})
     await page.locator('#planning-tour-primary').click()
@@ -127,23 +137,27 @@ try {
     proposal = await generated.json()
     assert.ok(proposal.sections.length > 0)
     await page.waitForURL(url => url.searchParams.get('etapa') === 'horario')
-    await page.locator('.planning-status-bar').waitFor()
-    assert.equal(await page.locator('.planning-status-bar').getAttribute('data-status'),proposal.status)
-    const facts = await page.locator('.planning-status-bar__facts').innerText()
+    await statusBar(page).waitFor()
+    assert.equal(await statusBar(page).getAttribute('data-status'),proposal.status)
+    const facts = await statusBar(page).locator('.planning-status-bar__facts').innerText()
     assert.match(facts,/\d+ de \d+ secciones completas/)
     assert.match(facts,/\d+ por completar/)
     assert.match(facts,/\d+ cruces en lo asignado/)
     assert.equal(await page.locator('.planning-view-pane--tabla').isVisible(),true)
     const before = requests.filter(({method,path}) => method === 'POST' && /\/propuestas$/.test(path)).length
-    await page.getByRole('button',{name:'Reintentar búsqueda',exact:true}).click()
+    // v2: "Reintentar búsqueda" lives in the "Ver avisos" panel (handoff §1 action table); its confirmation still gates the request
+    await page.getByRole('button',{name:/^Ver avisos/}).click()
+    await page.getByRole('dialog',{name:'Avisos de la generación'}).getByRole('button',{name:'Reintentar búsqueda',exact:true}).click()
     await page.getByRole('alertdialog').getByRole('button',{name:'Cancelar',exact:true}).click()
+    if (await page.getByRole('dialog',{name:'Avisos de la generación'}).isVisible()) await page.keyboard.press('Escape')
+    await page.getByRole('dialog',{name:'Avisos de la generación'}).waitFor({state:'hidden'})
     assert.equal(requests.filter(({method,path}) => method === 'POST' && /\/propuestas$/.test(path)).length,before)
     await capture('horario-tabla-light-1440')
   })
   await check('table-week-filters-selection-and-section-detail', async () => {
     const search = page.getByRole('searchbox',{name:'Buscar secciones',exact:true})
     const teacher = page.getByRole('combobox',{name:'Filtrar por docente',exact:true})
-    const row = page.locator('.planning-sections__row').first()
+    const row = page.getByRole('table',{name:'Secciones de la propuesta'}).locator('tr[data-section-id]').first()
     const sectionId = await row.getAttribute('data-section-id')
     const selected = proposal.sections.find(section => section.sectionId === sectionId)
     await row.getByRole('button',{name:/^Inspeccionar sección/}).click()
@@ -157,8 +171,11 @@ try {
     assert.equal(await teacher.inputValue(),teacherValue)
     assert.equal(await detail.isVisible(),true)
     await page.getByRole('button',{name:'Tabla',exact:true}).click()
-    assert.equal(await page.locator(`tr[data-section-id=${JSON.stringify(sectionId)}]`).getAttribute('aria-selected'),'true')
-    await page.getByRole('button',{name:'Cerrar inspector',exact:true}).click()
+    // v2: one table row per section component (T/P/L) share the section id; selection is per section, so every row of it is selected
+    const sectionRows = page.locator(`tr[data-section-id=${JSON.stringify(sectionId)}]`)
+    assert.ok(await sectionRows.count() >= 1)
+    assert.equal(await sectionRows.evaluateAll(rows => rows.every(row => row.getAttribute('aria-selected') === 'true')),true)
+    await page.getByRole('button',{name:'Cerrar detalle',exact:true}).click()
     await detail.waitFor({state:'hidden'})
     await search.fill('')
     await teacher.selectOption('all')
@@ -180,7 +197,10 @@ try {
     await page.keyboard.press('Enter')
     await rail.waitFor()
     await page.setViewportSize({width:1100,height:1024})
-    await page.getByRole('dialog').waitFor()
+    await page.waitForFunction(() => document.querySelector('#planning-toggle-chat')?.getAttribute('aria-expanded') === 'false')
+    assert.equal(await page.getByRole('dialog', {name:'Asistente normativo',exact:true}).count(),0)
+    await toggle.click()
+    await page.getByRole('dialog', {name:'Asistente normativo',exact:true}).waitFor()
     assert.equal(await rail.count(),0,'Assistant uses Sheet below 1280px')
     await page.getByRole('button',{name:'Cerrar asistente',exact:true}).click()
     await page.setViewportSize({width:1440,height:1024})
@@ -202,7 +222,7 @@ try {
     await mobile.waitFor({state:'hidden'})
     assert.equal(await menu.evaluate(el => el === document.activeElement),true)
     await menu.click()
-    await mobile.getByRole('link',{name:'Cursos',exact:true}).click()
+    await mobile.getByRole('link',{name:/^Oferta de cursos(?:\s|$)/}).click()
     await mobile.waitFor({state:'hidden'})
     assert.equal(new URL(page.url()).searchParams.get('vista'),'cursos')
     await page.setViewportSize({width:1440,height:1024})
@@ -210,7 +230,7 @@ try {
   await check('all-six-views-no-document-overflow', async () => {
     for (const width of [1440,1100,800,390]) {
       await page.setViewportSize({width,height:1024})
-      for (const [stage,view] of [['preparacion','resumen'],['preparacion','cursos'],['preparacion','recursos'],['horario'],['revision'],['aprobacion']]) {
+      for (const [stage,view] of [['preparacion','cursos'],['preparacion','recursos'],['horario'],['revision'],['aprobacion']]) {
         if (width < 1024) await page.locator('[data-slot=sidebar-trigger]').click()
         await navTo(stage,view)
         await overflow()

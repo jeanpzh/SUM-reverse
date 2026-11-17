@@ -1,19 +1,16 @@
-import { PlanningFetchLoading } from '../components/PlanningFetchLoading'
 import type { AcademicAdvisorPatch, AcademicAdvisorResponse, AcademicProposal, PlanningPeriod } from '../data/academicScheduling'
-import { academicSectionCoverage, academicSectionLabel, defaultAcademicAdvisorSelection, academicSessionLabel, fetchAcademicProposalAdvice, formatAcademicDuration, hasCurrentAdvisorImpact } from '../data/academicScheduling'
-import { useEffect, useRef, useState } from 'react'
+import { academicSectionCoverage, academicSectionLabel, defaultAcademicAdvisorSelection, academicSessionLabel, fetchAcademicProposalAdvice, hasCurrentAdvisorImpact } from '../data/academicScheduling'
+import { useEffect, useId, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/Dialog'
 import './PlanningStatusBar.css'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../components/ui/Sheet'
-import { CalendarCheck2, CircleAlert } from 'lucide-react'
+import type { NormativeChat } from './useNormativeChat'
+import { PlanningAssistAdvisor } from './PlanningAssistAdvisor'
+import { planningAssist, usePlanningAssist } from './PlanningAssistState'
+import { usePlanningSessionContext } from '../components/PlanningSessionProvider'
+import { PlanningResultStrip } from './PlanningResultStrip'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
-import { AdvisorFindings } from '../components/ai-elements/AdvisorFindings'
-import { AdvisorImpact } from '../components/ai-elements/AdvisorImpact'
-import { NormativeAdvice } from '../components/ai-elements/NormativeAdvice'
-import { Reasoning } from '../components/ai-elements/Reasoning'
-import { SuggestionCard } from '../components/ai-elements/SuggestionCard'
-import { Alert, AlertDescription } from '../components/ui/Alert'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../components/ui/Collapsible'
 
 const diagnosticLabels: Record<string, string> = {
@@ -24,7 +21,11 @@ const diagnosticLabels: Record<string, string> = {
 }
 
 export interface PlanningStatusBarProps {
+  onRetrySearch?: () => void
+  mobileActionContainer?: HTMLDivElement | null
+  contextContainer?: HTMLDivElement | null
   academicPeriod: PlanningPeriod
+  chat: NormativeChat
   proposal: AcademicProposal
   onApplyAdvisorPatches?: (patches: AcademicAdvisorPatch[]) => Promise<boolean | void> | boolean | void
   teacherNames?: Record<string, string>
@@ -32,6 +33,7 @@ export interface PlanningStatusBarProps {
   roomNames?: Record<string, string>
   isDraft?: boolean
   isLocked?: boolean
+  advisorDisabledReason?: string
 }
 
 function countAssignedConflicts(assignments: AcademicProposal['assignments']): number {
@@ -57,7 +59,7 @@ function resultWording(proposal: AcademicProposal) {
   let diagnosisText: string | null = null
 
   if (proposal.status === 'search-limit') {
-    badgeText = 'Programación parcial'
+    badgeText = 'Búsqueda inconclusa'
     headline = 'La programación aún tiene secciones por completar'
     subtext = 'La búsqueda se detuvo antes de completar la programación. Revisa las secciones pendientes o ajusta las restricciones.'
     diagnosisText = 'La búsqueda alcanzó su límite computacional. No prueba que no exista solución en el dominio configurado.'
@@ -81,23 +83,35 @@ function resultWording(proposal: AcademicProposal) {
   return { badgeText, headline, subtext, diagnosisText }
 }
 
-export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatches, teacherNames = {}, courseNames = {}, roomNames = {}, isLocked = false }: PlanningStatusBarProps) {
+export function PlanningStatusBar({ contextContainer, mobileActionContainer, onRetrySearch, proposal, academicPeriod, chat, onApplyAdvisorPatches, teacherNames = {}, courseNames = {}, roomNames = {}, isLocked = false, advisorDisabledReason }: PlanningStatusBarProps) {
+  const advisorDisabledReasonId = useId()
+  const applyDisabledReasonId = useId()
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
-  const [advisorOpen, setAdvisorOpen] = useState(false)
+  const [advisorRequested, setAdvisorRequested] = useState(false)
   const [advisorLoading, setAdvisorLoading] = useState(false)
   const [advisorError, setAdvisorError] = useState<string | null>(null)
   const [advisorData, setAdvisorData] = useState<AcademicAdvisorResponse | null>(null)
   const [selectedRecIds, setSelectedRecIds] = useState<string[]>([])
+  const [simulationRequested, setSimulationRequested] = useState(false)
+  const [impactInvalidated, setImpactInvalidated] = useState(false)
   const [applying, setApplying] = useState(false)
   const requestRef = useRef<AbortController | null>(null)
   const requestedSelection = useRef<string[] | undefined>(undefined)
   const editVersion = proposal.editVersion ?? 0
   useEffect(() => () => requestRef.current?.abort(), [proposal.proposalId, editVersion])
+  useEffect(() => planningAssist.registerAdvisor(), [])
+  const { slot: advisorSlot } = usePlanningAssist()
+  const draftVersion = usePlanningSessionContext().state.draft.version
 
   const currentAdvice = advisorData?.proposalId === proposal.proposalId && advisorData.editVersion === editVersion
     ? advisorData : null
   const previewCurrent = hasCurrentAdvisorImpact(currentAdvice, proposal.proposalId, editVersion, selectedRecIds)
   const impact = previewCurrent ? currentAdvice?.verifiedImpact : undefined
+  const applyDisabledReason = !onApplyAdvisorPatches || currentAdvice?.recommendations.length === 0 ? null
+    : isLocked ? advisorDisabledReason ?? 'La propuesta está bloqueada para cambios.'
+    : selectedRecIds.length === 0 ? 'Marca al menos una recomendación para continuar.'
+    : !previewCurrent ? 'La selección cambió o no tiene una simulación vigente. Pulsa «Simular selección actual» antes de aplicar.'
+    : null
 
   const requestAdvice = async (ids?: string[]) => {
     requestedSelection.current = ids === undefined ? undefined : [...ids]
@@ -106,11 +120,16 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
     requestRef.current = controller
     setAdvisorError(null)
     setAdvisorLoading(true)
-    setAdvisorData(null)
+    setSimulationRequested(ids !== undefined)
+    if (ids === undefined) {
+      setAdvisorData(null)
+      setImpactInvalidated(false)
+    }
     try {
       const response = await fetchAcademicProposalAdvice(proposal.proposalId, editVersion, globalThis.fetch, controller.signal, ids)
       if (controller.signal.aborted) return
       setAdvisorData(response)
+      setImpactInvalidated(false)
       setSelectedRecIds(ids ?? defaultAcademicAdvisorSelection(response))
     } catch (error) {
       if (!controller.signal.aborted) setAdvisorError(error instanceof Error ? error.message : 'No se pudo consultar al consejero de planificación.')
@@ -120,11 +139,20 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
   }
 
   const openAdvisor = () => {
-    setAdvisorOpen(true)
+    setAdvisorRequested(true)
+    planningAssist.requestOpen('consejero')
     void requestAdvice()
   }
 
+  const cancelAdvisor = () => {
+    requestRef.current?.abort()
+    setAdvisorLoading(false)
+    if (!currentAdvice) setAdvisorRequested(false)
+  }
+
   const toggleRecommendation = (id: string, checked: boolean) => {
+    if (applying || advisorLoading || isLocked) return
+    if (currentAdvice?.verifiedImpact) setImpactInvalidated(true)
     setSelectedRecIds((prev) => checked ? (prev.includes(id) ? prev : [...prev, id]) : prev.filter((item) => item !== id))
     // Discard the preview even if the user later returns to the original selection.
     setAdvisorData((prev) => prev ? { ...prev, verifiedImpact: undefined } : prev)
@@ -138,7 +166,7 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
     setAdvisorError(null)
     try {
       const applied = await onApplyAdvisorPatches(patches)
-      if (applied !== false) setAdvisorOpen(false)
+      if (applied !== false) planningAssist.requestClose()
     } catch (error) {
       setAdvisorError(error instanceof Error ? error.message : 'No se pudieron aplicar los cambios.')
     } finally {
@@ -157,27 +185,28 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
 
   const { badgeText, headline, subtext, diagnosisText } = resultWording(proposal)
 
-  return (
-    <section className="planning-status-bar" aria-labelledby="academic-scheduling-result" data-status={proposal.status}>
-      <div className="planning-status-bar__strip">
-        <strong id="academic-scheduling-result" role="status" className="planning-status-bar__state-row">
-          {proposal.status === 'complete' ? <CalendarCheck2 size={16} aria-hidden="true" /> : <CircleAlert size={16} aria-hidden="true" />}
-          {proposal.status === 'complete' ? headline : badgeText}
-        </strong>
-        <div className="planning-status-bar__facts"><span className="planning-status-bar__fact">{coverage.complete} de {totalSections} secciones completas</span>
-        <span className="planning-status-bar__fact">{coverage.partial + coverage.pending} por completar</span>
-        <span className="planning-status-bar__fact">{conflicts} cruces en lo asignado</span></div>
-        <div className="planning-status-bar__actions">
+  const content = (
+    <PlanningResultStrip actionContainer={mobileActionContainer} status={proposal.status} statusId="academic-scheduling-result"
+      label={proposal.status === 'complete' ? headline : badgeText}
+      facts={[<><span className="planning-desktop-fact">{coverage.complete} de {totalSections} secciones completas</span><span className="planning-mobile-fact">{coverage.complete} de {totalSections} completas</span></>, `${coverage.partial + coverage.pending} por completar`, `${conflicts} cruces en lo asignado`]}
+      action={<>
           {proposal.diagnostics.length > 0 && <Button type="button" variant="link" size="sm" aria-haspopup="dialog" onClick={() => setDiagnosticsOpen(true)}>Ver avisos ({proposal.diagnostics.length})</Button>}
-          {(coverage.partial + coverage.pending) > 0 && onApplyAdvisorPatches && <Button type="button" variant="outline" size="sm" disabled={isLocked} onClick={() => void openAdvisor()}>Consultar consejero</Button>}
-        </div>
-      </div>
+          {(coverage.partial + coverage.pending) > 0 && onApplyAdvisorPatches && <>
+            <Button type="button" variant="outline" size="sm" disabled={isLocked}
+              aria-describedby={isLocked && advisorDisabledReason ? advisorDisabledReasonId : undefined}
+              onClick={() => void openAdvisor()}>Consultar consejero</Button>
+            {isLocked && advisorDisabledReason && <span id={advisorDisabledReasonId} role="status"
+              className="text-sm text-muted-foreground">{advisorDisabledReason}</span>}
+          </>}
+      </>}>
+
       {(subtext || diagnosisText) && <p className="planning-status-bar__subtext">{subtext ?? diagnosisText}</p>}
       <Dialog open={diagnosticsOpen} onOpenChange={setDiagnosticsOpen}>
         <DialogContent showCloseButton={false} className="planning-status-bar__dialog min-w-0 sm:max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Avisos de la generación</DialogTitle>
             <DialogDescription>{proposal.diagnostics.length} avisos agrupados por tipo</DialogDescription>
+            {onRetrySearch && <Button variant="link" disabled={isLocked} onClick={onRetrySearch}>Reintentar búsqueda</Button>}
           </DialogHeader>
           <div className="planning-status-bar__groups grid min-w-0 gap-3">
             {diagnosticGroups.map((group) => {
@@ -244,169 +273,20 @@ export function PlanningStatusBar({ proposal, academicPeriod, onApplyAdvisorPatc
           </div>
         </DialogContent>
       </Dialog>
-      <Sheet open={advisorOpen} onOpenChange={(open) => {
-        if (applying) return
-        setAdvisorOpen(open)
-        if (!open) { requestRef.current?.abort(); setAdvisorLoading(false) }
-      }}>
-        <SheetContent className="planning-advisor-sheet" showCloseButton={!applying}>
-          <SheetHeader>
-            <SheetTitle>Consejero de planificación</SheetTitle>
-            <SheetDescription className="flex flex-wrap items-center gap-2">
-              <span>Diagnóstico asistido y recomendaciones aplicables para destrabar secciones pendientes.</span>
-              {currentAdvice && (
-                <Badge variant={currentAdvice.source.mode === 'llm-assisted' ? 'default' : 'secondary'}>
-                  {currentAdvice.source.mode === 'llm-assisted'
-                    ? `IA asistida · ${currentAdvice.source.providerLabel ?? 'LLM'}`
-                    : 'Análisis determinista local'}
-                </Badge>
-              )}
-            </SheetDescription>
-          </SheetHeader>
-          {advisorLoading && (
-            <PlanningFetchLoading label="Analizando propuesta y restricciones…" layout="cards" />
-          )}
-          {advisorError && (
-            <Alert variant="destructive">
-              <AlertDescription>{advisorError}</AlertDescription>
-            </Alert>
-          )}
-          {advisorError && !advisorLoading && <Button type="button" variant="outline" onClick={() => void requestAdvice(requestedSelection.current)}>Reintentar consejero</Button>}
-          {(advisorLoading || !currentAdvice) && <Button type="button" variant="outline" onClick={() => {
-            requestRef.current?.abort(); setAdvisorLoading(false); setAdvisorOpen(false)
-          }}>Volver al horario</Button>}
-          {!advisorLoading && currentAdvice && (
-            <div className="grid min-w-0 gap-4">
-              <AdvisorImpact impact={impact} />
-              <AdvisorFindings advice={currentAdvice} />
-              {currentAdvice.recommendations.length > 0 ? (
-                <div className="grid min-w-0 gap-2.5">
-                  <h4 className="m-0 text-sm font-semibold text-foreground">Recomendaciones aplicables</h4>
-                  {currentAdvice.recommendations.map((rec) => <SuggestionCard key={rec.id}
-                    recommendation={rec} checked={selectedRecIds.includes(rec.id)} disabled={applying || isLocked}
-                    onCheckedChange={(checked) => toggleRecommendation(rec.id, checked)}
-                    teacherNames={teacherNames} courseNames={courseNames} roomNames={roomNames} />)}
-                </div>
-              ) : (
-                <p className="m-0 text-sm text-muted-foreground">
-                  No se encontraron parches automáticos adicionales para esta configuración.
-                </p>
-              )}
-              {currentAdvice.normativeContext && (currentAdvice.normativeContext.context.academicPeriod === academicPeriod
-                && currentAdvice.normativeContext.context.facultyId === 'FISI'
-                ? <NormativeAdvice advice={currentAdvice.normativeContext} />
-                : <Alert variant="warning"><AlertDescription>El contexto normativo no corresponde al periodo actual. Consulta las fuentes con los filtros de esta propuesta.</AlertDescription></Alert>)}
-              <Reasoning steps={currentAdvice.reasoningSteps} />
-              <div className="flex flex-wrap items-center justify-end gap-2 border-0 border-t border-solid border-border pt-3">
-                <Button type="button" variant="outline" disabled={applying} onClick={() => setAdvisorOpen(false)}>
-                  Volver al horario
-                </Button>
-                <Button type="button" variant="outline" disabled={applying || isLocked}
-                  onClick={() => void requestAdvice([...selectedRecIds])}>Simular selección actual</Button>
-                {onApplyAdvisorPatches && currentAdvice.recommendations.length > 0 && (
-                  <Button
-                    type="button"
-                    variant="default"
-                    disabled={selectedRecIds.length === 0 || isLocked || applying || !previewCurrent}
-                    onClick={() => void applySelectedRecommendations()}
-                  >
-                    {applying ? 'Aplicando y regenerando…' : 'Aplicar seleccionadas y regenerar'}
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
-    </section>
+      {advisorSlot && createPortal(<PlanningAssistAdvisor
+        chat={chat} proposal={proposal} simulating={advisorLoading && simulationRequested} impactInvalidated={impactInvalidated}
+        academicPeriod={academicPeriod} draftVersion={draftVersion} openSections={coverage.partial + coverage.pending}
+        requested={advisorRequested} loading={advisorLoading} error={advisorError} advice={currentAdvice} impact={impact}
+        selectedIds={selectedRecIds} applying={applying} isLocked={isLocked} canApply={Boolean(onApplyAdvisorPatches)}
+        previewCurrent={previewCurrent} applyDisabledReason={applyDisabledReason} applyDisabledReasonId={applyDisabledReasonId}
+        canConsult={Boolean(onApplyAdvisorPatches) && !isLocked && coverage.partial + coverage.pending > 0}
+        consultDisabledReason={isLocked ? advisorDisabledReason ?? 'La propuesta está bloqueada para cambios.' : coverage.partial + coverage.pending === 0 ? 'No hay secciones por completar.' : undefined}
+        consultDisabledReasonId={advisorDisabledReasonId + '-rail'}
+        teacherNames={teacherNames} courseNames={courseNames} roomNames={roomNames}
+        onConsult={() => void openAdvisor()} onCancel={cancelAdvisor} onRetry={() => void requestAdvice(requestedSelection.current)}
+        onToggle={toggleRecommendation} onSimulate={() => void requestAdvice([...selectedRecIds])}
+        onApply={() => void applySelectedRecommendations()} />, advisorSlot)}
+    </PlanningResultStrip>
   )
-}
-
-export function PlanningSearchDetails({ proposal }: { proposal: AcademicProposal }) {
-  const coverage = academicSectionCoverage(proposal)
-  const scheduled = proposal.counts.scheduledSessions
-  const required = proposal.counts.requiredSessions
-  const { diagnosisText } = resultWording(proposal)
-  return (
-      <Collapsible className="planning-status-bar__details min-w-0 border-0 border-t border-solid border-border pt-2">
-        <CollapsibleTrigger asChild>
-          <Button type="button" variant="ghost" size="sm">Detalles de búsqueda</Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="planning-status-bar__details-content mt-2 flex min-w-0 flex-col gap-3">
-          {diagnosisText && (
-            <Alert variant={proposal.status === 'invalid-input' ? 'destructive' : 'warning'}>
-              <AlertDescription>{diagnosisText}</AlertDescription>
-            </Alert>
-          )}
-          <dl className="academic-scheduling__counts not-typeset">
-            <div><dt>Secciones</dt><dd>{proposal.counts.sections}</dd></div>
-            <div><dt>Completas</dt><dd>{coverage.complete}</dd></div>
-            <div><dt>Parciales</dt><dd>{coverage.partial}</dd></div>
-            <div><dt>Pendientes</dt><dd>{coverage.pending}</dd></div>
-            <div><dt>Componentes asignados</dt><dd>{scheduled}</dd></div>
-            <div><dt>Componentes requeridos</dt><dd>{required}</dd></div>
-          </dl>
-          <p className="academic-scheduling__stats">
-            Búsqueda local: {proposal.stats.exploredCandidates} candidatos explorados, {proposal.stats.candidateVisits} visitas y {proposal.stats.backtracks} retrocesos.
-            {proposal.stats.limitReason && <> Límite: {proposal.stats.limitReason}.</>}
-          </p>
-          {proposal.pending.length > 0 && (() => {
-            const groupedPending: Array<{
-              courseId: string
-              courseName: string
-              sections: Array<{ sectionId: string; sectionLabel: string; durations: string[] }>
-            }> = []
-            const byCourse = new Map<string, typeof groupedPending[number]>()
-            for (const pending of proposal.pending) {
-              const courseName = proposal.sections.find((s) => s.sectionId === pending.sectionId)?.courseName ?? pending.courseId
-              let courseGroup = byCourse.get(pending.courseId)
-              if (!courseGroup) {
-                courseGroup = { courseId: pending.courseId, courseName, sections: [] }
-                byCourse.set(pending.courseId, courseGroup)
-                groupedPending.push(courseGroup)
-              }
-              let sectionEntry = courseGroup.sections.find((s) => s.sectionId === pending.sectionId)
-              if (!sectionEntry) {
-                sectionEntry = {
-                  sectionId: pending.sectionId,
-                  sectionLabel: academicSectionLabel(proposal, pending.sectionId),
-                  durations: [],
-                }
-                courseGroup.sections.push(sectionEntry)
-              }
-              sectionEntry.durations.push(formatAcademicDuration(pending.durationMinutes))
-            }
-            return (
-              <div className="academic-scheduling__diagnostics typeset typeset-planning">
-                <div className="not-typeset flex flex-wrap items-center justify-between gap-2">
-                  <h4 className="m-0 text-sm font-semibold text-foreground">Componentes pendientes</h4>
-                  <Badge variant="outline">
-                    {proposal.pending.length} {proposal.pending.length === 1 ? 'componente' : 'componentes'} en {groupedPending.reduce((acc, g) => acc + g.sections.length, 0)} {groupedPending.reduce((acc, g) => acc + g.sections.length, 0) === 1 ? 'sección' : 'secciones'}
-                  </Badge>
-                </div>
-                <ul className="planning-status-bar__pending-compact">
-                  {groupedPending.map((group) => (
-                    <li key={group.courseId}>
-                      <strong>{group.courseName}</strong>{' '}
-                      <span className="text-muted-foreground">({group.courseId})</span>:{' '}
-                      {group.sections
-                        .map((sec) => `Sección ${sec.sectionLabel} (${sec.durations.join(' + ')})`)
-                        .join(' · ')}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )
-          })()}
-          {proposal.preferenceReport && (
-            <div className="academic-scheduling__preference-report typeset typeset-planning">
-              <h4>Resultado de preferencias · {proposal.preferenceReport.policy}</h4>
-              <p>
-                {proposal.preferenceReport.withinPreferenceSections} secciones dentro de preferencia, {proposal.preferenceReport.outsidePreferenceSections} fuera y {proposal.preferenceReport.withoutPreferenceSections} sin preferencia evaluable. La búsqueda no demuestra un óptimo global.
-              </p>
-            </div>
-          )}
-        </CollapsibleContent>
-      </Collapsible>
-  )
+  return contextContainer ? createPortal(content, contextContainer) : content
 }

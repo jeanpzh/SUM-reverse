@@ -11,6 +11,8 @@ const { MessageResponse } = await vite.ssrLoadModule('/src/components/ai-element
 const { Reasoning } = await vite.ssrLoadModule('/src/components/ai-elements/Reasoning.tsx')
 const { SuggestionCard } = await vite.ssrLoadModule('/src/components/ai-elements/SuggestionCard.tsx')
 
+const { PlanningAssistAdvisor } = await vite.ssrLoadModule('/src/screens/PlanningAssistAdvisor.tsx')
+
 const render = (component, props) => renderToStaticMarkup(createElement(component, props))
 
 test('Markdown formats GFM and discards raw HTML and dangerous link protocols', () => {
@@ -55,4 +57,40 @@ test('recommendation exposes every affected teacher with exact previous and next
   const checkboxId = html.match(/role="checkbox"[^>]*id="([^"]+)"/)?.[1]
   assert.ok(checkboxId)
   assert.ok(html.includes(`for="${checkboxId}"`))
+})
+
+const advisorProps = {
+  academicPeriod: '2026-II', draftVersion: null, openSections: 0,
+  proposal: { status: 'complete', pending: [], counts: { requiredSessions: 2, scheduledSessions: 2 } },
+  chat: { turns: [], question: '', loading: false, asOf: '2026-11-17', teacherType: 'unknown',
+    submit() {}, setQuestion() {}, cancel() {}, changeAsOf() {}, changeTeacherType() {} },
+  requested: false, loading: false, error: null, advice: null, impact: undefined,
+  selectedIds: [], applying: false, isLocked: false, canApply: true, previewCurrent: false,
+  impactInvalidated: false, simulating: false, applyDisabledReason: null, applyDisabledReasonId: 'apply-reason',
+  canConsult: false, consultDisabledReasonId: 'consult-reason',
+  teacherNames: {}, courseNames: {}, roomNames: {},
+  onConsult() {}, onCancel() {}, onRetry() {}, onToggle() {}, onSimulate() {}, onApply() {},
+}
+
+test('a complete proposal shows one honest empty state and no simulation/application action', () => {
+  const html = render(PlanningAssistAdvisor, advisorProps)
+  assert.equal(html.match(/Sin bloqueos que resolver/g)?.length, 1)
+  assert.match(html, /2 de 2 sesiones asignadas/)
+  assert.doesNotMatch(html, /Consultar consejero<|Simular selección<|Aplicar seleccionadas/)
+})
+
+test('an initial consultation failure offers retry without implying a simulation or fabricated result', () => {
+  const html = render(PlanningAssistAdvisor, { ...advisorProps, requested: true, error: 'Fallo sintético de transporte',
+    proposal: { pending: [{ sessionId: 'synthetic-session' }], counts: { requiredSessions: 2, scheduledSessions: 1 } } })
+  assert.match(html, /No se pudo completar la consulta/)
+  assert.match(html, /Fallo sintético de transporte/)
+  assert.match(html, /Reintentar consejero/)
+  assert.doesNotMatch(html, /data-advisor-impact="verified"|Simulación vigente/)
+})
+
+
+test('zero sessions in an invalid input do not claim that there are no blockers', () => {
+  const html = render(PlanningAssistAdvisor, { ...advisorProps,
+    proposal: { status: 'invalid-input', pending: [], counts: { requiredSessions: 0, scheduledSessions: 0 } } })
+  assert.doesNotMatch(html, /Sin bloqueos que resolver/)
 })

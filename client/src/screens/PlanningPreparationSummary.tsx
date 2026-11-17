@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Button } from '../components/ui/Button'
-import { CircleCheck, CircleAlert } from 'lucide-react'
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../components/ui/Collapsible'
 import './PlanningPreparationSummary.css'
 
 export interface PlanningPreparationSummaryProps {
@@ -13,52 +13,40 @@ export interface PlanningPreparationSummaryProps {
   catalogCourseCount: number
   onSelectAllCourses: () => void
   selectionDisabled: boolean
+  schoolName?: string
+  planningPeriod?: string
   invalidOfferNote?: string
-  children: ReactNode
+  children?: ReactNode
 }
 
-
-export function PlanningPreparationSummary({
-  selectedCourses,
-  invalidCourses,
-  teachers,
-  rooms,
-  offerReady,
-  catalogCourseCount,
-  onSelectAllCourses,
-  selectionDisabled,
-  invalidOfferNote,
-  children,
+export function PlanningPreparationSummary({ selectedCourses, invalidCourses, teachers, rooms, offerReady,
+  catalogCourseCount, onSelectAllCourses, selectionDisabled, invalidOfferNote, children, schoolName, planningPeriod,
 }: PlanningPreparationSummaryProps): ReactNode {
-  const rows = [
-    { text: `${selectedCourses} cursos seleccionados`, ready: selectedCourses > 0, action: 'Revisar cursos', view: 'cursos' },
-    { text: invalidCourses > 0 ? `${invalidCourses} cursos con datos por corregir` : 'Demanda y capacidad completas', ready: invalidCourses === 0, action: invalidCourses > 0 ? 'Corregir' : null, view: 'cursos' },
-    { text: `${teachers} docentes · ${rooms} ambientes`, ready: teachers > 0 && rooms > 0, action: 'Revisar recursos', view: 'recursos' },
-    { text: offerReady ? 'Oferta lista para generar' : 'Oferta incompleta', ready: offerReady },
-  ] as const
-
-  return (
-    <section className="planning-preparation-summary" aria-label="Resumen de preparación">
-      <h3 className="planning-preparation-summary__title">Lista de preparación</h3>
-      <ul className="planning-preparation-summary__list">
-        {rows.map((row) => (
-          <li key={row.text} className="planning-preparation-summary__row" data-ready={row.ready}>
-            {row.ready ? <CircleCheck size={16} aria-hidden="true" /> : <CircleAlert size={16} aria-hidden="true" />}
-            <span>{row.text}</span>
-            {'action' in row && row.action && <Button asChild variant="link" size="sm">
-              <Link to="/local/programacion-academica" search={{ etapa: 'preparacion', vista: row.view }}>{row.action}</Link>
-            </Button>}
-          </li>
-        ))}
-      </ul>
-      {invalidOfferNote && <p className="planning-preparation-summary__note">{invalidOfferNote}</p>}
-      {selectedCourses === 0 && catalogCourseCount > 0 && (
-        <Button type="button" variant="link" disabled={selectionDisabled} onClick={onSelectAllCourses}>
-          Seleccionar los {catalogCourseCount} cursos del catálogo
-        </Button>
-      )}
-      <p className="planning-preparation-summary__note">Los cambios quedan en memoria hasta generar o guardar.</p>
-      {children}
-    </section>
-  )
+  const checks = [
+    `${selectedCourses} cursos seleccionados`,
+    invalidCourses ? `${invalidCourses} con datos por corregir` : 'Demanda y capacidad completas',
+    `${teachers} docentes · ${rooms} ambientes`,
+  ]
+  const ready = offerReady && selectedCourses > 0 && invalidCourses === 0 && teachers > 0 && rooms > 0
+  if (selectedCourses === 0 && catalogCourseCount > 0) return <section className="planning-status-bar planning-preparation-empty" data-status="incomplete" aria-label="Lista de preparación">
+    <span className="planning-eyebrow">03 · Sin cursos</span>
+    <h2>Aún no hay cursos en la oferta</h2>
+    <p>El catálogo{schoolName ? ` de ${schoolName}` : ''} tiene {catalogCourseCount} cursos{planningPeriod ? ` para ${planningPeriod}` : ' para la oferta'}.</p>
+    <Button id="planning-tour-primary" disabled={selectionDisabled} onClick={onSelectAllCourses}>Seleccionar los {catalogCourseCount} cursos del catálogo</Button>
+    <p className="planning-preparation-empty__note">Una propuesta vacía no está lista para revisión.</p>
+    {children}
+  </section>
+  return <section className="planning-status-bar planning-preparation-summary" data-status={ready ? 'ready' : 'incomplete'} aria-label="Lista de preparación">
+    <div className="planning-status-bar__strip">
+      <strong role="status" className="planning-status-bar__state-row">{ready ? '✓ Oferta lista para generar' : '△ Oferta incompleta'}</strong>
+      <div className="planning-status-bar__facts">
+        <span className="planning-status-bar__fact">{ready ? `${selectedCourses} cursos · demanda y capacidad completas` : checks[0]}</span>
+        {!ready && <span className="planning-status-bar__fact"><Link to="/local/programacion-academica" search={{ etapa: 'preparacion', vista: 'cursos' }}>{checks[1]}</Link></span>}
+        <span className="planning-status-bar__fact">{ready ? checks[2] : <Link to="/local/programacion-academica" search={{ etapa: 'preparacion', vista: 'recursos' }}>{checks[2]}</Link>}</span>
+      </div>
+      {ready && <Collapsible className="planning-readiness-disclosure planning-status-bar__actions"><CollapsibleTrigger asChild><Button variant="link">Ver resumen</Button></CollapsibleTrigger><CollapsibleContent><ul>{checks.map((check) => <li key={check}>✓ {check}</li>)}</ul></CollapsibleContent></Collapsible>}
+    </div>
+    {!ready && <p className="planning-preparation-summary__helper">{invalidCourses > 0 ? `Puedes generar ahora; los ${invalidCourses} cursos con datos por corregir quedarán como pendientes con su causa.` : invalidOfferNote ?? 'Completa los recursos de la oferta antes de generar.'}</p>}
+    {children}
+  </section>
 }

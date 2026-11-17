@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Estados del ciclo de vida</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.app{font-family:Inter,ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:20px;color:#0a0a0a;background:#ffffff}
+.mono{font-family:"Geist Mono",ui-monospace,monospace;letter-spacing:-0.01em}
+.eyebrow{font-family:"Geist Mono",ui-monospace,monospace;font-size:11px;line-height:16px;letter-spacing:0.04em;text-transform:uppercase;color:#6b6b6b}
+.tile{background:#f9f8f6;border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:14px;min-height:0}
+.tile h3{margin:0;font-weight:400;font-size:20px;line-height:26px;letter-spacing:-0.4px}
+.btn{font:inherit;font-weight:500;font-size:14px;line-height:20px;border-radius:9999px;padding:6px 14px;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-primary{background:#0a0a0a;color:#fff}
+.btn-ghost{background:#fff;color:#0a0a0a;box-shadow:inset 0 0 0 1px #d5d9e2}
+.sk{height:12px;border-radius:9999px;background:linear-gradient(90deg,#eceae6,#f4f2ee,#eceae6)}
+.muted{color:#6b6b6b}
+.surface{background:#fff;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}
+</style>
+</helmet>
+<div class="app" style="width: 1440px; height: 1000px; box-sizing: border-box; padding: 48px; display: flex; flex-direction: column; gap: 28px">
+  <div style="display: flex; justify-content: space-between; align-items: flex-end">
+    <div><span class="eyebrow">Ciclo de vida · estados honestos</span><h1 style="margin: 6px 0 0; font-weight: 400; font-size: 48px; line-height: 48px; letter-spacing: -1.2px">Lo que el sistema dice en cada estado</h1></div>
+    <p class="muted" style="margin: 0; max-width: 380px">Cada estado nombra lo que sabe y la siguiente acción. Nunca simula progreso, éxito ni imposibilidad.</p>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 16px; flex: 1">
+    <section class="tile" aria-labelledby="s1"><span class="eyebrow">01 · Cargando catálogo</span><h3 id="s1">Cargando cursos de Sistemas · 2027-I</h3>
+      <div class="surface" aria-busy="true"><div class="sk" style="width: 70%"></div><div class="sk" style="width: 90%"></div><div class="sk" style="width: 55%"></div><div class="sk" style="width: 80%"></div></div>
+      <p class="muted" style="margin: 0; font-size: 13px">Texto de carga con alcance; esqueleto solo en la zona que carga.</p></section>
+
+    <section class="tile" aria-labelledby="s2"><span class="eyebrow">02 · Error de carga</span><h3 id="s2">No se pudo cargar el catálogo</h3>
+      <div class="surface" role="alert"><span style="color: #b42318; font-weight: 500">○ Error de red · 503</span><span>El servidor local no respondió. Tus cambios en memoria se conservan.</span></div>
+      <div><button class="btn btn-ghost">Reintentar</button></div></section>
+
+    <section class="tile" aria-labelledby="s3"><span class="eyebrow">03 · Sin cursos</span><h3 id="s3">Aún no hay cursos en la oferta</h3>
+      <p style="margin: 0; color: #545454">El catálogo de Sistemas tiene 52 cursos para 2027-I.</p>
+      <div><button class="btn btn-primary">Seleccionar los 52 cursos del catálogo</button></div>
+      <p class="muted" style="margin: 0; font-size: 13px">Una propuesta vacía no está lista para revisión.</p></section>
+
+    <section class="tile" aria-labelledby="s4"><span class="eyebrow">04 · Generando</span><h3 id="s4">Generando propuesta…</h3>
+      <div class="surface"><span style="display: flex; align-items: center; gap: 8px"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" stroke="#d5d9e2" stroke-width="2" fill="none"></circle><path d="M8 2a6 6 0 016 6" stroke="#0a0a0a" stroke-width="2" fill="none"></path></svg><span role="status">El motor trabaja sobre 52 cursos y 38 docentes</span></span></div>
+      <p class="muted" style="margin: 0; font-size: 13px">Sin porcentaje ni cancelación: el servidor no los informa. El botón queda bloqueado para evitar envíos duplicados.</p></section>
+
+    <section class="tile" aria-labelledby="s5"><span class="eyebrow">05 · Límite de búsqueda</span><h3 id="s5">Búsqueda inconclusa</h3>
+      <div class="surface" style="background: #fbf3e2"><span style="color: #8a5a00; font-weight: 500">◐ 142 asignadas · 6 pendientes</span><span>Se alcanzó el límite de simulación. Esto no prueba que no exista solución.</span></div>
+      <div style="display: flex; gap: 8px"><button class="btn btn-ghost">Revisar recursos</button><button class="btn btn-ghost">Reintentar búsqueda</button></div></section>
+
+    <section class="tile" aria-labelledby="s6"><span class="eyebrow">06 · Conflicto de versión</span><h3 id="s6">El servidor tiene una versión más reciente</h3>
+      <div class="surface" role="alert" style="background: #fdeeec"><span style="color: #b42318; font-weight: 500">○ Guardado rechazado · v6 en el servidor</span><span>Tu borrador local basado en v5 se conserva sin cambios. No se sobrescribió nada.</span></div>
+      <div><button class="btn btn-ghost">Recargar versión del servidor</button></div></section>
+
+    <section class="tile" aria-labelledby="s7"><span class="eyebrow">07 · Guardado</span><h3 id="s7">Confirmación breve</h3>
+      <div style="flex: 1; display: flex; align-items: flex-end"><div role="status" style="display: flex; align-items: center; gap: 12px; background: #0a0a0a; color: #fff; border-radius: 9999px; padding: 8px 8px 8px 16px; width: 100%; box-sizing: border-box"><span style="color: #7fd18e">✓</span><span style="flex: 1">Guardada como versión 5</span><button class="btn" style="background: #151515; color: #fff; box-shadow: inset 0 0 0 1px #545454; padding: 4px 12px">Cerrar</button></div></div>
+      <p class="muted" style="margin: 0; font-size: 13px">Aviso no modal, 6 s, pausa al enfocar. Solo confirma lo que el servidor aceptó.</p></section>
+
+    <section class="tile" aria-labelledby="s8"><span class="eyebrow">08 · Publicada</span><h3 id="s8">Solo lectura</h3>
+      <div class="surface"><span style="color: #1a7f37; font-weight: 500">✓ Publicada · 2026-II · v7 · PUB-0007</span><span>Los controles de edición no se muestran. Para cambios se crea un nuevo borrador.</span></div>
+      <div><button class="btn btn-ghost">Crear nuevo borrador</button></div></section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

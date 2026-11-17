@@ -1,6 +1,7 @@
 // Synthetic local acceptance script for Planning Week View (Semana) V3 correction cycle.
 // Starts dedicated processes on ports 3291/5291 with provenance env -i and synthetic fixtures.
 import assert from 'node:assert/strict'
+import { gotoStage } from './planning-v2-helpers.mjs'
 import { setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
@@ -154,7 +155,7 @@ try {
 
   // Helper to switch stages
   const goToStage = async (name, etapa) => {
-    await page.locator('.planning-root').getByRole('link', { name: name === 'Preparación' ? 'Resumen' : name, exact: true }).click()
+    await gotoStage(page, name)
     await page.waitForURL(new RegExp(`etapa=${etapa}(?:&|$)`))
   }
 

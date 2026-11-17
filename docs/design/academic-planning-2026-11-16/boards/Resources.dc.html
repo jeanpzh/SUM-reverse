@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Docentes y ambientes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#ffffff}
+a{color:#0a0a0a}a:hover{color:#545454}
+.app{--ink:#0a0a0a;--steel:#545454;--fog:#6b6b6b;--dove:#d5d9e2;--line:#8a8f99;--cream:#f9f8f6;--sand:#f2ede5;font-family:Inter,ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:20px;color:var(--ink);background:#fff}
+.mono{font-family:"Geist Mono",ui-monospace,monospace;letter-spacing:-0.01em}
+.eyebrow{font-family:"Geist Mono",ui-monospace,monospace;font-size:11px;line-height:16px;letter-spacing:0.04em;text-transform:uppercase;color:var(--fog)}
+.btn{font:inherit;font-weight:500;font-size:14px;line-height:20px;border-radius:9999px;padding:6px 14px;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;text-decoration:none}
+.btn-primary{background:var(--ink);color:#fff}
+.btn-ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--dove)}
+.icon-btn{width:32px;height:32px;border-radius:9999px;border:0;background:transparent;display:inline-flex;align-items:center;justify-content:center;color:var(--steel);cursor:pointer}
+:focus-visible{outline:2px solid #0a0a0a;outline-offset:2px}
+.field{font:inherit;height:32px;border-radius:6px;border:1px solid var(--line);padding:0 10px;background:#fff;color:var(--ink);box-sizing:border-box;width:100%}
+.muted{color:var(--fog)}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;line-height:16px;font-weight:500;border-radius:9999px;padding:2px 8px}
+.nav a{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:9999px;text-decoration:none;color:var(--steel);font-weight:500}
+.nav a[aria-current="page"]{color:var(--ink);background:var(--sand)}
+table{border-collapse:collapse;width:100%}
+th{font-family:"Geist Mono",ui-monospace,monospace;font-size:11px;line-height:16px;letter-spacing:0.04em;text-transform:uppercase;color:var(--fog);font-weight:400;text-align:left;padding:8px 12px;border-bottom:1px solid var(--dove);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid #eceef2;white-space:nowrap}
+td.n,th.n{text-align:right}
+tr.sel td{background:var(--sand)}
+tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--ink)}
+.meter{width:64px;height:4px;border-radius:9999px;background:#eceef2;display:inline-block;vertical-align:middle;margin-left:8px;overflow:hidden}
+.meter i{display:block;height:100%;background:#0a0a0a}
+.av{display:grid;grid-template-columns:64px repeat(6,minmax(0,1fr));gap:3px}
+.av span{font-family:"Geist Mono",ui-monospace,monospace;font-size:11px;color:var(--fog)}
+.av button{height:28px;border-radius:6px;border:0;cursor:pointer;font:inherit;font-size:11px}
+.on{background:#0a0a0a;color:#fff}
+.off{background:#f9f8f6;color:#6b6b6b;box-shadow:inset 0 0 0 1px #d5d9e2}
+</style>
+</helmet>
+<div class="app" style="display: flex; flex-direction: column; min-height: 1000px">
+  <header style="height: 52px; display: flex; align-items: center; gap: 16px; padding: 0 16px; border-bottom: 1px solid #d5d9e2">
+    <span style="font-weight: 500">Planificación académica</span>
+    <span style="width: 1px; height: 16px; background: #d5d9e2"></span>
+    <span>Sistemas · 2027-I</span>
+    <span class="muted">/</span>
+    <span>Propuesta base 2027-I <span class="mono muted" style="font-size: 12px">sin generar</span></span>
+  </header>
+  <div style="display: flex; flex: 1; flex-wrap: wrap">
+    <nav class="nav" aria-label="Etapas de la propuesta" style="flex: 0 0 216px; padding: 20px 12px; border-right: 1px solid #d5d9e2; display: flex; flex-direction: column; gap: 2px; box-sizing: border-box">
+      <div class="eyebrow" style="padding: 0 10px 8px">Preparación</div>
+      <a href="Preparation.dc.html">Oferta de cursos <span class="mono" style="font-size: 12px; color: #8a5a00">3</span></a>
+      <a href="Resources.dc.html" aria-current="page">Docentes y ambientes</a>
+      <div class="eyebrow" style="padding: 20px 10px 8px">Programación</div>
+      <a href="Main.dc.html">Horario</a>
+      <a href="Approval.dc.html">Revisión docente</a>
+      <a href="Approval.dc.html">Aprobación y publicación</a>
+    </nav>
+    <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+      <div style="padding: 24px 32px 16px; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; justify-content: space-between">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span class="eyebrow">Paso 1 de 4 · 2 cambios en memoria</span>
+          <h1 style="margin: 0; font-weight: 400; font-size: 30px; line-height: 36px; letter-spacing: -0.75px">Docentes y ambientes</h1>
+        </div>
+        <div style="display: flex; gap: 8px">
+          <button class="btn btn-ghost">Guardar</button>
+          <button class="btn btn-primary">Generar propuesta</button>
+        </div>
+      </div>
+      <section aria-label="Lista de preparación" style="margin: 0 32px 16px; border-radius: 12px; background: #fbf3e2; padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: center">
+        <span style="display: inline-flex; gap: 6px; font-weight: 500; color: #8a5a00">△ Oferta incompleta</span>
+        <span style="width: 1px; height: 16px; background: #d5d9e2"></span><a href="Preparation.dc.html">3 cursos con datos por corregir</a>
+        <span style="width: 1px; height: 16px; background: #d5d9e2"></span><span><b style="font-weight: 500">38</b> docentes · <b style="font-weight: 500">41</b> ambientes</span>
+        <span style="width: 1px; height: 16px; background: #d5d9e2"></span><span>1 docente se incorporará · 1 se retirará</span>
+      </section>
+      <div style="padding: 0 32px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+        <div role="tablist" aria-label="Recurso" style="display: inline-flex; padding: 2px; border-radius: 9999px; background: #f9f8f6">
+          <button role="tab" aria-selected="true" class="btn" style="background: #0a0a0a; color: #fff; padding: 4px 14px">Docentes <span class="mono" style="opacity: .7">38</span></button>
+          <button role="tab" aria-selected="false" class="btn" style="color: #545454; padding: 4px 14px">Ambientes <span class="mono">41</span></button>
+        </div>
+        <input class="field" aria-label="Buscar docente" placeholder="Buscar por nombre o curso habilitado" style="width: 280px">
+        <select class="field" aria-label="Origen" style="width: 200px"><option>Todos los orígenes</option><option>Incorporados</option><option>Referencia (no incorporado)</option></select>
+        <span style="flex: 1"></span>
+        <button class="btn btn-ghost">Agregar docente</button>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; border-top: 1px solid #d5d9e2; flex: 1">
+        <div style="flex: 999 1 520px; min-width: 0; overflow-x: auto">
+          <table aria-label="Tabla de docentes">
+            <thead><tr><th>Docente</th><th>Origen</th><th class="n">Cursos</th><th>Carga asignable</th><th>Disponibilidad</th></tr></thead>
+            <tbody>
+              <tr class="sel" aria-selected="true"><td>D. Quispe</td><td>Incorporado</td><td class="n mono">3</td><td class="mono">16 / 20 h<span class="meter" aria-hidden="true"><i style="width: 80%"></i></span></td><td class="mono muted">L–V mañana</td></tr>
+              <tr><td>R. Salazar</td><td>Incorporado</td><td class="n mono">2</td><td class="mono">12 / 16 h<span class="meter" aria-hidden="true"><i style="width: 75%"></i></span></td><td class="mono muted">L–S mañana</td></tr>
+              <tr><td>M. Huamán</td><td>Incorporado</td><td class="n mono">2</td><td class="mono">8 / 20 h<span class="meter" aria-hidden="true"><i style="width: 40%"></i></span></td><td class="mono muted">L–V tarde</td></tr>
+              <tr><td>L. Torres <span class="chip" style="background: #eef6ef; color: #1a7f37">Se incorporará</span></td><td class="muted">Referencia</td><td class="n mono">1</td><td class="mono">— / 12 h</td><td class="mono muted">Mar, Jue</td></tr>
+              <tr><td>C. Rojas <span class="chip" style="background: #fdeeec; color: #b42318">Se retirará</span></td><td>Incorporado</td><td class="n mono">2</td><td class="mono">6 / 10 h<span class="meter" aria-hidden="true"><i style="width: 60%"></i></span></td><td class="mono muted">L–V noche</td></tr>
+              <tr><td class="muted">A. Paredes</td><td class="muted">Referencia (no incorporado)</td><td class="n mono muted">2</td><td class="mono muted">—</td><td><button class="btn btn-ghost" style="padding: 2px 10px; font-size: 13px">Incorporar</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <aside aria-labelledby="t-title" style="flex: 1 1 380px; max-width: 420px; border-left: 1px solid #d5d9e2; padding: 20px 24px; display: flex; flex-direction: column; gap: 18px; box-sizing: border-box">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start">
+            <div><span class="eyebrow">Docente incorporado · DOC-0142</span><h2 id="t-title" style="margin: 4px 0 0; font-weight: 400; font-size: 24px; line-height: 30px; letter-spacing: -0.6px">D. Quispe</h2></div>
+            <button class="icon-btn" aria-label="Cerrar detalle"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.5"></path></svg></button>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+            <label style="display: flex; flex-direction: column; gap: 6px"><span style="font-weight: 500">Identificación</span><input class="field mono" value="DOC-0142"></label>
+            <label style="display: flex; flex-direction: column; gap: 6px"><span style="font-weight: 500">Carga máxima (h)</span><input class="field mono" value="20"></label>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <span style="font-weight: 500">Cursos habilitados</span>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px">
+              <span class="chip" style="background: #f9f8f6; box-shadow: inset 0 0 0 1px #d5d9e2">Base de Datos II ×</span>
+              <span class="chip" style="background: #f9f8f6; box-shadow: inset 0 0 0 1px #d5d9e2">Sistemas Operativos ×</span>
+              <span class="chip" style="background: #f9f8f6; box-shadow: inset 0 0 0 1px #d5d9e2">Redes de Computadoras ×</span>
+              <button class="chip" style="border: 0; background: transparent; text-decoration: underline; cursor: pointer; font-family: inherit">+ Habilitar curso</button>
+            </div>
+          </div>
+          <fieldset style="border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px">
+            <legend style="font-weight: 500; padding: 0 0 8px">Disponibilidad semanal</legend>
+            <div class="av">
+              <span></span><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span>
+              <span>08–13</span><button class="on" aria-pressed="true">Sí</button><button class="on" aria-pressed="true">Sí</button><button class="on" aria-pressed="true">Sí</button><button class="on" aria-pressed="true">Sí</button><button class="on" aria-pressed="true">Sí</button><button class="off" aria-pressed="false">No</button>
+              <span>14–18</span><button class="on" aria-pressed="true">Sí</button><button class="on" aria-pressed="true">Sí</button><button class="off" aria-pressed="false">No</button><button class="off" aria-pressed="false">No</button><button class="off" aria-pressed="false">No</button><button class="off" aria-pressed="false">No</button>
+              <span>18–22</span><button class="off" aria-pressed="false">No</button><button class="off" aria-pressed="false">No</button><button class="off" aria-pressed="false">No</button><button class="off" aria-pressed="false">No</button><button class="off" aria-pressed="false">No</button><button class="off" aria-pressed="false">No</button>
+            </div>
+            <p class="muted" style="margin: 0; font-size: 12px; line-height: 16px">Cada franja es un botón conmutable con su estado en texto. Teclado: flechas para moverse, Espacio para cambiar.</p>
+          </fieldset>
+          <div role="alert" style="padding: 10px 12px; border-radius: 8px; background: #fdeeec; color: #b42318; font-size: 13px">Esa identificación ya está asignada a otro docente.</div>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

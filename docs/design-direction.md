@@ -1,5 +1,7 @@
 # Design direction: internal academic planning product
 
+> **Superseded for visual decisions (user, 2026-11-16):** [DESIGN-v2.md](design/academic-planning-2026-11-16/DESIGN-v2.md), [theme.css](design/academic-planning-2026-11-16/theme.css) and the [handoff](design/academic-planning-2026-11-16/handoff.md) replace the palette, typography, shell, header and inspector decisions below and in the 2026-11-10 spec. The interaction rules below (Tabla and Semana, Semana, Approval and publication, Honest states) remain binding.
+
 Status: **binding**, revised by the user on 2026-11-09. The current direction below supersedes the earlier visual decisions from 2026-11-07/08 within the same internal-product scope. Source exploration: [academic-planning-2026-11-07](design/academic-planning-2026-11-07/README.md), cited below as "the report". This file states the decisions. The report holds the reasoning, the images and the detailed tables, which are not repeated here.
 
 ## Scope

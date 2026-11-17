@@ -1,3 +1,4 @@
+import { measureAdvisorOutcome, type AdvisorOutcome } from './advisorOutcome.ts'
 // Sesión de programación: owns the internal planning workflow (Preparación → Horario → Revisión docente
 // → Aprobación) behind a small interface. Plan: docs/reverse-engineering/plans/planning-session-ui-kit.md (D1–D3, D7).
 //
@@ -100,6 +101,7 @@ export interface PlanningSessionState {
   demandEstimate: AcademicDemandEstimate | null
   demandBaseRequest: AcademicDemandRequest | null
   proposal: AcademicProposal | null
+  advisorOutcome: AdvisorOutcome | null
   proposalResources: AcademicPlanningResources | null
   editingBlock: AcademicAdjustment | null
   draft: { id: string | null; version: number | null; title: string; state: AcademicDraftState;
@@ -119,7 +121,7 @@ export function initialPlanningSessionState(): PlanningSessionState {
     catalog: null, period: '2027-I', policy: null, allocationPolicy: 'preferences', selectedCourses: [],
     demands: {}, capacities: {}, patterns: {}, deliveryModes: {}, resources: { teachers: [], rooms: [] },
     demandSourceId: 'existing-regular-v1', demandEstimate: null, demandBaseRequest: null,
-    proposal: null, proposalResources: null, editingBlock: null,
+    proposal: null, advisorOutcome: null, proposalResources: null, editingBlock: null,
     draft: { id: null, version: null, title: 'Propuesta SISTEMAS 2027-I', state: 'draft', savedState: 'draft', review: undefined },
     draftList: null, dirty: false, message: null,
     busy: { catalog: true, demand: false, generate: false, adjust: false, draft: false },
@@ -130,6 +132,7 @@ export function initialPlanningSessionState(): PlanningSessionState {
 }
 
 export type PlanningSessionEvent =
+  | { type: 'advisor/applied'; outcome: AdvisorOutcome }
   | { type: 'catalog/started' }
   | { type: 'catalog/succeeded'; catalog: AcademicCatalog }
   | { type: 'catalog/failed'; message: string | null }
@@ -198,7 +201,7 @@ function markDirty(state: PlanningSessionState, configurationChanged = false): P
 
 function invalidateProposal(state: PlanningSessionState): PlanningSessionState {
   return { ...state, intents: { ...state.intents, proposal: state.intents.proposal + 1 }, proposal: null,
-    proposalResources: null, editingBlock: null, busy: { ...state.busy, adjust: false, generate: false },
+    advisorOutcome: null, proposalResources: null, editingBlock: null, busy: { ...state.busy, adjust: false, generate: false },
     errors: { ...state.errors, proposal: null, adjustment: null } }
 }
 
@@ -217,7 +220,7 @@ function hydrate(state: PlanningSessionState, draft: AcademicSavedDraft, message
   const demands = config.request.demands
   return {
     ...state,
-    hydratedFromDraft: true,
+    hydratedFromDraft: true, advisorOutcome: null,
     draft: { id: draft.id, version: draft.version, title: draft.title, state: draft.state, savedState: draft.state, review: draft.review },
     dirty: false,
     mutation: state.mutation + 1,
@@ -247,6 +250,9 @@ function applySaved(state: PlanningSessionState, saved: AcademicSavedDraft, incl
 
 export function reducePlanningSession(state: PlanningSessionState, event: PlanningSessionEvent): PlanningSessionState {
   switch (event.type) {
+    case 'advisor/applied':
+      return state.proposal?.proposalId === event.outcome.proposalId && (state.proposal.editVersion ?? 0) === event.outcome.editVersion
+        ? { ...state, advisorOutcome: event.outcome } : state
     case 'catalog/started':
       return { ...state, busy: { ...state.busy, catalog: true }, errors: { ...state.errors, catalog: null } }
     case 'catalog/succeeded': {
@@ -416,7 +422,7 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
 
     case 'generate/started': {
       const next = markDirty(state, true)
-      return { ...next, intents: { ...next.intents, proposal: next.intents.proposal + 1 }, proposal: null,
+      return { ...next, advisorOutcome: null, intents: { ...next.intents, proposal: next.intents.proposal + 1 }, proposal: null,
         proposalResources: null, editingBlock: null, busy: { ...next.busy, adjust: false, generate: true },
         errors: { ...next.errors, proposal: null, adjustment: null } }
     }
@@ -433,7 +439,7 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
         busy: { ...state.busy, adjust: true }, errors: { ...state.errors, adjustment: null } }
     case 'adjust/succeeded':
       if (event.token !== state.intents.proposal) return state
-      return { ...markDirty(state), proposal: event.proposal, editingBlock: null, busy: { ...state.busy, adjust: false } }
+      return { ...markDirty(state), proposal: event.proposal, advisorOutcome: null, editingBlock: null, busy: { ...state.busy, adjust: false } }
     case 'adjust/failed':
       if (event.token !== state.intents.proposal) return state
       return { ...state, busy: { ...state.busy, adjust: false }, errors: { ...state.errors, adjustment: event.message } }
@@ -708,8 +714,13 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
         || (state.proposal.editVersion ?? 0) !== expected.editVersion)) {
         throw new Error('La propuesta cambió. Consulta y simula de nuevo antes de aplicar recomendaciones.')
       }
+      const before = state.proposal
       dispatch({ type: 'applyAdvisorPatches', patches })
-      return commands.generate()
+      const applied = await commands.generate()
+      if (applied && before && state.proposal) {
+        dispatch({ type: 'advisor/applied', outcome: measureAdvisorOutcome(before, state.proposal, patches.length) })
+      }
+      return applied
     },
 
     async loadCatalog() {

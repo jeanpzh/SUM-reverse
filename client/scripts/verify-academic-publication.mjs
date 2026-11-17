@@ -1,5 +1,6 @@
 // Two-phase browser acceptance against the dedicated, explicitly synthetic 5280 service only.
 import assert from 'node:assert/strict'
+import { gotoStage, openProposalMenu, setProposalTitle } from './planning-v2-helpers.mjs'
 import { setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
@@ -45,7 +46,7 @@ try {
   }
   const offerBefore = await readOffer()
   const stage = async (name, etapa) => {
-    await page.locator('.planning-root').getByRole('link', { name: name === 'Preparación' ? 'Resumen' : name, exact: true }).click()
+    await gotoStage(page, name)
     await page.waitForURL(new RegExp(`etapa=${etapa}(?:&|$)`))
   }
   const openPanel = async () => {
@@ -128,7 +129,7 @@ try {
     assert.equal(proposal.status, 'complete')
     assert.ok(proposal.assignments.length)
     const title1 = `Publicación sintética ${Date.now()}`
-    await page.getByLabel('Nombre de la propuesta', { exact: true }).fill(title1)
+    await setProposalTitle(page, title1)
     const save1Response = page.waitForResponse((response) => apiResponse(response, '/borradores/guardar', 'POST'))
     await page.locator('#planning-tour-save').click()
     const saved1 = await save1Response.then((response) => response.json())
@@ -149,7 +150,7 @@ try {
     assert.equal(forkedResponse.request().postDataJSON().expectedVersion, first.draft.version)
     const forkTitle = `${title1} · revisión 2`
     await stage('Preparación', 'preparacion')
-    await page.getByLabel('Nombre de la propuesta', { exact: true }).fill(forkTitle)
+    await setProposalTitle(page, forkTitle)
     const save2Response = page.waitForResponse((response) => apiResponse(response, '/borradores/guardar', 'POST'))
     await page.locator('#planning-tour-save').click()
     const saved2 = await save2Response.then((response) => response.json())
@@ -193,7 +194,7 @@ try {
     }
     const oldPublicationBefore = await requestJson(page, `/publicaciones/${saved.second.id}`)
     await stage('Preparación', 'preparacion')
-    await page.locator('#planning-tour-proposals').click()
+    await openProposalMenu(page)
     const row = page.locator('.academic-scheduling__saved-row').filter({ hasText: saved.title })
     const resumeResponse = page.waitForResponse((response) => apiResponse(response, `/borradores/${saved.second.id}/continuar`, 'POST'))
     await row.getByRole('button', { name: 'Consultar', exact: true }).click()

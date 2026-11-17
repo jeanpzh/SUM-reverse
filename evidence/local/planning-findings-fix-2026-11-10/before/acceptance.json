@@ -1,0 +1,86 @@
+{
+  "source": "Fresh owned isolated synthetic React/Nest/Python stack, no cloud calls; explicit network delay/failure injections only",
+  "results": [
+    {
+      "name": "advisor-saving-state-explains-global-block",
+      "passed": false,
+      "durationMs": 16841,
+      "error": "Disabled advisor must have a nearby accessible reason",
+      "stack": "AssertionError [ERR_ASSERTION]: Disabled advisor must have a nearby accessible reason\n    at async.page.page (file:///home/ubuntu/projects/SUM-reverse/client/scripts/planning-audit/interactions.mjs:85:12)\n    at async file:///home/ubuntu/projects/SUM-reverse/client/scripts/verify-planning-comprehensive.mjs:32:4",
+      "errors": [],
+      "external": [],
+      "details": [
+        {
+          "disabledDuringSave": true,
+          "globalSaveLabel": "Guardando…",
+          "nearbyReason": null
+        }
+      ],
+      "http": [
+        {
+          "path": "/api/local/programacion-academica/v1/propuestas",
+          "status": 200
+        }
+      ],
+      "url": "http://127.0.0.1:6646/local/programacion-academica?etapa=horario"
+    },
+    {
+      "name": "responsive-open-rail-does-not-silently-block-workspace",
+      "passed": false,
+      "durationMs": 7244,
+      "error": "Resizing an open rail should not open a blocking modal without explicit intent (UX finding)\n\nfalse !== true\n",
+      "stack": "AssertionError [ERR_ASSERTION]: Resizing an open rail should not open a blocking modal without explicit intent (UX finding)\n\nfalse !== true\n\n    at async.page.page (file:///home/ubuntu/projects/SUM-reverse/client/scripts/planning-audit/interactions.mjs:109:12)\n    at async file:///home/ubuntu/projects/SUM-reverse/client/scripts/verify-planning-comprehensive.mjs:32:4",
+      "errors": [],
+      "external": [],
+      "details": [
+        {
+          "resizeMatrix": [
+            {
+              "width": 1280,
+              "modalAfterResize": false,
+              "bodyPointerEvents": "",
+              "advisorAccessibleCount": 1
+            },
+            {
+              "width": 1100,
+              "modalAfterResize": true,
+              "bodyPointerEvents": "none",
+              "advisorAccessibleCount": 0
+            },
+            {
+              "width": 1024,
+              "modalAfterResize": true,
+              "bodyPointerEvents": "none",
+              "advisorAccessibleCount": 0
+            },
+            {
+              "width": 900,
+              "modalAfterResize": true,
+              "bodyPointerEvents": "none",
+              "advisorAccessibleCount": 0
+            },
+            {
+              "width": 720,
+              "modalAfterResize": true,
+              "bodyPointerEvents": "none",
+              "advisorAccessibleCount": 0
+            },
+            {
+              "width": 390,
+              "modalAfterResize": true,
+              "bodyPointerEvents": "none",
+              "advisorAccessibleCount": 0
+            }
+          ]
+        }
+      ],
+      "http": [
+        {
+          "path": "/api/local/programacion-academica/v1/propuestas",
+          "status": 200
+        }
+      ],
+      "url": "http://127.0.0.1:6646/local/programacion-academica?etapa=horario"
+    }
+  ]
+}

@@ -1,12 +1,13 @@
 import { useId } from 'react'
 import type { AcademicAdvisorRecommendation } from '../../data/academicScheduling'
-import { Badge } from '../ui/Badge'
 import { Checkbox } from '../ui/Checkbox'
 import { MessageResponse } from './MessageResponse'
 import { AdviceDisclosure } from './AdviceDisclosure'
 
-export function SuggestionCard({ recommendation, checked, disabled, onCheckedChange, teacherNames, courseNames, roomNames }: {
+export function SuggestionCard({ recommendation, checked, disabled, index, measured = false, onCheckedChange, teacherNames, courseNames, roomNames }: {
   recommendation: AcademicAdvisorRecommendation
+  index?: number
+  measured?: boolean
   checked: boolean
   disabled: boolean
   onCheckedChange: (checked: boolean) => void
@@ -24,20 +25,29 @@ export function SuggestionCard({ recommendation, checked, disabled, onCheckedCha
         ? [patch.allowAfternoon && 'Permitir tardes: habilitar lunes a viernes de 14:00 a 22:00', patch.allowSaturday && 'Permitir sábado: habilitar de 08:00 a 13:00'].filter(Boolean)
         : [...patch.teacherIds.map((teacherId) => `Incorporar docente: ${teacherNames[teacherId] ?? teacherId} (${teacherId})`),
           ...patch.roomIds.map((roomId) => `Incorporar ambiente: ${roomNames[roomId] ?? roomId} (${roomId})`)]
-  return <article className="min-w-0 border-0 border-b border-solid border-border py-3 text-sm">
-    <div className="flex items-start gap-3">
-      <Checkbox id={id} checked={checked} disabled={disabled} onCheckedChange={(value) => onCheckedChange(value === true)} />
-      <div className="min-w-0 flex-1">
-        <label htmlFor={id} className="cursor-pointer font-semibold">{recommendation.title}</label>
-        <div className="my-2"><Badge variant="outline" className="whitespace-normal [overflow-wrap:anywhere]">Estimación: {recommendation.impactSummary}</Badge></div>
-        {patch.kind === 'increase_teacher_load' && <p className="my-2 font-medium">Escenario de simulación: requiere autorización externa para aumentar la carga docente. La consulta normativa no concede esa autorización.</p>}
-        <AdviceDisclosure label="Por qué se recomienda"><MessageResponse>{recommendation.rationale}</MessageResponse></AdviceDisclosure>
-        <details className="mt-2">
-          <summary className="cursor-pointer focus-visible:outline-2 focus-visible:outline-ring">Ver cambios exactos ({details.length})</summary>
-          <ul className="mb-0 pl-5 [overflow-wrap:anywhere]">{details.map((detail, index) => <li key={index}>{detail}</li>)}</ul>
-          {patch.kind === 'enable_planning_window' && <p>Se conserva la disponibilidad de docentes y ambientes.</p>}
-        </details>
+  const kind = {
+    increase_teacher_load: 'Carga docente',
+    incorporate_reference_resource: 'Habilitación',
+    enable_planning_window: 'Excepción horaria',
+    change_delivery_mode: 'Modalidad',
+  }[patch.kind]
+  return <article className="planning-rec" data-checked={checked || undefined} data-disabled={disabled || undefined}>
+    <Checkbox id={id} checked={checked} disabled={disabled} onCheckedChange={(value) => onCheckedChange(value === true)} />
+    <div className="planning-rec__body">
+      <label htmlFor={id} className="planning-rec__title">{index && <span className="planning-rec__index" aria-hidden="true">{String(index).padStart(2, '0')}</span>}{recommendation.title}</label>
+      <div className="planning-rec__badges"><span className="planning-rec__kind">{kind}</span>
+        {(patch.kind === 'increase_teacher_load' || patch.kind === 'enable_planning_window') && <span className="planning-rec__kind planning-rec__kind--authorization">Requiere autorización externa</span>}
       </div>
+      <p className="planning-rec__scope">Alcance estimado: {recommendation.impactSummary}</p>
+      <p className="planning-rec__measurement">{measured ? 'Incluida en la simulación vigente' : 'Impacto no simulado'}</p>
+      {patch.kind === 'increase_teacher_load' && <p className="planning-rec__warning">Escenario de simulación: requiere autorización externa para aumentar la carga docente. La consulta normativa no concede esa autorización.</p>}
+      {patch.kind === 'enable_planning_window' && <p className="planning-rec__warning">Habilitar una franja requiere autorización externa; no se concede al simular ni aplicar.</p>}
+      <AdviceDisclosure label="Por qué se recomienda"><MessageResponse>{recommendation.rationale}</MessageResponse></AdviceDisclosure>
+      <details className="planning-rec__details">
+        <summary>Ver cambios exactos ({details.length})</summary>
+        <ul>{details.map((detail, index) => <li key={index}>{detail}</li>)}</ul>
+        {patch.kind === 'enable_planning_window' && <p>Se conserva la disponibilidad de docentes y ambientes.</p>}
+      </details>
     </div>
   </article>
 }

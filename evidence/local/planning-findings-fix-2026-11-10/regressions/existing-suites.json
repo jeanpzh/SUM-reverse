@@ -1,0 +1,32 @@
+[
+  {
+    "suite": "assistant",
+    "code": 0,
+    "durationMs": 160295
+  },
+  {
+    "suite": "answer-quality",
+    "code": 0,
+    "durationMs": 53875
+  },
+  {
+    "suite": "normative",
+    "code": 0,
+    "durationMs": 26305
+  },
+  {
+    "suite": "chat",
+    "code": 0,
+    "durationMs": 18177
+  },
+  {
+    "suite": "shimmer",
+    "code": 0,
+    "durationMs": 16742
+  },
+  {
+    "suite": "redesign",
+    "code": 0,
+    "durationMs": 81422
+  }
+]

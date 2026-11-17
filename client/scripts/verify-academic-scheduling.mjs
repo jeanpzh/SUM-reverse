@@ -1,5 +1,6 @@
 // Synthetic local integration only. Starts dedicated processes, never attaches to existing servers.
 import assert from 'node:assert/strict'
+import { gotoStage } from './planning-v2-helpers.mjs'
 import { setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { spawn } from 'node:child_process'
 import { createServer } from 'node:net'
@@ -183,7 +184,7 @@ try {
   }
   assert.equal(new URL(page.url()).pathname, route)
   const stage = async (name, etapa) => {
-    await page.locator('.planning-root').getByRole('link', { name: name === 'Preparación' ? 'Resumen' : name, exact: true }).click()
+    await gotoStage(page, name)
     await page.waitForURL(new RegExp(`etapa=${etapa}(?:&|$)`))
   }
   let lastRequest
@@ -252,8 +253,9 @@ try {
   assert.equal(impossible.status, 'impossible')
   assert.ok(impossible.pending.length > 0)
   await page.locator('.planning-status-bar[data-status="impossible"]').waitFor()
-  await page.getByRole('button', { name: 'Detalles de búsqueda', exact: true }).click()
-  await page.getByRole('heading', { name: 'Componentes pendientes', exact: true }).waitFor()
+  await page.getByRole('button', { name: /^Ver avisos/ }).click()
+  await page.getByRole('dialog', { name: 'Avisos de la generación' }).waitFor()
+  await page.keyboard.press('Escape')
   await page.locator('.planning-status-bar').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(evidence, 'impossible.png') })
 

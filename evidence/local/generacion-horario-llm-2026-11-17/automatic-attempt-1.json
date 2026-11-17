@@ -1,0 +1,46 @@
+{
+  "source": "Own synthetic React/NestJS/Python, public corpus, real Bedrock; no mocked provider or private snapshots",
+  "checks": [
+    {
+      "name": "initial-schedule-is-a-real-partial-proposal",
+      "passed": true
+    },
+    {
+      "name": "mount-does-not-consult",
+      "passed": true
+    },
+    {
+      "name": "e2e-completion",
+      "passed": false,
+      "reason": "Actual mode: deterministic-fallback; reason: invalid_llm_output\n+ actual - expected\n\n+ 'deterministic-fallback'\n- 'llm-assisted'\n"
+    }
+  ],
+  "observations": [
+    {
+      "phase": "initial-generation",
+      "metrics": {
+        "status": "search-limit",
+        "requiredSessions": 332,
+        "scheduledSessions": 211,
+        "pendingSessions": 121,
+        "totalSections": 166,
+        "completeSections": 108,
+        "resourceConflicts": 0
+      },
+      "courses": 56,
+      "period": "2027-I",
+      "revision": "PA-DEMO-1"
+    },
+    {
+      "phase": "consultation",
+      "mode": "deterministic-fallback",
+      "provider": null,
+      "fallbackReason": "invalid_llm_output",
+      "recommendations": 3,
+      "narrativeCharacters": 247,
+      "simulated": false,
+      "latencyMs": 2171
+    }
+  ],
+  "passed": false
+}

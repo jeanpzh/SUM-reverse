@@ -1,5 +1,6 @@
 // Split-process local acceptance helper. Each phase launches a fresh browser context.
 import assert from 'node:assert/strict'
+import { openProposalMenu, setProposalTitle, readProposalTitle } from './planning-v2-helpers.mjs'
 import { isPlanningCheckboxChecked, setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
@@ -83,7 +84,7 @@ try {
     const movedAssignment = adjusted.assignments.find((item) => item.sessionId === originalAssignment.sessionId)
     assert.equal(movedAssignment.startMinute, nextStart)
 
-    await page.getByLabel('Nombre de la propuesta', { exact: true }).fill('Persistencia E1 sintética')
+    await setProposalTitle(page, 'Persistencia E1 sintética')
     await page.getByRole('button', { name: 'Marcar lista para revisión', exact: true }).click()
     const savePending = page.waitForResponse((response) => response.url().endsWith('/borradores/guardar') && response.request().method() === 'POST')
     await page.locator('#planning-tour-save').click()
@@ -108,15 +109,15 @@ try {
     const concurrent = await page.request.post(`${api}/borradores/guardar`, { data: concurrentBody })
     assert.equal(concurrent.status(), 200, await concurrent.text())
     const advanced = await concurrent.json()
-    await page.getByLabel('Nombre de la propuesta', { exact: true }).fill('Edición local desactualizada')
+    await setProposalTitle(page, 'Edición local desactualizada')
     const stalePending = page.waitForResponse((response) => response.url().endsWith('/borradores/guardar') && response.request().method() === 'POST')
     await page.locator('#planning-tour-save').click()
     const staleResponse = await stalePending
     assert.equal(staleResponse.status(), 409)
     await page.getByRole('alert').filter({ hasText: 'No se guardaron los cambios' }).waitFor()
-    assert.equal(await page.getByLabel('Nombre de la propuesta', { exact: true }).inputValue(), 'Edición local desactualizada')
+    assert.equal(await readProposalTitle(page), 'Edición local desactualizada')
     await page.locator('.planning-scope-header__draft-state').filter({ hasText: 'Cambios sin guardar' }).waitFor()
-    await page.locator('#planning-tour-proposal').screenshot({ path: outputPath })
+    await page.locator('.planning-scope-header').screenshot({ path: outputPath })
     await page.locator('.planning-status-bar').screenshot({ path: resolve(evidenceDir, 'phase-save-result.png') })
     const runtimeProposalId = saved.proposal.proposalId
     await writeFile(statePath, `${JSON.stringify({ id: advanced.id, version: advanced.version, title: advanced.title,
@@ -128,7 +129,7 @@ try {
     const course = (await read(page, '/local/programacion-academica/v1/catalogo')).courses.find((item) => item.courseId === saved.courseId)
     assert.ok(course, 'El curso sintético guardado debe existir en el mismo catálogo')
     const listPending = page.waitForResponse((response) => response.url().endsWith('/borradores') && response.request().method() === 'GET')
-    await page.locator('#planning-tour-proposals').click()
+    await openProposalMenu(page)
     const listResponse = await listPending
     assert.equal(listResponse.status(), 200, await listResponse.text())
     const list = await listResponse.json()
@@ -150,8 +151,8 @@ try {
     assert.equal(await page.getByLabel(`Demanda ${saved.courseId}`, { exact: true }).inputValue(), String(saved.finalDemand))
     assert.deepEqual(resumed.draft.proposal.manuallyAdjustedSectionIds, saved.manuallyAdjustedSectionIds)
     assert.equal(await page.locator('.planning-scope-header__draft-state').getAttribute('data-draft-state'), 'ready-for-review')
-    await page.getByRole('button', { name: 'Detalles de búsqueda', exact: true }).waitFor()
-    await page.locator('#planning-tour-proposal').screenshot({ path: outputPath })
+    await page.locator('.planning-status-bar[data-status]:visible').waitFor()
+    await page.locator('.planning-scope-header').screenshot({ path: outputPath })
 
     // A demand edit invalidates the recovered result and downgrades its state before saving config only.
     const changedDemand = saved.finalDemand + 1
@@ -176,7 +177,7 @@ try {
     freshPage.on('pageerror', (error) => errors.push(error.message))
     await freshPage.goto(`${base}/local/programacion-academica`)
     const freshListPending = freshPage.waitForResponse((response) => response.url().endsWith('/borradores') && response.request().method() === 'GET')
-    await freshPage.locator('#planning-tour-proposals').click()
+    await openProposalMenu(freshPage)
     await freshListPending
     const freshRow = freshPage.locator('.academic-scheduling__saved-row').filter({ hasText: saved.title })
     const freshResumePending = freshPage.waitForResponse((response) => response.url().endsWith(`/borradores/${saved.id}/continuar`))

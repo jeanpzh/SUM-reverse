@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { chromium } from 'playwright'
+import { openNormativa } from './planning-v2-helpers.mjs'
 if (process.env.SUM_REDESIGN_SYNTHETIC !== '1') throw new Error('Own synthetic stack required')
 const base = new URL(process.env.SUM_REDESIGN_BASE || 'http://127.0.0.1:5746')
 if (base.protocol !== 'http:' || base.hostname !== '127.0.0.1' || base.pathname !== '/' || base.search || base.hash || base.username || base.password) throw new Error('Dedicated loopback origin required')
@@ -33,7 +34,7 @@ try {
   await page.locator('#planning-page-title').waitFor()
   await check('no-query-on-mount-or-open', async () => {
     assert.equal(calls.length, 0)
-    if (await page.locator('#planning-toggle-chat').getAttribute('aria-expanded') !== 'true') await page.locator('#planning-toggle-chat').click()
+    await openNormativa(page) // v2: closed by default; the question field is mounted only on the Normativa tab
     await page.getByLabel('Pregunta normativa', { exact: true }).waitFor()
     assert.equal(calls.length, 0)
   })
@@ -48,9 +49,9 @@ try {
     assert.ok(!text.includes('Respuesta extractiva determinista'))
     assert.ok(!text.includes('Sin fuentes normativas aplicables recuperadas'))
     assert.equal(await answer.getByRole('button', { name: /^Fuentes localizadas/ }).count(), 0)
-    await answer.getByRole('button', { name: 'Ver respuesta completa', exact: true }).click()
-    assert.ok((await answer.innerText()).includes('Respuesta extractiva determinista'))
-    await answer.getByRole('button', { name: 'Ver respuesta completa', exact: true }).click()
+    // The concise answer replaced the hidden full-answer toggle: the next step is visible at once.
+    assert.equal(await answer.getByRole('button', { name: 'Ver respuesta completa', exact: true }).count(), 0)
+    assert.ok(text.includes('Siguiente paso:'))
   })
   await check('partial-evidence-keyboard-disclosure-and-metadata', async () => {
     await page.locator('.planning-chat__context-summary').click()
@@ -97,12 +98,15 @@ try {
     await page.locator('#planning-toggle-chat').click()
     assert.equal(await page.getByRole('region', { name: 'Respuesta normativa', exact: true }).count(), 1)
     await page.setViewportSize({ width: 390, height: 844 })
+    await page.waitForFunction(() => document.querySelector('#planning-toggle-chat')?.getAttribute('aria-expanded') === 'false')
+    await page.locator('#planning-toggle-chat').click()
+    assert.equal(await page.getByRole('region', {name:'Respuesta normativa',exact:true}).count(),1)
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
     await page.screenshot({ path: resolve(evidence, 'chat-partial-mobile-390.png') })
     await page.setViewportSize({ width: 720, height: 500 })
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
     await page.setViewportSize({ width: 1440, height: 1000 })
-    await page.locator('#planning-toggle-chat').click()
+    await page.waitForFunction(() => document.querySelector('#planning-toggle-chat')?.getAttribute('aria-expanded') === 'false')
   })
   await check('advisor-shows-measured-impact-and-keeps-mutation-explicit', async () => {
     await page.getByRole('button', { name: /Seleccionar los .* cursos del catálogo/ }).click()
@@ -112,11 +116,12 @@ try {
     await page.getByRole('button', { name: 'Consultar consejero', exact: true }).click()
     await page.locator('[data-advisor-impact="verified"]').waitFor({ timeout: 45000 })
     const impact = page.getByRole('status', { name: 'Impacto de la selección', exact: true })
-    assert.ok((await impact.innerText()).includes('Actual'))
-    assert.ok((await impact.innerText()).includes('Simulada'))
+    // v2 renders column headers uppercase (innerText follows text-transform), so assert the accessible column names instead
+    assert.equal(await impact.getByRole('columnheader', { name: 'Actual', exact: true }).count(), 1)
+    assert.equal(await impact.getByRole('columnheader', { name: 'Simulada', exact: true }).count(), 1)
     assert.equal(await impact.getByRole('rowheader').count(), 2)
-    const dialog = page.getByRole('dialog', { name: 'Consejero de planificación', exact: true })
-    assert.ok((await dialog.innerText()).includes('Recomendaciones'))
+    const dialog = page.getByRole('tabpanel', { name: 'Consejero', exact: true }) // v2: the advisor is a rail tab (or Sheet), not a dialog
+    assert.equal(await dialog.getByRole('group', { name: 'Recomendaciones verificables', exact: true }).count(), 1) // heading text is uppercase in v2, so assert the labelled group
     await page.screenshot({ path: resolve(evidence, 'advisor-impact-1440.png') })
   })
   assert.deepEqual(errors, [])

@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Horario — tabla y detalle</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#ffffff}
+a{color:#0a0a0a}a:hover{color:#545454}
+.app{--ink:#0a0a0a;--steel:#545454;--fog:#6b6b6b;--dove:#d5d9e2;--line:#8a8f99;--cream:#f9f8f6;--sand:#f2ede5;--ok:#1a7f37;--okbg:#eef6ef;--warn:#8a5a00;--warnbg:#fbf3e2;--err:#b42318;--errbg:#fdeeec;font-family:Inter,ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:20px;color:var(--ink);background:#fff;font-feature-settings:"cv11","ss01"}
+.mono{font-family:"Geist Mono",ui-monospace,monospace;letter-spacing:-0.01em}
+.eyebrow{font-family:"Geist Mono",ui-monospace,monospace;font-size:11px;line-height:16px;letter-spacing:0.04em;text-transform:uppercase;color:var(--fog)}
+.btn{font:inherit;font-weight:500;font-size:14px;line-height:20px;border-radius:9999px;padding:6px 14px;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;text-decoration:none}
+.btn-primary{background:var(--ink);color:#fff}
+.btn-ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--dove)}
+.btn-ghost:hover{box-shadow:inset 0 0 0 1px var(--line)}
+.btn-text{background:transparent;color:var(--ink);padding:6px 8px;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--dove)}
+.icon-btn{width:32px;height:32px;border-radius:9999px;border:0;background:transparent;display:inline-flex;align-items:center;justify-content:center;color:var(--steel);cursor:pointer}
+.icon-btn:hover{background:var(--cream);color:var(--ink)}
+:focus-visible{outline:2px solid #0a0a0a;outline-offset:2px}
+.field{font:inherit;height:32px;border-radius:6px;border:1px solid var(--line);padding:0 10px;background:#fff;color:var(--ink);box-sizing:border-box}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;line-height:16px;font-weight:500;border-radius:9999px;padding:2px 8px}
+.st{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500}
+.dot{width:8px;height:8px;border-radius:9999px;display:inline-block;flex:none}
+.nav a{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:9999px;text-decoration:none;color:var(--steel);font-weight:500}
+.nav a:hover{color:var(--ink);background:var(--cream)}
+.nav a[aria-current="page"]{color:var(--ink);background:var(--sand)}
+table{border-collapse:collapse;width:100%}
+th{font-family:"Geist Mono",ui-monospace,monospace;font-size:11px;line-height:16px;letter-spacing:0.04em;text-transform:uppercase;color:var(--fog);font-weight:400;text-align:left;padding:8px 12px;border-bottom:1px solid var(--dove);white-space:nowrap;background:#fff;position:sticky;top:0}
+td{padding:9px 12px;border-bottom:1px solid #eceef2;vertical-align:middle;white-space:nowrap}
+tr.sel td{background:var(--sand)}
+tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--ink)}
+tbody tr:hover td{background:var(--cream)}
+.muted{color:var(--fog)}
+.vr{width:1px;height:16px;background:var(--dove)}
+</style>
+</helmet>
+<div class="app" style="display: flex; flex-direction: column; min-height: 1000px">
+  <header style="height: 52px; display: flex; align-items: center; gap: 16px; padding: 0 16px; border-bottom: 1px solid #d5d9e2; flex-wrap: wrap">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="1" y="1" width="18" height="18" rx="9" fill="#0a0a0a"></rect><path d="M6 7h8M6 10h8M6 13h5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"></path></svg>
+      <span style="font-weight: 500">Planificación académica</span>
+    </div>
+    <span class="vr"></span>
+    <button class="btn btn-ghost" style="padding: 4px 12px" aria-haspopup="listbox"><span class="mono" style="font-size: 12px; color: #6b6b6b">FISI</span> Sistemas · 2027-I <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" stroke="currentColor" fill="none" stroke-width="1.5"></path></svg></button>
+    <button class="btn btn-ghost" style="padding: 4px 12px" aria-haspopup="dialog" id="planning-tour-proposals">Propuesta base 2027-I <span class="chip mono" style="background: #f2ede5">v4 · Borrador</span> <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" stroke="currentColor" fill="none" stroke-width="1.5"></path></svg></button>
+    <div style="flex: 1 1 40px"></div>
+    <label style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 9999px; background: #f9f8f6; color: #6b6b6b; min-width: 260px">
+      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="6" cy="6" r="4.5" stroke="currentColor" fill="none" stroke-width="1.5"></circle><path d="M9.5 9.5L13 13" stroke="currentColor" stroke-width="1.5"></path></svg>
+      <input aria-label="Ir a curso, docente o ambiente" placeholder="Ir a curso, docente o ambiente" style="border: 0; background: transparent; font: inherit; flex: 1; outline: none; color: #0a0a0a">
+      <span class="mono" style="font-size: 11px; border: 1px solid #d5d9e2; border-radius: 4px; padding: 0 4px">⌘K</span>
+    </label>
+    <button class="icon-btn" aria-label="Guía"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" stroke="currentColor" fill="none" stroke-width="1.5"></circle><path d="M6.2 6.2a1.9 1.9 0 113 1.5c-.7.4-1.2.8-1.2 1.6M8 11.5v.01" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round"></path></svg></button>
+    <button class="icon-btn" aria-label="Asistente (abierto)" aria-pressed="true" id="planning-toggle-chat" style="background: #f2ede5; color: #0a0a0a"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="2" stroke="currentColor" fill="none" stroke-width="1.5"></rect><path d="M10 2.5v11" stroke="currentColor" stroke-width="1.5"></path></svg></button>
+  </header>
+
+  <div style="display: flex; flex: 1; min-height: 0; flex-wrap: wrap">
+    <nav class="nav" aria-label="Etapas de la propuesta" style="flex: 0 0 216px; padding: 20px 12px; border-right: 1px solid #d5d9e2; display: flex; flex-direction: column; gap: 2px; box-sizing: border-box">
+      <div class="eyebrow" style="padding: 0 10px 8px">Preparación</div>
+      <a href="Preparation.dc.html">Oferta de cursos <span class="muted" aria-label="completado">✓</span></a>
+      <a href="Resources.dc.html">Docentes y ambientes <span class="muted" aria-label="completado">✓</span></a>
+      <div class="eyebrow" style="padding: 20px 10px 8px">Programación</div>
+      <a href="Main.dc.html" aria-current="page">Horario <span class="chip mono" style="background: #fbf3e2; color: #8a5a00; padding: 0 6px">6</span></a>
+      <a href="Approval.dc.html">Revisión docente</a>
+      <a href="Approval.dc.html">Aprobación y publicación</a>
+      <div style="flex: 1"></div>
+      <div style="padding: 12px 10px 0; border-top: 1px solid #eceef2; display: flex; flex-direction: column; gap: 8px">
+        <span class="mono" style="font-size: 11px; color: #6b6b6b" title="Prototipo local con datos sintéticos; no publica en el SUM.">Datos sintéticos · local</span>
+        <a href="#" style="padding: 0; color: #545454">← Módulos</a>
+      </div>
+    </nav>
+
+    <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+      <div style="padding: 24px 32px 16px; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; justify-content: space-between">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span class="eyebrow">Propuesta base 2027-I · versión 4 · <span style="color: #8a5a00">cambios sin guardar</span></span>
+          <h1 id="planning-page-title" style="margin: 0; font-weight: 400; font-size: 30px; line-height: 36px; letter-spacing: -0.75px">Horario</h1>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap">
+          <button class="btn btn-text">Reintentar búsqueda</button>
+          <button class="btn btn-ghost" id="planning-tour-save">Guardar</button>
+          <button class="btn btn-primary" id="planning-tour-primary">Revisar 6 pendientes</button>
+        </div>
+      </div>
+
+      <section aria-label="Resultado" style="margin: 0 32px; padding: 10px 16px; border-radius: 12px; background: #fbf3e2; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px">
+        <span class="st" role="status" id="academic-scheduling-result" style="color: #8a5a00"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" stroke="currentColor" fill="none" stroke-width="1.5"></circle><path d="M8 1.5a6.5 6.5 0 010 13z" fill="currentColor"></path></svg>Programación parcial</span>
+        <span class="vr"></span>
+        <span><b style="font-weight: 500">142</b> de 148 secciones completas</span>
+        <span class="vr"></span>
+        <span><b style="font-weight: 500">6</b> por completar</span>
+        <span class="vr"></span>
+        <span>0 cruces en lo asignado</span>
+        <span style="flex: 1"></span>
+        <button class="btn btn-text" style="padding: 2px 4px">Ver avisos (3)</button>
+      </section>
+
+      <div style="padding: 16px 32px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+        <input class="field" aria-label="Buscar sección" placeholder="Buscar curso, sección o aula" style="flex: 0 1 280px; min-width: 192px">
+        <select class="field" aria-label="Docente"><option>Todos los docentes</option></select>
+        <span class="muted" style="font-size: 13px">148 secciones · 6 pendientes primero</span>
+        <span style="flex: 1"></span>
+        <div role="group" aria-label="Vista" style="display: inline-flex; padding: 2px; border-radius: 9999px; background: #f9f8f6">
+          <a class="btn" href="Main.dc.html" aria-current="page" style="background: #0a0a0a; color: #fff; padding: 4px 14px">Tabla</a>
+          <a class="btn" href="Week.dc.html" style="color: #545454; padding: 4px 14px">Semana</a>
+        </div>
+      </div>
+
+      <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; border-top: 1px solid #d5d9e2">
+        <div style="overflow: auto; max-height: 360px">
+          <table aria-label="Secciones de la propuesta">
+            <thead><tr><th>Curso</th><th>Secc.</th><th>Componente</th><th>Docente</th><th>Ambiente</th><th>Día y hora</th><th>Estado</th></tr></thead>
+            <tbody>
+              <tr class="sel" aria-selected="true"><td><span class="mono muted" style="font-size: 12px">SI-404</span> Ingeniería de Software II</td><td class="mono">2</td><td>Lab.</td><td>R. Salazar</td><td class="muted"><i>Por asignar</i></td><td class="muted">—</td><td><span class="st" style="color: #8a5a00"><span class="dot" style="background: #b7791f"></span>Parcial</span></td></tr>
+              <tr><td><span class="mono muted" style="font-size: 12px">SI-312</span> Redes de Computadoras</td><td class="mono">1</td><td>Lab.</td><td class="muted"><i>Por asignar</i></td><td class="muted"><i>Por asignar</i></td><td class="muted">—</td><td><span class="st" style="color: #b42318"><span class="dot" style="border: 1.5px solid #b42318; box-sizing: border-box"></span>Pendiente</span></td></tr>
+              <tr><td><span class="mono muted" style="font-size: 12px">SI-312</span> Redes de Computadoras</td><td class="mono">2</td><td>Lab.</td><td class="muted"><i>Por asignar</i></td><td class="muted"><i>Por asignar</i></td><td class="muted">—</td><td><span class="st" style="color: #b42318"><span class="dot" style="border: 1.5px solid #b42318; box-sizing: border-box"></span>Pendiente</span></td></tr>
+              <tr><td><span class="mono muted" style="font-size: 12px">SI-208</span> Sistemas Operativos</td><td class="mono">3</td><td>Teoría</td><td>D. Quispe</td><td>Aula 205</td><td class="mono">Mar 14:00–16:00</td><td><span class="st" style="color: #8a5a00"><span class="dot" style="background: #b7791f"></span>Parcial</span></td></tr>
+              <tr><td><span class="mono muted" style="font-size: 12px">SI-101</span> Algorítmica I</td><td class="mono">1</td><td>Teoría</td><td>M. Huamán</td><td>Aula 104</td><td class="mono">Lun 08:00–10:00</td><td><span class="st" style="color: #1a7f37"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5l2.5 2.5L10 3.5" stroke="currentColor" fill="none" stroke-width="1.8"></path></svg>Completa</span></td></tr>
+              <tr><td><span class="mono muted" style="font-size: 12px">SI-101</span> Algorítmica I</td><td class="mono">1</td><td>Lab.</td><td>M. Huamán</td><td>Lab. 3</td><td class="mono">Mié 10:00–12:00</td><td><span class="st" style="color: #1a7f37"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5l2.5 2.5L10 3.5" stroke="currentColor" fill="none" stroke-width="1.8"></path></svg>Completa</span></td></tr>
+              <tr><td><span class="mono muted" style="font-size: 12px">SI-215</span> Base de Datos II</td><td class="mono">1</td><td>Teoría</td><td>L. Torres</td><td>Aula 201</td><td class="mono">Jue 16:00–18:00</td><td><span class="st" style="color: #1a7f37"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5l2.5 2.5L10 3.5" stroke="currentColor" fill="none" stroke-width="1.8"></path></svg>Completa</span></td></tr>
+              <tr><td><span class="mono muted" style="font-size: 12px">SI-306</span> Investigación Operativa</td><td class="mono">2</td><td>Práctica</td><td>C. Rojas</td><td>Aula 110</td><td class="mono">Vie 08:00–10:00</td><td><span class="st" style="color: #1a7f37"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5l2.5 2.5L10 3.5" stroke="currentColor" fill="none" stroke-width="1.8"></path></svg>Completa</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <section aria-labelledby="detail-title" style="border-top: 1px solid #d5d9e2; padding: 0 32px 24px; position: relative">
+          <div aria-hidden="true" style="width: 32px; height: 3px; border-radius: 9999px; background: #d5d9e2; margin: 6px auto 10px"></div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+            <div style="display: flex; flex-direction: column; gap: 2px">
+              <span class="eyebrow">SI-404 · Sección 2 · 40 vacantes</span>
+              <h2 id="detail-title" style="margin: 0; font-weight: 400; font-size: 24px; line-height: 32px; letter-spacing: -0.6px">Ingeniería de Software II</h2>
+            </div>
+            <div style="display: flex; gap: 8px">
+              <a class="btn btn-ghost" href="Week.dc.html">Ver en Semana</a>
+              <button class="btn btn-ghost">Editar horario</button>
+              <button class="icon-btn" aria-label="Cerrar detalle"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.5"></path></svg></button>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px">
+            <div style="background: #f9f8f6; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+              <div style="display: flex; justify-content: space-between"><b style="font-weight: 500">Teoría</b><span class="st" style="color: #1a7f37">✓ Asignada</span></div>
+              <dl style="margin: 0; display: grid; grid-template-columns: 88px 1fr; gap: 4px 12px">
+                <dt class="muted">Docente</dt><dd style="margin: 0">R. Salazar</dd>
+                <dt class="muted">Ambiente</dt><dd style="margin: 0">Aula 203 · 45</dd>
+                <dt class="muted">Horario</dt><dd class="mono" style="margin: 0">Lun 10:00–12:00 · Mié 10:00–12:00</dd>
+              </dl>
+            </div>
+            <div style="background: #f9f8f6; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+              <div style="display: flex; justify-content: space-between"><b style="font-weight: 500">Laboratorio</b><span class="st" style="color: #b42318">○ Pendiente</span></div>
+              <p style="margin: 0">Sin ambiente de laboratorio con capacidad para 40 en las franjas libres del docente.</p>
+              <p class="muted" style="margin: 0; font-size: 12px; line-height: 16px">Causa devuelta por el motor. Un límite de búsqueda no prueba que no exista solución.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <aside aria-label="Consejero de planificación" style="flex: 0 0 360px; border-left: 1px solid #d5d9e2; display: flex; flex-direction: column; background: #fff; box-sizing: border-box">
+      <div style="padding: 16px 20px 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #eceef2">
+        <div role="tablist" aria-label="Asistencia" style="display: inline-flex; padding: 2px; border-radius: 9999px; background: #f9f8f6">
+          <button role="tab" aria-selected="true" class="btn" style="background: #0a0a0a; color: #fff; padding: 4px 12px; font-size: 13px">Consejero</button>
+          <button role="tab" aria-selected="false" class="btn" style="background: transparent; color: #545454; padding: 4px 12px; font-size: 13px">Normativa</button>
+        </div>
+        <div style="display: flex">
+          <button class="icon-btn" aria-label="Ancho completo"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 5V2h3M12 5V2H9M2 9v3h3M12 9v3H9" stroke="currentColor" fill="none" stroke-width="1.5"></path></svg></button>
+          <button class="icon-btn" aria-label="Cerrar panel"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.5"></path></svg></button>
+        </div>
+      </div>
+      <div id="planning-chat-body" style="padding: 20px; display: flex; flex-direction: column; gap: 20px; overflow: auto">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span class="eyebrow">Análisis determinista local · v4</span>
+          <h2 style="margin: 0; font-weight: 400; font-size: 24px; line-height: 30px; letter-spacing: -0.6px">6 secciones sin cubrir por falta de laboratorio y carga docente</h2>
+        </div>
+        <ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px">
+          <li style="display: grid; grid-template-columns: 20px 1fr; gap: 8px"><span class="mono muted">01</span><span><b style="font-weight: 500">Capacidad docente insuficiente</b> en Redes de Computadoras: 2 secciones de laboratorio sin docente habilitado con horas libres.</span></li>
+          <li style="display: grid; grid-template-columns: 20px 1fr; gap: 8px"><span class="mono muted">02</span><span><b style="font-weight: 500">Laboratorios saturados</b> de lunes a viernes en la mañana para grupos de 40.</span></li>
+        </ol>
+        <fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+          <legend class="eyebrow" style="padding: 0 0 8px">Recomendaciones verificables</legend>
+          <label style="display: grid; grid-template-columns: 20px 1fr; gap: 10px; padding: 12px; border-radius: 12px; background: #f9f8f6; cursor: pointer"><input type="checkbox" checked style="margin: 2px 0 0; accent-color: #0a0a0a; width: 16px; height: 16px"><span><span class="chip mono" style="background: #fff; box-shadow: inset 0 0 0 1px #d5d9e2">Carga docente</span><br><span style="display: inline-block; margin-top: 6px">Aumentar la carga de D. Quispe de 16 a 20 h semanales.</span></span></label>
+          <label style="display: grid; grid-template-columns: 20px 1fr; gap: 10px; padding: 12px; border-radius: 12px; background: #f9f8f6; cursor: pointer"><input type="checkbox" checked style="margin: 2px 0 0; accent-color: #0a0a0a; width: 16px; height: 16px"><span><span class="chip mono" style="background: #fff; box-shadow: inset 0 0 0 1px #d5d9e2">Habilitación</span><br><span style="display: inline-block; margin-top: 6px">Habilitar a R. Salazar para Redes de Computadoras.</span></span></label>
+          <label style="display: grid; grid-template-columns: 20px 1fr; gap: 10px; padding: 12px; border-radius: 12px; background: #f9f8f6; cursor: pointer"><input type="checkbox" style="margin: 2px 0 0; accent-color: #0a0a0a; width: 16px; height: 16px"><span><span class="chip mono" style="background: #fff; box-shadow: inset 0 0 0 1px #d5d9e2">Excepción horaria</span><br><span style="display: inline-block; margin-top: 6px">Permitir sábado: habilitar de 08:00 a 13:00.</span></span></label>
+        </fieldset>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <button class="btn btn-ghost" style="justify-content: center">Aplicar 2 seleccionadas y regenerar</button>
+          <p class="muted" style="margin: 0; font-size: 12px; line-height: 16px">El consejero no asigna horarios: las recomendaciones modifican el workspace y el motor determinista regenera la propuesta. La cobertura se mide después de regenerar.</p>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

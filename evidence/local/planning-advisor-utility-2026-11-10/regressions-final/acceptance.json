@@ -1,0 +1,22 @@
+{
+  "source": "Own synthetic React/NestJS/Python stack, public corpus, LLM disabled; declared transport failure/delay injections",
+  "base": "http://127.0.0.1:7146",
+  "results": [
+    {
+      "name": "advisor-selection-invalidates-impact",
+      "passed": true
+    },
+    {
+      "name": "advisor-applies-only-on-command-and-regenerates",
+      "passed": true
+    },
+    {
+      "name": "advisor-retry-preserves-requested-selection",
+      "passed": true
+    },
+    {
+      "name": "advisor-retry-preserves-empty-selection",
+      "passed": true
+    }
+  ]
+}

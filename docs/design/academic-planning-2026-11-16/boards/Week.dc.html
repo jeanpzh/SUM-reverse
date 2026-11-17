@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Horario — Semana y ajuste</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#ffffff}
+a{color:#0a0a0a}a:hover{color:#545454}
+.app{--ink:#0a0a0a;--steel:#545454;--fog:#6b6b6b;--dove:#d5d9e2;--line:#8a8f99;--cream:#f9f8f6;--sand:#f2ede5;font-family:Inter,ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:20px;color:var(--ink);background:#fff}
+.mono{font-family:"Geist Mono",ui-monospace,monospace;letter-spacing:-0.01em}
+.eyebrow{font-family:"Geist Mono",ui-monospace,monospace;font-size:11px;line-height:16px;letter-spacing:0.04em;text-transform:uppercase;color:var(--fog)}
+.btn{font:inherit;font-weight:500;font-size:14px;line-height:20px;border-radius:9999px;padding:6px 14px;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;text-decoration:none}
+.btn-primary{background:var(--ink);color:#fff}
+.btn-ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--dove)}
+.icon-btn{width:32px;height:32px;border-radius:9999px;border:0;background:transparent;display:inline-flex;align-items:center;justify-content:center;color:var(--steel);cursor:pointer}
+:focus-visible{outline:2px solid #0a0a0a;outline-offset:2px}
+.field{font:inherit;height:32px;border-radius:6px;border:1px solid var(--line);padding:0 10px;background:#fff;color:var(--ink);box-sizing:border-box;width:100%}
+.muted{color:var(--fog)}
+.nav a{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:9999px;text-decoration:none;color:var(--steel);font-weight:500}
+.nav a[aria-current="page"]{color:var(--ink);background:var(--sand)}
+.grid{display:grid;grid-template-columns:56px repeat(6,minmax(0,1fr));grid-template-rows:32px repeat(12,40px);position:relative}
+.hd{font-family:"Geist Mono",ui-monospace,monospace;font-size:11px;letter-spacing:0.04em;text-transform:uppercase;color:var(--fog);padding:8px;border-bottom:1px solid var(--dove)}
+.hr{font-family:"Geist Mono",ui-monospace,monospace;font-size:11px;color:var(--fog);padding:0 8px;transform:translateY(-8px);text-align:right}
+.cell{border-left:1px solid #eceef2;border-bottom:1px solid #f1f2f5}
+.blk{margin:2px 3px;border-radius:8px;padding:6px 8px;font-size:12px;line-height:16px;overflow:hidden;display:flex;flex-direction:column;gap:2px;border:0;text-align:left;font-family:inherit;color:#0a0a0a;cursor:pointer}
+.t{background:#f9f8f6;box-shadow:inset 0 0 0 1px #d5d9e2}
+.l{background:#f2ede5}
+.p{background:#fff;box-shadow:inset 0 0 0 1px #8a8f99}
+.lbl{font-family:"Geist Mono",ui-monospace,monospace;font-size:10px;letter-spacing:0.04em;text-transform:uppercase;color:#545454}
+</style>
+</helmet>
+<div class="app" style="display: flex; flex-direction: column; min-height: 1000px">
+  <header style="height: 52px; display: flex; align-items: center; gap: 16px; padding: 0 16px; border-bottom: 1px solid #d5d9e2">
+    <span style="font-weight: 500">Planificación académica</span>
+    <span style="width: 1px; height: 16px; background: #d5d9e2"></span>
+    <span>Sistemas · 2027-I</span>
+    <span class="muted">/</span>
+    <span>Propuesta base 2027-I <span class="mono muted" style="font-size: 12px">v4 · Borrador</span></span>
+  </header>
+  <div style="display: flex; flex: 1; flex-wrap: wrap">
+    <nav class="nav" aria-label="Etapas de la propuesta" style="flex: 0 0 216px; padding: 20px 12px; border-right: 1px solid #d5d9e2; display: flex; flex-direction: column; gap: 2px; box-sizing: border-box">
+      <div class="eyebrow" style="padding: 0 10px 8px">Preparación</div>
+      <a href="Preparation.dc.html">Oferta de cursos <span class="muted">✓</span></a>
+      <a href="Resources.dc.html">Docentes y ambientes <span class="muted">✓</span></a>
+      <div class="eyebrow" style="padding: 20px 10px 8px">Programación</div>
+      <a href="Main.dc.html" aria-current="page">Horario</a>
+      <a href="Approval.dc.html">Revisión docente</a>
+      <a href="Approval.dc.html">Aprobación y publicación</a>
+    </nav>
+    <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+      <div style="padding: 24px 32px 16px; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; justify-content: space-between">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span class="eyebrow">Propuesta base 2027-I · versión 4 · ajuste en vista previa</span>
+          <h1 style="margin: 0; font-weight: 400; font-size: 30px; line-height: 36px; letter-spacing: -0.75px">Horario</h1>
+        </div>
+        <div style="display: flex; gap: 8px">
+          <button class="btn btn-ghost">Guardar</button>
+          <button class="btn btn-ghost">Revisar 6 pendientes</button>
+        </div>
+      </div>
+      <div style="padding: 0 32px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+        <select class="field" aria-label="Docente" style="width: 220px"><option>D. Quispe</option></select>
+        <span class="muted" style="font-size: 13px">Semana de D. Quispe · 16 de 20 h asignadas</span>
+        <span style="flex: 1"></span>
+        <div role="group" aria-label="Vista" style="display: inline-flex; padding: 2px; border-radius: 9999px; background: #f9f8f6">
+          <a class="btn" href="Main.dc.html" style="color: #545454; padding: 4px 14px">Tabla</a>
+          <a class="btn" href="Week.dc.html" aria-current="page" style="background: #0a0a0a; color: #fff; padding: 4px 14px">Semana</a>
+        </div>
+      </div>
+      <div style="padding: 0 32px 32px; overflow-x: auto">
+        <div class="grid" role="grid" aria-label="Semana de D. Quispe" style="min-width: 720px">
+          <div></div><div class="hd">Lun</div><div class="hd">Mar</div><div class="hd">Mié</div><div class="hd">Jue</div><div class="hd">Vie</div><div class="hd">Sáb <span style="text-transform: none">· 08–13</span></div>
+          <div class="hr" style="grid-row: 2; grid-column: 1">08:00</div>
+          <div class="hr" style="grid-row: 4; grid-column: 1">10:00</div>
+          <div class="hr" style="grid-row: 6; grid-column: 1">12:00</div>
+          <div class="hr" style="grid-row: 8; grid-column: 1">14:00</div>
+          <div class="hr" style="grid-row: 10; grid-column: 1">16:00</div>
+          <div class="hr" style="grid-row: 12; grid-column: 1">18:00</div>
+          <div class="cell" style="grid-column: 2; grid-row: 2 / 14"></div>
+          <div class="cell" style="grid-column: 3; grid-row: 2 / 14"></div>
+          <div class="cell" style="grid-column: 4; grid-row: 2 / 14"></div>
+          <div class="cell" style="grid-column: 5; grid-row: 2 / 14"></div>
+          <div class="cell" style="grid-column: 6; grid-row: 2 / 14"></div>
+          <div class="cell" style="grid-column: 7; grid-row: 2 / 7; background: #fff"></div>
+          <div class="cell" style="grid-column: 7; grid-row: 7 / 14; background: repeating-linear-gradient(135deg, #f9f8f6 0 6px, #ffffff 6px 12px)" title="Fuera de la disponibilidad configurada"></div>
+
+          <button class="blk t" style="grid-column: 2; grid-row: 2 / 4"><span class="lbl">Teoría</span><b style="font-weight: 500">Base de Datos II</b><span class="muted">Secc. 1 · Aula 201</span></button>
+          <button class="blk l" style="grid-column: 3; grid-row: 4 / 6"><span class="lbl">Lab.</span><b style="font-weight: 500">Base de Datos II</b><span class="muted">Secc. 1 · Lab. 2</span></button>
+          <button class="blk t" style="grid-column: 4; grid-row: 2 / 4"><span class="lbl">Teoría</span><b style="font-weight: 500">Base de Datos II</b><span class="muted">Secc. 1 · Aula 201</span></button>
+          <button class="blk p" style="grid-column: 6; grid-row: 6 / 8"><span class="lbl">Práctica</span><b style="font-weight: 500">Sistemas Operativos</b><span class="muted">Secc. 1 · Aula 110</span></button>
+          <button class="blk t" aria-label="Bloque actual: Sistemas Operativos, martes 14:00 a 16:00" style="grid-column: 3; grid-row: 8 / 10; box-shadow: inset 0 0 0 2px #0a0a0a"><span class="lbl">Actual · Teoría</span><b style="font-weight: 500">Sistemas Operativos</b><span class="muted">Secc. 3 · Aula 205</span></button>
+          <div aria-label="Ubicación propuesta: jueves 08:00 a 10:00" role="note" style="grid-column: 5; grid-row: 2 / 4; margin: 2px 3px; border-radius: 8px; border: 2px dashed #0a0a0a; background: rgba(242,237,229,0.6); padding: 6px 8px; font-size: 12px; line-height: 16px; display: flex; flex-direction: column; gap: 2px"><span class="lbl" style="color: #0a0a0a">Propuesto · sin validar</span><b style="font-weight: 500">Sistemas Operativos</b><span class="muted">Secc. 3 · Aula 205</span></div>
+        </div>
+        <p class="muted" style="margin: 12px 0 0; font-size: 12px; line-height: 16px">Arrastrar un bloque solo rellena el formulario. El sábado aparece porque tiene disponibilidad configurada; la zona rayada queda fuera de ella.</p>
+      </div>
+    </main>
+    <aside aria-labelledby="adj-title" style="flex: 0 0 360px; border-left: 1px solid #d5d9e2; padding: 24px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start">
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <span class="eyebrow">SI-208 · Sección 3 · Teoría</span>
+          <h2 id="adj-title" style="margin: 0; font-weight: 400; font-size: 24px; line-height: 30px; letter-spacing: -0.6px">Ajustar bloque</h2>
+        </div>
+        <button class="icon-btn" aria-label="Descartar ajuste"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.5"></path></svg></button>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 24px 1fr; align-items: center; gap: 8px; padding: 12px; background: #f9f8f6; border-radius: 12px">
+        <div><div class="eyebrow">Actual</div><div class="mono" style="font-size: 13px">Mar 14:00–16:00</div><div class="muted" style="font-size: 12px">Aula 205</div></div>
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="#0a0a0a" fill="none" stroke-width="1.5"></path></svg>
+        <div><div class="eyebrow">Propuesto</div><div class="mono" style="font-size: 13px">Jue 08:00–10:00</div><div class="muted" style="font-size: 12px">Aula 205</div></div>
+      </div>
+      <form style="display: flex; flex-direction: column; gap: 14px">
+        <label style="display: flex; flex-direction: column; gap: 6px"><span style="font-weight: 500">Docente</span><select class="field"><option>D. Quispe</option></select></label>
+        <label style="display: flex; flex-direction: column; gap: 6px"><span style="font-weight: 500">Ambiente</span><select class="field"><option>Aula 205 · 45</option></select></label>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+          <label style="display: flex; flex-direction: column; gap: 6px"><span style="font-weight: 500">Día</span><select class="field"><option>Jueves</option></select></label>
+          <label style="display: flex; flex-direction: column; gap: 6px"><span style="font-weight: 500">Inicio</span><select class="field"><option>08:00</option></select></label>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid #eceef2; border-bottom: 1px solid #eceef2"><span class="muted">Duración</span><span class="mono">2 h · no editable</span></div>
+        <p style="margin: 0; font-size: 13px; line-height: 18px; color: #545454">Vista previa local. El servidor valida docente, ambiente y cruces al aplicar; si lo rechaza, el horario guardado no cambia.</p>
+        <div style="display: flex; gap: 8px">
+          <button type="button" class="btn btn-primary">Aplicar ajuste</button>
+          <button type="button" class="btn btn-ghost">Descartar</button>
+        </div>
+      </form>
+      <div role="alert" style="border-radius: 12px; background: #fdeeec; padding: 12px; display: flex; gap: 10px; color: #b42318">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" style="flex: none; margin-top: 2px"><circle cx="8" cy="8" r="6.5" stroke="currentColor" fill="none" stroke-width="1.5"></circle><path d="M8 4.5v4M8 11v.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg>
+        <div style="display: flex; flex-direction: column; gap: 2px"><b style="font-weight: 500">Estado de rechazo (ejemplo)</b><span style="color: #0a0a0a">El servidor rechazó el ajuste: Aula 205 está ocupada el jueves 08:00–10:00. Se conserva el horario guardado.</span></div>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

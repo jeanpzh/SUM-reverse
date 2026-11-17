@@ -1,0 +1,72 @@
+{
+  "source": "Actual UI -> own synthetic NestJS/Python; no model calls or transport mocking",
+  "before": {
+    "components": 211,
+    "required": 332,
+    "completeSections": 108,
+    "totalSections": 166,
+    "pendingComponents": 121,
+    "status": "search-limit"
+  },
+  "defaultSimulation": {
+    "currentScheduledSessions": 211,
+    "projectedScheduledSessions": 243,
+    "requiredSessions": 332,
+    "currentCompleteSections": 108,
+    "projectedCompleteSections": 124,
+    "totalSections": 166,
+    "recommendationIds": [
+      "rec-enable-planning-window"
+    ],
+    "solverStatus": "search-limit"
+  },
+  "invalidated": {
+    "applyDisabled": true,
+    "describedBy": "_r_1k_",
+    "selectedIds": [
+      "rec-enable-planning-window",
+      "rec-change-delivery-mode"
+    ]
+  },
+  "simulation": {
+    "currentScheduledSessions": 211,
+    "projectedScheduledSessions": 243,
+    "requiredSessions": 332,
+    "currentCompleteSections": 108,
+    "projectedCompleteSections": 124,
+    "totalSections": 166,
+    "recommendationIds": [
+      "rec-change-delivery-mode",
+      "rec-enable-planning-window"
+    ],
+    "solverStatus": "search-limit"
+  },
+  "after": {
+    "components": 243,
+    "required": 332,
+    "completeSections": 124,
+    "totalSections": 166,
+    "pendingComponents": 89,
+    "status": "search-limit"
+  },
+  "appliedRequest": {
+    "planningPolicy": {
+      "revision": "FISI-PLANNING-1",
+      "period": "2027-I",
+      "allowAfternoon": true,
+      "allowSaturday": true
+    },
+    "deliveryModes": [
+      "continuous",
+      "split"
+    ]
+  },
+  "changedTeacherLoads": [],
+  "gain": {
+    "components": 32,
+    "completeSections": 16
+  },
+  "visibleOutcome": 1,
+  "persisted": true,
+  "errors": []
+}

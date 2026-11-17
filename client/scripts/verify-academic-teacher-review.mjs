@@ -1,5 +1,6 @@
 // Two-phase browser acceptance against the dedicated, explicitly synthetic 5280 service only.
 import assert from 'node:assert/strict'
+import { gotoStage, openProposalMenu, setProposalTitle } from './planning-v2-helpers.mjs'
 import { setPlanningCheckbox } from './planning-checkboxes.mjs'
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
@@ -40,7 +41,7 @@ try {
     return (await response.json()).data.offer
   }
   const stage = async (name, etapa) => {
-    await page.locator('.planning-root').getByRole('link', { name: name === 'Preparación' ? 'Resumen' : name, exact: true }).click()
+    await gotoStage(page, name)
     await page.waitForURL(new RegExp(`etapa=${etapa}(?:&|$)`))
   }
   const offerBefore = await readOffer()
@@ -59,7 +60,7 @@ try {
     assert.equal(proposal.status, 'complete')
     assert.ok(proposal.assignments.length)
     const title = `Revisión docente E1 sintética ${Date.now()}`
-    await page.getByLabel('Nombre de la propuesta', { exact: true }).fill(title)
+    await setProposalTitle(page, title)
     const save = page.waitForResponse((response) => response.url().endsWith('/borradores/guardar') && response.request().method() === 'POST')
     await page.locator('#planning-tour-save').click()
     const saveResponse = await save
@@ -131,7 +132,7 @@ try {
   } else {
     const saved = JSON.parse(await readFile(statePath, 'utf8'))
     const list = page.waitForResponse((response) => response.url().endsWith('/borradores') && response.request().method() === 'GET')
-    await page.locator('#planning-tour-proposals').click()
+    await openProposalMenu(page)
     await json(await list)
     const row = page.locator('.academic-scheduling__saved-row').filter({ hasText: saved.title })
     const resume = page.waitForResponse((response) => response.url().endsWith(`/borradores/${saved.id}/continuar`))

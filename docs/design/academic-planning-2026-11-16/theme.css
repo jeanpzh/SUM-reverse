@@ -1,0 +1,178 @@
+/*
+ * Planning v2 theme — Tailwind CSS v4 (client uses tailwindcss ^4.3.3).
+ * Status: proposed with DESIGN-v2.md (2026-11-16). Not imported anywhere yet.
+ *
+ * Scoping: values live on `.planning-root` only. `@theme inline` registers
+ * utilities (`bg-plan-cream`, `text-plan-fog`, `rounded-plan-input`,
+ * `text-plan-title`, `font-plan-mono`, …) that resolve to those variables, so
+ * they render nothing outside the planning route and never touch the student
+ * `--sum-*` tokens or the global `--font-sans` (Poppins) used by SUM screens.
+ *
+ * Adaptations from the supplied theme.css (each justified in DESIGN-v2.md §5):
+ *  1. `--spacing-4: 4px` etc. are dropped. In v4 they would redefine `p-4` as
+ *     4px instead of 16px. The default `--spacing: 0.25rem` already is the
+ *     4px base unit, so `p-4` = 16px, `gap-3` = 12px, `px-8` = 32px.
+ *  2. `--leading-caption: 20` (unitless 20 = 20× line height) is replaced by
+ *     v4 paired properties `--text-*--line-height` in px.
+ *  3. Font tokens are renamed by role and namespaced (`plan-sans`,
+ *     `plan-display`, `plan-mono`) instead of overriding `--font-sans`.
+ *  4. Fog text #858585 (3.7:1) → #6b6b6b (5.3:1). New control border
+ *     #8a8f99 (3.25:1) because Dove #d5d9e2 (1.4:1) fails WCAG 1.4.11.
+ *  5. Semantic status colors added; ember/sunbeam/sprout dropped.
+ *  6. Radius scale made role-based: pill / input 6 / block 8 / strip 12 / float 16.
+ *  7. The 48–72px display sizes are kept for documentation and empty-state covers only.
+ *  8. A derived dark theme (the shell persists a theme choice).
+ */
+
+.planning-root {
+  /* Ink and neutrals */
+  --plan-ink: #0a0a0a;
+  --plan-steel: #545454;
+  --plan-fog: #6b6b6b;
+  --plan-pewter: #9d9d9d; /* decorative only */
+  --plan-dove: #d5d9e2; /* dividers, ghost rings */
+  --plan-control-border: #8a8f99;
+  --plan-row-divider: #eceef2;
+
+  /* Surfaces */
+  --plan-paper: #ffffff;
+  --plan-cream: #f9f8f6;
+  --plan-sand: #f2ede5;
+  --plan-charcoal: #151515;
+  --plan-on-ink: #ffffff;
+
+  /* Status (always paired with icon + text) */
+  --plan-success: #1a7f37;
+  --plan-success-bg: #eef6ef;
+  --plan-warning: #8a5a00;
+  --plan-warning-bg: #fbf3e2;
+  --plan-danger: #b42318;
+  --plan-danger-bg: #fdeeec;
+
+  --plan-focus: #0a0a0a;
+
+  --plan-shadow-float: 0 0 0 1px rgb(0 0 0 / 0.06), 0 18px 40px -24px rgb(15 23 42 / 0.18);
+
+  --plan-font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --plan-font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  color-scheme: light;
+  font-family: var(--plan-font-sans);
+  color: var(--plan-ink);
+  background: var(--plan-paper);
+}
+
+.planning-root[data-theme='dark'],
+.dark .planning-root {
+  --plan-ink: #ededeb;
+  --plan-steel: #c2c2bf;
+  --plan-fog: #a3a3a3;
+  --plan-pewter: #5c5c5c;
+  --plan-dove: #2e3036;
+  --plan-control-border: #6b7079;
+  --plan-row-divider: #1f2126;
+
+  --plan-paper: #111111;
+  --plan-cream: #191919;
+  --plan-sand: #24211c;
+  --plan-charcoal: #ededeb;
+  --plan-on-ink: #111111;
+
+  --plan-success: #5cc679;
+  --plan-success-bg: #0f2416;
+  --plan-warning: #e3b55a;
+  --plan-warning-bg: #2a2010;
+  --plan-danger: #ff8a80;
+  --plan-danger-bg: #2c1210;
+
+  --plan-focus: #ededeb;
+  --plan-shadow-float: 0 0 0 1px rgb(255 255 255 / 0.08), 0 18px 40px -24px rgb(0 0 0 / 0.6);
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  /* Colors → bg-plan-*, text-plan-*, border-plan-*, ring-plan-* */
+  --color-plan-ink: var(--plan-ink);
+  --color-plan-steel: var(--plan-steel);
+  --color-plan-fog: var(--plan-fog);
+  --color-plan-pewter: var(--plan-pewter);
+  --color-plan-dove: var(--plan-dove);
+  --color-plan-control: var(--plan-control-border);
+  --color-plan-divider: var(--plan-row-divider);
+  --color-plan-paper: var(--plan-paper);
+  --color-plan-cream: var(--plan-cream);
+  --color-plan-sand: var(--plan-sand);
+  --color-plan-charcoal: var(--plan-charcoal);
+  --color-plan-on-ink: var(--plan-on-ink);
+  --color-plan-success: var(--plan-success);
+  --color-plan-success-bg: var(--plan-success-bg);
+  --color-plan-warning: var(--plan-warning);
+  --color-plan-warning-bg: var(--plan-warning-bg);
+  --color-plan-danger: var(--plan-danger);
+  --color-plan-danger-bg: var(--plan-danger-bg);
+  --color-plan-focus: var(--plan-focus);
+
+  /* Families → font-plan-sans, font-plan-display, font-plan-mono */
+  --font-plan-sans: var(--plan-font-sans);
+  --font-plan-display: var(--plan-font-sans);
+  --font-plan-mono: var(--plan-font-mono);
+
+  /* Shadow → shadow-plan-float (floating surfaces only) */
+  --shadow-plan-float: var(--plan-shadow-float);
+}
+
+@theme {
+  /* Type scale → text-plan-* (size + paired line height + tracking) */
+  --text-plan-label: 11px; /* mono caps eyebrows and column headers */
+  --text-plan-label--line-height: 16px;
+  --text-plan-label--letter-spacing: 0.04em;
+  --text-plan-meta: 12px;
+  --text-plan-meta--line-height: 16px;
+  --text-plan-dense: 13px;
+  --text-plan-dense--line-height: 18px;
+  --text-plan-body: 14px;
+  --text-plan-body--line-height: 20px;
+  --text-plan-lead: 16px;
+  --text-plan-lead--line-height: 24px;
+  --text-plan-state: 20px;
+  --text-plan-state--line-height: 26px;
+  --text-plan-state--letter-spacing: -0.4px;
+  --text-plan-section: 24px;
+  --text-plan-section--line-height: 32px;
+  --text-plan-section--letter-spacing: -0.6px;
+  --text-plan-title: 30px;
+  --text-plan-title--line-height: 36px;
+  --text-plan-title--letter-spacing: -0.75px;
+  /* Documentation / empty-state covers only */
+  --text-plan-cover: 48px;
+  --text-plan-cover--line-height: 48px;
+  --text-plan-cover--letter-spacing: -1.2px;
+  --text-plan-display: 72px;
+  --text-plan-display--line-height: 72px;
+  --text-plan-display--letter-spacing: -1.8px;
+
+  /* Role radii → rounded-plan-* */
+  --radius-plan-input: 6px;
+  --radius-plan-block: 8px;
+  --radius-plan-strip: 12px;
+  --radius-plan-float: 16px;
+  /* Pills use the built-in rounded-full. */
+
+  /* Layout */
+  --container-plan-rail: 216px;
+  --container-plan-assist: 360px;
+}
+
+/* Base rules for the planning root (no global selectors) */
+.planning-root :focus-visible {
+  outline: 2px solid var(--plan-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planning-root * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

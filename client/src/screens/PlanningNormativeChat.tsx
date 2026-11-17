@@ -1,7 +1,7 @@
 import { PlanningFetchLoading } from '../components/PlanningFetchLoading'
-import { useRef } from 'react'
+import { useRef, type ReactNode } from 'react'
 import type { NormativeChat } from './useNormativeChat'
-import { Send, Square, ArrowRight, SlidersHorizontal } from 'lucide-react'
+import { Send, Square, ArrowRight, ArrowUp, SlidersHorizontal } from 'lucide-react'
 import type { AcademicNormativeRequest } from '../../../shared/programacion-academica-api.mjs'
 import type { PlanningPeriod } from '../data/academicScheduling'
 import { NormativeAdvice } from '../components/ai-elements/NormativeAdvice'
@@ -39,7 +39,14 @@ const EXAMPLE_QUESTIONS: readonly ExampleQuestion[] = [
   },
 ] as const
 
-export function PlanningNormativeChat({ academicPeriod, chat }: { academicPeriod: PlanningPeriod; chat: NormativeChat }) {
+export function PlanningNormativeChat({ academicPeriod, chat, introduction, decision, footer, embedded = false }: {
+  academicPeriod: PlanningPeriod
+  chat: NormativeChat
+  introduction?: ReactNode
+  decision?: ReactNode
+  footer?: ReactNode
+  embedded?: boolean
+}) {
   const { question, setQuestion, turns, loading, asOf, teacherType, cancel, submit } = chat
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
@@ -49,8 +56,7 @@ export function PlanningNormativeChat({ academicPeriod, chat }: { academicPeriod
     void chat.submit(item.question, item.teacherType, undefined, true)
   }
 
-  return (
-    <div className="planning-chat">
+  const context = (
       <details className="planning-chat__context">
         <summary className="planning-chat__context-summary">
           <div className="planning-chat__context-info">
@@ -96,12 +102,20 @@ export function PlanningNormativeChat({ academicPeriod, chat }: { academicPeriod
           </Label>
         </div>
       </details>
+  )
 
-      <MessageScrollerProvider autoScroll>
+  return (
+    <div className={`planning-chat${embedded ? ' planning-chat--advisor' : ''}`}>
+      {!embedded && context}
+
+      <MessageScrollerProvider autoScroll={!embedded || turns.length > 0}>
         <MessageScroller className="planning-chat__scroller">
           <MessageScrollerViewport>
             <MessageScrollerContent className="planning-chat__messages" aria-label="Conversación normativa">
-              {turns.length === 0 && (
+              {introduction && <div className="planning-chat__introduction">{introduction}</div>}
+              {decision && <div className="planning-chat__decision">{decision}</div>}
+              <div className="planning-chat__turns">
+              {!embedded && turns.length === 0 && (
                 <div className="planning-chat__empty">
                   <div className="planning-chat__empty-header">
                     <h3 className="planning-chat__empty-title">Consulta antes de decidir</h3>
@@ -163,6 +177,7 @@ export function PlanningNormativeChat({ academicPeriod, chat }: { academicPeriod
                   </Message>
                 </MessageScrollerItem>
               ))}
+              </div>
             </MessageScrollerContent>
           </MessageScrollerViewport>
           {turns.length > 0 && (
@@ -174,6 +189,7 @@ export function PlanningNormativeChat({ academicPeriod, chat }: { academicPeriod
         </MessageScroller>
       </MessageScrollerProvider>
 
+      {footer}
       <form
         className="planning-chat__composer"
         onSubmit={(event) => {
@@ -182,6 +198,7 @@ export function PlanningNormativeChat({ academicPeriod, chat }: { academicPeriod
         }}
       >
         <div className="planning-chat__composer-inner">
+          {embedded && context}
           <Label htmlFor="planning-chat-question" className="sr-only">
             Pregunta normativa
           </Label>
@@ -190,14 +207,20 @@ export function PlanningNormativeChat({ academicPeriod, chat }: { academicPeriod
               ref={textareaRef}
               id="planning-chat-question"
               maxLength={1000}
-              rows={2}
+              rows={embedded ? 1 : 2}
               required
               value={question}
-              placeholder="Pregunta sobre carga lectiva o normativa docente…"
+              placeholder={embedded ? 'Pregunta por la norma o por una opción…' : 'Pregunta sobre carga lectiva o normativa docente…'}
               onChange={(event) => setQuestion(event.target.value)}
+              onKeyDown={(event) => {
+                if (embedded && event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                  event.preventDefault()
+                  if (!loading && question.trim() && asOf) void submit()
+                }
+              }}
             />
-            <InputGroupAddon align="block-end">
-              <span className="planning-chat__hint">
+            <InputGroupAddon align={embedded ? 'inline-end' : 'block-end'}>
+              <span className={embedded ? 'sr-only' : 'planning-chat__hint'}>
                 {question.length > 0 ? `${question.length}/1000` : ''}
               </span>
               {loading ? (
@@ -206,7 +229,7 @@ export function PlanningNormativeChat({ academicPeriod, chat }: { academicPeriod
                   if (event.detail < 2) cancel()
                 }}>
                   <Square className="size-3.5" />
-                  <span>Cancelar</span>
+                  <span className={embedded ? 'sr-only' : undefined}>Cancelar</span>
                 </InputGroupButton>
               ) : (
                 <InputGroupButton
@@ -214,8 +237,8 @@ export function PlanningNormativeChat({ academicPeriod, chat }: { academicPeriod
                   disabled={!question.trim() || !asOf}
                   aria-label="Enviar consulta"
                 >
-                  <Send className="size-3.5" />
-                  <span>Enviar</span>
+                  {embedded ? <ArrowUp className="size-4" /> : <Send className="size-3.5" />}
+                  <span className={embedded ? 'sr-only' : undefined}>Enviar</span>
                 </InputGroupButton>
               )}
             </InputGroupAddon>

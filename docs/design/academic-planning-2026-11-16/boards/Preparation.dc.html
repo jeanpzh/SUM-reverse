@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Preparación — cursos</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#ffffff}
+a{color:#0a0a0a}a:hover{color:#545454}
+.app{--ink:#0a0a0a;--steel:#545454;--fog:#6b6b6b;--dove:#d5d9e2;--line:#8a8f99;--cream:#f9f8f6;--sand:#f2ede5;font-family:Inter,ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:20px;color:var(--ink);background:#fff}
+.mono{font-family:"Geist Mono",ui-monospace,monospace;letter-spacing:-0.01em}
+.eyebrow{font-family:"Geist Mono",ui-monospace,monospace;font-size:11px;line-height:16px;letter-spacing:0.04em;text-transform:uppercase;color:var(--fog)}
+.btn{font:inherit;font-weight:500;font-size:14px;line-height:20px;border-radius:9999px;padding:6px 14px;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;text-decoration:none}
+.btn-primary{background:var(--ink);color:#fff}
+.btn-ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--dove)}
+.btn-inv{background:transparent;color:#fff;box-shadow:inset 0 0 0 1px #545454}
+.btn-text{background:transparent;color:var(--ink);padding:6px 8px;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--dove)}
+.icon-btn{width:32px;height:32px;border-radius:9999px;border:0;background:transparent;display:inline-flex;align-items:center;justify-content:center;color:var(--steel);cursor:pointer}
+:focus-visible{outline:2px solid #0a0a0a;outline-offset:2px}
+.field{font:inherit;height:32px;border-radius:6px;border:1px solid var(--line);padding:0 10px;background:#fff;color:var(--ink);box-sizing:border-box}
+.muted{color:var(--fog)}
+.st{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500}
+.nav a{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:9999px;text-decoration:none;color:var(--steel);font-weight:500}
+.nav a[aria-current="page"]{color:var(--ink);background:var(--sand)}
+table{border-collapse:collapse;width:100%}
+th{font-family:"Geist Mono",ui-monospace,monospace;font-size:11px;line-height:16px;letter-spacing:0.04em;text-transform:uppercase;color:var(--fog);font-weight:400;text-align:left;padding:8px 12px;border-bottom:1px solid var(--dove);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid #eceef2;white-space:nowrap}
+th.n,td.n{text-align:right;font-variant-numeric:tabular-nums}
+tr.chk td{background:var(--cream)}
+tr.sel td{background:var(--sand)}
+tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--ink)}
+input[type=checkbox]{accent-color:#0a0a0a;width:16px;height:16px;margin:0}
+.vr{width:1px;height:16px;background:var(--dove)}
+</style>
+</helmet>
+<div class="app" style="display: flex; flex-direction: column; min-height: 1000px">
+  <header style="height: 52px; display: flex; align-items: center; gap: 16px; padding: 0 16px; border-bottom: 1px solid #d5d9e2">
+    <span style="font-weight: 500">Planificación académica</span>
+    <span class="vr"></span>
+    <span>Sistemas · 2027-I</span>
+    <span class="muted">/</span>
+    <span>Propuesta base 2027-I <span class="mono muted" style="font-size: 12px">sin generar</span></span>
+  </header>
+  <div style="display: flex; flex: 1; flex-wrap: wrap">
+    <nav class="nav" aria-label="Etapas de la propuesta" style="flex: 0 0 216px; padding: 20px 12px; border-right: 1px solid #d5d9e2; display: flex; flex-direction: column; gap: 2px; box-sizing: border-box">
+      <div class="eyebrow" style="padding: 0 10px 8px">Preparación</div>
+      <a href="Preparation.dc.html" aria-current="page">Oferta de cursos <span class="mono" style="font-size: 12px; color: #8a5a00">3</span></a>
+      <a href="Resources.dc.html">Docentes y ambientes</a>
+      <div class="eyebrow" style="padding: 20px 10px 8px">Programación</div>
+      <a href="Main.dc.html">Horario</a>
+      <a href="Approval.dc.html">Revisión docente</a>
+      <a href="Approval.dc.html">Aprobación y publicación</a>
+    </nav>
+    <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+      <div style="padding: 24px 32px 16px; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; justify-content: space-between">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span class="eyebrow">Paso 1 de 4 · cambios en memoria hasta guardar</span>
+          <h1 style="margin: 0; font-weight: 400; font-size: 30px; line-height: 36px; letter-spacing: -0.75px">Oferta de cursos</h1>
+        </div>
+        <div style="display: flex; gap: 8px; position: relative">
+          <button class="btn btn-ghost" aria-expanded="true" aria-controls="gen-options">Opciones de generación</button>
+          <button class="btn btn-primary" aria-describedby="gen-why">Generar propuesta</button>
+          <div id="gen-options" role="dialog" aria-label="Opciones de generación" style="position: absolute; right: 0; top: 44px; width: 340px; background: #fff; border-radius: 16px; box-shadow: 0 0 0 1px rgba(0,0,0,0.06), 0 18px 40px -24px rgba(15,23,42,0.18); padding: 20px; display: flex; flex-direction: column; gap: 14px; z-index: 2">
+            <span class="eyebrow">Excepciones horarias</span>
+            <label style="display: flex; gap: 10px; align-items: flex-start"><input type="checkbox" style="margin-top: 2px"><span>Permitir tardes: habilitar lunes a viernes de 14:00 a 22:00</span></label>
+            <label style="display: flex; gap: 10px; align-items: flex-start"><input type="checkbox" checked style="margin-top: 2px"><span>Permitir sábado: habilitar de 08:00 a 13:00</span></label>
+            <label style="display: flex; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px solid #eceef2"><span class="eyebrow">Criterio de asignación</span><select class="field"><option>Configurado por el motor</option></select></label>
+          </div>
+        </div>
+      </div>
+
+      <section aria-label="Lista de preparación" style="margin: 0 32px; border-radius: 12px; background: #fbf3e2; padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: center">
+        <span class="st" style="color: #8a5a00"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8l6.7 12H1.3z" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linejoin="round"></path><path d="M8 6.5v3M8 11.6v.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg>Oferta incompleta</span>
+        <span class="vr"></span><span><b style="font-weight: 500">52</b> cursos seleccionados</span>
+        <span class="vr"></span><button class="btn btn-text" style="padding: 0">3 con datos por corregir</button>
+        <span class="vr"></span><a href="Resources.dc.html">38 docentes · 41 ambientes</a>
+      </section>
+      <p id="gen-why" class="muted" style="margin: 8px 32px 0; font-size: 12px; line-height: 16px">Puedes generar ahora; los 3 cursos con datos por corregir quedarán como pendientes con su causa.</p>
+
+      <div style="padding: 16px 32px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+        <div role="toolbar" aria-label="Acciones en lote" style="flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: #0a0a0a; color: #fff; border-radius: 9999px; padding: 4px 4px 4px 16px">
+          <span style="font-weight: 500">3 cursos seleccionados</span>
+          <span style="flex: 1"></span>
+          <button class="btn btn-inv">Estimar demanda</button>
+          <button class="btn btn-inv">Quitar de la oferta</button>
+          <button class="btn" style="background: #fff; color: #0a0a0a">Cancelar selección</button>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; border-top: 1px solid #d5d9e2; flex: 1">
+        <div style="flex: 999 1 560px; min-width: 0; overflow-x: auto">
+          <table aria-label="Cursos de la oferta">
+            <thead><tr><th style="width: 16px"><input type="checkbox" aria-label="Seleccionar todos" checked style="opacity: .5"></th><th>Curso</th><th class="n">Ciclo</th><th class="n">Demanda</th><th class="n">Secc.</th><th class="n">Vac./secc.</th><th>Horas T · P · L</th><th>Datos</th></tr></thead>
+            <tbody>
+              <tr class="chk"><td><input type="checkbox" checked aria-label="Seleccionar Redes de Computadoras"></td><td><span class="mono muted" style="font-size: 12px">SI-312</span> Redes de Computadoras</td><td class="n mono">6</td><td class="n mono">80</td><td class="n mono">2</td><td class="n mono">40</td><td class="mono">4 · 0 · 2</td><td><span class="st" style="color: #8a5a00">△ Sin laboratorio</span></td></tr>
+              <tr class="chk sel"><td><input type="checkbox" checked aria-label="Seleccionar Ingeniería de Software II"></td><td><span class="mono muted" style="font-size: 12px">SI-404</span> Ingeniería de Software II</td><td class="n mono">8</td><td class="n mono">—</td><td class="n mono">2</td><td class="n mono">40</td><td class="mono">3 · 0 · 2</td><td><span class="st" style="color: #8a5a00">△ Demanda sin definir</span></td></tr>
+              <tr class="chk"><td><input type="checkbox" checked aria-label="Seleccionar Gestión de Proyectos"></td><td><span class="mono muted" style="font-size: 12px">SI-509</span> Gestión de Proyectos</td><td class="n mono">9</td><td class="n mono">210</td><td class="n mono">2</td><td class="n mono">40</td><td class="mono">3 · 2 · 0</td><td><span class="st" style="color: #8a5a00">△ Capacidad &lt; demanda</span></td></tr>
+              <tr><td><input type="checkbox" aria-label="Seleccionar Algorítmica I"></td><td><span class="mono muted" style="font-size: 12px">SI-101</span> Algorítmica I</td><td class="n mono">1</td><td class="n mono">160</td><td class="n mono">4</td><td class="n mono">40</td><td class="mono">4 · 0 · 2</td><td><span class="st" style="color: #1a7f37">✓ Completo</span></td></tr>
+              <tr><td><input type="checkbox" aria-label="Seleccionar Base de Datos II"></td><td><span class="mono muted" style="font-size: 12px">SI-215</span> Base de Datos II</td><td class="n mono">5</td><td class="n mono">78</td><td class="n mono">2</td><td class="n mono">40</td><td class="mono">3 · 0 · 2</td><td><span class="st" style="color: #1a7f37">✓ Completo</span></td></tr>
+              <tr><td><input type="checkbox" aria-label="Seleccionar Sistemas Operativos"></td><td><span class="mono muted" style="font-size: 12px">SI-208</span> Sistemas Operativos</td><td class="n mono">4</td><td class="n mono">118</td><td class="n mono">3</td><td class="n mono">40</td><td class="mono">3 · 2 · 0</td><td><span class="st" style="color: #1a7f37">✓ Completo</span></td></tr>
+              <tr><td><input type="checkbox" aria-label="Seleccionar Investigación Operativa"></td><td><span class="mono muted" style="font-size: 12px">SI-306</span> Investigación Operativa</td><td class="n mono">6</td><td class="n mono">74</td><td class="n mono">2</td><td class="n mono">40</td><td class="mono">3 · 2 · 0</td><td><span class="st" style="color: #1a7f37">✓ Completo</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <aside aria-labelledby="course-title" style="flex: 1 1 340px; max-width: 380px; border-left: 1px solid #d5d9e2; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start">
+            <div><span class="eyebrow">SI-404 · ciclo 8 · obligatorio</span><h2 id="course-title" style="margin: 4px 0 0; font-weight: 400; font-size: 24px; line-height: 30px; letter-spacing: -0.6px">Ingeniería de Software II</h2></div>
+            <button class="icon-btn" aria-label="Cerrar detalle"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.5"></path></svg></button>
+          </div>
+          <dl style="margin: 0; display: grid; grid-template-columns: 1fr auto; gap: 8px 12px">
+            <dt class="muted">Elegibles potenciales</dt><dd class="mono" style="margin: 0">92</dd>
+            <dt class="muted">Intención registrada</dt><dd class="mono" style="margin: 0">—</dd>
+            <dt style="font-weight: 500">Demanda de planificación</dt><dd style="margin: 0"><input class="field mono" aria-label="Demanda de planificación" placeholder="Definir" style="width: 88px; text-align: right; border-color: #8a5a00"></dd>
+          </dl>
+          <p style="margin: -6px 0 0; font-size: 12px; line-height: 16px; color: #8a5a00">Define la demanda de planificación. Los elegibles y la intención son referencia, no se suman.</p>
+          <div style="border-top: 1px solid #eceef2; padding-top: 12px; display: grid; grid-template-columns: 1fr auto; gap: 8px 12px">
+            <span class="muted">Secciones</span><span class="mono">2 × 40 vacantes</span>
+            <span class="muted">Componentes</span><span class="mono">Teoría 3 h · Lab. 2 h</span>
+            <span class="muted">Docentes habilitados</span><span class="mono">4</span>
+          </div>
+          <button class="btn btn-ghost" style="align-self: flex-start">Estimar demanda</button>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

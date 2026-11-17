@@ -1,0 +1,73 @@
+{
+  "source": "Actual UI -> own synthetic NestJS/Python; no model calls or transport mocking",
+  "scenario": {
+    "kind": "single-course-window-bottleneck",
+    "courseId": "20118073"
+  },
+  "before": {
+    "components": 0,
+    "required": 2,
+    "completeSections": 0,
+    "totalSections": 1,
+    "pendingComponents": 2,
+    "status": "impossible"
+  },
+  "defaultSimulation": {
+    "currentScheduledSessions": 0,
+    "projectedScheduledSessions": 2,
+    "requiredSessions": 2,
+    "currentCompleteSections": 0,
+    "projectedCompleteSections": 1,
+    "totalSections": 1,
+    "recommendationIds": [
+      "rec-enable-planning-window"
+    ],
+    "solverStatus": "complete"
+  },
+  "invalidated": {
+    "applyDisabled": true,
+    "describedBy": "_r_1m_",
+    "selectedIds": [
+      "rec-enable-planning-window"
+    ]
+  },
+  "simulation": {
+    "currentScheduledSessions": 0,
+    "projectedScheduledSessions": 2,
+    "requiredSessions": 2,
+    "currentCompleteSections": 0,
+    "projectedCompleteSections": 1,
+    "totalSections": 1,
+    "recommendationIds": [
+      "rec-enable-planning-window"
+    ],
+    "solverStatus": "complete"
+  },
+  "after": {
+    "components": 2,
+    "required": 2,
+    "completeSections": 1,
+    "totalSections": 1,
+    "pendingComponents": 0,
+    "status": "complete"
+  },
+  "appliedRequest": {
+    "planningPolicy": {
+      "revision": "FISI-PLANNING-1",
+      "period": "2027-I",
+      "allowAfternoon": true,
+      "allowSaturday": true
+    },
+    "deliveryModes": [
+      "continuous"
+    ]
+  },
+  "changedTeacherLoads": [],
+  "gain": {
+    "components": 2,
+    "completeSections": 1
+  },
+  "visibleOutcome": 1,
+  "persisted": true,
+  "errors": []
+}

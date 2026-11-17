@@ -4,15 +4,20 @@ import { MessageResponse } from './MessageResponse'
 
 export function AdvisorFindings({ advice }: { advice: AcademicAdvisorResponse }) {
   if (!advice.bottlenecks.length) return <MessageResponse>{advice.summary}</MessageResponse>
-  return <section aria-label="Hallazgos de planificación" className="min-w-0 text-sm">
-    <h4 className="m-0 text-sm font-semibold">Qué limita la cobertura</h4>
-    <ul className="m-0 mt-2 grid list-none gap-2 p-0">
-      {advice.bottlenecks.map((item, index) => <li key={`${item.category}-${index}`} className="border-0 border-b border-solid border-border py-2">
-        <strong>{item.title}</strong>
-        <span className="mt-1 block text-muted-foreground">{item.affectedSessionCount} componentes afectados</span>
-        <AdviceDisclosure label={`Ver detalle: ${item.title}`}><p className="m-0">{item.detail}</p></AdviceDisclosure>
+  return <section aria-label="Hallazgos de planificación" className="planning-findings min-w-0">
+    <h4 className="sr-only">Qué limita la cobertura</h4>
+    <ul className="planning-findings__list">
+      {advice.bottlenecks.map((item, index) => <li key={`${item.category}-${index}`} className="planning-findings__item">
+        <span className="planning-findings__index">{item.affectedSessionCount}<span className="sr-only"> componentes afectados:</span></span>
+        <span className="min-w-0">{item.title}</span>
       </li>)}
     </ul>
-    <AdviceDisclosure label="Ver explicación completa"><MessageResponse>{advice.summary}</MessageResponse></AdviceDisclosure>
+    <AdviceDisclosure label="Ver evidencia y motivos">
+      <p>Las señales pueden afectar a una misma sesión; sus cifras no se suman.</p>
+      {advice.bottlenecks.map((item, index) => <div key={`${item.category}-${index}`}>
+        <h4>{item.title}</h4>
+        <p>{item.detail}</p>
+      </div>)}
+    </AdviceDisclosure>
   </section>
 }

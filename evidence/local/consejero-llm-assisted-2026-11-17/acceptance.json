@@ -1,0 +1,69 @@
+{
+  "source": "Own synthetic React/NestJS/Python, public corpus, real Bedrock; no mocked provider or private snapshots",
+  "checks": [
+    {
+      "name": "mount-does-not-consult",
+      "passed": true
+    },
+    {
+      "name": "initial-response-is-real-llm-assisted",
+      "passed": true
+    },
+    {
+      "name": "consultation-does-not-simulate",
+      "passed": true
+    },
+    {
+      "name": "model-narrative-renders-in-ui",
+      "passed": true
+    },
+    {
+      "name": "apply-disabled-before-simulation",
+      "passed": true
+    },
+    {
+      "name": "simulation-is-llm-assisted-with-exact-selection",
+      "passed": true
+    },
+    {
+      "name": "apply-regenerates-once-without-saving",
+      "passed": true
+    },
+    {
+      "name": "no-browser-exceptions",
+      "passed": true
+    }
+  ],
+  "observations": [
+    {
+      "phase": "consultation",
+      "mode": "llm-assisted",
+      "provider": "bedrock_converse / us.amazon.nova-lite-v1:0",
+      "recommendations": 3,
+      "narrativeCharacters": 247,
+      "simulated": false,
+      "latencyMs": 3467
+    },
+    {
+      "phase": "simulation",
+      "mode": "llm-assisted",
+      "provider": "bedrock_converse / us.amazon.nova-lite-v1:0",
+      "recommendations": 3,
+      "narrativeCharacters": 572,
+      "simulated": true,
+      "impact": {
+        "currentScheduledSessions": 211,
+        "projectedScheduledSessions": 243,
+        "requiredSessions": 332,
+        "currentCompleteSections": 108,
+        "projectedCompleteSections": 124,
+        "totalSections": 166,
+        "recommendationIds": [
+          "rec-enable-planning-window"
+        ],
+        "solverStatus": "search-limit"
+      }
+    }
+  ],
+  "passed": true
+}

@@ -48,3 +48,42 @@ This is acceptance of the requested adaptation of the supplied images to the exi
 ## Limits and follow-up polish
 
 No actionable P0/P1/P2 remains in the inspected final adaptation. This is not a clone of all five mockups: hypothetical comparisons, metrics and unimplemented actions were not added. High-density faculty-wide calendars retain the existing teacher/search/day filters and horizontal lane scrolling; the simpler reference content is not equivalent to every local dataset. Mobile layout and empty assistant state are local design decisions. Live Bedrock, production SUM and private operator data were not used for acceptance.
+
+
+---
+
+# Consejero normativo · Dirección A · revisión de integración
+
+Fecha: 2026-11-17. Superficie autorizada: consejero y conversación normativa de `/local/programacion-academica`. Aplicación local, catálogo y borradores construidos sintéticamente; proveedor LLM deshabilitado. Sin inspección de servidores del operador ni de SUM.
+
+## Referencia y normalización
+
+- Fuente visual: archivo del usuario «Consejero Normativo.html», componente «Dirección A · Hilo con decisión fija». Se desempaquetó fuera del repositorio; no se importó su runtime, sus temporizadores ni sus cifras de demostración a la aplicación.
+- Captura fuente: [source-initial.png](docs/design/academic-planning-2026-11-16/advisor-direction-a/source-initial.png), 420 × 900 px, viewport CSS 420 × 900, DPR 1, estado inicial oscuro.
+- Captura implementada: [rail-initial.png](docs/design/academic-planning-2026-11-16/advisor-direction-a/rail-initial.png), 419 × 900 px del panel dentro de viewport 1440 × 952, DPR 1, estado inicial oscuro. La diferencia de 1 px corresponde al límite del panel y su separador. No se escalaron las imágenes.
+- Comparación conjunta de la superficie completa: [comparison.png](docs/design/academic-planning-2026-11-16/advisor-direction-a/comparison.png). La superficie revisada es el rail completo; no hizo falta otra ampliación de una subregión para la comparación inicial.
+- Estados implementados capturados: [análisis](docs/design/academic-planning-2026-11-16/advisor-direction-a/rail-analyzed.png), [expandido](docs/design/academic-planning-2026-11-16/advisor-direction-a/expanded.png), [simulación vigente](docs/design/academic-planning-2026-11-16/advisor-direction-a/rail-simulated.png), [estrecho con selección invalidada](docs/design/academic-planning-2026-11-16/advisor-direction-a/narrow-stale.png).
+
+La fuente ilustra FISI 2026-II, v4 y conteos falsos. La aplicación muestra el periodo y los datos reales de su sesión sintética (en la aceptación, 2027-I y borrador sin guardar). Solo se compara composición y tratamiento visual entre estados equivalentes, sin afirmar igualdad de contenido ni paridad de píxeles.
+
+## Hallazgos e iteraciones
+
+1. P2: el encabezado conservaba pestañas y un segundo bloque de contexto que desplazaban la entrada del hilo respecto a la referencia. Se ocultó la pestaña redundante cuando hay un consejero activo y se movieron los filtros al compositor, plegados. Se conserva la pantalla normativa independiente antes de generar una propuesta. La captura final conjunta refleja la corrección.
+2. P2: el autoscroll del chat también desplazaba el análisis nuevo hasta las últimas opciones, ocultando el diagnóstico. Se desactiva el autoscroll en el consejero hasta que hay mensajes; la prueba de presentación comprueba la posición visible del diagnóstico. La captura final de análisis muestra el encabezado y el diagnóstico al comienzo.
+3. P2: en 360 px los rótulos largos de Simular y Aplicar deshabilitado consumían demasiado alto. Se acortaron los rótulos visibles manteniendo sus nombres accesibles y la explicación de deshabilitación. Se verificaron foco y ausencia de overflow a 360/720 px.
+4. P2: los motivos extensos heredados ocupaban el alto del rail antes de mostrar opciones. Se resumieron en filas de conteo y título, con una sola apertura de evidencia que advierte el posible solapamiento. La captura final de análisis corresponde a esa composición compacta.
+5. Adaptaciones funcionales: se conserva un acceso discreto a filtros junto al compositor; las preguntas sugeridas y las cifras reflejan el contrato y la sesión actuales. Se mantienen las fuentes y tokens de planificación existentes, sin modificar los del alumno. El mapa porcentual y las ideas de gestión del prototipo no se dibujan sin datos de contrato. No son capacidades implementadas ni verificadas.
+
+## Criterios revisados
+
+- Encabezado con identidad, expansión y cierre; ancho inicial 420 px redimensionable, hilo y decisión en dos columnas al expandir.
+- Tipografía 400/500, superficies oscuras y claras, hairlines, tarjetas de 12 px, botones pill, entrada de 6 px y Lucide existente. No se requieren activos raster ni nuevos iconos.
+- Una acción principal del consejero según su estado; Aplicar exige impacto vigente y queda deshabilitado con motivo tras cambiar la selección. El estado usa texto, no solo color.
+- Consulta sin envío al montar ni CP-SAT automático, selección exacta, modo degradado honesto, respuesta normativa real, expansión/restauración, cancelación de transporte, error/reintento, regeneración sin guardar/publicar.
+- Se inspeccionaron las capturas y la comparación conjunta. Las pruebas de navegador comprueban que no haya excepciones de página; el catálogo, API y solver son servicios propios sintéticos. Los avisos de tamaño de chunks del build y deprecación de LangChain son preexistentes y no acreditan fallos visuales.
+
+## Límites
+
+No se probaron proveedores LLM vivos, porcentajes de ocupación ni ideas no incluidas en el contrato. 720 px comprueba reflujo equivalente a la mitad de 1440 px, sin afirmar un cambio de zoom del navegador. Las pantallas SUM del alumno no se modificaron y no se hizo comparación visual de ellas. No quedan hallazgos visuales accionables P0/P1/P2 dentro de la superficie implementada; queda como P3 la adaptación editorial de textos a una densidad distinta cuando cambie el catálogo.
+
+final result: passed
