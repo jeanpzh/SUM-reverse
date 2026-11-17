@@ -305,6 +305,11 @@ def test_inconclusive_dry_run_gets_one_longer_attempt(monkeypatch):
     _, _, recs, _ = build_deterministic_analysis(req)
     budgets = []
 
+    from models import AssignmentOutput
+    req.assignments = [AssignmentOutput.model_validate(
+        {"id": "seed", "sectionId": "S1", "teacherId": "x", "roomId": "y", "interval": {"day": 1, "startMinute": 480, "endMinute": 540}}
+    )]
+
     def fake_solve(solve_req):
         budgets.append(solve_req.maxTimeSeconds)
         found = [] if len(budgets) == 1 else [

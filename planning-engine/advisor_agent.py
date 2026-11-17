@@ -55,10 +55,10 @@ def run_cpsat_dry_run(req, recommendations, recommendation_ids, *, max_time_seco
         ))
     result = solve(max_time_seconds)
     # The budget is wall-clock: under CPU contention the search can stop before it even
-    # matches the current schedule. A run that ends at the limit without improving on what is
-    # already assigned is inconclusive, so it gets one longer attempt before being reported.
-    floor = len(req.assignments) + (1 if recommendation_ids else 0)
-    if result.status == "search-limit" and len(result.assignments) < floor:
+    # matches the current schedule. Patches only relax constraints, so the current schedule
+    # stays feasible and a result below it is a cut-off search, not a measurement: it gets
+    # one longer attempt. Equal results are left alone, since a lever may truly add nothing.
+    if result.status == "search-limit" and len(result.assignments) < len(req.assignments):
         result = solve(max_time_seconds * INCONCLUSIVE_RETRY_FACTOR)
     def complete_sections(assignments):
         ids = {a.id for a in assignments}
