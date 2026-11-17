@@ -258,3 +258,27 @@ def test_http_partial_window_patch_omits_absent_flags_but_keeps_provider_null(mo
     assert patch == {'kind': 'enable_planning_window', **expected}
     assert body['source']['providerLabel'] is None
     assert body['verifiedImpact']['solverStatus'] in ('complete', 'impossible', 'search-limit')
+
+
+def test_llm_prose_claiming_load_without_authorization_is_rejected():
+    req = sample()
+    req.selectedRecommendationIds = []
+    claim = 'Amplía la carga de un docente, ya que no requiere autorización externa.'
+    result = run(req, FakeModel([AIMessage(content=json.dumps({'summary': claim, 'prioritizedIds': []}))]))
+    assert result.source.mode == 'deterministic-fallback'
+    assert result.source.fallbackReason == 'invalid_llm_output'
+    assert result.summary != claim
+
+
+def test_llm_prose_uses_titles_instead_of_recommendation_ids():
+    req = sample()
+    req.selectedRecommendationIds = []
+    recs = build_deterministic_analysis(req)[2]
+    first = recs[0]
+    text = f"Prueba primero '{first.id}' por su impacto medido."
+    result = run(req, FakeModel([AIMessage(content=json.dumps({'summary': text, 'prioritizedIds': [], 'rationalesById': {first.id: f'Ver {first.id}.'}}))]))
+    assert result.source.mode == 'llm-assisted'
+    assert first.id not in result.summary and f'«{first.title}»' in result.summary
+    rationale = next(r.rationale for r in result.recommendations if r.id == first.id)
+    if first.patch.kind != 'increase_teacher_load':
+        assert first.id not in rationale

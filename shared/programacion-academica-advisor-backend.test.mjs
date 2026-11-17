@@ -32,6 +32,19 @@ test('synthetic advisor selection propagation, unknown IDs, stale version and ou
     assert.deepEqual(captured.windows, catalog.windows)
     assert.equal(captured.editVersion, request.expectedEditVersion)
     assert.deepEqual(service.getProposal(proposal.proposalId), proposal)
+    // Engine-only catalog IDs (variants) reach the engine; the backend copy does not veto them.
+    const engineOnlyId = 'rec-enable-planning-window-afternoon'
+    globalThis.fetch = async (_url, options) => {
+      captured = JSON.parse(options.body)
+      return new Response(JSON.stringify({ ...fallback, recommendations: [{ id: engineOnlyId, title: 'Habilitar turno tarde',
+        rationale: 'Variante del motor.', impactSummary: 'Destraba 2 componentes en simulación', recommendedByDefault: false,
+        patch: { kind: 'enable_planning_window', allowAfternoon: true } }] }), { status: 200 })
+    }
+    await service.adviseProposal(proposal.proposalId, { ...request, selectedRecommendationIds: [engineOnlyId] })
+    assert.deepEqual(captured.selectedRecommendationIds, [engineOnlyId])
+    // The engine's 422 is a rejected selection, surfaced as 400 instead of a silent stale fallback.
+    globalThis.fetch = async () => new Response(JSON.stringify({ detail: 'Unknown or duplicate recommendation ID' }), { status: 422 })
+    await assert.rejects(service.adviseProposal(proposal.proposalId, { ...request, selectedRecommendationIds: ['rec-invented'] }), (e) => e.getStatus() === 400)
     globalThis.fetch = async () => { throw new Error('synthetic outage') }
     const outage = await service.adviseProposal(proposal.proposalId, request)
     assert.equal(outage.source.mode, 'deterministic-fallback')

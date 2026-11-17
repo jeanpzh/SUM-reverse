@@ -13,7 +13,7 @@ import { assessTeacherPreferences } from './teacher-preferences.js'
 import { createDemandSources } from './demand-fixtures.js'
 import { estimateAcademicDemand } from './demand-estimator.js'
 import { prepareGeneratorInput } from './generator-input.js'
-import { buildLocalDeterministicAdvisor, analyzeProposalAdvisor, trySolveWithPythonEngine } from './planning-engine.client.js'
+import { AdvisorSelectionRejected, analyzeProposalAdvisor, trySolveWithPythonEngine } from './planning-engine.client.js'
 import { THESIS_COURSE_IDS } from '../../../shared/academic-planning-policy.mjs'
 
 type RetainedProposal = {
@@ -147,11 +147,13 @@ export class DemoProposalService {
     if (value.expectedEditVersion !== currentVersion) {
       throw this.httpError(409, 'VERSION_MISMATCH', `Versión vigente ${currentVersion}; se recibió ${value.expectedEditVersion}`)
     }
-    const candidates = buildLocalDeterministicAdvisor(retained.view, retained.input, retained.resources, this.catalog).recommendations
-    if (value.selectedRecommendationIds?.some((id) => !candidates.some((r) => r.id === id))) {
-      throw this.httpError(400, 'INVALID_REQUEST', 'Recomendación desconocida')
+    let result: AcademicAdvisorResponse
+    try {
+      result = await analyzeProposalAdvisor(retained.view, retained.input, retained.resources, retained.requirements, this.catalog, globalThis.fetch, value.selectedRecommendationIds)
+    } catch (error) {
+      if (error instanceof AdvisorSelectionRejected) throw this.httpError(400, 'INVALID_REQUEST', 'Recomendación desconocida')
+      throw error
     }
-    const result = await analyzeProposalAdvisor(retained.view, retained.input, retained.resources, retained.requirements, this.catalog, globalThis.fetch, value.selectedRecommendationIds)
     if ((retained.view.editVersion ?? 0) !== currentVersion) throw this.httpError(409, 'VERSION_MISMATCH', 'La propuesta cambió durante la simulación')
     return result
   }

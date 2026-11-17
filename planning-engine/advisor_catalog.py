@@ -1030,6 +1030,26 @@ CATALOG_BY_KIND: dict[str, RecommendationKind] = {
 }
 
 
+def resolve_catalog_variants(
+    req: AdvisorAnalyzeRequest,
+    diagnosis: BlockerDiagnosis,
+    ids: list[str],
+) -> list[AdvisorRecommendation]:
+    """Rebuild selected variants that fell outside this call's ranked list (e.g. ones the
+    agent explored earlier). Only IDs the closed catalog can emit for this request resolve."""
+    wanted = set(ids)
+    found: dict[str, AdvisorRecommendation] = {}
+    for handler in RECOMMENDATION_CATALOG:
+        for scope in sorted(handler.valid_scopes(req, diagnosis)):
+            for variant in handler.variants_for_scope(req, diagnosis, scope):
+                if variant.id in wanted and variant.id not in found:
+                    variant.recommendedByDefault = False
+                    found[variant.id] = variant
+        if len(found) == len(wanted):
+            break
+    return [found[i] for i in ids if i in found]
+
+
 def request_variants_for_scope(
     req: AdvisorAnalyzeRequest,
     diagnosis: BlockerDiagnosis,

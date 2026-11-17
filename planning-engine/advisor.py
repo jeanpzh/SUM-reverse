@@ -10,6 +10,7 @@ from advisor_catalog import (
     attach_normative_contrasts,
     build_management_actions,
     rank_recommendations,
+    resolve_catalog_variants,
 )
 from advisor_diagnosis import diagnose
 from models import (
@@ -140,6 +141,19 @@ def _extract_json_object(raw_text: str) -> dict:
     return parsed
 
 
+# Teacher-load increases always need external authorization; prose saying otherwise is false.
+_LOAD_WITHOUT_AUTHORIZATION = re.compile(
+    r"carga[^.]*?(no\s+(requier|necesit)\w*|sin\s+(necesidad\s+de\s+)?)\s*(una\s+)?autorizaci",
+    re.IGNORECASE,
+)
+
+
+def _replace_ids_with_titles(text: str, recommendations: list[AdvisorRecommendation]) -> str:
+    for rec in sorted(recommendations, key=lambda r: len(r.id), reverse=True):
+        text = text.replace(f"'{rec.id}'", f"«{rec.title}»").replace(rec.id, f"«{rec.title}»")
+    return text
+
+
 def _apply_validated_llm_output(
     parsed: dict,
     provider_label: str,
@@ -176,6 +190,17 @@ def _apply_validated_llm_output(
         )
 
     rationales = parsed.get("rationalesById") or {}
+    prose = [parsed["summary"], *(v for v in rationales.values() if isinstance(v, str))] if isinstance(rationales, dict) else [parsed["summary"]]
+    if any(_LOAD_WITHOUT_AUTHORIZATION.search(text) for text in prose):
+        return (
+            AdvisorSource(
+                mode="deterministic-fallback",
+                providerLabel=None,
+                fallbackReason="invalid_llm_output",
+            ),
+            summary,
+            recommendations,
+        )
     rec_map = {r.id: r.model_copy(deep=True) for r in recommendations}
     llm_pos: dict[str, int] = {}
     for r_id in prioritized_ids:
@@ -190,7 +215,9 @@ def _apply_validated_llm_output(
             and isinstance(rationales, dict)
             and isinstance(rationales.get(item.id), str)
         ):
-            item.rationale = codec.rehydrate_text(rationales[item.id].strip())
+            item.rationale = _replace_ids_with_titles(
+                codec.rehydrate_text(rationales[item.id].strip()), recommendations
+            )
         if unlocked_by_id is not None and item.id in unlocked_by_id:
             tier = (0, -unlocked_by_id[item.id])
         elif unlocked_by_id is not None:
@@ -203,7 +230,9 @@ def _apply_validated_llm_output(
     tiered_items.sort(key=lambda entry: (entry[0], entry[1]))
     ordered_recs = [entry[2] for entry in tiered_items]
 
-    rehydrated_summary = codec.rehydrate_text(parsed["summary"].strip())
+    rehydrated_summary = _replace_ids_with_titles(
+        codec.rehydrate_text(parsed["summary"].strip()), recommendations
+    )
     return (
         AdvisorSource(
             mode="llm-assisted",
@@ -228,6 +257,10 @@ async def analyze_proposal_with_advisor(req: AdvisorAnalyzeRequest, env=None, tr
     summary, bottlenecks, recommendations, codec = build_deterministic_analysis(
         req, dry_run_cache=dry_run_cache, diagnosis=diagnosis, normative_cache=normative_cache
     )
+    known_ids = {r.id for r in recommendations}
+    missing_selected = [i for i in (req.selectedRecommendationIds or []) if i not in known_ids]
+    if missing_selected:
+        recommendations = recommendations + resolve_catalog_variants(req, diagnosis, missing_selected)
     source, final_summary, final_recommendations, impact, steps = await run_advisor_agent(
         req,
         summary,

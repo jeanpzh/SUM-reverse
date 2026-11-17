@@ -606,3 +606,23 @@ def test_exhausted_tool_budget_gets_one_final_answer_turn() -> None:
     # Only the in-budget rounds executed tools; the over-budget call was dropped.
     assert [s.toolName for s in result.reasoningSteps].count("inspect_diagnosis") == MAX_TOOL_ROUNDS
     assert "Presupuesto de herramientas agotado" in model.histories[-1][-1]["content"]
+
+
+def test_selected_variant_outside_ranked_list_is_resolved_and_simulated() -> None:
+    req = _make_exploration_request()
+    _, _, ranked, _ = build_deterministic_analysis(req)
+    variant_id = "rec-increase-teacher-load-C4"
+    assert variant_id not in {r.id for r in ranked}
+    req.selectedRecommendationIds = [variant_id]
+    result = asyncio.run(analyze_proposal_with_advisor(req, env={"SUM_LLM_PROVIDER": "disabled"}))
+    assert result.verifiedImpact.recommendationIds == [variant_id]
+    resolved = next(r for r in result.recommendations if r.id == variant_id)
+    assert resolved.recommendedByDefault is False
+    assert resolved.patch.kind == "increase_teacher_load"
+
+
+def test_selected_id_absent_from_whole_catalog_is_still_rejected() -> None:
+    req = _make_exploration_request()
+    req.selectedRecommendationIds = ["rec-increase-teacher-load-C_DONE"]
+    with pytest.raises(ValueError):
+        asyncio.run(analyze_proposal_with_advisor(req, env={"SUM_LLM_PROVIDER": "disabled"}))
