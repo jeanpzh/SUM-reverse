@@ -263,7 +263,7 @@ def test_http_partial_window_patch_omits_absent_flags_but_keeps_provider_null(mo
 def test_llm_prose_claiming_load_without_authorization_is_rejected():
     req = sample()
     req.selectedRecommendationIds = []
-    claim = 'Amplía la carga de un docente, ya que no requiere autorización externa.'
+    claim = 'Ampliar la carga de un docente no requiere autorización externa.'
     result = run(req, FakeModel([AIMessage(content=json.dumps({'summary': claim, 'prioritizedIds': []}))]))
     assert result.source.mode == 'deterministic-fallback'
     assert result.source.fallbackReason == 'invalid_llm_output'
@@ -373,3 +373,13 @@ def test_model_is_offered_only_action_tools_and_gets_the_diagnosis_up_front():
     assert sorted(t.name for t in model.tools) == ['request_variants', 'simulate_patches_cpsat']
     first_user = json.loads(model.histories[0][1]['content'])
     assert {'freeSlotFits', 'pendingByCourse', 'topTeacherSlack'} <= set(first_user['diagnosis'])
+
+
+@pytest.mark.parametrize('text', [
+    'Prioriza la tarde sobre ampliar la carga, ya que no requiere autorización externa.',
+    'Habilita la tarde antes que la carga porque no requiere autorización externa.',
+    'Ampliar la carga requiere autorización externa; la tarde no requiere autorización.',
+])
+def test_authorization_guard_ignores_claims_about_other_options(text):
+    from advisor import _LOAD_WITHOUT_AUTHORIZATION
+    assert not _LOAD_WITHOUT_AUTHORIZATION.search(text)

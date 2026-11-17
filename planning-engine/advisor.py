@@ -176,8 +176,12 @@ def _extract_json_object(raw_text: str) -> dict:
 
 
 # Teacher-load increases always need external authorization; prose saying otherwise is false.
+# The claim must stay inside one clause after "carga": crossing a comma or a causal connector
+# ("porque", "ya que") usually moves to another option, and rejecting a sound answer drops the
+# whole LLM output. A causal clause whose subject is ambiguous is therefore let through.
 _LOAD_WITHOUT_AUTHORIZATION = re.compile(
-    r"carga[^.]*?(no\s+(requier|necesit)\w*|sin\s+(necesidad\s+de\s+)?)\s*(una\s+)?autorizaci",
+    r"\bcarga\b(?:(?!\b(?:porque|ya que|pues|mientras)\b)[^.,;:]){0,50}?"
+    r"\b(?:no\s+(?:requiere|necesita)\w*|sin\s+(?:necesidad\s+de\s+)?)\s*(?:una\s+|ninguna\s+)?autorizaci",
     re.IGNORECASE,
 )
 
