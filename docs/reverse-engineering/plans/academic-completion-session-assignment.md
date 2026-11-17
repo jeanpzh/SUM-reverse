@@ -1,7 +1,7 @@
 # Diseño arquitectónico: asignación docente por sesión, franjas por facultad/periodo y completitud de programación académica
 
 Fecha: 2026-11-17
-Estado: En implementación (`t3/complete-academic-sessions`, base `6c1d30f`)
+Estado: Integrado localmente en `feat/session-assignment-completion`, validación independiente pendiente. Resultados reales y límites: [aceptación integrada](../../testing/academic-completion-integrated.md).
 
 ## 1. Diagnóstico de incompatibilidades y causas raíz actuales
 
@@ -23,7 +23,7 @@ Al auditar en modo lectura los contratos compartidos (`shared/`), el motor Pytho
 4. **Verificación de huella e integridad en borradores y revisión docente:**
    - `DemoProposalService.validateRetainedView`, `matchesProposalConfiguration`, `captureDraftRetention` y `teacherFingerprints` (`teacher-review.ts`) comparan configuraciones canonizadas exactas y atributos de sección (`deliveryMode`). Cualquier extensión de contrato debe ser **aditiva y opcional con valores legacy por omisión**, de modo que solicitudes existentes mantengan exactamente su forma canonizada y compatibilidad con borradores guardados previos.
 
-## 2. Migración aditiva de contratos (compatibilidad legacy 100 %)
+## 2. Migración aditiva de contratos (compatibilidad de solicitudes legacy)
 
 Todos los cambios de esquema son **aditivos con propiedades opcionales**; omitir los campos nuevos preserva idénticamente el comportamiento previo:
 

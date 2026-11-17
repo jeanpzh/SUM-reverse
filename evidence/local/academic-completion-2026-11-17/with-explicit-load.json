@@ -1,0 +1,323 @@
+{
+  "source": "Own synthetic React/NestJS/Python, LLM-free, no API key required",
+  "includeLoad": true,
+  "targetMet": true,
+  "completion": {
+    "targetRequiredSessions": 332,
+    "targetMet": true,
+    "status": "complete",
+    "requiredSessions": 332,
+    "scheduledSessions": 332,
+    "pendingSessions": 0,
+    "completeSections": 166,
+    "totalSections": 166,
+    "gains": {
+      "scheduledSessions": 121,
+      "completeSections": 58,
+      "pendingSessions": -121
+    }
+  },
+  "checks": [
+    {
+      "name": "initial-56-courses-generated",
+      "passed": true
+    },
+    {
+      "name": "mount-does-not-consult",
+      "passed": true
+    },
+    {
+      "name": "consultation-without-simulation-or-llm",
+      "passed": true
+    },
+    {
+      "name": "apply-disabled-before-simulation",
+      "passed": true
+    },
+    {
+      "name": "select-new-options-without-silent-load-increase",
+      "passed": true
+    },
+    {
+      "name": "simulate-exact-selection",
+      "passed": true
+    },
+    {
+      "name": "apply-regenerates-once-without-implicit-save",
+      "passed": true
+    },
+    {
+      "name": "regeneration-preserves-demand-and-applies-exact-patches",
+      "passed": true
+    },
+    {
+      "name": "no-resource-or-section-conflicts-after-regeneration",
+      "passed": true
+    },
+    {
+      "name": "regeneration-respects-eligibility-availability-capacity-and-selected-loads",
+      "passed": true
+    },
+    {
+      "name": "complete-target-with-explicit-selected-load",
+      "passed": true
+    },
+    {
+      "name": "partial-result-never-claims-complete-in-ui",
+      "passed": true
+    },
+    {
+      "name": "no-browser-exceptions",
+      "passed": true
+    }
+  ],
+  "observations": [
+    {
+      "phase": "initial-generation",
+      "metrics": {
+        "status": "search-limit",
+        "requiredSessions": 332,
+        "scheduledSessions": 211,
+        "pendingSessions": 121,
+        "totalSections": 166,
+        "completeSections": 108,
+        "resourceConflicts": 0,
+        "sectionOverlaps": 0
+      },
+      "courses": 56,
+      "period": "2027-I",
+      "revision": "PA-DEMO-1"
+    },
+    {
+      "phase": "consultation",
+      "mode": "deterministic-fallback",
+      "recommendations": 4,
+      "patchKinds": [
+        "increase_teacher_load",
+        "enable_planning_window",
+        "change_delivery_mode",
+        "change_teacher_assignment_mode"
+      ],
+      "simulated": false
+    },
+    {
+      "phase": "simulation",
+      "mode": "deterministic-fallback",
+      "selectedIds": [
+        "rec-increase-teacher-load",
+        "rec-enable-planning-window",
+        "rec-change-delivery-mode",
+        "rec-change-teacher-assignment-mode"
+      ],
+      "excludedLoadIds": [],
+      "impact": {
+        "currentScheduledSessions": 211,
+        "projectedScheduledSessions": 332,
+        "requiredSessions": 332,
+        "currentCompleteSections": 108,
+        "projectedCompleteSections": 166,
+        "totalSections": 166,
+        "recommendationIds": [
+          "rec-enable-planning-window",
+          "rec-increase-teacher-load",
+          "rec-change-delivery-mode",
+          "rec-change-teacher-assignment-mode"
+        ],
+        "solverStatus": "complete"
+      }
+    },
+    {
+      "phase": "actual-regeneration",
+      "metrics": {
+        "status": "complete",
+        "requiredSessions": 332,
+        "scheduledSessions": 332,
+        "pendingSessions": 0,
+        "totalSections": 166,
+        "completeSections": 166,
+        "resourceConflicts": 0,
+        "sectionOverlaps": 0
+      },
+      "completion": {
+        "targetRequiredSessions": 332,
+        "targetMet": true,
+        "status": "complete",
+        "requiredSessions": 332,
+        "scheduledSessions": 332,
+        "pendingSessions": 0,
+        "completeSections": 166,
+        "totalSections": 166,
+        "gains": {
+          "scheduledSessions": 121,
+          "completeSections": 58,
+          "pendingSessions": -121
+        }
+      },
+      "teacherLoadDeltas": [
+        {
+          "teacherId": "REF-TEACHER-001",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 780,
+          "delta": 180
+        },
+        {
+          "teacherId": "REF-TEACHER-006",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 1500,
+          "delta": 900
+        },
+        {
+          "teacherId": "REF-TEACHER-007",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 1500,
+          "delta": 900
+        },
+        {
+          "teacherId": "REF-TEACHER-013",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 1260,
+          "delta": 660
+        },
+        {
+          "teacherId": "REF-TEACHER-029",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 1500,
+          "delta": 900
+        },
+        {
+          "teacherId": "REF-TEACHER-031",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 960,
+          "delta": 360
+        },
+        {
+          "teacherId": "REF-TEACHER-032",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 960,
+          "delta": 360
+        },
+        {
+          "teacherId": "REF-TEACHER-033",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 1260,
+          "delta": 660
+        },
+        {
+          "teacherId": "REF-TEACHER-034",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 1500,
+          "delta": 900
+        },
+        {
+          "teacherId": "REF-TEACHER-036",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 840,
+          "delta": 240
+        },
+        {
+          "teacherId": "REF-TEACHER-037",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 840,
+          "delta": 240
+        },
+        {
+          "teacherId": "REF-TEACHER-039",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 1260,
+          "delta": 660
+        },
+        {
+          "teacherId": "REF-TEACHER-040",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 780,
+          "delta": 180
+        },
+        {
+          "teacherId": "REF-TEACHER-041",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 1200,
+          "delta": 600
+        },
+        {
+          "teacherId": "REF-TEACHER-059",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 1020,
+          "delta": 420
+        },
+        {
+          "teacherId": "REF-TEACHER-062",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 1440,
+          "delta": 840
+        },
+        {
+          "teacherId": "REF-TEACHER-063",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 900,
+          "delta": 300
+        },
+        {
+          "teacherId": "REF-TEACHER-064",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 900,
+          "delta": 300
+        },
+        {
+          "teacherId": "REF-TEACHER-065",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 1020,
+          "delta": 420
+        },
+        {
+          "teacherId": "REF-TEACHER-066",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 1020,
+          "delta": 420
+        },
+        {
+          "teacherId": "REF-TEACHER-073",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 840,
+          "delta": 240
+        },
+        {
+          "teacherId": "REF-TEACHER-074",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 1020,
+          "delta": 420
+        },
+        {
+          "teacherId": "REF-TEACHER-077",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 900,
+          "delta": 300
+        },
+        {
+          "teacherId": "REF-TEACHER-083",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 900,
+          "delta": 300
+        },
+        {
+          "teacherId": "REF-TEACHER-084",
+          "previousMaxWeeklyMinutes": 600,
+          "nextMaxWeeklyMinutes": 1020,
+          "delta": 420
+        }
+      ],
+      "selectedPatchKinds": [
+        "increase_teacher_load",
+        "enable_planning_window",
+        "change_delivery_mode",
+        "change_teacher_assignment_mode"
+      ],
+      "policy": {
+        "revision": "FISI-PLANNING-1",
+        "period": "2027-I",
+        "allowAfternoon": true,
+        "allowSaturday": true
+      }
+    }
+  ],
+  "passed": true
+}
