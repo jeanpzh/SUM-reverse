@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom'
 import { PlanningResultStrip } from './PlanningResultStrip'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { Button } from '../components/ui/Button'
 import type { AcademicProposal } from '../data/academicScheduling'
 import type { AcademicTeacherReview } from '../../../shared/programacion-academica-api.mjs'
@@ -45,6 +45,7 @@ function plural(count: number, one: string, many: string) {
 
 export function AcademicTeacherReview({ actionContainer, primaryActionId, review, proposal, draftId, draftVersion, dirty, busy, error, onSubmit, onRespond }: Props) {
   const { state } = usePlanningSessionContext()
+  const sectionRef = useRef<HTMLElement>(null)
   const [role, setRole] = useState<'school' | 'teacher'>('school')
   const [teacherId, setTeacherId] = useState('')
   const [paneOpen, setPaneOpen] = useState(true)
@@ -98,6 +99,16 @@ export function AcademicTeacherReview({ actionContainer, primaryActionId, review
     setPaneOpen(true)
     if (nextRole) setRole(nextRole)
   }
+  const closeDetail = () => {
+    const id = selectedTeacher?.teacherId
+    setPaneOpen(false)
+    if (!id) return
+    requestAnimationFrame(() => {
+      const row = Array.from(sectionRef.current?.querySelectorAll<HTMLTableRowElement>('tr[data-teacher-id]') ?? [])
+        .find((item) => item.dataset.teacherId === id)
+      row?.querySelector<HTMLButtonElement>('.academic-teacher-review__name')?.focus()
+    })
+  }
   const respondToFirstPending = () => {
     const pending = ordered.find((teacher) => teacher.status === 'pending')
     if (pending) openTeacher(pending.teacherId)
@@ -112,7 +123,7 @@ export function AcademicTeacherReview({ actionContainer, primaryActionId, review
   </label>
   const inHead = (node: ReactNode) => actionContainer ? createPortal(node, actionContainer) : node
 
-  return <section className="academic-teacher-review" aria-label="Revisión docente simulada">
+  return <section ref={sectionRef} className="academic-teacher-review" aria-label="Revisión docente simulada">
     {inHead(roleControl)}
     {actionContainer && primaryActionId === 'record-response' && createPortal(<Button id="planning-tour-primary" onClick={respondToFirstPending}>Registrar respuesta ({counts.pending})</Button>, actionContainer)}
     {actionContainer && canSubmit && createPortal(<Button type="button" variant="outline" onClick={onSubmit}>Enviar a revisión</Button>, actionContainer)}
@@ -132,7 +143,7 @@ export function AcademicTeacherReview({ actionContainer, primaryActionId, review
         <span>{normalizedQuery ? `${visible.length} de ${plural(teachers.length, 'docente', 'docentes')}` : plural(teachers.length, 'docente', 'docentes')} · los que requieren atención primero</span>
       </div>
       <div className="academic-teacher-review__split">
-        <div className="academic-teacher-review__table-wrap">
+        <div className="academic-teacher-review__table-wrap" role="region" aria-label="Lista de docentes en revisión" tabIndex={0}>
           <table aria-label="Docentes en revisión">
             <thead><tr><th scope="col">Docente</th><th scope="col">Estado</th><th scope="col">Observación</th><th scope="col">Respuesta</th></tr></thead>
             <tbody>{visible.map((teacher) => {
@@ -158,13 +169,13 @@ export function AcademicTeacherReview({ actionContainer, primaryActionId, review
               <span className="academic-teacher-review__eyebrow">{selectedTeacher.decisionVersion !== null ? `Respuesta ${responseLabel(selectedTeacher)?.replace(' · ', ' de ')}` : `Sin respuesta · ronda ${review?.round}`}</span>
               <h2 id="academic-review-pane-title">{selectedTeacher.teacherName}</h2>
             </div>
-            <button type="button" className="academic-teacher-review__close" aria-label="Cerrar detalle" onClick={() => setPaneOpen(false)}>
+            <button type="button" className="academic-teacher-review__close" aria-label="Cerrar detalle" onClick={closeDetail}>
               <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.5" /></svg>
             </button>
           </div>
           {dirty && <p className="academic-teacher-review__warning">La tabla muestra la edición local; la conformidad guardada corresponde al horario anterior.</p>}
           {role === 'school' && selectedTeacher.observation && <p className="academic-teacher-review__observation-readonly"><span className="academic-teacher-review__eyebrow">Observación docente</span>{selectedTeacher.observation}</p>}
-          {blocks.length ? <div className="academic-teacher-review__blocks">
+          {blocks.length ? <div className="academic-teacher-review__blocks" role="region" aria-label={`Horario asignado de ${selectedTeacher.teacherName}`} tabIndex={0}>
             <table aria-label={`Bloques de ${selectedTeacher.teacherName}`}>
               <thead><tr><th scope="col">Curso</th><th scope="col">Secc.</th><th scope="col">Día</th><th scope="col">Horario</th><th scope="col">Ambiente</th></tr></thead>
               <tbody>{blocks.map((block) => <tr key={`${block.sectionId}-${block.day}-${block.startMinute}`}>
