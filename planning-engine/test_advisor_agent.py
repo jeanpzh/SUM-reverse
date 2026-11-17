@@ -322,3 +322,183 @@ def test_advisor_emits_and_simulates_change_teacher_assignment_mode():
     assert impact.projectedScheduledSessions == 3
     assert impact.projectedCompleteSections == 1
     assert impact.solverStatus == 'complete'
+
+
+def _five_class_request():
+    windows = [{'day': d, 'startMinute': 480, 'endMinute': 1320} for d in range(1, 6)]
+    return AdvisorAnalyzeRequest.model_validate({
+        'proposalId': 'synthetic-five-classes',
+        'editVersion': 0,
+        'courses': [
+            {
+                'courseId': 'C_TPL',
+                'name': 'Curso Mixto Ciclo 7',
+                'estimatedDemand': 45,
+                'targetCapacity': 45,
+                'weeklySessions': [
+                    {'id': 'T', 'durationMinutes': 120, 'type': 'T'},
+                    {'id': 'P', 'durationMinutes': 120, 'type': 'P'},
+                    {'id': 'L', 'durationMinutes': 120, 'type': 'L'},
+                ],
+                'deliveryMode': 'continuous',
+                'teacherAssignmentMode': 'single-teacher-section',
+                'cycle': 7,
+            },
+            {
+                'courseId': 'C_REF',
+                'name': 'Curso Sin Docente Local',
+                'estimatedDemand': 45,
+                'targetCapacity': 45,
+                'weeklySessions': [
+                    {'id': 'T', 'durationMinutes': 120, 'type': 'T'},
+                ],
+                'deliveryMode': 'continuous',
+                'teacherAssignmentMode': 'single-teacher-section',
+                'cycle': 4,
+            },
+        ],
+        'teachers': [
+            {'id': 'DOC_A', 'name': 'Docente Alfa', 'courseIds': ['C_TPL'], 'availability': windows, 'maxWeeklyMinutes': 240},
+            {'id': 'DOC_B', 'name': 'Docente Beta', 'courseIds': ['C_TPL'], 'availability': windows, 'maxWeeklyMinutes': 120},
+        ],
+        'referenceTeachers': [
+            {'id': 'DOC_REF', 'name': 'Docente Ref', 'courseIds': ['C_REF']},
+        ],
+        'rooms': [
+            {'id': 'A1', 'capacity': 50, 'kind': 'classroom', 'availability': windows},
+            {'id': 'LAB1', 'capacity': 50, 'kind': 'laboratory', 'availability': windows},
+        ],
+        'referenceRooms': [
+            {'id': 'A_REF', 'name': 'Aula Ref', 'capacity': 50, 'kind': 'classroom'},
+        ],
+        'sections': [
+            {'id': 'S1', 'courseId': 'C_TPL', 'capacity': 45, 'cycle': 7, 'ordinal': 1},
+            {'id': 'S2', 'courseId': 'C_REF', 'capacity': 45, 'cycle': 4, 'ordinal': 1},
+        ],
+        'requirements': [
+            {'id': 'S1:T', 'sectionId': 'S1', 'courseId': 'C_TPL', 'durationMinutes': 120, 'type': 'T', 'order': 0},
+            {'id': 'S1:P', 'sectionId': 'S1', 'courseId': 'C_TPL', 'durationMinutes': 120, 'type': 'P', 'order': 1},
+            {'id': 'S1:L', 'sectionId': 'S1', 'courseId': 'C_TPL', 'durationMinutes': 120, 'type': 'L', 'order': 2},
+            {'id': 'S2:T', 'sectionId': 'S2', 'courseId': 'C_REF', 'durationMinutes': 120, 'type': 'T', 'order': 0},
+        ],
+        'pending': [
+            {'sessionId': 'S1:T', 'sectionId': 'S1', 'courseId': 'C_TPL', 'durationMinutes': 120},
+            {'sessionId': 'S1:P', 'sectionId': 'S1', 'courseId': 'C_TPL', 'durationMinutes': 120},
+            {'sessionId': 'S1:L', 'sectionId': 'S1', 'courseId': 'C_TPL', 'durationMinutes': 120},
+            {'sessionId': 'S2:T', 'sectionId': 'S2', 'courseId': 'C_REF', 'durationMinutes': 120},
+            # Additional synthetic pending items to trigger Saturday window recommendation cleanly (>6)
+            {'sessionId': 'S1:T2', 'sectionId': 'S1', 'courseId': 'C_TPL', 'durationMinutes': 60},
+            {'sessionId': 'S1:P2', 'sectionId': 'S1', 'courseId': 'C_TPL', 'durationMinutes': 60},
+            {'sessionId': 'S1:L2', 'sectionId': 'S1', 'courseId': 'C_TPL', 'durationMinutes': 60},
+        ],
+        'assignments': [],
+        'diagnostics': [{'code': 'NO_COMPATIBLE_ROOM', 'message': 'Sin aula ref', 'sessionIds': ['S2:T']}],
+        'windows': windows,
+        'planningPolicy': {'period': '2027-I', 'facultyId': 'FISI', 'allowAfternoon': False, 'allowSaturday': False},
+    })
+
+
+def test_advisor_fifth_class_preserves_deterministic_order_exact_selection_and_no_consultation_sim(monkeypatch):
+    import advisor_agent
+
+    req = _five_class_request()
+    recs = build_deterministic_analysis(req)[2]
+    expected_ids = [
+        'rec-increase-teacher-load',
+        'rec-enable-planning-window',
+        'rec-incorporate-reference-resource',
+        'rec-change-delivery-mode',
+        'rec-change-teacher-assignment-mode',
+    ]
+    assert [r.id for r in recs] == expected_ids
+
+    # Consultation mode (selectedRecommendationIds is None) must never execute CP-SAT even if model asks.
+    monkeypatch.setattr(advisor_agent, 'run_cpsat_dry_run', lambda *a, **kw: (_ for _ in ()).throw(AssertionError('Consultation must not simulate')))
+    consult_res = run(req, FakeModel([call('simulate_patches_cpsat', {'recommendation_ids': expected_ids})]))
+    assert consult_res.verifiedImpact is None
+    assert [r.id for r in consult_res.recommendations] == expected_ids
+
+
+def test_advisor_fifth_class_keeps_deterministic_order_under_llm_reorder_and_exact_selection():
+    req = _five_class_request()
+    recs = build_deterministic_analysis(req)[2]
+    expected_ids = [r.id for r in recs]
+
+    selected = ['rec-change-teacher-assignment-mode', 'rec-incorporate-reference-resource', 'rec-enable-planning-window']
+    req.selectedRecommendationIds = selected
+    reordered = list(reversed(expected_ids))
+    result = run(req, FakeModel([AIMessage(content=json.dumps({'summary': 'Resumen sintético', 'prioritizedIds': reordered}))]))
+
+    assert result.source.mode == 'llm-assisted'
+    assert [r.id for r in result.recommendations] == expected_ids
+    assert result.verifiedImpact is not None
+    assert result.verifiedImpact.recommendationIds == selected
+    assert result.verifiedImpact.projectedScheduledSessions == 4
+    assert result.verifiedImpact.projectedCompleteSections == 2
+    assert result.verifiedImpact.solverStatus == 'complete'
+
+
+def test_simulation_vs_regeneration_parity_with_assignment_mode_and_saturday_non_invention():
+    from models import PendingSessionItem, RoomInput, TeacherInput, TimeInterval
+    from solver import get_effective_planning_windows
+
+    req = _five_class_request()
+    # Match pending strictly to actual requirements for exact regeneration parity.
+    req.pending = [
+        PendingSessionItem(sessionId=r.id, sectionId=r.sectionId, courseId=r.courseId, durationMinutes=r.durationMinutes)
+        for r in req.requirements
+    ]
+    # Add extra pending items only after verifying 4 requirements or force afternoon + assignment mode:
+    # Here senior cycle=7 + allowAfternoon=False -> rec-enable-planning-window triggers (allowAfternoon=True).
+    recs = build_deterministic_analysis(req)[2]
+    selected = ['rec-enable-planning-window', 'rec-incorporate-reference-resource', 'rec-change-delivery-mode', 'rec-change-teacher-assignment-mode']
+    impact = run_cpsat_dry_run(req, recs, selected)
+
+    # Regenerate identically through /v1/solve with maxTimeSeconds=2.5.
+    regen = req.model_copy(deep=True)
+    ref_windows = [TimeInterval(day=d, startMinute=480, endMinute=1320) for d in range(1, 6)]
+    rec_map = {r.id: r.patch for r in recs}
+    for rec_id in selected:
+        patch = rec_map[rec_id]
+        if patch.kind == 'enable_planning_window':
+            if patch.allowAfternoon:
+                regen.planningPolicy.allowAfternoon = True
+            if patch.allowSaturday:
+                regen.planningPolicy.allowSaturday = True
+        elif patch.kind == 'change_delivery_mode':
+            for c in regen.courses:
+                if c.courseId in patch.courseIds:
+                    c.deliveryMode = 'split'
+        elif patch.kind == 'change_teacher_assignment_mode':
+            for c in regen.courses:
+                if c.courseId in patch.courseIds:
+                    c.teacherAssignmentMode = patch.teacherAssignmentMode
+        elif patch.kind == 'incorporate_reference_resource':
+            for rt in regen.referenceTeachers:
+                if rt.id in patch.teacherIds:
+                    regen.teachers.append(TeacherInput(id=rt.id, name=rt.name, courseIds=rt.courseIds, maxWeeklyMinutes=600, availability=ref_windows, facultyId='FISI', qualificationSource='synthetic'))
+            for rr in regen.referenceRooms:
+                if rr.id in patch.roomIds:
+                    regen.rooms.append(RoomInput(**rr.model_dump(), availability=ref_windows))
+
+    regen.windows = get_effective_planning_windows(regen.windows, regen.planningPolicy)
+    solve_payload = SolveScheduleRequest(
+        courses=regen.courses,
+        teachers=regen.teachers,
+        rooms=regen.rooms,
+        sections=regen.sections,
+        requirements=regen.requirements,
+        windows=regen.windows,
+        startStepMinutes=regen.startStepMinutes,
+        allocationPolicy=regen.allocationPolicy,
+        planningPolicy=regen.planningPolicy,
+        maxTimeSeconds=2.5,
+    )
+    with TestClient(app) as client:
+        resp = client.post('/v1/solve', json=solve_payload.model_dump())
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body['assignments']) == impact.projectedScheduledSessions == 4
+    assert body['status'] == impact.solverStatus == 'complete'
+    assert all(a['interval']['day'] != 6 for a in body['assignments'])
+
