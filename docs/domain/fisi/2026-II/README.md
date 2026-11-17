@@ -8,6 +8,7 @@
 - `as-is-process.md`: actores, fechas y **turnos FISI 2026-II documentados**, proceso regular virtual P01–P12, Mermaid de flujo **testimoniado**, límites del conocimiento, procesos posteriores.
 - `emulation-fidelity.md`: niveles N0–N3, qué replicar, qué **no** afirmar, catálogo configurable de mensajes placeholder, concurrencia y criterios para pasar a especificación de paridad.
 - `open-questions.md`: Q-01–Q-35 priorizadas, responsables sugeridos y método de validación que no exige tocar datos ni matrículas reales.
+- `teacher-conformity-sources-2026-11-17.md`: quién elabora, revisa y aprueba la carga docente según el reglamento docente 2026; la práctica FISI de conformidad firmada queda sin verificar (CD-01–CD-03).
 
 ## Cambios críticos respecto al borrador
 

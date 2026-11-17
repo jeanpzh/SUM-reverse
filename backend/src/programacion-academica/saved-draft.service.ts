@@ -496,7 +496,7 @@ export class SavedDraftService {
   }
 
   private requireHistoryCapacity(history: AcademicTeacherReview['history'], additions: number): void {
-    if (history.length + additions > 200) throw this.httpError(429, 'REVIEW_HISTORY_LIMIT', 'Se alcanzó el máximo de eventos del historial de revisión. Guarda la propuesta como un borrador nuevo para continuar.')
+    if (history.length + additions > 200) throw this.httpError(429, 'REVIEW_HISTORY_LIMIT', 'Se alcanzó el máximo de 200 eventos del historial de revisión; esta propuesta no admite más respuestas.')
   }
 
   private writeReviewDraft(payload: PersistedDraft, draft: AcademicSavedDraft): void {
