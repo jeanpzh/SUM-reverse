@@ -6,7 +6,7 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { academicSectionCoverage, formatAcademicInterval } from '../data/academicScheduling'
 import type { PlanningPeriod } from '../data/academicScheduling'
-import type { AcademicAdjustment, AcademicAllocationPolicy, AcademicDraftState, AcademicPlanningResources } from '../../../shared/programacion-academica-api.mjs'
+import type { AcademicAdjustment, AcademicAllocationPolicy, AcademicDraftState, AcademicPlanningResources, AcademicTeacherAssignmentMode } from '../../../shared/programacion-academica-api.mjs'
 import { usePlanningSessionContext } from '../components/PlanningSessionProvider'
 import type { PlanningPreparationView, PlanningBlock } from '../data/planningSession'
 import { AcademicResourceEditor } from './AcademicResourceEditor'
@@ -109,7 +109,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
   }, [viewMode])
 
   const { catalog, proposal, proposalResources, editingBlock, demands, capacities, patterns, deliveryModes,
-    selectedCourses, demandSourceId, demandEstimate, resources, allocationPolicy } = state
+    teacherAssignmentModes, selectedCourses, demandSourceId, demandEstimate, resources, allocationPolicy } = state
   const planningPeriod = state.period
   const chat = useNormativeChat(planningPeriod)
   const planningPolicy = state.policy
@@ -224,6 +224,8 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
   const changeDemandSource = (value: 'existing-regular-v1' | 'independent-120-v1') => commands.edit({ type: 'changeDemandSource', value })
   const updatePattern = (courseId: string, value: string) => commands.edit({ type: 'updatePattern', courseId, value })
   const updateDeliveryMode = (courseId: string, value: 'continuous' | 'split') => commands.edit({ type: 'updateDeliveryMode', courseId, value })
+  const updateTeacherAssignmentMode = (courseId: string, value: AcademicTeacherAssignmentMode) =>
+    commands.edit({ type: 'updateTeacherAssignmentMode', courseId, value })
   const updateResources = (value: AcademicPlanningResources) => commands.edit({ type: 'updateResources', value })
   const updateAllocationPolicy = (value: AcademicAllocationPolicy) => commands.edit({ type: 'updateAllocationPolicy', value })
   const updatePlanningException = (key: 'allowAfternoon' | 'allowSaturday', checked: boolean) =>
@@ -494,10 +496,12 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
             capacities={capacities}
             patterns={patterns}
             deliveryModes={deliveryModes}
+            teacherAssignmentModes={teacherAssignmentModes}
             onUpdateDemand={updateDemand}
             onUpdateCapacity={updateCapacity}
             onUpdatePattern={updatePattern}
             onUpdateDeliveryMode={updateDeliveryMode}
+            onUpdateTeacherAssignmentMode={updateTeacherAssignmentMode}
             onApplyBulkChanges={applyBulkChanges}
             proposal={proposal}
             isLocked={lockedDraft || draftBusy}

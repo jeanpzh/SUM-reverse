@@ -11,6 +11,7 @@ from models import (
     AdvisorRecommendation,
     AdvisorSource,
     ChangeDeliveryModePatch,
+    ChangeTeacherAssignmentModePatch,
     EnablePlanningWindowPatch,
     IncorporateReferenceResourcePatch,
     IncreaseTeacherLoadPatch,
@@ -339,6 +340,46 @@ def build_deterministic_analysis(
                 patch=ChangeDeliveryModePatch(
                     courseIds=sorted(long_continuous_courses),
                     deliveryMode="split",
+                ),
+            )
+        )
+
+    # 5. Courses mixing T/P and L under strict single-teacher-section ownership -> suggest tp-grouped-l-independent
+    split_assignment_courses: list[str] = []
+    split_assignment_sessions = 0
+    for course_id, p_items in pending_by_course.items():
+        course = courses_by_id.get(course_id)
+        if not course or course.teacherAssignmentMode != "single-teacher-section":
+            continue
+        has_lab = any(ws.type == "L" for ws in course.weeklySessions)
+        has_non_lab = any(ws.type != "L" for ws in course.weeklySessions)
+        if has_lab and has_non_lab:
+            split_assignment_courses.append(course_id)
+            split_assignment_sessions += len(p_items)
+
+    if split_assignment_courses:
+        bottlenecks.append(
+            AdvisorBottleneck(
+                category="teacher_assignment_mode",
+                title=f"{len(split_assignment_courses)} curso(s) con teoría/práctica y laboratorio atados a un solo docente",
+                detail=(
+                    "Exigir un único docente para teoría/práctica y laboratorio impide aprovechar saldos parciales de carga entre docentes habilitados."
+                ),
+                affectedSessionCount=split_assignment_sessions,
+            )
+        )
+        recommendations.append(
+            AdvisorRecommendation(
+                id="rec-change-teacher-assignment-mode",
+                title=f"Separar docente de laboratorio (T/P juntos y L independiente) en {len(split_assignment_courses)} curso(s)",
+                rationale=(
+                    "Mantiene un docente común para teoría y práctica (T+P continuos cuando corresponda), mientras habilita docente y franja independientes para laboratorio (L) sin elevar cargas máximas."
+                ),
+                impactSummary=f"Habilita asignación T/P + L separada en {len(split_assignment_courses)} curso(s) ({split_assignment_sessions} componentes)",
+                recommendedByDefault=False,
+                patch=ChangeTeacherAssignmentModePatch(
+                    courseIds=sorted(split_assignment_courses),
+                    teacherAssignmentMode="tp-grouped-l-independent",
                 ),
             )
         )

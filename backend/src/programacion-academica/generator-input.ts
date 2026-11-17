@@ -1,9 +1,10 @@
 import { calculateRequiredSections } from './section-sizing.js'
 import { intervalsOverlap, validateAcademicSchedule } from './schedule-validator.js'
-import type { AllocationPolicy, DeliveryMode, GeneratorInput, RequiredSession } from './generator.types.js'
+import type { AllocationPolicy, DeliveryMode, GeneratorInput, RequiredSession, TeacherAssignmentMode } from './generator.types.js'
 import type { AcademicSchedule } from './schedule.types.js'
 import { GENERATOR_LIMITS, checkScheduleSizes } from './generator-limits.js'
 import { PLANNING_LIMITS, validatePlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
+import { TEACHER_ASSIGNMENT_MODES } from '../../../shared/programacion-academica-api.mjs'
 
 export const compareIds = (left: string, right: string) => left < right ? -1 : left > right ? 1 : 0
 
@@ -29,6 +30,11 @@ function deliveryMode(value: unknown, path: string): DeliveryMode {
   if (value === undefined) return 'continuous'
   if (value !== 'continuous' && value !== 'split') fail(path, 'debe ser continuous o split')
   return value
+}
+function teacherAssignmentMode(value: unknown, path: string): TeacherAssignmentMode | undefined {
+  if (value === undefined) return undefined
+  if (!TEACHER_ASSIGNMENT_MODES.includes(value as TeacherAssignmentMode)) fail(path, 'debe ser single-teacher-section, tp-grouped-l-independent o per-session')
+  return value as TeacherAssignmentMode
 }
 function sessionType(value: unknown, path: string): string | undefined {
   if (value === undefined) return undefined
@@ -71,8 +77,9 @@ export function prepareGeneratorInput(value: unknown): { input: GeneratorInput; 
   const requirements: RequiredSession[] = []
   courses.forEach((value, index) => {
     const path = `courses[${index}]`
-    const course = exactRecord(value, ['courseId', 'estimatedDemand', 'targetCapacity', 'weeklySessions'], path, ['deliveryMode', 'cycle', 'sectionCapacities'])
+    const course = exactRecord(value, ['courseId', 'estimatedDemand', 'targetCapacity', 'weeklySessions'], path, ['deliveryMode', 'teacherAssignmentMode', 'cycle', 'sectionCapacities'])
     const mode = deliveryMode(course.deliveryMode, `${path}.deliveryMode`)
+    teacherAssignmentMode(course.teacherAssignmentMode, `${path}.teacherAssignmentMode`)
     requireId(course.courseId, `${path}.courseId`)
     if (course.cycle !== undefined) requireInteger(course.cycle, 1, 10, `${path}.cycle`)
     let count: number

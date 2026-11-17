@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from normative import NormativeResponse
 
 
@@ -48,6 +48,13 @@ class SectionCapacityOverride(BaseModel):
     capacity: int = Field(ge=1)
 
 
+TeacherAssignmentMode = Literal[
+    "single-teacher-section",
+    "tp-grouped-l-independent",
+    "per-session",
+]
+
+
 class CourseInput(BaseModel):
     courseId: str
     name: str | None = None
@@ -55,8 +62,22 @@ class CourseInput(BaseModel):
     targetCapacity: int = Field(ge=1)
     weeklySessions: list[WeeklySessionInput]
     deliveryMode: Literal["continuous", "split"] = "continuous"
+    teacherAssignmentMode: TeacherAssignmentMode = "single-teacher-section"
     cycle: int | None = None
     sectionCapacities: list[SectionCapacityOverride] | None = None
+
+
+class PlanningPolicyExceptionsInput(BaseModel):
+    saturdayStartMinute: int | None = Field(default=None, ge=0, le=1439, exclude_if=lambda v: v is None)
+    saturdayEndMinute: int | None = Field(default=None, ge=1, le=1440, exclude_if=lambda v: v is None)
+
+    @model_validator(mode="after")
+    def _validate_range(self) -> PlanningPolicyExceptionsInput:
+        start = self.saturdayStartMinute if self.saturdayStartMinute is not None else 480
+        end = self.saturdayEndMinute if self.saturdayEndMinute is not None else 780
+        if start >= end:
+            raise ValueError("Rango horario de excepción de sábado inválido")
+        return self
 
 
 class PlanningPolicyInput(BaseModel):
@@ -64,6 +85,24 @@ class PlanningPolicyInput(BaseModel):
     period: str
     allowAfternoon: bool = False
     allowSaturday: bool = False
+    facultyId: str | None = Field(default=None, exclude_if=lambda v: v is None)
+    source: str | None = Field(default=None, exclude_if=lambda v: v is None)
+    exceptions: PlanningPolicyExceptionsInput | None = Field(default=None, exclude_if=lambda v: v is None)
+
+    @model_validator(mode="after")
+    def _validate_profile(self) -> PlanningPolicyInput:
+        if self.facultyId is not None and self.facultyId != "FISI":
+            raise ValueError(f"Facultad de política local no admitida o desconocida: {self.facultyId}")
+        if self.source is not None and (not self.source.strip() or len(self.source) > 120):
+            raise ValueError("Procedencia de política local inválida")
+        if self.exceptions is not None:
+            has_sat = (
+                self.exceptions.saturdayStartMinute is not None
+                or self.exceptions.saturdayEndMinute is not None
+            )
+            if has_sat and not self.allowSaturday:
+                raise ValueError("La excepción de franja de sábado requiere allowSaturday activo")
+        return self
 
 
 class SectionInput(BaseModel):
@@ -157,6 +196,12 @@ class ChangeDeliveryModePatch(BaseModel):
     deliveryMode: Literal["split"] = "split"
 
 
+class ChangeTeacherAssignmentModePatch(BaseModel):
+    kind: Literal["change_teacher_assignment_mode"] = "change_teacher_assignment_mode"
+    courseIds: list[str]
+    teacherAssignmentMode: Literal["tp-grouped-l-independent", "per-session"] = "tp-grouped-l-independent"
+
+
 class IncorporateReferenceResourcePatch(BaseModel):
     kind: Literal["incorporate_reference_resource"] = "incorporate_reference_resource"
     teacherIds: list[str]
@@ -167,6 +212,7 @@ AcademicAdvisorPatch = (
     IncreaseTeacherLoadPatch
     | EnablePlanningWindowPatch
     | ChangeDeliveryModePatch
+    | ChangeTeacherAssignmentModePatch
     | IncorporateReferenceResourcePatch
 )
 
@@ -177,6 +223,7 @@ class AdvisorBottleneck(BaseModel):
         "planning_window",
         "missing_resource",
         "delivery_mode",
+        "teacher_assignment_mode",
         "other",
     ]
     title: str
@@ -194,6 +241,7 @@ class AdvisorRecommendation(BaseModel):
         IncreaseTeacherLoadPatch
         | EnablePlanningWindowPatch
         | ChangeDeliveryModePatch
+        | ChangeTeacherAssignmentModePatch
         | IncorporateReferenceResourcePatch
     )
 
@@ -232,6 +280,7 @@ class AdvisorAnalyzeRequest(BaseModel):
     pending: list[PendingSessionItem]
     diagnostics: list[DiagnosticOutput]
     planningPolicy: PlanningPolicyInput | None = None
+    allocationPolicy: Literal["preferences", "balanced", "first-feasible"] = "preferences"
     windows: list[TimeInterval] = Field(default_factory=lambda: [TimeInterval(day=d, startMinute=480, endMinute=1320) for d in range(1, 7)])
     startStepMinutes: int = Field(default=60, ge=1)
     selectedRecommendationIds: list[str] | None = None

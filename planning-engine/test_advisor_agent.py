@@ -277,3 +277,48 @@ def test_narrative_preserves_deterministic_order():
     ids = [r.id for r in build_deterministic_analysis(req)[2]]
     result = run(req, FakeModel([AIMessage(content=json.dumps({'summary': 'Texto sintético', 'prioritizedIds': list(reversed(ids))}))]))
     assert [r.id for r in result.recommendations] == ids
+
+
+def test_advisor_emits_and_simulates_change_teacher_assignment_mode():
+    windows = [{'day': d, 'startMinute': 480, 'endMinute': 720} for d in (1, 2)]
+    req = AdvisorAnalyzeRequest.model_validate({
+        'proposalId': 'synthetic-tpl', 'editVersion': 0,
+        'courses': [{
+            'courseId': 'C_TPL', 'name': 'Curso Mixto', 'estimatedDemand': 45, 'targetCapacity': 45,
+            'weeklySessions': [
+                {'id': 'T', 'durationMinutes': 120, 'type': 'T'},
+                {'id': 'P', 'durationMinutes': 120, 'type': 'P'},
+                {'id': 'L', 'durationMinutes': 120, 'type': 'L'},
+            ],
+            'deliveryMode': 'split', 'teacherAssignmentMode': 'single-teacher-section', 'cycle': 4,
+        }],
+        'teachers': [
+            {'id': 'DOC_A', 'name': 'Docente A', 'courseIds': ['C_TPL'], 'availability': windows, 'maxWeeklyMinutes': 240},
+            {'id': 'DOC_B', 'name': 'Docente B', 'courseIds': ['C_TPL'], 'availability': windows, 'maxWeeklyMinutes': 120},
+        ],
+        'rooms': [
+            {'id': 'R1', 'capacity': 50, 'kind': 'classroom', 'availability': windows},
+            {'id': 'LAB1', 'capacity': 50, 'kind': 'laboratory', 'availability': windows},
+        ],
+        'sections': [{'id': 'S1', 'courseId': 'C_TPL', 'capacity': 45, 'cycle': 4, 'ordinal': 1}],
+        'requirements': [
+            {'id': 'S1:T', 'sectionId': 'S1', 'courseId': 'C_TPL', 'durationMinutes': 120, 'type': 'T', 'order': 0},
+            {'id': 'S1:P', 'sectionId': 'S1', 'courseId': 'C_TPL', 'durationMinutes': 120, 'type': 'P', 'order': 1},
+            {'id': 'S1:L', 'sectionId': 'S1', 'courseId': 'C_TPL', 'durationMinutes': 120, 'type': 'L', 'order': 2},
+        ],
+        'pending': [
+            {'sessionId': 'S1:T', 'sectionId': 'S1', 'courseId': 'C_TPL', 'durationMinutes': 120},
+            {'sessionId': 'S1:P', 'sectionId': 'S1', 'courseId': 'C_TPL', 'durationMinutes': 120},
+            {'sessionId': 'S1:L', 'sectionId': 'S1', 'courseId': 'C_TPL', 'durationMinutes': 120},
+        ],
+        'assignments': [], 'diagnostics': [], 'windows': windows,
+        'planningPolicy': {'period': '2027-I', 'facultyId': 'FISI'},
+    })
+    recs = build_deterministic_analysis(req)[2]
+    tpl_rec = next(r for r in recs if r.patch.kind == 'change_teacher_assignment_mode')
+    assert tpl_rec.recommendedByDefault is False
+    assert tpl_rec.patch.teacherAssignmentMode == 'tp-grouped-l-independent'
+    impact = run_cpsat_dry_run(req, recs, [tpl_rec.id])
+    assert impact.projectedScheduledSessions == 3
+    assert impact.projectedCompleteSections == 1
+    assert impact.solverStatus == 'complete'

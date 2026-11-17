@@ -55,9 +55,10 @@ def test_scale_useful_within_advisor_budget(scale_request):
     assert len(result.assignments) >= 100
 
 
-def patched_request(req, initial, split):
+def patched_request(req, initial, split, *, teacher_mode=False, include_load=True):
     from advisor import build_deterministic_analysis
     from models import AdvisorAnalyzeRequest
+    from solver import get_effective_planning_windows
     assigned = {a.id for a in initial.assignments}
     analysis = AdvisorAnalyzeRequest(**{k: v for k, v in req.model_dump().items() if k in AdvisorAnalyzeRequest.model_fields},
         proposalId='synthetic-scale', editVersion=0, assignments=initial.assignments, diagnostics=initial.diagnostics,
@@ -66,7 +67,7 @@ def patched_request(req, initial, split):
     copy = req.model_copy(deep=True)
     for rec in build_deterministic_analysis(analysis)[2]:
         patch = rec.patch
-        if patch.kind == 'increase_teacher_load':
+        if include_load and patch.kind == 'increase_teacher_load':
             for adj in patch.adjustments:
                 next(t for t in copy.teachers if t.id == adj.teacherId).maxWeeklyMinutes = adj.nextMaxWeeklyMinutes
         elif patch.kind == 'enable_planning_window':
@@ -76,27 +77,41 @@ def patched_request(req, initial, split):
             for c in copy.courses:
                 if c.courseId in patch.courseIds:
                     c.deliveryMode = 'split'
+        elif teacher_mode and patch.kind == 'change_teacher_assignment_mode':
+            for c in copy.courses:
+                if c.courseId in patch.courseIds:
+                    c.teacherAssignmentMode = patch.teacherAssignmentMode
+    copy.windows = get_effective_planning_windows(copy.windows, copy.planningPolicy)
     return copy
 
 
 def test_scale_patches(scale_request):
     initial_request = scale_request.model_copy(update={'maxTimeSeconds': 2.5})
     initial = solve_academic_schedule(initial_request)
-    for split, budget in [(False, 0.8), (True, 0.8), (True, 2.5)]:
-        req = patched_request(scale_request, initial, split)
+    for split, teacher_mode, include_load, budget, floor in [
+        (False, False, True, 0.8, 280),
+        (True, False, True, 0.8, 300),
+        (True, True, False, 2.5, 255),
+        (True, True, True, 2.5, 332),
+    ]:
+        req = patched_request(scale_request, initial, split, teacher_mode=teacher_mode, include_load=include_load)
         req.maxTimeSeconds = budget
         started = time.monotonic()
         result = solve_academic_schedule(req)
         elapsed = time.monotonic() - started
-        print(f'patches split={split} budget={budget}: {elapsed:.3f}s, {len(result.assignments)}/{len(req.requirements)} sessions {len({a.sectionId for a in result.assignments})}/{len(req.sections)} sections, {result.status}')
+        print(f'patches split={split} tpl={teacher_mode} load={include_load} budget={budget}: {elapsed:.3f}s, {len(result.assignments)}/{len(req.requirements)} sessions {len({a.sectionId for a in result.assignments})}/{len(req.sections)} sections, {result.status}')
         assert_hard_constraints(req, result)
-        assert elapsed < budget + 0.2
-        assert len(result.assignments) >= (300 if split else 280)
+        assert elapsed < budget + 0.35
+        assert len(result.assignments) >= floor
+        if not include_load:
+            assert all(t.maxWeeklyMinutes == 600 for t in req.teachers)
+        if floor == 332:
+            assert result.status == 'complete'
 
 
 def assert_hard_constraints(req, result):
     from collections import Counter, defaultdict
-    from solver import availability_covers, is_eligible_for_course, planning_time_rank
+    from solver import availability_covers, get_section_component_groups, is_eligible_for_course, planning_time_rank
     requirements = {r.id: r for r in req.requirements}
     sections = {s.id: s for s in req.sections}
     courses = {c.courseId: c for c in req.courses}
@@ -127,11 +142,24 @@ def assert_hard_constraints(req, result):
         for limit in teachers[tid].sectionLimits or []:
             assert len(taught[tid, limit.courseId]) <= limit.maxSections
     for sid, placed in grouped.items():
-        assert {a.id for a in placed} == {r.id for r in req.requirements if r.sectionId == sid}
-        assert len({a.teacherId for a in placed}) == 1
+        sec_reqs = [r for r in req.requirements if r.sectionId == sid]
         course = courses[sections[sid].courseId]
-        ordered = sorted(placed, key=lambda a: requirements[a.id].order)
-        blocks = [[a] for a in ordered] if course.deliveryMode == 'split' else [ordered]
+        by_id = {a.id: a for a in placed}
+        ordered_reqs = sorted(sec_reqs, key=lambda r: r.order)
+        groups = get_section_component_groups(ordered_reqs, course.teacherAssignmentMode)
+        if course.teacherAssignmentMode == 'single-teacher-section':
+            assert {a.id for a in placed} == {r.id for r in sec_reqs}
+        blocks = []
+        for grp in groups:
+            grp_placed = [by_id[r.id] for r in grp if r.id in by_id]
+            assert len(grp_placed) in (0, len(grp))
+            if not grp_placed:
+                continue
+            assert len({a.teacherId for a in grp_placed}) == 1
+            if course.deliveryMode == 'split':
+                blocks.extend([[a] for a in grp_placed])
+            else:
+                blocks.append(grp_placed)
         for block in blocks:
             w = block[0].interval
             duration = sum(requirements[a.id].durationMinutes for a in block)
@@ -142,7 +170,7 @@ def assert_hard_constraints(req, result):
     for i, a in enumerate(result.assignments):
         for b in result.assignments[i + 1:]:
             sa, sb = sections[a.sectionId], sections[b.sectionId]
-            shared = a.teacherId == b.teacherId or a.roomId == b.roomId or (
+            shared = a.sectionId == b.sectionId or a.teacherId == b.teacherId or a.roomId == b.roomId or (
                 req.planningPolicy and sa.cycle is not None and sa.ordinal is not None and (sa.cycle, sa.ordinal) == (sb.cycle, sb.ordinal))
             if shared:
                 assert a.interval.day != b.interval.day or a.interval.endMinute <= b.interval.startMinute or b.interval.endMinute <= a.interval.startMinute

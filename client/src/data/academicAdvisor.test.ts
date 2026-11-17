@@ -150,3 +150,34 @@ test('teacher load increase is never selected by default even in a legacy respon
   }] }
   assert.deepEqual(defaultAcademicAdvisorSelection(legacy), ['enable-afternoon'])
 })
+
+test('teacher assignment mode patch and manual update stay preserved and forward only non-default modes', async () => {
+  const catalog = { revision: 'PA-DEMO-1', courses: [1, 2].map((n) => ({
+    courseId: `SYN${n}`, name: `Curso ${n}`, estimatedDemand: 20, targetCapacity: 20,
+    weeklySessions: [{ id: `SYN${n}-T`, durationMinutes: 120, type: 'T' }, { id: `SYN${n}-L`, durationMinutes: 120, type: 'L' }],
+  })), teachers: [], rooms: [], windows: [{ day: 1, startMinute: 480, endMinute: 780 }], startStepMinutes: 30, maxExplorations: 100 }
+  const { defaultPlanningSessionClient } = await import('./planningSession.ts')
+  let capturedRequest: unknown = null
+  const session = createPlanningSession({
+    ...defaultPlanningSessionClient,
+    createProposal: async (request) => {
+      capturedRequest = request
+      return {
+        proposalId: 'syn-prop', editVersion: 0, createdAt: '2026-11-08T00:00:00.000Z', expiresAt: '2026-11-08T01:00:00.000Z',
+        status: 'complete', sections: [], assignments: [], pending: [], diagnostics: [], coverageComplete: true,
+        counts: { sections: 0, requiredSessions: 0, scheduledSessions: 0 },
+        stats: { exploredCandidates: 0, candidateVisits: 0, backtracks: 0, limitReason: null },
+      }
+    },
+  }, reducePlanningSession(initialPlanningSessionState(), { type: 'catalog/succeeded', catalog }))
+  session.commands.edit({ type: 'selectCourses', courseIds: ['SYN1', 'SYN2'] })
+  session.commands.edit({ type: 'applyAdvisorPatches', patches: [
+    { kind: 'change_teacher_assignment_mode', courseIds: ['SYN1'], teacherAssignmentMode: 'tp-grouped-l-independent' },
+  ] })
+  assert.equal(session.getState().teacherAssignmentModes.SYN1, 'tp-grouped-l-independent')
+  assert.equal(await session.commands.generate(), true)
+  const demands = (capturedRequest as { demands: Array<{ courseId: string; teacherAssignmentMode?: string }> }).demands
+  assert.equal(demands.find((d) => d.courseId === 'SYN1')?.teacherAssignmentMode, 'tp-grouped-l-independent')
+  assert.equal('teacherAssignmentMode' in (demands.find((d) => d.courseId === 'SYN2') ?? {}), false)
+  session.dispose()
+})

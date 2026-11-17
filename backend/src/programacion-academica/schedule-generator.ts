@@ -6,9 +6,10 @@ import { GENERATOR_LIMITS } from './generator-limits.js'
 import { preferenceRank } from './teacher-preferences.js'
 import type { GeneratorDiagnostic, GeneratorExecutionOptions, GeneratorInput, GeneratorResult, GeneratorSeed, RequiredSession } from './generator.types.js'
 import type { AcademicAssignment, AcademicSchedule, TimeInterval } from './schedule.types.js'
-import { THESIS_COURSE_IDS } from '../../../shared/academic-planning-policy.mjs'
+import { THESIS_COURSE_IDS, planningIntervalRank } from '../../../shared/academic-planning-policy.mjs'
+import { getSectionComponentGroups } from '../../../shared/programacion-academica-api.mjs'
 
-type SearchUnit = { requirements: RequiredSession[], mode: 'continuous' | 'split' }
+type SearchUnit = { requirements: RequiredSession[], mode: 'continuous' | 'split', groupRequirementIds: Set<string> }
 
 const invalidSeedResult = (code: string, message: string, sessionIds: string[]): GeneratorResult => ({
   status: 'invalid-input', schedule: null, requirements: [], coverage: null,
@@ -95,12 +96,28 @@ export function generateAcademicSchedule(value: unknown, options: GeneratorExecu
     const minutes = course.weeklySessions.reduce((sum, item) => sum + item.durationMinutes, 0)
     const availableMinutes = (teacher: GeneratorInput['teachers'][number]) => Math.max(0, teacher.maxWeeklyMinutes
       - fixedAssignments.filter((item) => item.teacherId === teacher.id).reduce((sum, item) => sum + item.interval.endMinute - item.interval.startMinute, 0))
-    const capacity = teachers.reduce((sum, teacher) => {
-      const fixedCount = new Set(fixedAssignments.filter((item) => item.teacherId === teacher.id
-        && schedule.sections.some((section) => section.id === item.sectionId && section.courseId === course.courseId)).map((item) => item.sectionId)).size
-      const cap = teacher.sectionLimits?.find((item) => item.courseId === course.courseId)?.maxSections
-      return sum + Math.min(Math.floor(availableMinutes(teacher) / minutes), cap === undefined ? sections.length : Math.max(0, cap - fixedCount))
-    }, 0)
+    const teacherMode = course.teacherAssignmentMode ?? 'single-teacher-section'
+    let capacity: number
+    if (teacherMode === 'single-teacher-section') {
+      capacity = teachers.reduce((sum, teacher) => {
+        const fixedCount = new Set(fixedAssignments.filter((item) => item.teacherId === teacher.id
+          && schedule.sections.some((section) => section.id === item.sectionId && section.courseId === course.courseId)).map((item) => item.sectionId)).size
+        const cap = teacher.sectionLimits?.find((item) => item.courseId === course.courseId)?.maxSections
+        return sum + Math.min(Math.floor(availableMinutes(teacher) / minutes), cap === undefined ? sections.length : Math.max(0, cap - fixedCount))
+      }, 0)
+    } else {
+      const sampleRows = rows.filter((item) => item.sectionId === sections[0]!.id)
+      const minGroupDuration = Math.min(...getSectionComponentGroups(sampleRows, teacherMode).map((group) => group.reduce((sum, item) => sum + item.durationMinutes, 0)))
+      const usableMinutes = teachers.reduce((sum, teacher) => {
+        const avail = availableMinutes(teacher)
+        if (avail < minGroupDuration) return sum
+        const fixedCount = new Set(fixedAssignments.filter((item) => item.teacherId === teacher.id
+          && schedule.sections.some((section) => section.id === item.sectionId && section.courseId === course.courseId)).map((item) => item.sectionId)).size
+        const cap = teacher.sectionLimits?.find((item) => item.courseId === course.courseId)?.maxSections
+        return sum + (cap === undefined ? avail : Math.min(avail, Math.max(0, cap - fixedCount) * minutes))
+      }, 0)
+      capacity = minutes > 0 ? Math.ceil(usableMinutes / minutes) : sections.length
+    }
     const exclude = (sectionIds: string[], code: string, message: string) => {
       if (!sectionIds.length) return
       sectionIds.forEach((id) => excludedSections.add(id))
@@ -110,7 +127,7 @@ export function generateAcademicSchedule(value: unknown, options: GeneratorExecu
       exclude(sections.map((item) => item.id), 'NO_QUALIFIED_TEACHER', `${course.courseId} requiere ${sections.length} secciones de ${minutes} min; hay 0 docentes habilitados`)
       continue
     }
-    // Keep the lowest ordinals; each section needs one responsible teacher even in split mode.
+    // Keep the lowest ordinals; capacity accounts for grouped vs per-component teacher assignment.
     exclude(sections.slice(capacity).map((item) => item.id), 'TEACHER_CAPACITY_SHORTFALL',
       `${course.courseId} requiere ${sections.length} secciones de ${minutes} min; los docentes habilitados cubren ${capacity} (${teachers.reduce((sum, teacher) => sum + availableMinutes(teacher), 0)} min disponibles)`)
     for (const section of sections) {
@@ -122,7 +139,10 @@ export function generateAcademicSchedule(value: unknown, options: GeneratorExecu
         exclude([section.id], 'NO_COMPATIBLE_ROOM', `${course.courseId}, sección ${section.id}: 0 ambientes compatibles para ${section.capacity} plazas y los tipos requeridos`)
         continue
       }
-      const blocks = course.deliveryMode === 'split' ? sectionRows.map((item) => item.durationMinutes) : [minutes]
+      const groups = getSectionComponentGroups(sectionRows, teacherMode)
+      const blocks = course.deliveryMode === 'split'
+        ? sectionRows.map((item) => item.durationMinutes)
+        : groups.map((group) => group.reduce((sum, item) => sum + item.durationMinutes, 0))
       // Input windows alone prove this bound; resource availability remains candidate work.
       const hasWindow = blocks.every((duration) => input.windows.some((window) => {
         for (let start = window.startMinute; start + duration <= window.endMinute; start += input.startStepMinutes) {
@@ -166,10 +186,10 @@ export function generateAcademicSchedule(value: unknown, options: GeneratorExecu
   }
 
   function* candidates(unit: SearchUnit): Generator<AcademicAssignment[]> {
-    const { requirements: componentRequirements, mode } = unit
+    const { requirements: componentRequirements, mode, groupRequirementIds } = unit
     const first = componentRequirements[0]!
     const blockDuration = componentRequirements.reduce((total, item) => total + item.durationMinutes, 0)
-    const assignedTeacher = schedule.assignments.find((item) => item.sectionId === first.sectionId)?.teacherId
+    const assignedTeacher = schedule.assignments.find((item) => item.sectionId === first.sectionId && groupRequirementIds.has(item.id))?.teacherId
 
     const eligibleTeachers = teachersByCourse.get(first.courseId)!.filter((teacher) => !assignedTeacher || teacher.id === assignedTeacher)
     const hasPreferenceWindows = input.allocationPolicy !== 'first-feasible'
@@ -366,6 +386,7 @@ export function generateAcademicSchedule(value: unknown, options: GeneratorExecu
 
 function makeUnits(input: GeneratorInput, requirements: RequiredSession[]): SearchUnit[] {
   const modes = new Map(input.courses.map((course) => [course.courseId, course.deliveryMode ?? 'continuous']))
+  const teacherModes = new Map(input.courses.map((course) => [course.courseId, course.teacherAssignmentMode ?? 'single-teacher-section']))
   const sections = new Map<string, RequiredSession[]>()
   for (const requirement of requirements) {
     const sectionRequirements = sections.get(requirement.sectionId) ?? []
@@ -375,9 +396,14 @@ function makeUnits(input: GeneratorInput, requirements: RequiredSession[]): Sear
   const units: SearchUnit[] = []
   for (const sectionRequirements of sections.values()) {
     sectionRequirements.sort((a, b) => a.order - b.order)
-    const mode = modes.get(sectionRequirements[0]!.courseId) ?? 'continuous'
-    if (mode === 'continuous') units.push({ requirements: sectionRequirements, mode })
-    else for (const requirement of sectionRequirements) units.push({ requirements: [requirement], mode })
+    const courseId = sectionRequirements[0]!.courseId
+    const mode = modes.get(courseId) ?? 'continuous'
+    const teacherMode = teacherModes.get(courseId) ?? 'single-teacher-section'
+    for (const group of getSectionComponentGroups(sectionRequirements, teacherMode)) {
+      const groupRequirementIds = new Set(group.map((item) => item.id))
+      if (mode === 'continuous') units.push({ requirements: group, mode, groupRequirementIds })
+      else for (const requirement of group) units.push({ requirements: [requirement], mode, groupRequirementIds })
+    }
   }
   return units
 }
@@ -435,21 +461,26 @@ function proveNecessaryConstraint(input: GeneratorInput, requirements: RequiredS
       code: 'INSUFFICIENT_TEACHER_SECTION_CAP',
       message: `Los límites explícitos de docentes habilitados para ${courseId} permiten menos de ${requiredSections} secciones`,
     }
-    const sectionLoad = courseRequirements.filter((item) => item.sectionId === courseRequirements[0]!.sectionId)
-      .reduce((sum, item) => sum + item.durationMinutes, 0)
-    if (teacherPool.every((teacher) => teacher.maxWeeklyMinutes < sectionLoad)) {
-      return { code: 'INSUFFICIENT_TEACHER_LOAD', message: `La carga máxima de cada docente habilitado es menor que los ${sectionLoad} minutos requeridos por sección` }
+    const courseObj = input.courses.find((item) => item.courseId === courseId)
+    const teacherMode = courseObj?.teacherAssignmentMode ?? 'single-teacher-section'
+    const firstSectionReqs = courseRequirements.filter((item) => item.sectionId === courseRequirements[0]!.sectionId).sort((a, b) => a.order - b.order)
+    const sectionLoad = firstSectionReqs.reduce((sum, item) => sum + item.durationMinutes, 0)
+    const groupDurations = getSectionComponentGroups(firstSectionReqs, teacherMode).map((group) => group.reduce((sum, item) => sum + item.durationMinutes, 0))
+    const minRequiredLoad = teacherMode === 'single-teacher-section' ? sectionLoad : Math.min(...groupDurations)
+    if (teacherPool.every((teacher) => teacher.maxWeeklyMinutes < minRequiredLoad)) {
+      return { code: 'INSUFFICIENT_TEACHER_LOAD', message: `La carga máxima de cada docente habilitado es menor que los ${minRequiredLoad} minutos requeridos` }
     }
-    const mode = input.courses.find((item) => item.courseId === courseId)?.deliveryMode ?? 'continuous'
+    const mode = courseObj?.deliveryMode ?? 'continuous'
     if (mode === 'continuous') {
-      const duration = sectionLoad
-      const hasTeacherWindow = teacherPool.some((teacher) => input.windows.some((window) => {
-        for (let start = window.startMinute; start + duration <= window.endMinute; start += input.startStepMinutes) {
-          if (availabilityCovers(teacher.availability, window.day, start, start + duration)) return true
-        }
-        return false
-      }))
-      if (!hasTeacherWindow) return { code: 'NO_CONTINUOUS_TEACHER_WINDOW', message: `No existe una franja docente continua de ${duration} minutos dentro de las ventanas declaradas` }
+      for (const duration of groupDurations) {
+        const hasTeacherWindow = teacherPool.some((teacher) => input.windows.some((window) => {
+          for (let start = window.startMinute; start + duration <= window.endMinute; start += input.startStepMinutes) {
+            if (availabilityCovers(teacher.availability, window.day, start, start + duration)) return true
+          }
+          return false
+        }))
+        if (!hasTeacherWindow) return { code: 'NO_CONTINUOUS_TEACHER_WINDOW', message: `No existe una franja docente continua de ${duration} minutos dentro de las ventanas declaradas` }
+      }
     }
   }
   if (!input.rooms.length) return { code: 'NO_ROOM_SELECTED', message: 'No hay ambientes seleccionados para programar las secciones' }
@@ -482,18 +513,9 @@ function planningTimeRank(requirement: RequiredSession, start: number, day: numb
   const policy = input.planningPolicy
   if (!policy) return 0
   const course = input.courses.find((item) => item.courseId === requirement.courseId)
-  const senior = (course?.cycle ?? 0) >= 7
-  if (day === 7) return null
-  if (day === 6) return policy.allowSaturday && start >= 8 * 60 && start + duration <= 13 * 60 ? (senior ? 2 : 1) : null
-  if (day < 1 || day > 5 || start + duration > 22 * 60) return null
-  if (senior) {
-    if (start >= 18 * 60 && start < 22 * 60) return 0
-    if (policy.allowAfternoon && start >= 14 * 60 && start < 22 * 60) return 1
-    return null
-  }
-  return start >= 8 * 60 && start < 22 * 60 ? 0 : null
+  return planningIntervalRank(course?.cycle, start, day, duration, policy)
 }
 
 function slotsRank(requirement: RequiredSession, interval: TimeInterval, input: GeneratorInput): number {
-  return planningTimeRank(requirement, interval.startMinute, interval.day, input) ?? Number.MAX_SAFE_INTEGER
+  return planningTimeRank(requirement, interval.startMinute, interval.day, input, interval.endMinute - interval.startMinute) ?? Number.MAX_SAFE_INTEGER
 }

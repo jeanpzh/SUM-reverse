@@ -5,7 +5,7 @@ import type { AcademicAdjustment, AcademicAdvisorRequest, AcademicAdvisorRespons
 import { planningDefaults as getPlanningDefaults, PLANNING_LIMITS, syntheticTeachingMetadata, validatePlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
 import type { PlanningPeriod, PlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
 
-export type { AcademicAdvisorBottleneck, AcademicAdvisorPatch, AcademicAdvisorRecommendation, AcademicAdvisorResponse, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest, AcademicProposal, AcademicRequest } from '../../../shared/programacion-academica-api.mjs'
+export type { AcademicAdvisorBottleneck, AcademicAdvisorPatch, AcademicAdvisorRecommendation, AcademicAdvisorResponse, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest, AcademicProposal, AcademicRequest, AcademicTeacherAssignmentMode } from '../../../shared/programacion-academica-api.mjs'
 export { PLANNING_LIMITS, syntheticTeachingMetadata }
 export type { PlanningPeriod, PlanningPolicy }
 

@@ -21,15 +21,18 @@ export function SuggestionCard({ recommendation, checked, disabled, index, measu
     ? patch.adjustments.map((row) => `${teacherNames[row.teacherId] ?? row.teacherId} (${row.teacherId}): ${row.previousMaxWeeklyMinutes} → ${row.nextMaxWeeklyMinutes} min semanales`)
     : patch.kind === 'change_delivery_mode'
       ? patch.courseIds.map((courseId) => `${courseNames[courseId] ?? courseId} (${courseId}): componentes en franjas independientes; un docente responsable por sección`)
-      : patch.kind === 'enable_planning_window'
-        ? [patch.allowAfternoon && 'Permitir tardes: habilitar lunes a viernes de 14:00 a 22:00', patch.allowSaturday && 'Permitir sábado: habilitar de 08:00 a 13:00'].filter(Boolean)
-        : [...patch.teacherIds.map((teacherId) => `Incorporar docente: ${teacherNames[teacherId] ?? teacherId} (${teacherId})`),
-          ...patch.roomIds.map((roomId) => `Incorporar ambiente: ${roomNames[roomId] ?? roomId} (${roomId})`)]
+      : patch.kind === 'change_teacher_assignment_mode'
+        ? patch.courseIds.map((courseId) => `${courseNames[courseId] ?? courseId} (${courseId}): ${patch.teacherAssignmentMode === 'per-session' ? 'docente independiente por sesión' : 'teoría/práctica juntas y laboratorio independiente'}`)
+        : patch.kind === 'enable_planning_window'
+          ? [patch.allowAfternoon && 'Permitir tardes: habilitar lunes a viernes de 14:00 a 22:00', patch.allowSaturday && 'Permitir sábado: habilitar de 08:00 a 13:00'].filter(Boolean)
+          : [...patch.teacherIds.map((teacherId) => `Incorporar docente: ${teacherNames[teacherId] ?? teacherId} (${teacherId})`),
+            ...patch.roomIds.map((roomId) => `Incorporar ambiente: ${roomNames[roomId] ?? roomId} (${roomId})`)]
   const kind = {
     increase_teacher_load: 'Carga docente',
     incorporate_reference_resource: 'Habilitación',
     enable_planning_window: 'Excepción horaria',
     change_delivery_mode: 'Modalidad',
+    change_teacher_assignment_mode: 'Asignación docente',
   }[patch.kind]
   return <article className="planning-rec" data-checked={checked || undefined} data-disabled={disabled || undefined}>
     <Checkbox id={id} checked={checked} disabled={disabled} onCheckedChange={(value) => onCheckedChange(value === true)} />
