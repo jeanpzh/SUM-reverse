@@ -94,3 +94,42 @@ test('zero sessions in an invalid input do not claim that there are no blockers'
     proposal: { status: 'invalid-input', pending: [], counts: { requiredSessions: 0, scheduledSessions: 0 } } })
   assert.doesNotMatch(html, /Sin bloqueos que resolver/)
 })
+
+test('SuggestionCard renders teacher assignment modes and non-legacy delivery copy cleanly', () => {
+  const grouped = render(SuggestionCard, {
+    checked: false,
+    disabled: false,
+    onCheckedChange() {},
+    teacherNames: {},
+    courseNames: { CS101: 'Curso sintético' },
+    roomNames: {},
+    recommendation: {
+      id: 'assign-tp',
+      title: 'Separar laboratorio',
+      rationale: 'Permite otro docente en laboratorio',
+      impactSummary: 'Desbloquea laboratorio',
+      recommendedByDefault: true,
+      patch: { kind: 'change_delivery_mode', courseIds: ['CS101'], teacherAssignmentMode: 'tp-grouped-l-independent' },
+    },
+  })
+  assert.match(grouped, /Modalidad/)
+  assert.match(grouped, /Curso sintético \(CS101\): teoría\/práctica juntas y laboratorio independiente/)
+
+  const perSession = render(SuggestionCard, {
+    checked: true,
+    disabled: false,
+    onCheckedChange() {},
+    teacherNames: {},
+    courseNames: { CS102: 'Curso dos' },
+    roomNames: {},
+    recommendation: {
+      id: 'assign-per-session',
+      title: 'Docente por sesión',
+      rationale: 'Permite docente independiente',
+      impactSummary: 'Desbloquea sesiones',
+      recommendedByDefault: false,
+      patch: { kind: 'change_delivery_mode', courseIds: ['CS102'], teacherAssignmentMode: 'per-session' },
+    },
+  })
+  assert.match(perSession, /Curso dos \(CS102\): docente independiente por sesión/)
+})

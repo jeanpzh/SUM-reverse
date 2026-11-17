@@ -9,7 +9,7 @@ import type {
 } from '../../../shared/programacion-academica-api.mjs'
 import { queryNormative } from './normative.client.js'
 import type { AcademicNormativeRequest, AcademicNormativeResponse } from '../../../shared/programacion-academica-api.mjs'
-import { THESIS_COURSE_IDS } from '../../../shared/academic-planning-policy.mjs'
+import { THESIS_COURSE_IDS, resolvePlanningTimeProfile } from '../../../shared/academic-planning-policy.mjs'
 import { prepareGeneratorInput } from './generator-input.js'
 import { createCoverageAuthority } from './session-coverage.js'
 import type { GeneratorInput, GeneratorResult, RequiredSession } from './generator.types.js'
@@ -207,7 +207,7 @@ export function buildLocalDeterministicAdvisor(
   let deficitSessionCount = 0
 
   const reservedByTeacher = new Map<string, number>()
-  for (const [courseId, pendingItems] of pendingByCourse) {
+  for (const [courseId, pendingItems] of [...pendingByCourse].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)) {
     const eligible = input.teachers.filter((t) => isEligibleTeacher(t, courseId, hasPolicy))
     if (!eligible.length) continue
     const pendingMinutes = pendingItems.reduce((sum, item) => sum + item.durationMinutes, 0)
@@ -290,26 +290,32 @@ export function buildLocalDeterministicAdvisor(
   const policy = input.planningPolicy
   const seniorPending = proposal.pending.filter((p) => (courseById.get(p.courseId)?.cycle ?? 0) >= 7)
   if (policy && (!policy.allowAfternoon || !policy.allowSaturday)) {
+    const profile = resolvePlanningTimeProfile(policy)
+    const clock = (minute: number) => `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`
+    const afternoonProfile = resolvePlanningTimeProfile({ ...policy, allowAfternoon: true })
+    const afternoon = `${clock(afternoonProfile.seniorStartMinute)}–${clock(profile.weekdayEndMinute)}`
+    const saturday = `${clock(profile.saturdayStartMinute)}–${clock(profile.saturdayEndMinute)}`
     const needAfternoon = !policy.allowAfternoon && seniorPending.length > 0
     const needSaturday = !policy.allowSaturday && proposal.pending.length > 6
     if (needAfternoon || needSaturday) {
       const pendingSections = new Set(proposal.pending.map((p) => p.sectionId))
+      const changes = [needAfternoon && `turno tarde (${afternoon})`, needSaturday && `sábado (${saturday})`].filter(Boolean)
       bottlenecks.push({
         category: 'planning_window',
-        title: 'Restricción de franja horaria en ciclos VII–X y cierre de sábado',
-        detail: `Los cursos de ciclos superiores se concentran entre 18:00 y 22:00 (${seniorPending.length} componentes pendientes) sin excepción de tarde ni mañana de sábado.`,
+        title: 'Restricción de franja horaria en ciclos superiores / semana',
+        detail: `Ciclos VII–X: ${clock(profile.seniorStartMinute)}–${clock(profile.weekdayEndMinute)} (${seniorPending.length} componentes pendientes). Sábado: ${policy.allowSaturday ? `habilitado (${saturday})` : 'cerrado'}.`,
         affectedSessionCount: needAfternoon ? seniorPending.length : proposal.pending.length,
       })
       recommendations.push({
         id: 'rec-enable-planning-window',
-        title: 'Habilitar excepción de turno tarde (14:00–22:00) y sábado (08:00–13:00)',
-        rationale: 'Permite programar secciones de ciclos VII–X desde las 14:00 y abre la mañana del sábado para eliminar colisiones de cohorte y aula.',
+        title: `Habilitar excepción de ${changes.join(' y ')}`,
+        rationale: 'Amplía las franjas seleccionadas según el perfil vigente; conserva disponibilidad y exige autorización externa.',
         impactSummary: `Amplía ventanas para ${pendingSections.size} sección(es) pendientes`,
         recommendedByDefault: true,
         patch: {
           kind: 'enable_planning_window',
-          ...(!policy.allowAfternoon ? { allowAfternoon: true as const } : {}),
-          ...(!policy.allowSaturday ? { allowSaturday: true as const } : {}),
+          ...(needAfternoon ? { allowAfternoon: true as const } : {}),
+          ...(needSaturday ? { allowSaturday: true as const } : {}),
         },
       })
     }
@@ -319,7 +325,7 @@ export function buildLocalDeterministicAdvisor(
   const workspaceTeacherIds = new Set(resources.teachers.map((t) => t.id))
   const missingTeacherIds: string[] = []
   let unqualifiedCount = 0
-  for (const [courseId, pendingItems] of pendingByCourse) {
+  for (const [courseId, pendingItems] of [...pendingByCourse].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)) {
     const eligible = input.teachers.filter((t) => isEligibleTeacher(t, courseId, hasPolicy))
     if (!eligible.length) {
       unqualifiedCount += pendingItems.length
@@ -360,7 +366,7 @@ export function buildLocalDeterministicAdvisor(
   // 4. Long continuous courses
   const splitCourseIds: string[] = []
   let splitSessionCount = 0
-  for (const [courseId, pendingItems] of pendingByCourse) {
+  for (const [courseId, pendingItems] of [...pendingByCourse].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)) {
     const course = courseById.get(courseId)
     if (!course) continue
     const totalMinutes = course.weeklySessions.reduce((sum, s) => sum + s.durationMinutes, 0)
@@ -390,6 +396,40 @@ export function buildLocalDeterministicAdvisor(
     })
   }
 
+  // 5. Courses mixing T/P and L under single-teacher-section
+  const splitAssignmentCourseIds: string[] = []
+  let splitAssignmentSessions = 0
+  for (const [courseId, pendingItems] of [...pendingByCourse].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)) {
+    const course = courseById.get(courseId)
+    if (!course || (course.teacherAssignmentMode ?? 'single-teacher-section') !== 'single-teacher-section') continue
+    const hasLab = course.weeklySessions.some((s) => s.type === 'L')
+    const hasNonLab = course.weeklySessions.some((s) => s.type !== 'L')
+    if (hasLab && hasNonLab) {
+      splitAssignmentCourseIds.push(courseId)
+      splitAssignmentSessions += pendingItems.length
+    }
+  }
+  if (splitAssignmentCourseIds.length > 0) {
+    bottlenecks.push({
+      category: 'delivery_mode',
+      title: `${splitAssignmentCourseIds.length} curso(s) con teoría/práctica y laboratorio atados a un solo docente`,
+      detail: 'Exigir un único docente para teoría/práctica y laboratorio impide aprovechar saldos parciales de carga entre docentes habilitados.',
+      affectedSessionCount: splitAssignmentSessions,
+    })
+    recommendations.push({
+      id: 'rec-change-teacher-assignment-mode',
+      title: `Separar docente de laboratorio (T/P juntos y L independiente) en ${splitAssignmentCourseIds.length} curso(s)`,
+      rationale: 'Mantiene un docente común para teoría y práctica (T+P continuos cuando corresponda), mientras habilita docente y franja independientes para laboratorio (L) sin elevar cargas máximas.',
+      impactSummary: `Habilita asignación T/P + L separada en ${splitAssignmentCourseIds.length} curso(s) (${splitAssignmentSessions} componentes)`,
+      recommendedByDefault: false,
+      patch: {
+        kind: 'change_delivery_mode',
+        courseIds: splitAssignmentCourseIds.sort(),
+        teacherAssignmentMode: 'tp-grouped-l-independent',
+      },
+    })
+  }
+
   const pendingSectionsCount = new Set(proposal.pending.map((p) => p.sectionId)).size
   const summary = `La propuesta cubre ${proposal.counts.scheduledSessions}/${proposal.counts.requiredSessions} componentes requeridos y deja ${proposal.pending.length} componentes pendientes en ${pendingSectionsCount} sección(es). Se detectaron ${bottlenecks.length} cuello(s) de botella y ${recommendations.length} recomendación(es) accionables.`
   return { summary, bottlenecks, recommendations, codec }
@@ -414,6 +454,7 @@ export async function analyzeProposalAdvisor(
       selectedRecommendationIds,
       windows: input.windows,
       startStepMinutes: input.startStepMinutes,
+      allocationPolicy: input.allocationPolicy ?? 'preferences',
       proposalId: proposal.proposalId,
       editVersion: proposal.editVersion ?? 0,
       courses: input.courses.map((c) => ({ ...c, name: courseNames.get(c.courseId) ?? c.courseId })),

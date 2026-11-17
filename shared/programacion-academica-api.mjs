@@ -3,6 +3,17 @@ import { PLANNING_LIMITS, isPlanningPeriod, validatePlanningPolicy } from './aca
 export const ACADEMIC_REVISION = 'PA-DEMO-1'
 export const ACADEMIC_ROUTE = '/local/programacion-academica'
 export const ACADEMIC_API = '/api/local/programacion-academica/v1'
+export const TEACHER_ASSIGNMENT_MODES = Object.freeze(['single-teacher-section', 'tp-grouped-l-independent', 'per-session'])
+export function getSectionComponentGroups(items, teacherAssignmentMode = 'single-teacher-section') {
+  if (!Array.isArray(items) || !items.length) return []
+  if (teacherAssignmentMode === 'per-session') return items.map((item) => [item])
+  if (teacherAssignmentMode === 'tp-grouped-l-independent') {
+    const nonLab = items.filter((item) => (item.sessionType ?? item.type) !== 'L')
+    const labs = items.filter((item) => (item.sessionType ?? item.type) === 'L')
+    return [...(nonLab.length ? [nonLab] : []), ...labs.map((item) => [item])]
+  }
+  return [items]
+}
 const demandSources = ['existing-regular-v1', 'independent-120-v1']
 const draftStates = ['draft', 'ready-for-review', 'in-review', 'ready-for-approval', 'approved', 'published']
 function draftId(value) {
@@ -302,8 +313,9 @@ export function validateAcademicRequest(value) {
   string(value.revision, 'revision')
   const seen = new Set()
   array(value.demands, 'demands', PLANNING_LIMITS.courses).forEach((row) => {
-    object(row, ['courseId', 'estimatedDemand'], 'demand', ['targetCapacity', 'patternId', 'deliveryMode', 'sectionCapacities'])
+    object(row, ['courseId', 'estimatedDemand'], 'demand', ['targetCapacity', 'patternId', 'deliveryMode', 'teacherAssignmentMode', 'sectionCapacities'])
     if (Object.hasOwn(row, 'deliveryMode') && !['continuous', 'split'].includes(row.deliveryMode)) throw new TypeError('Modalidad de sección inválida')
+    if (Object.hasOwn(row, 'teacherAssignmentMode') && !TEACHER_ASSIGNMENT_MODES.includes(row.teacherAssignmentMode)) throw new TypeError('Modo de asignación docente inválido')
     string(row.courseId, 'courseId')
     number(row.estimatedDemand, 'estimatedDemand')
     if (Object.hasOwn(row, 'targetCapacity')) number(row.targetCapacity, 'targetCapacity', 1)
@@ -453,8 +465,10 @@ export function validateAcademicProposal(value) {
   }
   if (!states.includes(value.status) || typeof value.coverageComplete !== 'boolean') throw new TypeError('Estado de propuesta inválido')
   array(value.sections, 'sections').forEach((row) => {
-    object(row, ['sectionId', 'courseId', 'courseName', 'capacity'], 'section', ['deliveryMode'])
+    object(row, ['sectionId', 'courseId', 'courseName', 'capacity'], 'section', ['deliveryMode', 'teacherAssignmentMode', 'responsibleTeacherId'])
     if (Object.hasOwn(row, 'deliveryMode') && !['continuous', 'split'].includes(row.deliveryMode)) throw new TypeError('Modalidad de sección inválida')
+    if (Object.hasOwn(row, 'teacherAssignmentMode') && !TEACHER_ASSIGNMENT_MODES.includes(row.teacherAssignmentMode)) throw new TypeError('Modo de asignación docente de sección inválido')
+    if (Object.hasOwn(row, 'responsibleTeacherId')) resourceId(row.responsibleTeacherId)
     for (const field of ['sectionId', 'courseId', 'courseName']) string(row[field], field)
     number(row.capacity, 'capacity', 1)
   })
@@ -504,10 +518,16 @@ export function validateAcademicProposal(value) {
   if (value.status === 'complete' && value.sections.some((section) => !value.assignments.some((assignment) => assignment.sectionId === section.sectionId))) throw new TypeError('Propuesta completa con sección sin asignar')
   for (const section of value.sections) {
     const assignments = value.assignments.filter((assignment) => assignment.sectionId === section.sectionId)
-    if (new Set(assignments.map((assignment) => assignment.teacherId)).size > 1) throw new TypeError('Sección con docentes responsables distintos')
-    if (section.deliveryMode === 'continuous' && assignments.length > 1) {
-      const ordered = [...assignments].sort((a, b) => a.startMinute - b.startMinute)
-      if (ordered.some((assignment, index) => index > 0 && (assignment.day !== ordered[0].day || assignment.startMinute !== ordered[index - 1].endMinute))) throw new TypeError('Bloque continuo fragmentado')
+    if (section.teacherAssignmentMode === 'tp-grouped-l-independent' && assignments.some((assignment) => !assignment.sessionType)) {
+      throw new TypeError('La asignación por grupos requiere tipo de sesión explícito')
+    }
+    const groups = getSectionComponentGroups(assignments, section.teacherAssignmentMode ?? 'single-teacher-section')
+    for (const group of groups) {
+      if (new Set(group.map((assignment) => assignment.teacherId)).size > 1) throw new TypeError('Sección con docentes responsables distintos')
+      if (section.deliveryMode === 'continuous' && group.length > 1) {
+        const ordered = [...group].sort((a, b) => a.startMinute - b.startMinute)
+        if (ordered.some((assignment, index) => index > 0 && (assignment.day !== ordered[0].day || assignment.startMinute !== ordered[index - 1].endMinute))) throw new TypeError('Bloque continuo fragmentado')
+      }
     }
   }
   if (Object.hasOwn(value, 'preferenceReport')) {
@@ -565,8 +585,10 @@ export function validateAcademicAdvisorPatch(value) {
     return
   }
   if (value.kind === 'change_delivery_mode') {
-    object(value, ['kind', 'courseIds', 'deliveryMode'], 'patch')
-    if (value.deliveryMode !== 'split') throw new TypeError('deliveryMode debe ser split')
+    object(value, ['kind', 'courseIds'], 'patch', ['deliveryMode', 'teacherAssignmentMode'])
+    if (Object.hasOwn(value, 'deliveryMode') && value.deliveryMode !== 'split') throw new TypeError('deliveryMode debe ser split')
+    if (Object.hasOwn(value, 'teacherAssignmentMode') && !['tp-grouped-l-independent', 'per-session'].includes(value.teacherAssignmentMode)) throw new TypeError('teacherAssignmentMode inválido')
+    if (!value.deliveryMode && !value.teacherAssignmentMode) throw new TypeError('Modalidad requiere un cambio explícito')
     strings(value.courseIds, 'courseIds')
     if (!value.courseIds.length) throw new TypeError('courseIds vacío')
     return

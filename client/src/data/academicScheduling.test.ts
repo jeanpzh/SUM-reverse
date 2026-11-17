@@ -495,3 +495,31 @@ test('proposal render index preserves aggregate blocks, session order and missin
   assert.equal(index.adjustedSections.size, 0)
   assert.deepEqual(proposal, before)
 })
+
+test('planning request builder deep-clones additive faculty policy and exception bounds without mutating caller state', () => {
+  const policy = {
+    revision: 'FISI-PLANNING-1' as const,
+    period: '2027-I' as const,
+    allowAfternoon: true,
+    allowSaturday: true,
+    facultyId: 'FISI' as const,
+    source: 'synthetic-policy-override',
+    exceptions: { saturdayStartMinute: 540, saturdayEndMinute: 840 },
+  }
+  const built = buildAcademicPlanningRequest({ revision: ACADEMIC_REVISION, demands: [] }, policy)
+  assert.deepEqual(built.planningPolicy, policy)
+  assert.notEqual(built.planningPolicy, policy)
+  assert.notEqual(built.planningPolicy.exceptions, policy.exceptions)
+  policy.exceptions.saturdayStartMinute = 480
+  assert.equal(built.planningPolicy.exceptions?.saturdayStartMinute, 540)
+})
+
+test('editing blocks preserve declared teacher groups even when the same teacher teaches adjacent sessions', () => {
+  const assignments = ['T', 'P', 'L'].map((type, index) => ({ ...proposal.assignments[0],
+    sessionId: `GROUP-${type}`, sessionType: type, startMinute: 480 + index * 60, endMinute: 540 + index * 60 }))
+  const grouped = aggregateAcademicBlocks({ sections: [{ ...proposal.sections[0], teacherAssignmentMode: 'tp-grouped-l-independent' }], assignments })
+  assert.deepEqual(grouped.map(block => block.sessionIds), [['GROUP-T', 'GROUP-P'], ['GROUP-L']])
+  const independent = aggregateAcademicBlocks({ sections: [{ ...proposal.sections[0], teacherAssignmentMode: 'per-session' }], assignments })
+  assert.equal(independent.length, 3)
+  assert.equal(aggregateAcademicBlocks({ sections: proposal.sections, assignments }).length, 1)
+})

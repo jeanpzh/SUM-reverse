@@ -39,12 +39,12 @@ export function assessTeacherPreferences(
     if (!sectionRequirements.length || sectionRequirements.some((item) => !assigned.has(item.id))) continue
     evaluatedSections++
     const sessions = sectionRequirements.map((item) => assigned.get(item.id)!)
-    const teacher = teachers.get(sessions[0]!.teacherId)
-    if (!teacher?.preferences?.length) {
+    const sessionsWithPrefs = sessions.filter((session) => teachers.get(session.teacherId)?.preferences?.length)
+    if (!sessionsWithPrefs.length) {
       withoutPreferenceSections++
       continue
     }
-    if (sessions.every((session) => covers(teacher.preferences!, session.interval))) withinPreferenceSections++
+    if (sessionsWithPrefs.every((session) => covers(teachers.get(session.teacherId)!.preferences!, session.interval))) withinPreferenceSections++
     else outsidePreferenceSections++
   }
 

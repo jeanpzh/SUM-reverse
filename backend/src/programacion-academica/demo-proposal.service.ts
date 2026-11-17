@@ -14,7 +14,8 @@ import { createDemandSources } from './demand-fixtures.js'
 import { estimateAcademicDemand } from './demand-estimator.js'
 import { prepareGeneratorInput } from './generator-input.js'
 import { buildLocalDeterministicAdvisor, analyzeProposalAdvisor, trySolveWithPythonEngine } from './planning-engine.client.js'
-import { THESIS_COURSE_IDS } from '../../../shared/academic-planning-policy.mjs'
+import { getEffectivePlanningWindows, isAllowedPlanningInterval as isAllowedPlanningIntervalPolicy, resolvePlanningTimeProfile, THESIS_COURSE_IDS } from '../../../shared/academic-planning-policy.mjs'
+import { getSectionComponentGroups } from '../../../shared/programacion-academica-api.mjs'
 
 type RetainedProposal = {
   request: AcademicRequest
@@ -180,10 +181,24 @@ export class DemoProposalService {
 
     const requirements = retained.requirements.filter((requirement) => requirement.sectionId === section.sectionId).sort((left, right) => left.order - right.order)
     const mode = section.deliveryMode ?? 'continuous'
-    if (mode === 'continuous' && (sectionAssignments.length !== requirements.length
-      || adjustment.sessionIds.length !== requirements.length
-      || requirements.some((requirement, index) => adjustment.sessionIds[index] !== requirement.id))) {
-      throw this.adjustmentRejected('section', section.sectionId, 'Una sección continua requiere mover todos sus componentes asignados en su orden declarado')
+    const teacherMode = section.teacherAssignmentMode ?? 'single-teacher-section'
+    const componentGroups = getSectionComponentGroups(requirements, teacherMode)
+    const touchedGroups = componentGroups.filter((group) => group.some((requirement) => adjustment.sessionIds.includes(requirement.id)))
+    if (mode === 'continuous') {
+      if (teacherMode === 'single-teacher-section') {
+        if (sectionAssignments.length !== requirements.length
+          || adjustment.sessionIds.length !== requirements.length
+          || requirements.some((requirement, index) => adjustment.sessionIds[index] !== requirement.id)) {
+          throw this.adjustmentRejected('section', section.sectionId, 'Una sección continua requiere mover todos sus componentes asignados en su orden declarado')
+        }
+      } else if (touchedGroups.some((group) => {
+        const groupIndices = group.map((requirement) => adjustment.sessionIds.indexOf(requirement.id))
+        return group.some((requirement) => !sectionAssignments.some((assignment) => assignment.sessionId === requirement.id))
+          || groupIndices.some((idx) => idx === -1)
+          || groupIndices.some((idx, pos) => pos > 0 && idx !== groupIndices[pos - 1]! + 1)
+      })) {
+        throw this.adjustmentRejected('section', section.sectionId, 'Una sección continua requiere mover cada bloque agrupado completo en su orden declarado')
+      }
     }
 
     const chronologicallySelected = [...selected].sort((left, right) => left!.day - right!.day || left!.startMinute - right!.startMinute)
@@ -196,7 +211,9 @@ export class DemoProposalService {
     }
     const selectedStart = chronologicallySelected[0]!
     const selectedEnd = chronologicallySelected.at(-1)!
+    const affectedGroupRequirementIds = new Set(touchedGroups.flatMap((group) => group.map((requirement) => requirement.id)))
     if (sectionAssignments.some((assignment) => !adjustment.sessionIds.includes(assignment.sessionId)
+      && affectedGroupRequirementIds.has(assignment.sessionId)
       && assignment.day === selectedStart.day
       && (assignment.endMinute === selectedStart.startMinute || assignment.startMinute === selectedEnd.endMinute))) {
       throw this.adjustmentRejected('session', section.sectionId, 'El ajuste debe incluir el bloque contiguo completo')
@@ -214,8 +231,10 @@ export class DemoProposalService {
     }
 
     const selectedIds = new Set(adjustment.sessionIds)
-    const changeTeacherForSection = sectionAssignments.some((assignment) => assignment.teacherId !== adjustment.teacherId)
-    const changedTeacherIds = new Set(changeTeacherForSection ? sectionAssignments.map((assignment) => assignment.sessionId) : [])
+    const changeTeacherForGroup = sectionAssignments.some((assignment) => affectedGroupRequirementIds.has(assignment.sessionId) && assignment.teacherId !== adjustment.teacherId)
+    const changedTeacherIds = new Set(changeTeacherForGroup
+      ? sectionAssignments.filter((assignment) => affectedGroupRequirementIds.has(assignment.sessionId)).map((assignment) => assignment.sessionId)
+      : [])
     const selectedById = new Map(selected.map((assignment, index) => [assignment!.sessionId, { assignment: assignment!, roomId: adjustment.roomIds[index]! }]))
     const assignments = current.assignments.map((assignment) => {
       const selectedEdit = selectedById.get(assignment.sessionId)
@@ -271,9 +290,22 @@ export class DemoProposalService {
     })
     if (!effectiveChange) return structuredClone(current)
 
+    const nextAssignmentById = new Map(
+      assignments.filter((assignment) => assignment.sectionId === section.sectionId).map((assignment) => [assignment.sessionId, assignment]),
+    )
+    const orderedSectionAssignments = requirements
+      .map((requirement) => nextAssignmentById.get(requirement.id))
+      .filter((assignment): assignment is NonNullable<typeof assignment> => Boolean(assignment))
+    const nonLabAssignment = orderedSectionAssignments.find((assignment) => assignment.sessionType !== 'L')
+    const responsibleTeacherId = (nonLabAssignment ?? orderedSectionAssignments[0])?.teacherId
+    const sections = current.sections.map((item) => item.sectionId === section.sectionId && responsibleTeacherId !== undefined
+      ? { ...item, responsibleTeacherId }
+      : item)
+
     const preferenceReport = assessTeacherPreferences(retained.input, schedule, retained.requirements)
     const changedView: AcademicProposal = {
       ...structuredClone(current),
+      sections,
       assignments,
       editVersion: version + 1,
       manuallyAdjustedSectionIds: [...new Set([...(current.manuallyAdjustedSectionIds ?? []), section.sectionId])],
@@ -415,13 +447,30 @@ export class DemoProposalService {
     const expiresAt = new Date(Date.now() + retentionMs).toISOString()
     const assignments = result.schedule?.assignments ?? []
     const assignedIds = new Set(assignments.map((assignment) => assignment.id))
-    const sections = (result.schedule?.sections ?? []).map((section) => ({
-      sectionId: section.id,
-      courseId: section.courseId,
-      courseName: this.catalog.courses.find((course) => course.courseId === section.courseId)!.name,
-      capacity: section.capacity,
-      deliveryMode: input.courses.find((course) => course.courseId === section.courseId)!.deliveryMode ?? 'continuous',
-    }))
+    const sections = (result.schedule?.sections ?? []).map((section) => {
+      const course = input.courses.find((course) => course.courseId === section.courseId)!
+      const teacherMode = course.teacherAssignmentMode ?? 'single-teacher-section'
+      const sectionAssignmentById = new Map(
+        assignments.filter((assignment) => assignment.sectionId === section.id).map((assignment) => [assignment.id, assignment]),
+      )
+      const orderedRequirements = result.requirements
+        .filter((requirement) => requirement.sectionId === section.id)
+        .sort((left, right) => left.order - right.order)
+      const orderedSectionAssignments = orderedRequirements
+        .map((requirement) => ({ requirement, assignment: sectionAssignmentById.get(requirement.id) }))
+        .filter((item): item is { requirement: RequiredSession, assignment: NonNullable<typeof item.assignment> } => Boolean(item.assignment))
+      const nonLabAssignment = orderedSectionAssignments.find(({ requirement }) => requirement.type !== 'L')?.assignment
+      const responsibleTeacherId = (nonLabAssignment ?? orderedSectionAssignments[0]?.assignment)?.teacherId
+      return {
+        sectionId: section.id,
+        courseId: section.courseId,
+        courseName: this.catalog.courses.find((course) => course.courseId === section.courseId)!.name,
+        capacity: section.capacity,
+        deliveryMode: course.deliveryMode ?? 'continuous',
+        ...(teacherMode !== 'single-teacher-section' ? { teacherAssignmentMode: teacherMode } : {}),
+        ...(responsibleTeacherId !== undefined ? { responsibleTeacherId } : {}),
+      }
+    })
     const view: AcademicProposal = {
       proposalId: randomUUID(),
       createdAt,
@@ -459,9 +508,10 @@ export class DemoProposalService {
       view.diagnostics.push({ code: 'PREFERENCES_NOT_MET', message: 'Hay secciones programadas fuera de sus preferencias. Las preferencias son orientativas; no se ha demostrado optimalidad global.', sessionIds: [] })
     }
     if (request.planningPolicy) {
+      const profile = resolvePlanningTimeProfile(request.planningPolicy)
       const exceptions = view.assignments.filter((assignment) => {
         const cycle = this.catalog.courses.find((course) => course.courseId === assignment.courseId)?.cycle ?? 0
-        return assignment.day === 6 || (cycle >= 7 && assignment.startMinute < 18 * 60)
+        return assignment.day === 6 || (profile.seniorCycleThreshold !== null && cycle >= profile.seniorCycleThreshold && assignment.startMinute < profile.seniorDefaultStartMinute)
       })
       if (exceptions.length) view.diagnostics.push({ code: 'PLANNING_EXCEPTION',
         message: `La propuesta incluye ${exceptions.length} sesión(es) fuera del horario preferido; requiere aceptación explícita. No se afirma optimalidad ni necesidad de la excepción.`,
@@ -475,7 +525,9 @@ export class DemoProposalService {
     const expectedSections = new Map(proposal.sections.map((section) => [section.sectionId, section]))
     const effectiveCapacities = new Map(prepareGeneratorInput(input).schedule.sections.map((section) => [section.id, section.capacity]))
     if (proposal.sections.some((section) => !input.courses.some((course) => course.courseId === section.courseId
-      && (effectiveCapacities.get(section.sectionId) ?? course.targetCapacity) === section.capacity && course.deliveryMode === section.deliveryMode))) return false
+      && (effectiveCapacities.get(section.sectionId) ?? course.targetCapacity) === section.capacity
+      && course.deliveryMode === section.deliveryMode
+      && (course.teacherAssignmentMode ?? 'single-teacher-section') === (section.teacherAssignmentMode ?? 'single-teacher-section')))) return false
     return proposal.assignments.every((assignment) => {
       const section = expectedSections.get(assignment.sectionId)
       const resourceTeacher = resources.teachers.find((teacher) => teacher.id === assignment.teacherId)
@@ -501,9 +553,15 @@ export class DemoProposalService {
       courseId: item.courseId, durationMinutes: item.durationMinutes }))
     if (canonicalize(view.pending) !== canonicalize(expectedPending)) throw new Error('pending mismatch')
     const expectedSections = prepareGeneratorInput(input).schedule.sections
-    if (canonicalize(view.sections.map(({ sectionId, courseId, capacity, deliveryMode }) => ({ sectionId, courseId, capacity, deliveryMode })))
-      !== canonicalize(expectedSections.map(({ id, courseId, capacity }) => ({ sectionId: id, courseId, capacity,
-        deliveryMode: input.courses.find((course) => course.courseId === courseId)?.deliveryMode ?? 'continuous' })))) throw new Error('section mismatch')
+    if (canonicalize(view.sections.map(({ sectionId, courseId, capacity, deliveryMode, teacherAssignmentMode }) => ({
+      sectionId, courseId, capacity, deliveryMode, teacherAssignmentMode: teacherAssignmentMode ?? 'single-teacher-section',
+    })))
+      !== canonicalize(expectedSections.map(({ id, courseId, capacity }) => {
+        const course = input.courses.find((candidate) => candidate.courseId === courseId)
+        return { sectionId: id, courseId, capacity,
+          deliveryMode: course?.deliveryMode ?? 'continuous',
+          teacherAssignmentMode: course?.teacherAssignmentMode ?? 'single-teacher-section' }
+      }))) throw new Error('section mismatch')
     const requirementById = new Map(requirements.map((item) => [item.id, item]))
     if (view.assignments.some((assignment) => {
       const requirement = requirementById.get(assignment.sessionId)
@@ -521,10 +579,16 @@ export class DemoProposalService {
   }
 
   private proposalStructure(view: AcademicProposal): unknown {
-    return { status: view.status, sections: view.sections,
+    return {
+      status: view.status,
+      sections: view.sections.map(({ sectionId, courseId, courseName, capacity, deliveryMode, teacherAssignmentMode }) => ({
+        sectionId, courseId, courseName, capacity, deliveryMode, ...(teacherAssignmentMode ? { teacherAssignmentMode } : {}),
+      })),
       assignments: view.assignments.map(({ sessionId, sectionId, courseId, sessionType }) => ({ sessionId, sectionId, courseId, sessionType }))
         .sort((left, right) => left.sessionId.localeCompare(right.sessionId)),
-      pending: view.pending, counts: view.counts }
+      pending: view.pending,
+      counts: view.counts,
+    }
   }
 
   private cleanExpired(): void {
@@ -576,6 +640,7 @@ export class DemoProposalService {
           ...(course.cycle !== undefined ? { cycle: course.cycle } : {}),
           weeklySessions: structuredClone(pattern?.weeklySessions ?? course.weeklySessions),
           deliveryMode: demand.deliveryMode ?? 'continuous',
+          ...(demand.teacherAssignmentMode && demand.teacherAssignmentMode !== 'single-teacher-section' ? { teacherAssignmentMode: demand.teacherAssignmentMode } : {}),
           ...(demand.sectionCapacities !== undefined ? { sectionCapacities: demand.sectionCapacities.map((override) => ({ ...override })) } : {}),
         }
       }),
@@ -588,8 +653,7 @@ export class DemoProposalService {
         })),
       rooms: resources.rooms.map(({ id, capacity, availability, kind }) => ({ id, capacity, availability: this.toIntervals(availability), ...(kind ? { kind } : {}) })),
       compatibleGroups: [],
-      windows: [...this.toIntervals(this.catalog.windows), ...(request.planningPolicy?.allowSaturday
-        ? [{ day: 6 as TimeInterval['day'], startMinute: 8 * 60, endMinute: 13 * 60 }] : [])],
+      windows: getEffectivePlanningWindows(this.toIntervals(this.catalog.windows), request.planningPolicy) as TimeInterval[],
       startStepMinutes: this.catalog.startStepMinutes,
       maxExplorations: this.catalog.maxExplorations,
       allocationPolicy: request.allocationPolicy ?? 'preferences',
@@ -637,12 +701,7 @@ export class DemoProposalService {
   }
 
   private isAllowedPlanningInterval(cycle: number, interval: TimeInterval, policy: NonNullable<AcademicRequest['planningPolicy']>): boolean {
-    if (interval.day === 7) return false
-    if (interval.day === 6) return policy.allowSaturday && interval.startMinute >= 8 * 60 && interval.endMinute <= 13 * 60
-    if (interval.day < 1 || interval.day > 5) return false
-    if (cycle >= 7) return (interval.startMinute >= 18 * 60 && interval.endMinute <= 22 * 60)
-      || (policy.allowAfternoon && interval.startMinute >= 14 * 60 && interval.endMinute <= 22 * 60)
-    return interval.startMinute >= 8 * 60 && interval.endMinute <= 22 * 60
+    return isAllowedPlanningIntervalPolicy(cycle, interval, policy)
   }
 
   private httpError(status: number, code: string, message: string): HttpException {

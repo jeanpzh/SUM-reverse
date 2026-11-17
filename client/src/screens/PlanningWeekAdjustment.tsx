@@ -302,7 +302,9 @@ export function PlanningWeekAdjustment({
         <p className="planning-week-adjustment__notice">
           Vista previa local. El servidor valida docente, ambiente y cruces al aplicar; si lo
           rechaza, el horario guardado no cambia.
-          {section.deliveryMode === 'split'
+          {section.teacherAssignmentMode && section.teacherAssignmentMode !== 'single-teacher-section'
+            ? ' Cambiar docente afecta al grupo de sesiones seleccionado; los demás grupos conservan su asignación.'
+            : section.deliveryMode === 'split'
             ? ' Cambiar docente modifica la responsabilidad de toda la sección; los demás bloques mantienen sus horarios.'
             : ''}
         </p>

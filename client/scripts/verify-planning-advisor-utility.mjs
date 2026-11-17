@@ -48,7 +48,7 @@ try{
  observed.initialAnalysis={recommendations:initial.recommendations.length,hasImpact:false}
  const panel=page.getByRole('tabpanel',{name:'Consejero',exact:true}) // v2: Consejero tab of the assistance rail (or Sheet)
  await panel.locator('[data-advisor-impact=pending]').waitFor()
- const selected=initial.recommendations.filter(r=>(constrained?['enable_planning_window']:['enable_planning_window','change_delivery_mode']).includes(r.patch.kind))
+ const selected=initial.recommendations.filter(r=>(constrained?['enable_planning_window']:['enable_planning_window','change_delivery_mode']).includes(r.patch.kind)&&!r.patch.teacherAssignmentMode)
  assert.equal(selected.length,constrained?1:2)
  for(const r of initial.recommendations){
   const checkbox=panel.getByRole('checkbox',{name:r.title,exact:true})
@@ -81,8 +81,14 @@ try{
  await page.screenshot({path:resolve(evidence,'actual-regenerated.png')})
  const drafts=await json(await page.request.get(`${base.origin}${api}/borradores`))
  assert.equal(drafts.items.length,0,'Applying does not implicitly save')
- assert.equal(observed.appliedRequest.planningPolicy.allowAfternoon,true)
- assert.equal(observed.appliedRequest.planningPolicy.allowSaturday,true)
+ for(const key of ['allowAfternoon','allowSaturday']){
+  const selectedEnable=selected.some(r=>r.patch.kind==='enable_planning_window'&&r.patch[key]===true)
+  assert.equal(observed.appliedRequest.planningPolicy[key],selectedEnable?true:generationRequests[0].planningPolicy[key],`Apply must preserve ${key} unless the selected patch enables it`)
+ }
+ if(constrained){
+  assert.equal(observed.appliedRequest.planningPolicy.allowAfternoon,true)
+  assert.equal(observed.appliedRequest.planningPolicy.allowSaturday,false,'This course needs only afternoon; Saturday must remain closed')
+ }
  if(!constrained)assert.ok(observed.appliedRequest.deliveryModes.includes('split'))
  if(constrained){assert.equal(actual.status,'complete');assert.equal(actual.pending.length,0)}
  assert.ok(observed.gain.components>0,'These synthetic safe recommendations must improve actual coverage')

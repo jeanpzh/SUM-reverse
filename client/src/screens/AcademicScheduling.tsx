@@ -4,9 +4,9 @@ import { usePlanningAssistantDisplay } from './usePlanningAssistantDisplay'
 import { PlanningFetchLoading } from '../components/PlanningFetchLoading'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
-import { academicSectionCoverage, formatAcademicInterval } from '../data/academicScheduling'
+import { academicSectionCoverage, formatAcademicInterval, formatAcademicMinute, resolvePlanningTimeProfile } from '../data/academicScheduling'
 import type { PlanningPeriod } from '../data/academicScheduling'
-import type { AcademicAdjustment, AcademicAllocationPolicy, AcademicDraftState, AcademicPlanningResources } from '../../../shared/programacion-academica-api.mjs'
+import type { AcademicAdjustment, AcademicAllocationPolicy, AcademicDraftState, AcademicPlanningResources, AcademicTeacherAssignmentMode } from '../../../shared/programacion-academica-api.mjs'
 import { usePlanningSessionContext } from '../components/PlanningSessionProvider'
 import type { PlanningPreparationView, PlanningBlock } from '../data/planningSession'
 import { AcademicResourceEditor } from './AcademicResourceEditor'
@@ -109,10 +109,15 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
   }, [viewMode])
 
   const { catalog, proposal, proposalResources, editingBlock, demands, capacities, patterns, deliveryModes,
-    selectedCourses, demandSourceId, demandEstimate, resources, allocationPolicy } = state
+    teacherAssignmentModes, selectedCourses, demandSourceId, demandEstimate, resources, allocationPolicy } = state
   const planningPeriod = state.period
   const chat = useNormativeChat(planningPeriod)
   const planningPolicy = state.policy
+  const effectivePolicy = planningPolicy ?? {
+    revision: 'FISI-PLANNING-1' as const, period: planningPeriod, allowAfternoon: false, allowSaturday: false,
+  }
+  const timeProfile = resolvePlanningTimeProfile(effectivePolicy)
+  const afternoonStart = resolvePlanningTimeProfile({ ...effectivePolicy, allowAfternoon: true }).seniorStartMinute
   const draftTitle = state.draft.title
   const invalidDraftTitle = !draftTitle.trim() || draftTitle.trim() !== draftTitle
   const draftId = state.draft.id
@@ -224,6 +229,8 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
   const changeDemandSource = (value: 'existing-regular-v1' | 'independent-120-v1') => commands.edit({ type: 'changeDemandSource', value })
   const updatePattern = (courseId: string, value: string) => commands.edit({ type: 'updatePattern', courseId, value })
   const updateDeliveryMode = (courseId: string, value: 'continuous' | 'split') => commands.edit({ type: 'updateDeliveryMode', courseId, value })
+  const updateTeacherAssignmentMode = (courseId: string, value: AcademicTeacherAssignmentMode) =>
+    commands.edit({ type: 'updateTeacherAssignmentMode', courseId, value })
   const updateResources = (value: AcademicPlanningResources) => commands.edit({ type: 'updateResources', value })
   const updateAllocationPolicy = (value: AcademicAllocationPolicy) => commands.edit({ type: 'updateAllocationPolicy', value })
   const updatePlanningException = (key: 'allowAfternoon' | 'allowSaturday', checked: boolean) =>
@@ -403,9 +410,9 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
                   <fieldset className="academic-scheduling__policy">
                     <legend>Excepciones de horario · decisión local explícita</legend>
                     <div className="academic-scheduling__exception"><Checkbox id="planning-allow-afternoon" disabled={lockedDraft || draftBusy} checked={planningPolicy?.allowAfternoon ?? false}
-                      onCheckedChange={(checked) => updatePlanningException('allowAfternoon', checked === true)} /><Label htmlFor="planning-allow-afternoon">Permitir propuesta de lunes a viernes desde las 14:00 hasta las 22:00</Label></div>
+                      onCheckedChange={(checked) => updatePlanningException('allowAfternoon', checked === true)} /><Label htmlFor="planning-allow-afternoon">Permitir propuesta de lunes a viernes desde las {formatAcademicMinute(afternoonStart)} hasta las {formatAcademicMinute(timeProfile.weekdayEndMinute)}</Label></div>
                     <div className="academic-scheduling__exception"><Checkbox id="planning-allow-saturday" disabled={lockedDraft || draftBusy} checked={planningPolicy?.allowSaturday ?? false}
-                      onCheckedChange={(checked) => updatePlanningException('allowSaturday', checked === true)} /><Label htmlFor="planning-allow-saturday">Permitir propuesta sábado de 08:00 a 13:00</Label></div>
+                      onCheckedChange={(checked) => updatePlanningException('allowSaturday', checked === true)} /><Label htmlFor="planning-allow-saturday">Permitir propuesta sábado de {formatAcademicMinute(timeProfile.saturdayStartMinute)} a {formatAcademicMinute(timeProfile.saturdayEndMinute)}</Label></div>
                     <p>La disponibilidad docente y de ambientes sigue siendo obligatoria. Habilitar sábado no agrega disponibilidad automáticamente.</p>
                   </fieldset>
                   <div className="academic-scheduling__policy"><Label htmlFor="planning-allocation-policy">Criterio para ordenar alternativas</Label>
@@ -494,10 +501,12 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
             capacities={capacities}
             patterns={patterns}
             deliveryModes={deliveryModes}
+            teacherAssignmentModes={teacherAssignmentModes}
             onUpdateDemand={updateDemand}
             onUpdateCapacity={updateCapacity}
             onUpdatePattern={updatePattern}
             onUpdateDeliveryMode={updateDeliveryMode}
+            onUpdateTeacherAssignmentMode={updateTeacherAssignmentMode}
             onApplyBulkChanges={applyBulkChanges}
             proposal={proposal}
             isLocked={lockedDraft || draftBusy}

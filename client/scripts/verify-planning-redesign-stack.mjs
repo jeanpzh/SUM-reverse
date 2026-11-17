@@ -15,7 +15,7 @@ const ports = {
 }
 if (new Set(Object.values(ports)).size !== 3 || Object.values(ports).some(port => !Number.isInteger(port) || port < 1024 || port > 65535)) throw new Error('Three distinct valid unprivileged ports required')
 const testScript = process.env.SUM_REDESIGN_TEST_SCRIPT || process.argv[2] || 'verify-planning-redesign.mjs'
-if (!['verify-planning-redesign.mjs', 'verify-planning-normative.mjs', 'verify-planning-assistant.mjs', 'verify-planning-answer-quality.mjs', 'verify-planning-chat.mjs', 'verify-planning-shimmer.mjs', 'verify-planning-comprehensive.mjs', 'verify-planning-advisor-utility.mjs', 'verify-planning-v2-shell.mjs', 'verify-planning-llm-assisted.mjs'].includes(testScript)) throw new Error('Unknown synthetic acceptance script')
+if (!['verify-planning-redesign.mjs', 'verify-planning-normative.mjs', 'verify-planning-assistant.mjs', 'verify-planning-answer-quality.mjs', 'verify-planning-chat.mjs', 'verify-planning-shimmer.mjs', 'verify-planning-comprehensive.mjs', 'verify-planning-advisor-utility.mjs', 'verify-planning-v2-shell.mjs', 'verify-planning-llm-assisted.mjs', 'verify-planning-completion.mjs'].includes(testScript)) throw new Error('Unknown synthetic acceptance script')
 const live = process.env.SUM_REDESIGN_LIVE_LLM === '1'
 if (live !== (testScript === 'verify-planning-llm-assisted.mjs')) throw new Error('Live E2E requires the dedicated script and SUM_REDESIGN_LIVE_LLM=1')
 const liveEngine = live ? await liveEngineEnvironment(process.env.SUM_PLANNING_ENV_FILE, { ...process.env, PORT: String(ports.engine) }) : null

@@ -7,7 +7,7 @@ import { NativeSelect } from '../components/ui/NativeSelect'
 import { Label } from '../components/ui/Label'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table'
 import { useId, useMemo, useState } from 'react'
-import type { AcademicCatalog, AcademicDemandEstimate, AcademicProposal, PlanningPeriod } from '../data/academicScheduling.ts'
+import type { AcademicCatalog, AcademicDemandEstimate, AcademicProposal, AcademicTeacherAssignmentMode, PlanningPeriod } from '../data/academicScheduling.ts'
 import { calculatePresentedSections, formatAcademicInterval, PLANNING_LIMITS } from '../data/academicScheduling.ts'
 import {
   applyBulkChanges,
@@ -42,10 +42,12 @@ export interface AcademicPreparationCoursesProps {
   capacities: Record<string, string>
   patterns: Record<string, string>
   deliveryModes: Record<string, 'continuous' | 'split'>
+  teacherAssignmentModes?: Record<string, AcademicTeacherAssignmentMode>
   onUpdateDemand: (courseId: string, value: string) => void
   onUpdateCapacity: (courseId: string, value: string) => void
   onUpdatePattern: (courseId: string, patternId: string) => void
   onUpdateDeliveryMode: (courseId: string, mode: 'continuous' | 'split') => void
+  onUpdateTeacherAssignmentMode?: (courseId: string, mode: AcademicTeacherAssignmentMode) => void
   onApplyBulkChanges: (newDemands: Record<string, string>, newCapacities: Record<string, string>) => void
   proposal: AcademicProposal | null
   isLocked?: boolean
@@ -75,10 +77,12 @@ export function AcademicPreparationCourses({
   capacities,
   patterns,
   deliveryModes,
+  teacherAssignmentModes = {},
   onUpdateDemand,
   onUpdateCapacity,
   onUpdatePattern,
   onUpdateDeliveryMode,
+  onUpdateTeacherAssignmentMode,
   onApplyBulkChanges,
   proposal,
   isLocked = false,
@@ -277,6 +281,25 @@ export function AcademicPreparationCourses({
           >
             <option value="continuous">Bloque continuo · predeterminado</option>
             <option value="split">Sesiones divididas · excepción</option>
+          </NativeSelect>
+        </Label>
+
+        <Label>
+          Asignación docente
+          <NativeSelect
+            value={teacherAssignmentModes[inspectedCourse.courseId] ?? 'single-teacher-section'}
+            disabled={isLocked || !selectedCourses.includes(inspectedCourse.courseId) || !onUpdateTeacherAssignmentMode}
+            aria-label={`Asignación docente ${inspectedCourse.courseId}`}
+            onChange={(event) =>
+              onUpdateTeacherAssignmentMode?.(
+                inspectedCourse.courseId,
+                event.currentTarget.value as AcademicTeacherAssignmentMode
+              )
+            }
+          >
+            <option value="single-teacher-section">Un docente por sección · predeterminado</option>
+            <option value="tp-grouped-l-independent">T/P juntos y laboratorio independiente</option>
+            <option value="per-session">Docente independiente por sesión</option>
           </NativeSelect>
         </Label>
 

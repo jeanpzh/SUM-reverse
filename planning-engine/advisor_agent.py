@@ -7,7 +7,7 @@ import os
 import time
 
 from models import AdvisorReasoningStep, AdvisorSource, AdvisorVerifiedImpact, SolveScheduleRequest, TeacherInput, RoomInput
-from solver import solve_academic_schedule
+from solver import get_effective_planning_windows, solve_academic_schedule
 
 MAX_TOOL_CALLS = 4
 MAX_TOOL_ROUNDS = 2
@@ -36,7 +36,10 @@ def run_cpsat_dry_run(req, recommendations, recommendation_ids):
         elif patch.kind == 'change_delivery_mode':
             for course in copy.courses:
                 if course.courseId in patch.courseIds:
-                    course.deliveryMode = 'split'
+                    if patch.deliveryMode:
+                        course.deliveryMode = patch.deliveryMode
+                    if patch.teacherAssignmentMode:
+                        course.teacherAssignmentMode = patch.teacherAssignmentMode
         elif patch.kind == 'incorporate_reference_resource':
             for teacher in copy.referenceTeachers:
                 if teacher.id in patch.teacherIds and not any(t.id == teacher.id for t in copy.teachers):
@@ -44,11 +47,13 @@ def run_cpsat_dry_run(req, recommendations, recommendation_ids):
             for room in copy.referenceRooms:
                 if room.id in patch.roomIds and not any(r.id == room.id for r in copy.rooms):
                     copy.rooms.append(RoomInput(**room.model_dump(), availability=reference_windows))
+    effective_windows = get_effective_planning_windows(copy.windows, copy.planningPolicy)
     result = solve_academic_schedule(SolveScheduleRequest(
         courses=copy.courses, teachers=copy.teachers, rooms=copy.rooms,
         sections=copy.sections, requirements=copy.requirements,
-        windows=copy.windows, startStepMinutes=copy.startStepMinutes,
-        planningPolicy=copy.planningPolicy, maxTimeSeconds=0.8,
+        windows=effective_windows, startStepMinutes=copy.startStepMinutes,
+        allocationPolicy=copy.allocationPolicy,
+        planningPolicy=copy.planningPolicy, maxTimeSeconds=2.5,
     ))
     def complete_sections(assignments):
         ids = {a.id for a in assignments}

@@ -1,0 +1,167 @@
+{
+  "source": "Own synthetic React/NestJS/Python, LLM-free, no API key required",
+  "includeLoad": false,
+  "targetMet": false,
+  "completion": {
+    "targetRequiredSessions": 332,
+    "targetMet": false,
+    "status": "search-limit",
+    "requiredSessions": 332,
+    "scheduledSessions": 260,
+    "pendingSessions": 72,
+    "completeSections": 125,
+    "totalSections": 166,
+    "gains": {
+      "scheduledSessions": 49,
+      "completeSections": 17,
+      "pendingSessions": -49
+    }
+  },
+  "checks": [
+    {
+      "name": "initial-56-courses-generated",
+      "passed": true
+    },
+    {
+      "name": "mount-does-not-consult",
+      "passed": true
+    },
+    {
+      "name": "consultation-without-simulation-or-llm",
+      "passed": true
+    },
+    {
+      "name": "apply-disabled-before-simulation",
+      "passed": true
+    },
+    {
+      "name": "select-new-options-without-silent-load-increase",
+      "passed": true
+    },
+    {
+      "name": "simulate-exact-selection",
+      "passed": true
+    },
+    {
+      "name": "apply-regenerates-once-without-implicit-save",
+      "passed": true
+    },
+    {
+      "name": "regeneration-preserves-demand-and-applies-exact-patches",
+      "passed": true
+    },
+    {
+      "name": "no-resource-or-section-conflicts-after-regeneration",
+      "passed": true
+    },
+    {
+      "name": "regeneration-respects-eligibility-availability-capacity-and-selected-loads",
+      "passed": true
+    },
+    {
+      "name": "partial-result-never-claims-complete-in-ui",
+      "passed": true
+    },
+    {
+      "name": "no-browser-exceptions",
+      "passed": true
+    }
+  ],
+  "observations": [
+    {
+      "phase": "initial-generation",
+      "metrics": {
+        "status": "search-limit",
+        "requiredSessions": 332,
+        "scheduledSessions": 211,
+        "pendingSessions": 121,
+        "totalSections": 166,
+        "completeSections": 108,
+        "resourceConflicts": 0,
+        "sectionOverlaps": 0
+      },
+      "courses": 56,
+      "period": "2027-I",
+      "revision": "PA-DEMO-1"
+    },
+    {
+      "phase": "consultation",
+      "mode": "deterministic-fallback",
+      "recommendations": 4,
+      "patchKinds": [
+        "increase_teacher_load",
+        "enable_planning_window",
+        "change_delivery_mode",
+        "change_delivery_mode"
+      ],
+      "simulated": false
+    },
+    {
+      "phase": "simulation",
+      "mode": "deterministic-fallback",
+      "selectedIds": [
+        "rec-enable-planning-window",
+        "rec-change-delivery-mode",
+        "rec-change-teacher-assignment-mode"
+      ],
+      "excludedLoadIds": [
+        "rec-increase-teacher-load"
+      ],
+      "impact": {
+        "currentScheduledSessions": 211,
+        "projectedScheduledSessions": 260,
+        "requiredSessions": 332,
+        "currentCompleteSections": 108,
+        "projectedCompleteSections": 125,
+        "totalSections": 166,
+        "recommendationIds": [
+          "rec-enable-planning-window",
+          "rec-change-delivery-mode",
+          "rec-change-teacher-assignment-mode"
+        ],
+        "solverStatus": "search-limit"
+      }
+    },
+    {
+      "phase": "actual-regeneration",
+      "metrics": {
+        "status": "search-limit",
+        "requiredSessions": 332,
+        "scheduledSessions": 260,
+        "pendingSessions": 72,
+        "totalSections": 166,
+        "completeSections": 125,
+        "resourceConflicts": 0,
+        "sectionOverlaps": 0
+      },
+      "completion": {
+        "targetRequiredSessions": 332,
+        "targetMet": false,
+        "status": "search-limit",
+        "requiredSessions": 332,
+        "scheduledSessions": 260,
+        "pendingSessions": 72,
+        "completeSections": 125,
+        "totalSections": 166,
+        "gains": {
+          "scheduledSessions": 49,
+          "completeSections": 17,
+          "pendingSessions": -49
+        }
+      },
+      "teacherLoadDeltas": [],
+      "selectedPatchKinds": [
+        "enable_planning_window",
+        "change_delivery_mode",
+        "change_delivery_mode"
+      ],
+      "policy": {
+        "revision": "FISI-PLANNING-1",
+        "period": "2027-I",
+        "allowAfternoon": true,
+        "allowSaturday": true
+      }
+    }
+  ],
+  "passed": true
+}

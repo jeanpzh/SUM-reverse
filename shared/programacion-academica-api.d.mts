@@ -4,10 +4,13 @@ export const ACADEMIC_ROUTE: '/local/programacion-academica'
 export const ACADEMIC_API: '/api/local/programacion-academica/v1'
 export type AcademicInterval = { day: number; startMinute: number; endMinute: number }
 export type AcademicAllocationPolicy = 'preferences' | 'balanced' | 'first-feasible'
+export type AcademicTeacherAssignmentMode = 'single-teacher-section' | 'tp-grouped-l-independent' | 'per-session'
+export const TEACHER_ASSIGNMENT_MODES: readonly ['single-teacher-section', 'tp-grouped-l-independent', 'per-session']
+export function getSectionComponentGroups<T extends { type?: string; sessionType?: string }>(items: T[], teacherAssignmentMode?: AcademicTeacherAssignmentMode): T[][]
 export type AcademicTeacherResource = { id: string; name: string; courseIds: string[]; maxWeeklyMinutes: number; availability: AcademicInterval[]; preferences?: AcademicInterval[]; sectionLimits?: Array<{ courseId: string; maxSections: number }>; facultyId?: string; category?: 'principal' | 'asociado' | 'auxiliar'; qualificationSource?: 'synthetic' }
 export type AcademicRoomResource = { id: string; name: string; capacity: number; availability: AcademicInterval[]; kind?: 'classroom' | 'laboratory' }
 export type AcademicPlanningResources = { teachers: AcademicTeacherResource[]; rooms: AcademicRoomResource[] }
-export type AcademicRequest = { revision: string; demands: Array<{ courseId: string; estimatedDemand: number; targetCapacity?: number; patternId?: string; deliveryMode?: 'continuous' | 'split'; sectionCapacities?: Array<{ ordinal: number; capacity: number }> }>; resources?: AcademicPlanningResources; allocationPolicy?: AcademicAllocationPolicy; planningPolicy?: PlanningPolicy }
+export type AcademicRequest = { revision: string; demands: Array<{ courseId: string; estimatedDemand: number; targetCapacity?: number; patternId?: string; deliveryMode?: 'continuous' | 'split'; teacherAssignmentMode?: AcademicTeacherAssignmentMode; sectionCapacities?: Array<{ ordinal: number; capacity: number }> }>; resources?: AcademicPlanningResources; allocationPolicy?: AcademicAllocationPolicy; planningPolicy?: PlanningPolicy }
 export type AcademicWeeklySession = { id: string; durationMinutes: number; type?: string }
 export type AcademicHistory = { sections: Array<{ sectionId: string; capacity: number; sessions: Array<AcademicInterval & { room: string; teacherId: string; teacherName?: string; type: string }> }> }
 export type AcademicCatalog = {
@@ -30,7 +33,7 @@ export type AcademicProposal = {
   createdAt: string
   expiresAt: string
   status: 'complete' | 'impossible' | 'search-limit' | 'invalid-input'
-  sections: Array<{ sectionId: string; courseId: string; courseName: string; capacity: number; deliveryMode?: 'continuous' | 'split' }>
+  sections: Array<{ sectionId: string; courseId: string; courseName: string; capacity: number; deliveryMode?: 'continuous' | 'split'; teacherAssignmentMode?: AcademicTeacherAssignmentMode; responsibleTeacherId?: string }>
   assignments: Array<AcademicInterval & { sessionId: string; sectionId: string; courseId: string; courseName: string; teacherId: string; teacherName: string; roomId: string; roomName: string; sessionType?: string }>
   pending: Array<{ sessionId: string; sectionId: string; courseId: string; durationMinutes: number }>
   diagnostics: Array<{ code: string; message: string; sessionIds: string[] }>
@@ -85,7 +88,10 @@ export function validateAcademicDraftResume(value: unknown): asserts value is Ac
 export type AcademicAdvisorPatch =
   | { kind: 'increase_teacher_load'; adjustments: Array<{ teacherId: string; previousMaxWeeklyMinutes: number; nextMaxWeeklyMinutes: number }> }
   | { kind: 'enable_planning_window'; allowAfternoon?: true; allowSaturday?: true }
-  | { kind: 'change_delivery_mode'; courseIds: string[]; deliveryMode: 'split' }
+  | ({ kind: 'change_delivery_mode'; courseIds: string[] } & (
+      | { deliveryMode: 'split'; teacherAssignmentMode?: 'tp-grouped-l-independent' | 'per-session' }
+      | { deliveryMode?: 'split'; teacherAssignmentMode: 'tp-grouped-l-independent' | 'per-session' }
+    ))
   | { kind: 'incorporate_reference_resource'; teacherIds: string[]; roomIds: string[] }
 export type AcademicAdvisorRequest = { expectedEditVersion: number; selectedRecommendationIds?: string[] }
 export type AcademicAdvisorBottleneck = {

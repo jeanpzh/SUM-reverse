@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { ACADEMIC_REVISION, validateAcademicCatalog, validateAcademicRequest, validateAcademicResources, validateAcademicProposal, validateAcademicAdjustment } from './programacion-academica-api.mjs'
+import { ACADEMIC_REVISION, getSectionComponentGroups, validateAcademicCatalog, validateAcademicRequest, validateAcademicResources, validateAcademicProposal, validateAcademicAdjustment, validateAcademicAdvisorPatch } from './programacion-academica-api.mjs'
 
 test('partial proposal counters, termination reason and diagnostics cannot contradict each other', () => {
   const proposal = {
@@ -118,4 +118,45 @@ test('catalog can expose 56 courses independently of the bounded planning reques
   const invalid = structuredClone(catalog)
   invalid.courses[0].history.sections[0].sessions[0].endMinute = 480
   assert.throws(() => validateAcademicCatalog(invalid))
+})
+
+test('component grouping preserves legacy section ownership by default and supports T/P grouped + L independent', () => {
+  const sessions = [{ id: 's1', type: 'T' }, { id: 's2', type: 'P' }, { id: 's3', type: 'L' }]
+  assert.equal(getSectionComponentGroups(sessions).length, 1)
+  assert.deepEqual(getSectionComponentGroups(sessions, 'tp-grouped-l-independent').map((g) => g.map((x) => x.id)), [['s1', 's2'], ['s3']])
+  assert.deepEqual(getSectionComponentGroups(sessions, 'per-session').map((g) => g.map((x) => x.id)), [['s1'], ['s2'], ['s3']])
+
+  const proposal = {
+    proposalId: 'TP-L', createdAt: '2026-10-29T12:00:00Z', expiresAt: '2026-10-29T12:15:00Z',
+    status: 'complete', coverageComplete: true,
+    sections: [{ sectionId: 'S1', courseId: 'C1', courseName: 'Curso', capacity: 45, deliveryMode: 'continuous', teacherAssignmentMode: 'tp-grouped-l-independent', responsibleTeacherId: 'TA' }],
+    assignments: [
+      { sessionId: 'A1', sectionId: 'S1', courseId: 'C1', courseName: 'Curso', teacherId: 'TA', teacherName: 'Doc A', roomId: 'R1', roomName: 'Aula 1', day: 5, startMinute: 480, endMinute: 600, sessionType: 'T' },
+      { sessionId: 'A2', sectionId: 'S1', courseId: 'C1', courseName: 'Curso', teacherId: 'TA', teacherName: 'Doc A', roomId: 'R1', roomName: 'Aula 1', day: 5, startMinute: 600, endMinute: 720, sessionType: 'P' },
+      { sessionId: 'A3', sectionId: 'S1', courseId: 'C1', courseName: 'Curso', teacherId: 'TB', teacherName: 'Doc B', roomId: 'L1', roomName: 'Lab 1', day: 4, startMinute: 600, endMinute: 720, sessionType: 'L' },
+    ],
+    pending: [],
+    diagnostics: [{ code: 'COMPLETE', message: 'Ok', sessionIds: [] }],
+    counts: { sections: 1, requiredSessions: 3, scheduledSessions: 3 },
+    stats: { exploredCandidates: 1, candidateVisits: 1, backtracks: 0, limitReason: null },
+  }
+  assert.doesNotThrow(() => validateAcademicProposal(proposal))
+  const missingType = structuredClone(proposal)
+  delete missingType.assignments[0].sessionType
+  assert.throws(() => validateAcademicProposal(missingType), /tipo de sesión explícito/)
+  const splitTP = structuredClone(proposal)
+  splitTP.assignments[1].teacherId = 'TB'
+  assert.throws(() => validateAcademicProposal(splitTP))
+  assert.doesNotThrow(() => validateAcademicAdvisorPatch({ kind: 'change_delivery_mode', courseIds: ['C1'], teacherAssignmentMode: 'tp-grouped-l-independent' }))
+})
+
+
+test('delivery recommendations retain four classes and require an explicit delivery or assignment change', () => {
+  const patch = { kind: 'change_delivery_mode', courseIds: ['C'] }
+  assert.throws(() => validateAcademicAdvisorPatch(patch), /cambio explícito/)
+  assert.doesNotThrow(() => validateAcademicAdvisorPatch({ ...patch, deliveryMode: 'split' }))
+  assert.doesNotThrow(() => validateAcademicAdvisorPatch({ ...patch, teacherAssignmentMode: 'per-session' }))
+  assert.doesNotThrow(() => validateAcademicAdvisorPatch({ ...patch, deliveryMode: 'split', teacherAssignmentMode: 'tp-grouped-l-independent' }))
+  assert.throws(() => validateAcademicAdvisorPatch({ ...patch, deliveryMode: 'split', teacherAssignmentMode: 'unknown' }))
+  assert.throws(() => validateAcademicAdvisorPatch({ ...patch, kind: 'change_teacher_assignment_mode', teacherAssignmentMode: 'per-session' }))
 })

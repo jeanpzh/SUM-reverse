@@ -16,6 +16,7 @@ import { measureAdvisorOutcome, type AdvisorOutcome } from './advisorOutcome.ts'
 // | changeDemandSource       | no                   | yes                         | yes                | yes   | yes                      |
 // | updatePattern            | yes                  | no                          | no                 | yes   | yes                      |
 // | updateDeliveryMode       | yes                  | no                          | no                 | yes   | yes                      |
+// | updateTeacherAssignmentMode | yes               | no                          | no                 | yes   | yes                      |
 // | updateResources          | yes                  | no                          | no                 | yes   | yes                      |
 // | updateAllocationPolicy   | yes                  | no                          | no                 | yes   | yes                      |
 // | updatePlanningException  | yes                  | no                          | no                 | yes   | yes                      |
@@ -30,11 +31,11 @@ import type {
   AcademicAdjustment, AcademicAdvisorPatch, AcademicAllocationPolicy, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest,
   AcademicDemandSourceId, AcademicDraftList, AcademicDraftResume, AcademicDraftSaveRequest, AcademicDraftState,
   AcademicPlanningResources, AcademicProposal, AcademicPublicationRequest, AcademicRequest, AcademicReviewDecision,
-  AcademicReviewSubmission, AcademicSavedDraft, AcademicTeacherReview, AcademicWorkspace,
+  AcademicReviewSubmission, AcademicSavedDraft, AcademicTeacherAssignmentMode, AcademicTeacherReview, AcademicWorkspace,
 } from '../../../shared/programacion-academica-api.mjs'
 import {
   PLANNING_LIMITS, academicPlanningErrorMessage, academicSectionCoverage, adjustAcademicProposal, aggregateAcademicBlocks, approveAcademicDraft,
-  buildAcademicPlanningRequest, createAcademicPlanningDefaults, createAcademicProposal, estimateAcademicDemand,
+  buildAcademicPlanningRequest, clonePlanningPolicy, createAcademicPlanningDefaults, createAcademicProposal, estimateAcademicDemand,
   fetchAcademicCatalog, fetchAcademicDrafts, forkAcademicDraft, publishAcademicDraft, respondAcademicTeacherReview,
   resumeAcademicDraft, saveAcademicDraft, submitAcademicTeacherReview, syntheticTeachingMetadata,
 } from './academicScheduling.ts'
@@ -96,6 +97,7 @@ export interface PlanningSessionState {
   capacities: Record<string, string>
   patterns: Record<string, string>
   deliveryModes: Record<string, 'continuous' | 'split'>
+  teacherAssignmentModes: Record<string, AcademicTeacherAssignmentMode>
   resources: AcademicPlanningResources
   demandSourceId: AcademicDemandSourceId
   demandEstimate: AcademicDemandEstimate | null
@@ -119,7 +121,7 @@ export interface PlanningSessionState {
 export function initialPlanningSessionState(): PlanningSessionState {
   return {
     catalog: null, period: '2027-I', policy: null, allocationPolicy: 'preferences', selectedCourses: [],
-    demands: {}, capacities: {}, patterns: {}, deliveryModes: {}, resources: { teachers: [], rooms: [] },
+    demands: {}, capacities: {}, patterns: {}, deliveryModes: {}, teacherAssignmentModes: {}, resources: { teachers: [], rooms: [] },
     demandSourceId: 'existing-regular-v1', demandEstimate: null, demandBaseRequest: null,
     proposal: null, advisorOutcome: null, proposalResources: null, editingBlock: null,
     draft: { id: null, version: null, title: 'Propuesta SISTEMAS 2027-I', state: 'draft', savedState: 'draft', review: undefined },
@@ -144,6 +146,7 @@ export type PlanningSessionEvent =
   | { type: 'changeDemandSource'; value: AcademicDemandSourceId }
   | { type: 'updatePattern'; courseId: string; value: string }
   | { type: 'updateDeliveryMode'; courseId: string; value: 'continuous' | 'split' }
+  | { type: 'updateTeacherAssignmentMode'; courseId: string; value: AcademicTeacherAssignmentMode }
   | { type: 'updateResources'; value: AcademicPlanningResources }
   | { type: 'updateAllocationPolicy'; value: AcademicAllocationPolicy }
   | { type: 'updatePlanningException'; key: 'allowAfternoon' | 'allowSaturday'; checked: boolean }
@@ -225,13 +228,14 @@ function hydrate(state: PlanningSessionState, draft: AcademicSavedDraft, message
     dirty: false,
     mutation: state.mutation + 1,
     period: config.academicPeriod,
-    policy: config.request.planningPolicy ? { ...config.request.planningPolicy } : null,
+    policy: config.request.planningPolicy ? clonePlanningPolicy(config.request.planningPolicy) : null,
     allocationPolicy: config.request.allocationPolicy ?? 'preferences',
     selectedCourses: demands.map((item) => item.courseId),
     demands: { ...state.demands, ...Object.fromEntries(demands.map((item) => [item.courseId, String(item.estimatedDemand)])) },
     capacities: { ...state.capacities, ...Object.fromEntries(demands.map((item) => [item.courseId, String(item.targetCapacity ?? '')])) },
     patterns: { ...state.patterns, ...Object.fromEntries(demands.flatMap((item) => item.patternId ? [[item.courseId, item.patternId]] : [])) },
-    deliveryModes: { ...state.deliveryModes, ...Object.fromEntries(demands.map((item) => [item.courseId, item.deliveryMode ?? 'continuous'])) },
+    deliveryModes: Object.fromEntries(demands.map((item) => [item.courseId, item.deliveryMode ?? 'continuous'])),
+    teacherAssignmentModes: Object.fromEntries(demands.map((item) => [item.courseId, item.teacherAssignmentMode ?? 'single-teacher-section'])),
     demandSourceId: config.demandSourceId,
     demandBaseRequest: config.demandBaseRequest,
     demandEstimate: draft.demandBase,
@@ -295,21 +299,31 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
       return { ...markDirty(invalidateProposal(state), true), patterns: { ...state.patterns, [event.courseId]: event.value } }
     case 'updateDeliveryMode':
       return { ...markDirty(invalidateProposal(state), true), deliveryModes: { ...state.deliveryModes, [event.courseId]: event.value } }
+    case 'updateTeacherAssignmentMode':
+      return { ...markDirty(invalidateProposal(state), true), teacherAssignmentModes: { ...state.teacherAssignmentModes, [event.courseId]: event.value } }
     case 'updateResources':
       return { ...markDirty(invalidateProposal(state), true), resources: event.value }
     case 'updateAllocationPolicy':
       return { ...markDirty(invalidateProposal(state), true), allocationPolicy: event.value }
     case 'updatePlanningException': {
-      const policy: PlanningPolicy = { revision: 'FISI-PLANNING-1', period: state.period,
-        allowAfternoon: state.policy?.allowAfternoon ?? false, allowSaturday: state.policy?.allowSaturday ?? false,
-        [event.key]: event.checked }
+      const base = state.policy ? clonePlanningPolicy(state.policy) : {
+        revision: 'FISI-PLANNING-1' as const,
+        period: state.period,
+        allowAfternoon: false,
+        allowSaturday: false,
+      }
+      const policy: PlanningPolicy = { ...base, period: state.period, [event.key]: event.checked }
+      if (!policy.allowSaturday && policy.exceptions) {
+        delete policy.exceptions
+      }
       return { ...markDirty(invalidateProposal(state), true), policy }
     }
     case 'applyAdvisorPatches': {
       if (!event.patches.length) return state
       let nextResources = cloneResources(state.resources)
-      let nextPolicy: PlanningPolicy | null = state.policy ? { ...state.policy } : null
+      let nextPolicy: PlanningPolicy | null = state.policy ? clonePlanningPolicy(state.policy) : null
       const nextDeliveryModes = { ...state.deliveryModes }
+      const nextTeacherAssignmentModes = { ...state.teacherAssignmentModes }
       const defaultWindows = [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 }))
 
       for (const patch of event.patches) {
@@ -330,7 +344,8 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
           if (patch.allowSaturday) nextPolicy = { ...nextPolicy, allowSaturday: true }
         } else if (patch.kind === 'change_delivery_mode') {
           for (const courseId of patch.courseIds) {
-            nextDeliveryModes[courseId] = 'split'
+            if (patch.deliveryMode) nextDeliveryModes[courseId] = patch.deliveryMode
+            if (patch.teacherAssignmentMode) nextTeacherAssignmentModes[courseId] = patch.teacherAssignmentMode
           }
         } else if (patch.kind === 'incorporate_reference_resource' && state.catalog) {
           const existingTeacherIds = new Set(nextResources.teachers.map((t) => t.id))
@@ -375,13 +390,14 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
         resources: nextResources,
         policy: nextPolicy,
         deliveryModes: nextDeliveryModes,
+        teacherAssignmentModes: nextTeacherAssignmentModes,
       }
     }
     case 'applyPeriodDefaults': {
       if (!state.catalog || (event.period === state.period && !event.force)) return state
       const defaults = createAcademicPlanningDefaults(state.catalog, event.period)
       const next = markDirty(invalidateProposal(invalidateDemand(state)), true)
-      return { ...next, period: event.period, policy: { ...(state.policy ?? defaults.planningPolicy), period: event.period },
+      return { ...next, period: event.period, policy: { ...clonePlanningPolicy(state.policy ?? defaults.planningPolicy), period: event.period },
         demands: defaults.demands, capacities: defaults.capacities }
     }
     case 'setTitle':
@@ -533,6 +549,8 @@ function requestBase(state: PlanningSessionState, catalog: AcademicCatalog, blan
       targetCapacity: toNumber(state.capacities[course.courseId]),
       ...(state.patterns[course.courseId] ? { patternId: state.patterns[course.courseId] } : {}),
       deliveryMode: state.deliveryModes[course.courseId] ?? 'continuous',
+      ...(state.teacherAssignmentModes[course.courseId] && state.teacherAssignmentModes[course.courseId] !== 'single-teacher-section'
+        ? { teacherAssignmentMode: state.teacherAssignmentModes[course.courseId] } : {}),
     })),
     allocationPolicy: state.allocationPolicy,
     resources: cloneResources(state.resources),
@@ -703,7 +721,7 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
 
   const commands = {
     edit: (event: Extract<PlanningSessionEvent, { type: 'toggleCourse' | 'selectCourses' | 'applyBulkChanges' | 'updateDemand'
-      | 'updateCapacity' | 'changeDemandSource' | 'updatePattern' | 'updateDeliveryMode' | 'updateResources'
+      | 'updateCapacity' | 'changeDemandSource' | 'updatePattern' | 'updateDeliveryMode' | 'updateTeacherAssignmentMode' | 'updateResources'
       | 'updateAllocationPolicy' | 'updatePlanningException' | 'applyAdvisorPatches' | 'applyPeriodDefaults' | 'setTitle' | 'setDraftState'
       | 'startBlockReview' | 'changeEditingBlock' | 'cancelBlockReview' | 'setDraftError'
       | 'setDraftMessage' }>) => dispatch(event),
