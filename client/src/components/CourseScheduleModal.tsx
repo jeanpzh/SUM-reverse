@@ -52,12 +52,12 @@ export function CourseScheduleModal({ course, onClose }: { course: Course | null
         <table>
           <thead>
             <tr>
-              <th>Horario</th>
-              <th>Día</th>
-              <th>Horas de clase</th>
-              <th>Aula</th>
-              <th>Tipo</th>
-              {showTeacher && <th>Docente</th>}
+              <th scope="col">Horario</th>
+              <th scope="col">Día</th>
+              <th scope="col">Horas de clase</th>
+              <th scope="col">Aula</th>
+              <th scope="col">Tipo</th>
+              {showTeacher && <th scope="col">Docente</th>}
             </tr>
           </thead>
           <tbody>

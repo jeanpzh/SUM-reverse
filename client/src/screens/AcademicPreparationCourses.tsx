@@ -18,8 +18,8 @@ import {
   selectVisibleCourses,
 } from '../data/academicPreparation.ts'
 import type { BulkChangePreview } from '../data/academicPreparation.ts'
-import { calculateCourseComponentHours, resolveCoursePlanningSessions } from '../data/planningCourseHours.ts'
-import { AcademicDemandPanel } from './AcademicDemandPanel.tsx'
+import { calculateCourseComponentHours, resolveCoursePlanningSessions } from '../data/planningCourseHours'
+import { AcademicDemandPanel } from './AcademicDemandPanel'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../components/ui/Dialog'
 import { RotateCcw } from 'lucide-react'
 import { Sheet, SheetContent, SheetTitle } from '../components/ui/Sheet'

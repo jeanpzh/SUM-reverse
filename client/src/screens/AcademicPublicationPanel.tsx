@@ -63,7 +63,7 @@ export function AcademicPublicationHeaderActions({
     <>
       <Button
         type="button"
-        variant={publishIsPrimary ? 'default' : 'outline'}
+        variant="outline"
         id={publishIsPrimary ? 'planning-tour-primary' : undefined}
         className="academic-publication__publish"
         disabled={!canPublish}
