@@ -1,7 +1,9 @@
 """Bounded provider adapter; only closed, deterministic tools can change simulations."""
 from __future__ import annotations
 
+import hashlib
 import logging
+from collections import OrderedDict
 import asyncio
 import json
 import os
@@ -35,6 +37,50 @@ _UNLOCKED_SUMMARY_RE = re.compile(r"^Destraba (\d+) componentes? en simulación$
 
 
 INCONCLUSIVE_RETRY_FACTOR = 3
+SHARED_DRY_RUN_LIMIT = 256
+# Conclusive dry runs keyed by (request fingerprint, ids). "Simular selección actual" right
+# after a consult sends the same workspace, so it reuses the consult's measurements and shows
+# the same numbers instead of re-running every simulation.
+_SHARED_DRY_RUNS: "OrderedDict[tuple[str, tuple[str, ...]], AdvisorVerifiedImpact]" = OrderedDict()
+
+
+def clear_shared_dry_runs() -> None:
+    _SHARED_DRY_RUNS.clear()
+
+
+def request_fingerprint(req) -> str:
+    payload = req.model_dump_json(exclude={"selectedRecommendationIds", "proposalId", "editVersion"})
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _is_conclusive(req, impact: AdvisorVerifiedImpact) -> bool:
+    # A run cut at the time limit that does not beat the current schedule may be a
+    # contention artifact; it is used for this request only, never shared.
+    return impact.solverStatus != "search-limit" or impact.projectedScheduledSessions > len(req.assignments)
+
+
+def measured_dry_run(req, recommendations, recommendation_ids, cache, fingerprint: str | None = None):
+    """Dry run through the request cache, then the shared cache, then CP-SAT."""
+    key = tuple(recommendation_ids)
+    if key in cache:
+        return cache[key]
+    shared_key = (fingerprint or request_fingerprint(req), key)
+    impact = _SHARED_DRY_RUNS.get(shared_key)
+    if impact is not None:
+        _SHARED_DRY_RUNS.move_to_end(shared_key)
+    else:
+        impact = run_cpsat_dry_run(req, recommendations, list(recommendation_ids))
+        if _is_conclusive(req, impact):
+            _SHARED_DRY_RUNS[shared_key] = impact
+            while len(_SHARED_DRY_RUNS) > SHARED_DRY_RUN_LIMIT:
+                _SHARED_DRY_RUNS.popitem(last=False)
+        elif impact.projectedScheduledSessions <= len(req.assignments):
+            logging.getLogger("planning.advisor").warning(
+                "advisor_dry_run_inconclusive ids=%d projected=%d current=%d",
+                len(key), impact.projectedScheduledSessions, len(req.assignments),
+            )
+    cache[key] = impact
+    return impact
 
 
 def run_cpsat_dry_run(req, recommendations, recommendation_ids, *, max_time_seconds: float = 0.8):
@@ -326,8 +372,7 @@ def build_advisor_tools(
     def _handle_simulate(args: dict[str, Any]) -> tuple[str, str]:
         nonlocal agent_simulations
         ids = args["recommendation_ids"]
-        impact = run_cpsat_dry_run(req, list(known_catalog.values()), ids)
-        cache[tuple(ids)] = impact
+        impact = measured_dry_run(req, list(known_catalog.values()), ids, cache)
         agent_simulations += 1
         result_json = impact.model_dump_json()
         return result_json, result_json
@@ -432,8 +477,7 @@ async def run_advisor_agent(
         cache,
         sanitize,
     )
-    impact = run_cpsat_dry_run(req, list(known_catalog.values()), selected)
-    cache[tuple(selected)] = impact
+    impact = measured_dry_run(req, list(known_catalog.values()), selected, cache)
     steps.append(
         AdvisorReasoningStep(
             toolName="simulate_patches_cpsat",
@@ -517,7 +561,12 @@ async def run_advisor_agent(
             for round_index in range(MAX_TOOL_ROUNDS + 2):
                 if time.monotonic() - started >= timeout:
                     return fallback("timeout")
+                call_started = time.monotonic()
                 answer = await bound.ainvoke(messages)
+                logging.getLogger("planning.advisor").info(
+                    "advisor_llm_call round=%d seconds=%.2f tool_calls=%d",
+                    round_index, time.monotonic() - call_started, len(answer.tool_calls or []),
+                )
                 tool_calls = answer.tool_calls
                 if not tool_calls:
                     parsed = _extract_json_object(answer.text)

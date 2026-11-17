@@ -324,3 +324,42 @@ def test_inconclusive_dry_run_gets_one_longer_attempt(monkeypatch):
     impact = run_cpsat_dry_run(req, recs, [recs[0].id], max_time_seconds=0.5)
     assert budgets == [0.5, 0.5 * advisor_agent.INCONCLUSIVE_RETRY_FACTOR]
     assert impact.projectedScheduledSessions == len(req.requirements)
+
+
+def test_repeated_consult_on_the_same_workspace_reuses_conclusive_dry_runs(monkeypatch):
+    import advisor_agent
+    req = sample()
+    req.selectedRecommendationIds = []
+    real = advisor_agent.run_cpsat_dry_run
+    calls = []
+
+    def counting(r, recs, ids, **kw):
+        calls.append(tuple(ids))
+        return real(r, recs, ids, **kw)
+
+    monkeypatch.setattr(advisor_agent, 'run_cpsat_dry_run', counting)
+    first = asyncio.run(analyze_proposal_with_advisor(req, env={'SUM_LLM_PROVIDER': 'disabled'}))
+    first_calls = len(calls)
+    again = req.model_copy(update={'editVersion': req.editVersion + 1, 'selectedRecommendationIds': [first.recommendations[0].id]})
+    second = asyncio.run(analyze_proposal_with_advisor(again, env={'SUM_LLM_PROVIDER': 'disabled'}))
+    assert first_calls > 0
+    assert len(calls) - first_calls <= first_calls
+    assert [r.impactSummary for r in second.recommendations] == [r.impactSummary for r in first.recommendations]
+
+
+def test_inconclusive_dry_run_is_not_shared_between_requests(monkeypatch):
+    import advisor_agent
+    from models import SolveScheduleResponse
+    req = sample()
+    _, _, recs, _ = build_deterministic_analysis(req)
+    runs = []
+
+    def cut_off(solve_req):
+        runs.append(1)
+        return SolveScheduleResponse(status='search-limit', assignments=[], exploredCandidates=0,
+                                     candidateVisits=0, backtracks=0, limitReason='time', diagnostics=[])
+
+    monkeypatch.setattr(advisor_agent, 'solve_academic_schedule', cut_off)
+    advisor_agent.measured_dry_run(req, recs, [recs[0].id], {})
+    advisor_agent.measured_dry_run(req, recs, [recs[0].id], {})
+    assert len(runs) == 2

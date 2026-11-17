@@ -96,7 +96,7 @@ def build_deterministic_analysis(
     normative_cache: dict[str, AdvisorNormativeContrast] | None = None,
     retriever: object | None = None,
 ) -> tuple[str, list[AdvisorBottleneck], list[AdvisorRecommendation], AdvisorPrivacyCodec]:
-    from advisor_agent import run_cpsat_dry_run
+    from advisor_agent import measured_dry_run, request_fingerprint, run_cpsat_dry_run
 
     teacher_names: dict[str, str] = {
         t.id: (t.name or t.id) for t in req.teachers
@@ -118,7 +118,13 @@ def build_deterministic_analysis(
         recommendations.extend(handler.variants(req, diag))
 
     base_dry_run = dry_run or run_cpsat_dry_run
-    if dry_run_cache is not None:
+    if dry_run_cache is not None and dry_run is None:
+        fingerprint = request_fingerprint(req)
+
+        def _measured(r, recs, rec_ids):
+            return measured_dry_run(r, recs, rec_ids, dry_run_cache, fingerprint)
+        effective_dry_run: DryRunFn = _measured
+    elif dry_run_cache is not None:
         def _cached_dry_run(
             r: AdvisorAnalyzeRequest,
             recs: list[AdvisorRecommendation],
@@ -130,7 +136,7 @@ def build_deterministic_analysis(
             impact = base_dry_run(r, recs, rec_ids)
             dry_run_cache[key] = impact
             return impact
-        effective_dry_run: DryRunFn = _cached_dry_run
+        effective_dry_run = _cached_dry_run
     else:
         effective_dry_run = base_dry_run
 
