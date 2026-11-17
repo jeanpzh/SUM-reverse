@@ -363,3 +363,13 @@ def test_inconclusive_dry_run_is_not_shared_between_requests(monkeypatch):
     advisor_agent.measured_dry_run(req, recs, [recs[0].id], {})
     advisor_agent.measured_dry_run(req, recs, [recs[0].id], {})
     assert len(runs) == 2
+
+
+def test_model_is_offered_only_action_tools_and_gets_the_diagnosis_up_front():
+    req = sample()
+    req.selectedRecommendationIds = []
+    model = FakeModel([AIMessage(content=json.dumps({'summary': 'Sin cambios medidos.', 'prioritizedIds': []}))])
+    run(req, model)
+    assert sorted(t.name for t in model.tools) == ['request_variants', 'simulate_patches_cpsat']
+    first_user = json.loads(model.histories[0][1]['content'])
+    assert {'freeSlotFits', 'pendingByCourse', 'topTeacherSlack'} <= set(first_user['diagnosis'])

@@ -37,6 +37,7 @@ _UNLOCKED_SUMMARY_RE = re.compile(r"^Destraba (\d+) componentes? en simulación$
 
 
 INCONCLUSIVE_RETRY_FACTOR = 3
+OFFERED_TOOLS = frozenset({"request_variants", "simulate_patches_cpsat"})
 SHARED_DRY_RUN_LIMIT = 256
 # Conclusive dry runs keyed by (request fingerprint, ids). "Simular selección actual" right
 # after a consult sends the same workspace, so it reuses the consult's measurements and shows
@@ -498,7 +499,11 @@ async def run_advisor_agent(
             model, label = (model_factory or create_chat_model)(environ)
             if model is None:
                 return fallback("not_configured")
-            bound = model.bind_tools([spec.lc_tool for spec in registry.values()])
+            # The inspect tools only return what the first message already holds; offering them
+            # cost a model round trip per consult. They stay registered so a call still validates.
+            bound = model.bind_tools([
+                spec.lc_tool for name, spec in registry.items() if name in OFFERED_TOOLS
+            ])
             messages = [
                 {
                     "role": "system",
@@ -520,6 +525,10 @@ async def run_advisor_agent(
                         "componentes se destraban a partir de él. "
                         "rationalesById: para las 3 primeras recomendaciones, una frase que explique por qué esa opción encaja en "
                         "este diagnóstico concreto (cuello de botella, franja o resultado de simulación), no qué cambia. "
+                        "El diagnóstico, las mediciones individuales (measuredUnlockedComponents) y el impacto de la "
+                        "selección (verifiedImpact) ya están en el contexto: no los vuelvas a simular. Llama herramientas solo "
+                        "para pedir variantes o simular una combinación nueva que pueda cambiar tu recomendación; si no hace "
+                        "falta, responde directamente con el JSON. "
                         "Las herramientas aceptan solo IDs de recomendaciones, kinds y scopes cerrados (ver variantScopes), nunca identidades docentes. "
                         f"Presupuesto: como máximo {MAX_TOOL_ROUNDS} rondas y {MAX_TOOL_CALLS} llamadas a herramientas; "
                         "después responde solo con el JSON final."
@@ -550,7 +559,11 @@ async def run_advisor_agent(
                             "normativeContext": normative_context,
                             "verifiedImpact": impact.model_dump(),
                             "variantScopes": variant_scopes(req, diag),
-                            "freeSlotFits": _free_slot_context(diag),
+                            "diagnosis": {
+                                key: value
+                                for key, value in _summarize_diagnosis_for_agent(req, diag, bottlenecks, known_catalog).items()
+                                if key not in {"bottlenecks", "recommendations"}
+                            },
                         }
                     ),
                 },
