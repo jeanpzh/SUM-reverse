@@ -77,7 +77,7 @@ try {
   assert.equal(await page.getByRole('link', { name: 'Iniciar Matrícula' }).count(), 0)
   await page.screenshot({ path: `${outDir}08-informacion-registrada.png`, fullPage: true })
 
-  // AC-SUM-08 (T-01, L-06, L-08): a rejected request lists its causes and returns to an empty selection.
+  // Local correction (2026-11-17): recoverable credit rejection preserves the chosen section.
   const second = await context.newPage()
   await login(second, 'SYN-SIS-B')
   await second.goto(`${origin}/local/matricula-regular`)
@@ -89,7 +89,7 @@ try {
   await second.screenshot({ path: `${outDir}09-rechazo.png` })
   await second.getByRole('button', { name: 'ACEPTAR', exact: true }).click()
   await second.getByText('Asignaturas matriculadas:').waitFor()
-  assert.equal(await second.getByRole('button', { name: /^Quitar sección de / }).count(), 0)
+  assert.equal(await second.getByRole('button', { name: /^Quitar sección de / }).count(), 1)
 
   console.log(`OK: escenarios sintéticos verificados; capturas en ${outDir}`)
 } finally {

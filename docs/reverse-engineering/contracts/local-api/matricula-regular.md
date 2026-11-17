@@ -250,12 +250,16 @@ fallo protocolario, no Outcome; no modificar errores de otras rutas. GET/método
 
 Context expone capacity/occupied para checks synthetic y evaluación propia, sin adoptar
 panel de vacantes actualizadas ni polling. La aceptación usa ocupación al procesar, no
-lo mostrado por una lectura anterior. Todo Outcome rejected académico definitivo (incluidos
-cruce sin cupo lleno, prerrequisito, crédito, pertenencia y cupo) muestra causas, luego retorna
-a `/local/matricula-regular` con elección vacía, sin reenviar; cerrar/Escape ejecuta ese retorno.
-L-06 es política local, no generalización SUM. Configuration-pending conserva su contexto/gaps;
-HTTP protocolario no vacía elección por esta política. Transporte incierto conserva identidad
-recuperable; no lo trata como rejected. Diferente elección tras rechazo requiere nueva UUID.
+lo mostrado por una lectura anterior. Corrección local autorizada el 2026-11-17: un Outcome
+rejected recuperable (p. ej. crédito, cruce o cupo) muestra causas y, al cerrar/Escape,
+conserva elecciones para corregirlas sin reenviar automáticamente. Refresca el contexto y
+retira cursos/secciones que ya no estén disponibles; el envío queda bloqueado durante la
+actualización o ante error. Cambio de alumno/oferta o contexto no habilitado invalida la
+selección obsoleta. Los rechazos no recuperables limpian la selección. Esta decisión sustituye
+la antigua política local L-06 de vaciar siempre y no generaliza comportamiento SUM.
+Configuration-pending conserva su contexto/gaps; transporte incierto conserva identidad
+recuperable y no se trata como rejected. Un nuevo intento corregido requiere nueva UUID;
+consult/replay de un resultado incierto conserva la UUID original.
 
 ## Reporte y aceptación
 

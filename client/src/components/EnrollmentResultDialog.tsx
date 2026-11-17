@@ -143,7 +143,8 @@ export function EnrollmentResultDialog({
               </ul>
               <div className="enrollment-result-dialog__reset-notice" role="status">
                 Conforme al principio de todo-o-nada, la solicitud no generó registros parciales ni reserva de cupos.
-                Al cerrar este aviso, el sistema retorna a la pantalla de registro con la selección reiniciada.
+                Al cerrar este aviso, se actualizará el contexto. Si el rechazo permite corregir la solicitud,
+                se conservarán las elecciones que sigan disponibles para que puedas revisarlas.
               </div>
             </>
           )}
