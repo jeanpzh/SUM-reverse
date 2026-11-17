@@ -18,6 +18,7 @@ import {
   selectVisibleCourses,
 } from '../data/academicPreparation.ts'
 import type { BulkChangePreview } from '../data/academicPreparation.ts'
+import { calculateCourseComponentHours, resolveCoursePlanningSessions } from '../data/planningCourseHours.ts'
 import { AcademicDemandPanel } from './AcademicDemandPanel.tsx'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../components/ui/Dialog'
 import { RotateCcw } from 'lucide-react'
@@ -186,14 +187,9 @@ export function AcademicPreparationCourses({
   }
 
   const sessionsFor = (course: AcademicCatalog['courses'][number]) =>
-    course.planningPatterns?.find((pattern) => pattern.id === patterns[course.courseId])?.weeklySessions ?? course.weeklySessions
-  const hoursFor = (course: AcademicCatalog['courses'][number]) => {
-    const sessions = sessionsFor(course)
-    if (sessions.some((session) => !session.type)) return ['—', '—', '—']
-    return ['teor', 'pr', 'lab'].map((type) => sessions
-      .filter((session) => session.type?.toLowerCase().startsWith(type))
-      .reduce((sum, session) => sum + session.durationMinutes / 60, 0))
-  }
+    resolveCoursePlanningSessions(course, patterns[course.courseId])
+  const hoursFor = (course: AcademicCatalog['courses'][number]) =>
+    calculateCourseComponentHours(course, patterns[course.courseId])
   const demandValue = inspectedCourse ? demands[inspectedCourse.courseId] ?? '' : ''
   const capacityValue = inspectedCourse ? capacities[inspectedCourse.courseId] ?? '' : ''
   const invalidDemand = demandValue.trim() === '' || !Number.isSafeInteger(Number(demandValue)) || Number(demandValue) < 0
@@ -227,7 +223,7 @@ export function AcademicPreparationCourses({
       </p>
       <dl className="academic-preparation__detail-facts academic-preparation__detail-components">
         <dt>Secciones</dt><dd>{calculatePresentedSections(demandValue, capacityValue) ?? '—'} × {capacityValue || '—'} vacantes</dd>
-        <dt>Componentes</dt><dd>{sessionsFor(inspectedCourse).map((session) => `${session.type === 'Laboratorio' ? 'Lab.' : session.type ?? 'Sesión'} ${session.durationMinutes / 60} h`).join(' · ')}</dd>
+        <dt>Componentes</dt><dd>{(sessionsFor(inspectedCourse) ?? []).map((session) => `${session.type === 'Laboratorio' ? 'Lab.' : session.type ?? 'Sesión'} ${session.durationMinutes / 60} h`).join(' · ') || '—'}</dd>
         <dt>Docentes habilitados</dt><dd>{(resources ?? catalog)?.teachers.filter((teacher) => teacher.courseIds.includes(inspectedCourse.courseId)).length ?? '—'}</dd>
       </dl>
       <Button variant="outline" type="button" className="academic-preparation__estimate" disabled={planningPeriod !== '2027-I'} onClick={() => setDemandOpen(true)}>Estimar demanda</Button>
