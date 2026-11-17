@@ -68,17 +68,34 @@ export function WeeklySchedule({ data, displayEvents }: {
               return <div key={day} className={`weekly-schedule__day ${dayIndex === currentDay ? 'is-today' : ''}`} aria-label={day}
                 style={{ backgroundSize: `100% ${hourHeight}px` }}>
                 {!dayEvents.length && <span className="weekly-schedule__no-classes">Sin clases</span>}
-                {positioned.map(({ event, lane }, index) => <article key={`${event.course}-${index}`}
-                  className={`weekly-schedule__event${event.end - event.start < 60 ? ' is-compact' : ''}`} tabIndex={0}
-                  aria-label={`${day} · ${event.course} · ${event.time} · Sección ${event.section} · ${event.kind}`}
-                  title={`${day} · ${event.course} · ${event.time} · Sección ${event.section} · ${event.kind}`}
-                  style={{ top: (event.start - firstMinute) / 60 * hourHeight,
-                    height: (event.end - event.start) / 60 * hourHeight,
-                    left: `${lane / laneCount * 100}%`, width: `${100 / laneCount}%` }}>
-                  <strong>{event.course}</strong>
-                  <span>{event.time}</span>
-                  <small>Sección {event.section} · {event.kind}</small>
-                </article>)}
+                {positioned.map(({ event, lane }, index) => {
+                  const sessionType = 'sessionType' in event ? event.sessionType : undefined
+                  const room = 'room' in event ? event.room : undefined
+                  const teacher = 'teacher' in event ? event.teacher : undefined
+                  const hasSessionMetadata = Boolean(sessionType || room || teacher)
+                  const sectionLine = hasSessionMetadata
+                    ? `Sección ${event.section} · ${[sessionType, room].filter(Boolean).join(' · ') || event.kind}`
+                    : `Sección ${event.section} · ${event.kind}`
+                  const accessibleSummary = hasSessionMetadata
+                    ? `${day} · ${event.course} · ${event.time} · Sección ${event.section} · ${[sessionType, room, teacher].filter(Boolean).join(' · ')}`
+                    : `${day} · ${event.course} · ${event.time} · Sección ${event.section} · ${event.kind}`
+                  return (
+                    <article key={`${event.course}-${index}`}
+                      className={`weekly-schedule__event${event.end - event.start < 60 ? ' is-compact' : ''}`} tabIndex={0}
+                      aria-label={accessibleSummary}
+                      title={accessibleSummary}
+                      style={{ top: (event.start - firstMinute) / 60 * hourHeight,
+                        height: (event.end - event.start) / 60 * hourHeight,
+                        left: `${lane / laneCount * 100}%`, width: `${100 / laneCount}%` }}>
+                      <strong>{event.course}</strong>
+                      <span>{event.time}</span>
+                      <small>{sectionLine}</small>
+                      {hasSessionMetadata && teacher && (
+                        <small className="weekly-schedule__teacher">{teacher}</small>
+                      )}
+                    </article>
+                  )
+                })}
                 {dayIndex === currentDay && showNow && <div className="weekly-schedule__now"
                   style={{ top: (currentTime - firstMinute) / 60 * hourHeight }} aria-label={`Hora actual: ${clock}`}>
                   <span>Ahora {clock}</span>

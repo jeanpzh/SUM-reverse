@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { buildScheduleFromCommittedReport, localAcademicContext, buildProgrammingRows, formatProgrammingRow,
-  buildPreEnrollmentRows, buildStudyPlanRows } from './localAcademicView.ts'
+  buildPreEnrollmentRows, buildStudyPlanRows, buildScheduleEvents, buildProgrammingScheduleDialog } from './localAcademicView.ts'
 import type { MatriculaRegularContext, MatriculaRegularEnrollmentReport } from './matriculaRegular.ts'
 
 const reportFor = (actorId: 'SYN-SIS-A' | 'SYN-SIS-B' = 'SYN-SIS-A'): MatriculaRegularEnrollmentReport => ({
@@ -78,3 +78,102 @@ test('scope_isolation keeps committed report actor and scope together', () => {
   assert.equal(report.scope.schoolId, 'SISTEMAS')
   assert.equal(view?.rows[0]?.[1], `${report.rows[0]?.courseId} - ${report.rows[0]?.name}`)
 })
+
+test('D2: buildScheduleEvents derives sessionType, room and teacher from meeting.details and preserves legacy dash without details', () => {
+  const legacyEvents = buildScheduleEvents(reportFor())
+  assert.deepEqual(legacyEvents, [{
+    day: 1,
+    start: 480,
+    end: 600,
+    course: 'Curso sintético',
+    section: '01',
+    kind: '—',
+    time: '08:00-10:00',
+  }])
+
+  const detailedReport: MatriculaRegularEnrollmentReport = {
+    ...reportFor(),
+    rows: [{
+      courseId: 'SYN-COURSE-A',
+      sectionId: 'SYN-SECTION-A',
+      planId: 'SYN-SIS-PLAN',
+      name: 'Algoritmos',
+      credits: 4,
+      cycle: 3,
+      label: '1',
+      teacher: 'DOCENTE A / DOCENTE B',
+      schedule: [
+        {
+          day: 1,
+          startMinute: 480,
+          endMinute: 600,
+          details: { sessionId: 's1', teacherId: 't1', teacherName: 'DOCENTE A', roomId: 'r1', roomName: 'Aula 101', sessionType: 'T' },
+        },
+        {
+          day: 3,
+          startMinute: 480,
+          endMinute: 600,
+          details: { sessionId: 's2', teacherId: 't1', teacherName: 'DOCENTE A', roomId: 'r1', roomName: 'Aula 101', sessionType: 'P' },
+        },
+        {
+          day: 5,
+          startMinute: 840,
+          endMinute: 960,
+          details: { sessionId: 's3', teacherId: 't2', teacherName: 'DOCENTE B', roomId: 'r2', roomName: 'Lab 2', sessionType: 'L' },
+        },
+        {
+          day: 6,
+          startMinute: 600,
+          endMinute: 660,
+          details: { sessionId: 's4', teacherId: 't2', teacherName: 'DOCENTE B', roomId: 'r2', roomName: 'Lab 2' },
+        },
+      ],
+    }],
+  }
+
+  assert.deepEqual(buildScheduleEvents(detailedReport), [
+    { day: 1, start: 480, end: 600, course: 'Algoritmos', section: '1', kind: 'Teoría · Aula 101', time: '08:00-10:00', sessionType: 'Teoría', room: 'Aula 101', teacher: 'DOCENTE A' },
+    { day: 3, start: 480, end: 600, course: 'Algoritmos', section: '1', kind: 'Práctica · Aula 101', time: '08:00-10:00', sessionType: 'Práctica', room: 'Aula 101', teacher: 'DOCENTE A' },
+    { day: 5, start: 840, end: 960, course: 'Algoritmos', section: '1', kind: 'Laboratorio · Lab 2', time: '14:00-16:00', sessionType: 'Laboratorio', room: 'Lab 2', teacher: 'DOCENTE B' },
+    { day: 6, start: 600, end: 660, course: 'Algoritmos', section: '1', kind: 'Lab 2', time: '10:00-11:00', room: 'Lab 2', teacher: 'DOCENTE B' },
+  ])
+})
+
+test('D2: buildProgrammingScheduleDialog shows per-session type, room and teacher when details exist and keeps 2 columns for legacy', () => {
+  const legacyDialog = buildProgrammingScheduleDialog(contextForProjection().offer[0]!.sections[0]!)
+  assert.deepEqual(legacyDialog, {
+    headers: ['Día', 'Horas de clase'],
+    rows: [['Lunes', '08:00-10:00']],
+  })
+
+  const detailedDialog = buildProgrammingScheduleDialog({
+    sectionId: 'SYN-SECTION-D2',
+    label: '1',
+    capacity: 30,
+    occupied: 10,
+    teacher: 'DOCENTE A / DOCENTE B',
+    room: 'Aula 101 / Lab 2',
+    schedule: [
+      {
+        day: 1,
+        startMinute: 480,
+        endMinute: 600,
+        details: { sessionId: 's1', teacherId: 't1', teacherName: 'DOCENTE A', roomId: 'r1', roomName: 'Aula 101', sessionType: 'T' },
+      },
+      {
+        day: 5,
+        startMinute: 840,
+        endMinute: 960,
+        details: { sessionId: 's2', teacherId: 't2', teacherName: 'DOCENTE B', roomId: 'r2', roomName: 'Lab 2', sessionType: 'L' },
+      },
+    ],
+  })
+  assert.deepEqual(detailedDialog, {
+    headers: ['Día', 'Horas de clase', 'Tipo', 'Aula', 'Docente'],
+    rows: [
+      ['Lunes', '08:00-10:00', 'Teoría', 'Aula 101', 'DOCENTE A'],
+      ['Viernes', '14:00-16:00', 'Laboratorio', 'Lab 2', 'DOCENTE B'],
+    ],
+  })
+})
+

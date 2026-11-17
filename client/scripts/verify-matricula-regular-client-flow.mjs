@@ -161,6 +161,163 @@ try {
     assert.doesNotMatch(accepted, /REDIRECCIONANDO|M-?01|Redirigiendo/)
     assert.match(accepted.match(/<button[^>]*>Enviar solicitud de matrícula/)?.[0] ?? '', /disabled/)
   })
+
+  // ---- D2: per-session details in WeeklySchedule, SectionPickerDialog, and CourseScheduleModal ----
+  await check('D2: WeeklySchedule renders per-session type, room and teacher from MeetingDetails and keeps legacy fallback', async () => {
+    const { WeeklySchedule } = await server.ssrLoadModule('/src/screens/WeeklySchedule.tsx')
+    const { buildScheduleEvents } = await server.ssrLoadModule('/src/data/localAcademicView.ts')
+    const detailedReport = kit.enrollmentReport({
+      rows: [{
+        courseId: 'SYN-SIS-C1',
+        sectionId: 'SYN-SIS-S1',
+        planId: 'SYN-PLAN-SIS',
+        name: 'Algoritmos y Estructuras',
+        credits: 4,
+        label: '1',
+        teacher: 'DOCENTE A / DOCENTE B',
+        schedule: [
+          {
+            day: 1,
+            startMinute: 480,
+            endMinute: 600,
+            details: { sessionId: 's-t', teacherId: 't-a', teacherName: 'DOCENTE A', roomId: 'r-1', roomName: 'Aula 101', sessionType: 'T' },
+          },
+          {
+            day: 4,
+            startMinute: 840,
+            endMinute: 960,
+            details: { sessionId: 's-l', teacherId: 't-b', teacherName: 'DOCENTE B', roomId: 'r-2', roomName: 'Lab 2', sessionType: 'L' },
+          },
+        ],
+      }],
+    })
+    const detailedMarkup = html(WeeklySchedule, { data: null, displayEvents: buildScheduleEvents(detailedReport) })
+    assert.match(detailedMarkup, /Sección 1 · Teoría · Aula 101/)
+    assert.match(detailedMarkup, /DOCENTE A/)
+    assert.match(detailedMarkup, /Sección 1 · Laboratorio · Lab 2/)
+    assert.match(detailedMarkup, /DOCENTE B/)
+    assert.match(detailedMarkup, /aria-label="Lunes · Algoritmos y Estructuras · 08:00-10:00 · Sección 1 · Teoría · Aula 101 · DOCENTE A"/)
+    assert.match(detailedMarkup, /aria-label="Jueves · Algoritmos y Estructuras · 14:00-16:00 · Sección 1 · Laboratorio · Lab 2 · DOCENTE B"/)
+
+    const legacyMarkup = html(WeeklySchedule, { data: null, displayEvents: buildScheduleEvents(kit.enrollmentReport()) })
+    assert.match(legacyMarkup, /Sección SYN-SIS-S1 · —/)
+  })
+
+  await check('D2: SectionPickerDialog expanded schedule renders per-session teacher and room without collapsing T/P and L', async () => {
+    const { SectionPickerDialog } = await server.ssrLoadModule('/src/components/SectionPickerDialog.tsx')
+    const course = {
+      ...syntheticContext().offer[0],
+      sections: [{
+        sectionId: 'SYN-SIS-S1',
+        label: '1',
+        capacity: 30,
+        occupied: 4,
+        teacher: 'DOCENTE A / DOCENTE B',
+        room: 'Aula 101 / Lab 2',
+        schedule: [
+          {
+            day: 1,
+            startMinute: 480,
+            endMinute: 600,
+            details: { sessionId: 's-t', teacherId: 't-a', teacherName: 'DOCENTE A', roomId: 'r-1', roomName: 'Aula 101', sessionType: 'T' },
+          },
+          {
+            day: 3,
+            startMinute: 480,
+            endMinute: 600,
+            details: { sessionId: 's-p', teacherId: 't-a', teacherName: 'DOCENTE A', roomId: 'r-1', roomName: 'Aula 101', sessionType: 'P' },
+          },
+          {
+            day: 5,
+            startMinute: 840,
+            endMinute: 960,
+            details: { sessionId: 's-l', teacherId: 't-b', teacherName: 'DOCENTE B', roomId: 'r-2', roomName: 'Lab 2', sessionType: 'L' },
+          },
+        ],
+      }],
+    }
+    const markup = html(SectionPickerDialog, {
+      course,
+      currentSectionId: 'SYN-SIS-S1',
+      initialExpandedSectionId: 'SYN-SIS-S1',
+      onAccept: noop,
+      onCancel: noop,
+    })
+    assert.match(markup, /Lun 08:00-10:00.*Teoría.*Aula 101.*DOCENTE A/)
+    assert.match(markup, /Mié 08:00-10:00.*Práctica.*Aula 101.*DOCENTE A/)
+    assert.match(markup, /Vie 14:00-16:00.*Laboratorio.*Lab 2.*DOCENTE B/)
+
+    const legacyCourse = syntheticContext().offer[0]
+    const legacyMarkup = html(SectionPickerDialog, {
+      course: legacyCourse,
+      currentSectionId: 'SYN-SIS-S1',
+      initialExpandedSectionId: 'SYN-SIS-S1',
+      onAccept: noop,
+      onCancel: noop,
+    })
+    assert.match(legacyMarkup, /<td colSpan="6">Lun 08:00-10:00<\/td>|colspan="6">Lun 08:00-10:00<\/td>/)
+    assert.doesNotMatch(legacyMarkup, /<ul/)
+  })
+
+  await check('D2: CourseScheduleModal renders Docente column for operational slots and omits it for legacy slots', async () => {
+    const { CourseScheduleModal } = await server.ssrLoadModule('/src/components/CourseScheduleModal.tsx')
+    const { mockResponses } = await server.ssrLoadModule('/src/data/mocks/responses.ts')
+    const legacyCourse = mockResponses.programacion.data.programacion[0]
+    const legacyMarkup = html(CourseScheduleModal, { course: legacyCourse, onClose: noop })
+    assert.doesNotMatch(legacyMarkup, /<th>Docente<\/th>/)
+
+    const operationalCourse = {
+      ...legacyCourse,
+      codDocente: '',
+      apePatDocente: '',
+      apeMatDocente: '',
+      nomDocente: 'DOCENTE A / DOCENTE B',
+      horarios: [
+        { ...legacyCourse.horarios[0], codAula: 'Aula 101', nomDocente: 'DOCENTE A', desTipoHoraAsignatura: 'Teoría' },
+        { ...legacyCourse.horarios[1], codAula: 'Lab 2', nomDocente: 'DOCENTE B', desTipoHoraAsignatura: 'Laboratorio' },
+      ],
+    }
+    const opMarkup = html(CourseScheduleModal, { course: operationalCourse, onClose: noop })
+    assert.match(opMarkup, /<th[^>]*>Docente<\/th>/)
+    assert.match(opMarkup, /Aula 101/)
+    assert.match(opMarkup, /DOCENTE A/)
+    assert.match(opMarkup, /Lab 2/)
+    assert.match(opMarkup, /DOCENTE B/)
+  })
+
+  await check('D2: LocalAcademicView horarios view renders per-session room, type and teacher from committed report', async () => {
+    const { LocalAcademicView } = await server.ssrLoadModule('/src/screens/LocalAcademicView.tsx')
+    const detailedReport = kit.enrollmentReport({
+      rows: [{
+        courseId: 'SYN-SIS-C1',
+        sectionId: 'SYN-SIS-S1',
+        planId: 'SYN-PLAN-SIS',
+        name: 'Arquitectura de Computadoras',
+        credits: 4,
+        label: '1',
+        teacher: 'DOCENTE A / DOCENTE B',
+        schedule: [
+          {
+            day: 2,
+            startMinute: 480,
+            endMinute: 600,
+            details: { sessionId: 's-t', teacherId: 't-a', teacherName: 'DOCENTE A', roomId: 'r-1', roomName: 'Aula 101', sessionType: 'T' },
+          },
+          {
+            day: 5,
+            startMinute: 840,
+            endMinute: 960,
+            details: { sessionId: 's-l', teacherId: 't-b', teacherName: 'DOCENTE B', roomId: 'r-2', roomName: 'Lab 2', sessionType: 'L' },
+          },
+        ],
+      }],
+    })
+    const markup = html(LocalAcademicView, { kind: 'horarios', response: detailedReport })
+    assert.match(markup, /Sección 1 · Teoría · Aula 101/)
+    assert.match(markup, /DOCENTE A/)
+    assert.match(markup, /Sección 1 · Laboratorio · Lab 2/)
+    assert.match(markup, /DOCENTE B/)
+  })
 } finally {
   await server.close()
 }

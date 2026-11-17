@@ -6,12 +6,10 @@ import { EnrollmentCalendarPanel } from '../components/EnrollmentCalendarPanel'
 import { PreEnrollmentPanel } from '../components/PreEnrollmentPanel'
 import { buildScheduleFromCommittedReport, localAcademicContext, buildProgrammingRows, formatProgrammingRow,
   buildPreEnrollmentRows, buildStudyPlanRows, PROGRAMMING_HEADERS, PRE_ENROLLMENT_HEADERS,
-  ENROLLMENT_HEADERS, STUDY_PLAN_HEADERS, buildScheduleEvents } from '../data/localAcademicView'
+  ENROLLMENT_HEADERS, STUDY_PLAN_HEADERS, buildScheduleEvents, buildProgrammingScheduleDialog } from '../data/localAcademicView'
 import type { LocalAcademicKind, LocalAcademicResponse, ProgrammingRow } from '../data/localAcademicView'
 import { useStudent } from '../data/useStudent'
 import { WeeklySchedule } from './WeeklySchedule'
-
-const missing = '—'
 
 function ProgrammingTable({ rows }: { rows: ProgrammingRow[] }) {
   const [search, setSearch] = useState('')
@@ -24,8 +22,18 @@ function ProgrammingTable({ rows }: { rows: ProgrammingRow[] }) {
     if (!selected && dialog.open) dialog.close()
   }, [selected])
   const query = search.trim().toLocaleLowerCase()
-  const visible = rows.filter((row) => !query || [row.courseId, row.name, row.section.label, row.section.sectionId, row.section.teacher,
-    row.cycle === null ? '' : `ciclo${row.cycle}`].join(' ').toLocaleLowerCase().includes(query))
+  const visible = rows.filter((row) => !query || [
+    row.courseId,
+    row.name,
+    row.section.label,
+    row.section.sectionId,
+    row.section.teacher,
+    ...(row.section.schedule?.flatMap((meeting) => meeting.details ? [meeting.details.teacherName, meeting.details.roomName] : []) ?? []),
+    row.cycle === null ? '' : `ciclo${row.cycle}`,
+  ].join(' ').toLocaleLowerCase().includes(query))
+  const scheduleDialog = selected && selected.section.schedule?.length
+    ? buildProgrammingScheduleDialog(selected.section)
+    : null
   return <>
     <div className="report-toolbar">
       <DownloadButton name="programacion-asignaturas" headers={PROGRAMMING_HEADERS}
@@ -46,6 +54,7 @@ function ProgrammingTable({ rows }: { rows: ProgrammingRow[] }) {
     </table></div><p className="table-footer">Mostrando {visible.length} registros</p></div>
     <dialog ref={dialogRef} className="course-schedule-dialog" aria-labelledby="local-course-schedule-title"
       aria-describedby="local-course-schedule-context" onClose={() => setSelected(null)}
+      style={scheduleDialog && scheduleDialog.headers.length > 2 ? { width: 'min(640px, calc(100vw - 28px))' } : undefined}
       onCancel={(event) => { event.preventDefault(); setSelected(null) }}>
       <header className="course-schedule-dialog__header">
         <h2 id="local-course-schedule-title">Horarios</h2>
@@ -54,10 +63,7 @@ function ProgrammingTable({ rows }: { rows: ProgrammingRow[] }) {
       </header>
       <div className="course-schedule-dialog__body">{!selected ? null
         : selected.section.schedule === null ? <p role="status">Horario no disponible.</p>
-        : selected.section.schedule.length ? <DataTable headers={['Día', 'Horas de clase']} rows={selected.section.schedule.map((meeting) => [
-          ['—', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][meeting.day] ?? missing,
-          `${String(Math.floor(meeting.startMinute / 60)).padStart(2, '0')}:${String(meeting.startMinute % 60).padStart(2, '0')}-${String(Math.floor(meeting.endMinute / 60)).padStart(2, '0')}:${String(meeting.endMinute % 60).padStart(2, '0')}`,
-        ])} /> : <p>No hay horarios registrados.</p>}</div>
+        : scheduleDialog ? <DataTable headers={scheduleDialog.headers} rows={scheduleDialog.rows} /> : <p>No hay horarios registrados.</p>}</div>
     </dialog>
   </>
 }

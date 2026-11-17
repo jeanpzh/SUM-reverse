@@ -65,3 +65,62 @@ test('course schedule modal preserves every slot with room and class type', () =
   assert.equal(rows[1][3], course.horarios[1].codAula)
   assert.deepEqual(toCourseScheduleRows([]), [])
 })
+
+test('D2: operational toProgrammingRows keeps joined teacher names without empty legacy prefix', () => {
+  const base = mockResponses.programacion.data.programacion[0]
+  const operational = {
+    ...base,
+    codDocente: '',
+    apePatDocente: '',
+    apeMatDocente: '',
+    nomDocente: 'DOCENTE A / DOCENTE B',
+  }
+  const missingTeacher = {
+    ...base,
+    codDocente: '--',
+    apePatDocente: '--',
+    apeMatDocente: '--',
+    nomDocente: '--',
+  }
+  const rows = toProgrammingRows([operational, missingTeacher, base])
+  assert.equal(rows[0]?.[4], 'DOCENTE A / DOCENTE B')
+  assert.equal(rows[1]?.[4], '--')
+  assert.equal(rows[2]?.[4], 'DOC-1 - DE DEMOSTRACIÓN, DOCENTE')
+})
+
+test('D2: operational toCourseScheduleRows exposes per-session teacher when nomDocente is present without breaking legacy 5 columns', () => {
+  const base = mockResponses.programacion.data.programacion[0]
+  const operationalSlots = [
+    {
+      ...base.horarios[0],
+      horario: 1,
+      dia: 'LUNES',
+      horaInicio: '08:00',
+      horaFin: '10:00',
+      codAula: 'Aula 101',
+      codTipoHoraAsignatura: 'T',
+      desTipoHoraAsignatura: 'Teoría',
+      codDocente: 'T-A',
+      nomDocente: 'DOCENTE A',
+    },
+    {
+      ...base.horarios[1],
+      horario: 2,
+      dia: 'JUEVES',
+      horaInicio: '14:00',
+      horaFin: '16:00',
+      codAula: 'Lab 2',
+      codTipoHoraAsignatura: 'L',
+      desTipoHoraAsignatura: 'Laboratorio',
+      codDocente: 'T-B',
+      nomDocente: 'DOCENTE B',
+    },
+  ]
+  const rows = toCourseScheduleRows(operationalSlots)
+  assert.deepEqual(rows, [
+    [1, 'LUNES', '08:00 - 10:00', 'Aula 101', 'Teoría', 'DOCENTE A'],
+    [2, 'JUEVES', '14:00 - 16:00', 'Lab 2', 'Laboratorio', 'DOCENTE B'],
+  ])
+  assert.equal(toCourseScheduleRows(base.horarios)[0]?.length, 5)
+})
+
