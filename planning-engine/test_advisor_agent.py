@@ -388,3 +388,47 @@ def test_model_is_offered_only_action_tools_and_gets_the_diagnosis_up_front():
 def test_authorization_guard_follows_the_subject_of_the_claim(text, claims):
     from advisor import _claims_load_without_authorization
     assert _claims_load_without_authorization(text) is claims
+
+
+def _load_rec(rec_id, title):
+    from models import AdvisorRecommendation, IncreaseTeacherLoadPatch, TeacherLoadAdjustment
+    return AdvisorRecommendation(
+        id=rec_id, title=title, rationale='r', impactSummary='i', recommendedByDefault=False,
+        patch=IncreaseTeacherLoadPatch(adjustments=[TeacherLoadAdjustment(teacherId='t', previousMaxWeeklyMinutes=1, nextMaxWeeklyMinutes=2)]),
+    )
+
+
+def test_summary_leading_with_a_dominated_option_is_rejected():
+    from advisor import _apply_validated_llm_output
+    _, _, _, codec = build_deterministic_analysis(sample())
+    recs = [
+        _load_rec('load-all', 'Ampliar carga máxima semanal de 22 docente(s) habilitados'),
+        _load_rec('load-course', 'Ampliar carga docente solo para PROGRAMACIÓN Y FUNDAMENTOS DE ALGORÍTMICA (1 docente(s))'),
+    ]
+    impacts = {'load-all': 79, 'load-course': 9}
+    real = ("Primero, considera aumentar la carga docente para el curso 'PROGRAMACIÓN Y FUNDAMENTOS DE ALGORÍTMICA' "
+            "ya que tiene el mayor impacto medido (9 componentes).")
+    source, _, _ = _apply_validated_llm_output({'summary': real, 'prioritizedIds': []}, 'fake', 'base', recs, codec, unlocked_by_id=impacts)
+    assert source.fallbackReason == 'invalid_llm_output'
+    fine = 'Primero aplica Ampliar carga máxima semanal de 22 docente(s) habilitados; requiere autorización.'
+    source, _, _ = _apply_validated_llm_output({'summary': fine, 'prioritizedIds': []}, 'fake', 'base', recs, codec, unlocked_by_id=impacts)
+    assert source.mode == 'llm-assisted'
+
+
+def test_cut_off_run_below_the_current_schedule_is_labelled_inconclusive():
+    from advisor_catalog import INCONCLUSIVE_IMPACT_SUMMARY, rank_recommendations
+    from models import AdvisorVerifiedImpact, AssignmentOutput
+    req = sample()
+    req.assignments = [AssignmentOutput.model_validate(
+        {"id": "seed", "sectionId": "S1", "teacherId": "x", "roomId": "y", "interval": {"day": 1, "startMinute": 480, "endMinute": 540}}
+    )]
+    _, _, recs, _ = build_deterministic_analysis(sample())
+
+    def dry_run(r, rs, ids):
+        projected = 1 if not ids else 0
+        return AdvisorVerifiedImpact(currentScheduledSessions=1, projectedScheduledSessions=projected, requiredSessions=2,
+                                     currentCompleteSections=0, projectedCompleteSections=0, totalSections=1,
+                                     recommendationIds=list(ids), solverStatus='search-limit')
+
+    ranked = rank_recommendations(req, [r.model_copy(deep=True) for r in recs], dry_run)
+    assert ranked and all(r.impactSummary == INCONCLUSIVE_IMPACT_SUMMARY for r in ranked if 'no simulado' not in r.impactSummary)

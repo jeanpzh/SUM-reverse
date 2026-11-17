@@ -126,6 +126,8 @@ def _measured_unlocked(cache: dict[tuple[str, ...], Any], rec_id: str) -> int | 
     baseline, single = cache.get(()), cache.get((rec_id,))
     if baseline is None or single is None:
         return None
+    if single.solverStatus == "search-limit" and single.projectedScheduledSessions < single.currentScheduledSessions:
+        return None
     return max(0, single.projectedScheduledSessions - baseline.projectedScheduledSessions)
 
 

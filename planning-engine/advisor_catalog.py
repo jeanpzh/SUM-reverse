@@ -1088,6 +1088,8 @@ DryRunFn = Callable[
 ]
 
 
+INCONCLUSIVE_IMPACT_SUMMARY = "Medición no concluyente: la búsqueda se cortó antes de igualar el horario actual"
+
 def rank_recommendations(
     req: AdvisorAnalyzeRequest,
     recommendations: list[AdvisorRecommendation],
@@ -1141,7 +1143,11 @@ def rank_recommendations(
         )
         unlocked = max(0, impact.projectedScheduledSessions - baseline_sessions)
         unlocked_by_id[rec.id] = unlocked
-        if unlocked > 0:
+        if impact.solverStatus == "search-limit" and impact.projectedScheduledSessions < len(req.assignments):
+            # Patches only relax constraints, so a result below the current schedule is a search
+            # cut off by the time limit, not a measurement of the lever.
+            rec.impactSummary = INCONCLUSIVE_IMPACT_SUMMARY
+        elif unlocked > 0:
             unit = "componente" if unlocked == 1 else "componentes"
             rec.impactSummary = f"Destraba {unlocked} {unit} en simulación"
         else:

@@ -227,8 +227,30 @@ def _reject(
     )
 
 
+def _requires_authorization(rec: AdvisorRecommendation) -> bool:
+    if rec.patch.kind == "increase_teacher_load":
+        return True
+    return bool(rec.normativeContrast and rec.normativeContrast.requiresExternalAuthorization)
+
+
+_SCOPED_TITLE = re.compile(r"solo (?:para|en) (.+?)(?:\s*\(|$)")
+_LEVER_CUE = {"increase_teacher_load": "carga", "change_delivery_mode": "divid"}
+
+
 def _first_mentioned(text: str, recommendations: list[AdvisorRecommendation]) -> AdvisorRecommendation | None:
-    found = [(text.find(r.title), r) for r in recommendations if r.title and r.title in text]
+    """The option the prose names first: by full title, or for a course-scoped variant by
+    its course name preceded closely by the lever's cue word (e.g. "carga ... CÁLCULO I")."""
+    found: list[tuple[int, AdvisorRecommendation]] = []
+    upper = text.upper()
+    for rec in recommendations:
+        if rec.title and rec.title in text:
+            found.append((text.find(rec.title), rec))
+            continue
+        scoped, cue = _SCOPED_TITLE.search(rec.title or ""), _LEVER_CUE.get(rec.patch.kind)
+        if scoped and cue:
+            position = upper.find(scoped.group(1).strip().upper())
+            if position >= 0 and cue in text[max(0, position - 80):position].lower():
+                found.append((position, rec))
     return min(found, key=lambda item: item[0])[1] if found else None
 
 
@@ -255,15 +277,20 @@ def _apply_validated_llm_output(
     prose = [parsed["summary"], *(v for v in rationales.values() if isinstance(v, str))] if isinstance(rationales, dict) else [parsed["summary"]]
     if any(_claims_load_without_authorization(text) for text in prose):
         return _reject("load_without_authorization", summary, recommendations)
-    # The summary must not lead with an option measured at zero when another one unlocks components.
+    # The summary must not lead with an option measured at zero when another one unlocks
+    # components, nor with one another option dominates: at least the same measured impact,
+    # no stricter authorization, and strictly better on one of the two.
     lead = _first_mentioned(parsed["summary"], recommendations)
-    if (
-        lead is not None
-        and unlocked_by_id
-        and unlocked_by_id.get(lead.id) == 0
-        and max(unlocked_by_id.values()) > 0
-    ):
-        return _reject("zero_impact_option_first", summary, recommendations)
+    if lead is not None and unlocked_by_id and lead.id in unlocked_by_id:
+        lead_impact, lead_auth = unlocked_by_id[lead.id], _requires_authorization(lead)
+        if lead_impact == 0 and max(unlocked_by_id.values()) > 0:
+            return _reject("zero_impact_option_first", summary, recommendations)
+        for other in recommendations:
+            if other.id == lead.id or other.id not in unlocked_by_id:
+                continue
+            impact, auth = unlocked_by_id[other.id], _requires_authorization(other)
+            if impact >= lead_impact and auth <= lead_auth and (impact > lead_impact or auth < lead_auth):
+                return _reject("dominated_option_first", summary, recommendations)
     rec_map = {r.id: r.model_copy(deep=True) for r in recommendations}
     llm_pos: dict[str, int] = {}
     for r_id in prioritized_ids:
