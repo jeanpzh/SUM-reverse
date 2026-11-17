@@ -4,8 +4,10 @@ import { Checkbox } from '../ui/Checkbox'
 import { MessageResponse } from './MessageResponse'
 import { AdviceDisclosure } from './AdviceDisclosure'
 
-export function SuggestionCard({ recommendation, checked, disabled, onCheckedChange, teacherNames, courseNames, roomNames }: {
+export function SuggestionCard({ recommendation, checked, disabled, index, measured = false, onCheckedChange, teacherNames, courseNames, roomNames }: {
   recommendation: AcademicAdvisorRecommendation
+  index?: number
+  measured?: boolean
   checked: boolean
   disabled: boolean
   onCheckedChange: (checked: boolean) => void
@@ -32,10 +34,14 @@ export function SuggestionCard({ recommendation, checked, disabled, onCheckedCha
   return <article className="planning-rec" data-checked={checked || undefined} data-disabled={disabled || undefined}>
     <Checkbox id={id} checked={checked} disabled={disabled} onCheckedChange={(value) => onCheckedChange(value === true)} />
     <div className="planning-rec__body">
-      <span className="planning-rec__kind">{kind}</span>
-      <label htmlFor={id} className="planning-rec__title">{recommendation.title}</label>
+      <label htmlFor={id} className="planning-rec__title">{index && <span className="planning-rec__index" aria-hidden="true">{String(index).padStart(2, '0')}</span>}{recommendation.title}</label>
+      <div className="planning-rec__badges"><span className="planning-rec__kind">{kind}</span>
+        {(patch.kind === 'increase_teacher_load' || patch.kind === 'enable_planning_window') && <span className="planning-rec__kind planning-rec__kind--authorization">Requiere autorización externa</span>}
+      </div>
       <p className="planning-rec__scope">Alcance estimado: {recommendation.impactSummary}</p>
+      <p className="planning-rec__measurement">{measured ? 'Incluida en la simulación vigente' : 'Impacto no simulado'}</p>
       {patch.kind === 'increase_teacher_load' && <p className="planning-rec__warning">Escenario de simulación: requiere autorización externa para aumentar la carga docente. La consulta normativa no concede esa autorización.</p>}
+      {patch.kind === 'enable_planning_window' && <p className="planning-rec__warning">Habilitar una franja requiere autorización externa; no se concede al simular ni aplicar.</p>}
       <AdviceDisclosure label="Por qué se recomienda"><MessageResponse>{recommendation.rationale}</MessageResponse></AdviceDisclosure>
       <details className="planning-rec__details">
         <summary>Ver cambios exactos ({details.length})</summary>

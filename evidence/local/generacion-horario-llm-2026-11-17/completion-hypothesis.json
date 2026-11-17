@@ -1,0 +1,39 @@
+{
+  "date": "2026-11-17",
+  "sourceClass": "observed",
+  "scope": "Hypothetical synthetic CP-SAT experiment, not an E2E regeneration or an applicable API impact",
+  "appliedToWorkspace": false,
+  "availableAsExactSelectionInCurrentUI": false,
+  "conditions": {
+    "baseOptions": [
+      "increase_teacher_load",
+      "enable_planning_window",
+      "change_delivery_mode"
+    ],
+    "additionalChange": {
+      "kind": "increase_teacher_load",
+      "eligibleCourseId": "20118041",
+      "teacherSelector": "the unique eligible teacher with a 600-minute weekly limit in this fixture",
+      "previousMaxWeeklyMinutes": 600,
+      "nextMaxWeeklyMinutes": 720
+    },
+    "maxTimeSeconds": 2.5
+  },
+  "impact": {
+    "currentScheduledSessions": 211,
+    "projectedScheduledSessions": 332,
+    "requiredSessions": 332,
+    "currentCompleteSections": 108,
+    "projectedCompleteSections": 166,
+    "totalSections": 166,
+    "solverStatus": "complete"
+  },
+  "resourceConflicts": 0,
+  "teachersOverModifiedLoad": 0,
+  "limitReason": null,
+  "limits": [
+    "The additional change requires external authorization; none was granted",
+    "This is a feasible complete witness under modified synthetic conditions, not proof that the increase is necessary or minimal",
+    "The current catalog option IDs alone do not encode this additional 120-minute change; re-simulation of a revised exact selection is required before any application"
+  ]
+}

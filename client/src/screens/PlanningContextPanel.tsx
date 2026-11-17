@@ -1,8 +1,9 @@
 import { useEffect, useRef, type KeyboardEvent } from 'react'
-import { Maximize, Minimize, X } from 'lucide-react'
+import { Maximize, Minimize, Scale, X } from 'lucide-react'
 import type { PlanningPeriod } from '../data/academicScheduling'
 import { PlanningNormativeChat } from './PlanningNormativeChat'
 import { planningAssist, usePlanningAssist, type PlanningAssistTab } from './PlanningAssistState'
+import { usePlanningSessionContext } from '../components/PlanningSessionProvider'
 import type { NormativeChat } from './useNormativeChat'
 import './PlanningContextPanel.css'
 import './PlanningAssist.css'
@@ -29,12 +30,17 @@ function bindAdvisorSlot(element: HTMLDivElement | null) {
 
 export function PlanningContextPanel({ academicPeriod, chat, expanded, onExpandedChange, onClose }: PlanningContextPanelProps) {
   const { tab, advisors, openRequests } = usePlanningAssist()
+  const { state: { draft } } = usePlanningSessionContext()
+  const titleRef = useRef<HTMLHeadingElement | null>(null)
   const tabRefs = useRef<Record<PlanningAssistTab, HTMLButtonElement | null>>({ consejero: null, normativa: null })
 
   // "Consultar consejero" opens the rail on purpose, so focus follows to the panel.
   useEffect(() => {
-    if (planningAssist.consumeFocusRequest()) tabRefs.current[planningAssist.getTab()]?.focus()
-  }, [openRequests])
+    if (planningAssist.consumeFocusRequest()) {
+      if (advisors > 0 && planningAssist.getTab() === 'consejero') titleRef.current?.focus()
+      else tabRefs.current[planningAssist.getTab()]?.focus()
+    }
+  }, [openRequests, advisors])
 
   const selectTab = (next: PlanningAssistTab, focus = false) => {
     planningAssist.setTab(next)
@@ -53,9 +59,10 @@ export function PlanningContextPanel({ academicPeriod, chat, expanded, onExpande
   }
 
   return (
-    <section className="planning-copilot planning-assist" aria-label={tab === 'consejero' ? 'Consejero de planificación' : 'Asistente normativo'}>
+    <section className="planning-copilot planning-assist" data-expanded={expanded || undefined} aria-label={tab === 'consejero' ? 'Consejero de planificación' : 'Asistente normativo'}>
       <header className="planning-assist__header">
-        <div role="tablist" aria-label="Asistencia" className="planning-assist__tabs">
+        <div className="planning-assist__identity"><Scale size={18} aria-hidden="true" /><div><h2 ref={titleRef} tabIndex={-1}>Consejero normativo</h2><span className="planning-eyebrow">{draft.title} · {draft.version === null ? 'sin guardar' : `v${draft.version}`}</span></div></div>
+        <div hidden={advisors > 0 && tab === 'consejero'} role="tablist" aria-label="Asistencia" className="planning-assist__tabs">
           {TABS.map((item) => (
             <button key={item.id} type="button" role="tab" id={`planning-assist-tab-${item.id}`}
               ref={(element) => { tabRefs.current[item.id] = element }}

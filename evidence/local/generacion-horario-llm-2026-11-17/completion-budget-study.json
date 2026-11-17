@@ -1,0 +1,238 @@
+[
+  {
+    "budgetSeconds": 0.8,
+    "elapsedSeconds": 0.735,
+    "impact": {
+      "currentScheduledSessions": 211,
+      "projectedScheduledSessions": 330,
+      "requiredSessions": 332,
+      "currentCompleteSections": 108,
+      "projectedCompleteSections": 165,
+      "totalSections": 166,
+      "recommendationIds": [
+        "rec-increase-teacher-load",
+        "rec-enable-planning-window",
+        "rec-change-delivery-mode"
+      ],
+      "solverStatus": "search-limit"
+    },
+    "limitReason": "time",
+    "missing": [
+      {
+        "courseId": "20118041",
+        "sectionId": "section:[\"20118041\",2]",
+        "durationMinutes": 180
+      },
+      {
+        "courseId": "20118041",
+        "sectionId": "section:[\"20118041\",2]",
+        "durationMinutes": 180
+      }
+    ],
+    "remainingTeacherSlack": [
+      {
+        "courseId": "20118041",
+        "eligibleTeachers": [
+          {
+            "maxMinutes": 600,
+            "assignedMinutes": 360,
+            "slackMinutes": 240
+          },
+          {
+            "maxMinutes": 840,
+            "assignedMinutes": 720,
+            "slackMinutes": 120
+          },
+          {
+            "maxMinutes": 840,
+            "assignedMinutes": 720,
+            "slackMinutes": 120
+          }
+        ]
+      }
+    ],
+    "diagnostics": [
+      {
+        "code": "PARTIAL_PROPOSAL",
+        "sessions": 2
+      }
+    ]
+  },
+  {
+    "budgetSeconds": 2.5,
+    "elapsedSeconds": 2.522,
+    "impact": {
+      "currentScheduledSessions": 211,
+      "projectedScheduledSessions": 330,
+      "requiredSessions": 332,
+      "currentCompleteSections": 108,
+      "projectedCompleteSections": 165,
+      "totalSections": 166,
+      "recommendationIds": [
+        "rec-increase-teacher-load",
+        "rec-enable-planning-window",
+        "rec-change-delivery-mode"
+      ],
+      "solverStatus": "search-limit"
+    },
+    "limitReason": "time",
+    "missing": [
+      {
+        "courseId": "20118041",
+        "sectionId": "section:[\"20118041\",2]",
+        "durationMinutes": 180
+      },
+      {
+        "courseId": "20118041",
+        "sectionId": "section:[\"20118041\",2]",
+        "durationMinutes": 180
+      }
+    ],
+    "remainingTeacherSlack": [
+      {
+        "courseId": "20118041",
+        "eligibleTeachers": [
+          {
+            "maxMinutes": 600,
+            "assignedMinutes": 360,
+            "slackMinutes": 240
+          },
+          {
+            "maxMinutes": 840,
+            "assignedMinutes": 720,
+            "slackMinutes": 120
+          },
+          {
+            "maxMinutes": 840,
+            "assignedMinutes": 720,
+            "slackMinutes": 120
+          }
+        ]
+      }
+    ],
+    "diagnostics": [
+      {
+        "code": "PARTIAL_PROPOSAL",
+        "sessions": 2
+      }
+    ]
+  },
+  {
+    "budgetSeconds": 5.0,
+    "elapsedSeconds": 5.0,
+    "impact": {
+      "currentScheduledSessions": 211,
+      "projectedScheduledSessions": 330,
+      "requiredSessions": 332,
+      "currentCompleteSections": 108,
+      "projectedCompleteSections": 165,
+      "totalSections": 166,
+      "recommendationIds": [
+        "rec-increase-teacher-load",
+        "rec-enable-planning-window",
+        "rec-change-delivery-mode"
+      ],
+      "solverStatus": "search-limit"
+    },
+    "limitReason": "time",
+    "missing": [
+      {
+        "courseId": "20118041",
+        "sectionId": "section:[\"20118041\",2]",
+        "durationMinutes": 180
+      },
+      {
+        "courseId": "20118041",
+        "sectionId": "section:[\"20118041\",2]",
+        "durationMinutes": 180
+      }
+    ],
+    "remainingTeacherSlack": [
+      {
+        "courseId": "20118041",
+        "eligibleTeachers": [
+          {
+            "maxMinutes": 600,
+            "assignedMinutes": 360,
+            "slackMinutes": 240
+          },
+          {
+            "maxMinutes": 840,
+            "assignedMinutes": 720,
+            "slackMinutes": 120
+          },
+          {
+            "maxMinutes": 840,
+            "assignedMinutes": 720,
+            "slackMinutes": 120
+          }
+        ]
+      }
+    ],
+    "diagnostics": [
+      {
+        "code": "PARTIAL_PROPOSAL",
+        "sessions": 2
+      }
+    ]
+  },
+  {
+    "budgetSeconds": 10.0,
+    "elapsedSeconds": 9.998,
+    "impact": {
+      "currentScheduledSessions": 211,
+      "projectedScheduledSessions": 330,
+      "requiredSessions": 332,
+      "currentCompleteSections": 108,
+      "projectedCompleteSections": 165,
+      "totalSections": 166,
+      "recommendationIds": [
+        "rec-increase-teacher-load",
+        "rec-enable-planning-window",
+        "rec-change-delivery-mode"
+      ],
+      "solverStatus": "search-limit"
+    },
+    "limitReason": "time",
+    "missing": [
+      {
+        "courseId": "20118041",
+        "sectionId": "section:[\"20118041\",2]",
+        "durationMinutes": 180
+      },
+      {
+        "courseId": "20118041",
+        "sectionId": "section:[\"20118041\",2]",
+        "durationMinutes": 180
+      }
+    ],
+    "remainingTeacherSlack": [
+      {
+        "courseId": "20118041",
+        "eligibleTeachers": [
+          {
+            "maxMinutes": 600,
+            "assignedMinutes": 360,
+            "slackMinutes": 240
+          },
+          {
+            "maxMinutes": 840,
+            "assignedMinutes": 720,
+            "slackMinutes": 120
+          },
+          {
+            "maxMinutes": 840,
+            "assignedMinutes": 720,
+            "slackMinutes": 120
+          }
+        ]
+      }
+    ],
+    "diagnostics": [
+      {
+        "code": "PARTIAL_PROPOSAL",
+        "sessions": 2
+      }
+    ]
+  }
+]

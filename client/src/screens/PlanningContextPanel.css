@@ -129,3 +129,20 @@
 /* The page head lives in the content column so the assistant rail spans the full height below the scope bar (Main board). */
 .planning-root .planning-content-column { display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0; }
 .planning-root .planning-content-column > .planning-schedule-split { flex: 1; min-height: 0; }
+
+.planning-root .planning-assist { container: planning-assistance / inline-size; }
+.planning-root .planning-assist__identity { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.planning-root .planning-assist__identity > svg { flex: none; color: var(--plan-steel); }
+.planning-root .planning-assist__identity h2 { font-size: 14px; line-height: 20px; font-weight: 500; margin: 0; }
+.planning-root .planning-assist__identity .planning-eyebrow { font-size: 10px; }
+.planning-root .planning-assist__header { padding: 10px 12px 10px 16px; gap: 8px; }
+.planning-root .planning-assist__tabs { order: 3; width: 100%; border-radius: 6px; }
+.planning-root .planning-assist__tab { flex: 1; border-radius: 4px; }
+.planning-root .planning-assist__panel--advisor { padding: 0; overflow: hidden; gap: 0; }
+.planning-root .planning-assist__slot { display: flex; flex: 1; min-height: 0; min-width: 0; }
+.planning-copilot-sheet .planning-assist__panel--advisor > * { max-width: none; }
+.planning-root .planning-assist__empty { padding: 20px; }
+.planning-root .planning-assist__tabs[hidden] { display: none; }
+.planning-root .planning-assist__identity > div { min-width: 0; }
+.planning-root .planning-assist__identity .planning-eyebrow { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.planning-root .planning-assist__identity h2:focus { outline-offset: 3px; }

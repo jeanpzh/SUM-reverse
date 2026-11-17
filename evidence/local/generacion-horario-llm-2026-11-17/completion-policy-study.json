@@ -1,0 +1,40 @@
+[
+  {
+    "allocationPolicy": "balanced",
+    "budgetSeconds": 2.5,
+    "impact": {
+      "currentScheduledSessions": 211,
+      "projectedScheduledSessions": 330,
+      "requiredSessions": 332,
+      "currentCompleteSections": 108,
+      "projectedCompleteSections": 165,
+      "totalSections": 166,
+      "recommendationIds": [
+        "rec-increase-teacher-load",
+        "rec-enable-planning-window",
+        "rec-change-delivery-mode"
+      ],
+      "solverStatus": "search-limit"
+    },
+    "limitReason": "time"
+  },
+  {
+    "allocationPolicy": "first-feasible",
+    "budgetSeconds": 2.5,
+    "impact": {
+      "currentScheduledSessions": 211,
+      "projectedScheduledSessions": 330,
+      "requiredSessions": 332,
+      "currentCompleteSections": 108,
+      "projectedCompleteSections": 165,
+      "totalSections": 166,
+      "recommendationIds": [
+        "rec-increase-teacher-load",
+        "rec-enable-planning-window",
+        "rec-change-delivery-mode"
+      ],
+      "solverStatus": "search-limit"
+    },
+    "limitReason": "time"
+  }
+]

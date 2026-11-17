@@ -553,7 +553,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
             courseNames={Object.fromEntries((catalog?.courses ?? []).map((course) => [course.courseId, course.name]))}
             roomNames={Object.fromEntries([...(catalog?.referenceRooms ?? []), ...resources.rooms].map((room) => [room.id, room.name]))}
             proposal={proposal}
-            academicPeriod={state.period}
+            academicPeriod={state.period} chat={chat}
             isDraft={!lockedDraft}
             onApplyAdvisorPatches={async (patches) => {
               if ((proposal.manuallyAdjustedSectionIds?.length ?? 0) > 0) {
@@ -692,7 +692,7 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
     </ResizablePanel>
     {railOpen && <>
       <ResizableHandle withHandle aria-label="Redimensionar asistente" />
-      <ResizablePanel id="planning-rail" defaultSize="360px" minSize="320px" maxSize="560px" className="planning-workspace__panel">
+      <ResizablePanel id="planning-rail" defaultSize="420px" minSize="320px" maxSize="560px" className="planning-workspace__panel">
         <aside className="planning-rail" aria-label="Asistente normativo">
           <PlanningContextPanel academicPeriod={planningPeriod} chat={chat}
             expanded={false} onExpandedChange={setChatExpanded} onClose={closeChat} />

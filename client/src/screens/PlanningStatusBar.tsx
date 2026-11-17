@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/Dialog'
 import './PlanningStatusBar.css'
+import type { NormativeChat } from './useNormativeChat'
 import { PlanningAssistAdvisor } from './PlanningAssistAdvisor'
 import { planningAssist, usePlanningAssist } from './PlanningAssistState'
 import { usePlanningSessionContext } from '../components/PlanningSessionProvider'
@@ -24,6 +25,7 @@ export interface PlanningStatusBarProps {
   mobileActionContainer?: HTMLDivElement | null
   contextContainer?: HTMLDivElement | null
   academicPeriod: PlanningPeriod
+  chat: NormativeChat
   proposal: AcademicProposal
   onApplyAdvisorPatches?: (patches: AcademicAdvisorPatch[]) => Promise<boolean | void> | boolean | void
   teacherNames?: Record<string, string>
@@ -81,7 +83,7 @@ function resultWording(proposal: AcademicProposal) {
   return { badgeText, headline, subtext, diagnosisText }
 }
 
-export function PlanningStatusBar({ contextContainer, mobileActionContainer, onRetrySearch, proposal, academicPeriod, onApplyAdvisorPatches, teacherNames = {}, courseNames = {}, roomNames = {}, isLocked = false, advisorDisabledReason }: PlanningStatusBarProps) {
+export function PlanningStatusBar({ contextContainer, mobileActionContainer, onRetrySearch, proposal, academicPeriod, chat, onApplyAdvisorPatches, teacherNames = {}, courseNames = {}, roomNames = {}, isLocked = false, advisorDisabledReason }: PlanningStatusBarProps) {
   const advisorDisabledReasonId = useId()
   const applyDisabledReasonId = useId()
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
@@ -90,6 +92,8 @@ export function PlanningStatusBar({ contextContainer, mobileActionContainer, onR
   const [advisorError, setAdvisorError] = useState<string | null>(null)
   const [advisorData, setAdvisorData] = useState<AcademicAdvisorResponse | null>(null)
   const [selectedRecIds, setSelectedRecIds] = useState<string[]>([])
+  const [simulationRequested, setSimulationRequested] = useState(false)
+  const [impactInvalidated, setImpactInvalidated] = useState(false)
   const [applying, setApplying] = useState(false)
   const requestRef = useRef<AbortController | null>(null)
   const requestedSelection = useRef<string[] | undefined>(undefined)
@@ -116,11 +120,16 @@ export function PlanningStatusBar({ contextContainer, mobileActionContainer, onR
     requestRef.current = controller
     setAdvisorError(null)
     setAdvisorLoading(true)
-    setAdvisorData(null)
+    setSimulationRequested(ids !== undefined)
+    if (ids === undefined) {
+      setAdvisorData(null)
+      setImpactInvalidated(false)
+    }
     try {
       const response = await fetchAcademicProposalAdvice(proposal.proposalId, editVersion, globalThis.fetch, controller.signal, ids)
       if (controller.signal.aborted) return
       setAdvisorData(response)
+      setImpactInvalidated(false)
       setSelectedRecIds(ids ?? defaultAcademicAdvisorSelection(response))
     } catch (error) {
       if (!controller.signal.aborted) setAdvisorError(error instanceof Error ? error.message : 'No se pudo consultar al consejero de planificación.')
@@ -138,10 +147,12 @@ export function PlanningStatusBar({ contextContainer, mobileActionContainer, onR
   const cancelAdvisor = () => {
     requestRef.current?.abort()
     setAdvisorLoading(false)
-    setAdvisorRequested(false)
+    if (!currentAdvice) setAdvisorRequested(false)
   }
 
   const toggleRecommendation = (id: string, checked: boolean) => {
+    if (applying || advisorLoading || isLocked) return
+    if (currentAdvice?.verifiedImpact) setImpactInvalidated(true)
     setSelectedRecIds((prev) => checked ? (prev.includes(id) ? prev : [...prev, id]) : prev.filter((item) => item !== id))
     // Discard the preview even if the user later returns to the original selection.
     setAdvisorData((prev) => prev ? { ...prev, verifiedImpact: undefined } : prev)
@@ -263,6 +274,7 @@ export function PlanningStatusBar({ contextContainer, mobileActionContainer, onR
         </DialogContent>
       </Dialog>
       {advisorSlot && createPortal(<PlanningAssistAdvisor
+        chat={chat} proposal={proposal} simulating={advisorLoading && simulationRequested} impactInvalidated={impactInvalidated}
         academicPeriod={academicPeriod} draftVersion={draftVersion} openSections={coverage.partial + coverage.pending}
         requested={advisorRequested} loading={advisorLoading} error={advisorError} advice={currentAdvice} impact={impact}
         selectedIds={selectedRecIds} applying={applying} isLocked={isLocked} canApply={Boolean(onApplyAdvisorPatches)}

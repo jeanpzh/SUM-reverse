@@ -1,0 +1,54 @@
+{
+  "date": "2026-11-17",
+  "sourceClass": "observed",
+  "scope": "Local synthetic diagnosis; no changes applied to the workspace and no authorization granted",
+  "initial": {
+    "status": "search-limit",
+    "counts": {
+      "sections": 166,
+      "requiredSessions": 332,
+      "scheduledSessions": 211
+    }
+  },
+  "windowAndSplit": {
+    "scenario": "window-plus-split",
+    "source": {
+      "mode": "llm-assisted",
+      "providerLabel": "bedrock_converse / us.amazon.nova-lite-v1:0"
+    },
+    "impact": {
+      "currentScheduledSessions": 211,
+      "projectedScheduledSessions": 243,
+      "requiredSessions": 332,
+      "currentCompleteSections": 108,
+      "projectedCompleteSections": 124,
+      "totalSections": 166,
+      "recommendationIds": [
+        "rec-enable-planning-window",
+        "rec-change-delivery-mode"
+      ],
+      "solverStatus": "search-limit"
+    }
+  },
+  "allCatalogOptions": {
+    "scenario": "all-three-including-teacher-load",
+    "source": {
+      "mode": "llm-assisted",
+      "providerLabel": "bedrock_converse / us.amazon.nova-lite-v1:0"
+    },
+    "impact": {
+      "currentScheduledSessions": 211,
+      "projectedScheduledSessions": 330,
+      "requiredSessions": 332,
+      "currentCompleteSections": 108,
+      "projectedCompleteSections": 165,
+      "totalSections": 166,
+      "recommendationIds": [
+        "rec-enable-planning-window",
+        "rec-change-delivery-mode",
+        "rec-increase-teacher-load"
+      ],
+      "solverStatus": "search-limit"
+    }
+  }
+}

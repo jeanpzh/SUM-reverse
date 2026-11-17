@@ -1,0 +1,61 @@
+{
+  "date": "2026-11-17",
+  "source": "T3 Browser direct, actual existing synthetic application on localhost:5636 -> NestJS -> Python -> Bedrock; only native preview tools, no headless runner for this repetition",
+  "consultationAndSimulation": {
+    "phases": [
+      {
+        "source": {
+          "mode": "llm-assisted",
+          "providerLabel": "bedrock_converse / us.amazon.nova-lite-v1:0"
+        },
+        "hasImpact": false
+      },
+      {
+        "source": {
+          "mode": "llm-assisted",
+          "providerLabel": "bedrock_converse / us.amazon.nova-lite-v1:0"
+        },
+        "hasImpact": true,
+        "selection": [
+          "rec-enable-planning-window"
+        ]
+      }
+    ],
+    "impact": {
+      "currentScheduledSessions": 211,
+      "projectedScheduledSessions": 243,
+      "requiredSessions": 332,
+      "currentCompleteSections": 108,
+      "projectedCompleteSections": 124,
+      "totalSections": 166,
+      "recommendationIds": [
+        "rec-enable-planning-window"
+      ],
+      "solverStatus": "search-limit"
+    },
+    "exactSelection": true,
+    "applyEnabled": true,
+    "errors": []
+  },
+  "selectionInvalidation": {
+    "state": "stale",
+    "hasVerifiedImpact": false,
+    "applyDisabled": true
+  },
+  "effects": {
+    "browser": "T3 Browser direct",
+    "generations": 2,
+    "regeneratedWithNewId": true,
+    "consultationMode": "llm-assisted",
+    "initialConsultationSimulated": false,
+    "simulationModes": [
+      "llm-assisted",
+      "llm-assisted"
+    ],
+    "draftsBefore": 1,
+    "draftsAfter": 1,
+    "outcomeVisible": true,
+    "railClosed": true,
+    "browserErrors": []
+  }
+}

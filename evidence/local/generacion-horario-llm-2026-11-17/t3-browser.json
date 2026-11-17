@@ -1,0 +1,88 @@
+{
+  "date": "2026-11-17",
+  "sourceClass": "observed",
+  "scope": "Local synthetic scenario, T3 Browser direct -> own React/NestJS/Python -> real Bedrock",
+  "browser": "T3 Browser direct",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "configuration": {
+    "courseCount": 56,
+    "revision": "PA-DEMO-1",
+    "policy": {
+      "revision": "FISI-PLANNING-1",
+      "period": "2027-I",
+      "allowAfternoon": false,
+      "allowSaturday": false
+    }
+  },
+  "before": {
+    "status": "search-limit",
+    "requiredSessions": 332,
+    "scheduledSessions": 211,
+    "pendingSessions": 121,
+    "totalSections": 166,
+    "completeSections": 108,
+    "resourceConflicts": 0
+  },
+  "analysis": {
+    "source": {
+      "mode": "llm-assisted",
+      "providerLabel": "bedrock_converse / us.amazon.nova-lite-v1:0"
+    },
+    "simulated": false
+  },
+  "simulation": {
+    "source": {
+      "mode": "llm-assisted",
+      "providerLabel": "bedrock_converse / us.amazon.nova-lite-v1:0"
+    },
+    "selection": [
+      "rec-enable-planning-window"
+    ],
+    "impact": {
+      "currentScheduledSessions": 211,
+      "projectedScheduledSessions": 243,
+      "requiredSessions": 332,
+      "currentCompleteSections": 108,
+      "projectedCompleteSections": 124,
+      "totalSections": 166,
+      "recommendationIds": [
+        "rec-enable-planning-window"
+      ],
+      "solverStatus": "search-limit"
+    }
+  },
+  "after": {
+    "status": "search-limit",
+    "requiredSessions": 332,
+    "scheduledSessions": 243,
+    "pendingSessions": 89,
+    "totalSections": 166,
+    "completeSections": 124,
+    "resourceConflicts": 0
+  },
+  "appliedConfiguration": {
+    "courseCount": 56,
+    "revision": "PA-DEMO-1",
+    "policy": {
+      "revision": "FISI-PLANNING-1",
+      "period": "2027-I",
+      "allowAfternoon": true,
+      "allowSaturday": true
+    }
+  },
+  "gain": {
+    "scheduledSessions": 32,
+    "completeSections": 16
+  },
+  "effects": {
+    "generationCount": 2,
+    "newProposalId": true,
+    "draftsBefore": 1,
+    "draftsAfter": 1,
+    "actualOutcomeVisible": true,
+    "browserErrors": []
+  }
+}

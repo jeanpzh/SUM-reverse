@@ -36,8 +36,8 @@ No model-authored patch is accepted and no hidden model reasoning is exposed.
 
 ## Selection and simulation
 
-`selectedRecommendationIds` absent selects default recommendations; `[]` selects
-no patches. Unknown and duplicate IDs are rejected. The response's optional
+`selectedRecommendationIds` absent requests diagnosis without running CP-SAT; an
+explicit selection requests simulation (`[]` still simulates no patches for API compatibility). Unknown and duplicate IDs are rejected. The response's optional
 `verifiedImpact` always refers to this authoritative selection, even when a model
 simulates another subset. It has six measured counters, `recommendationIds`, and
 `solverStatus`. Simulations deep-copy inputs and never persist changes. CP-SAT
@@ -286,3 +286,83 @@ The real FastAPI public-corpus response also passed the shared JavaScript
 validator with extractive generation and a null provider label. A final targeted
 pipeline recheck passed 9 tests after distinguishing provider-construction
 failures from invalid structured model output.
+
+
+## Interactive runtime with AI enabled (2026-11-17)
+
+For the interactive application, use `scripts/start-planning-engine-live.mjs`
+from the repository root with `SUM_PLANNING_ENV_FILE` pointing explicitly to the
+operator configuration and optional `PORT` (default 3637). This launcher always
+sets `SUM_LLM_PROVIDER=bedrock_converse` and does not carry over the extractive-only
+setting of synthetic tests. It accepts only region, model, timeout and explicit
+Bedrock credential settings; it never inherits private snapshot or corpus paths.
+The operator key file must exist outside the private-data directory. Ambient AWS
+profiles and credentials files are disabled for this explicit bearer deployment.
+Configuration errors stop startup without logging credential values.
+
+On the development machine used for this validation, the interactive engine is managed by the user service
+`sum-planning-engine-live.service`, enabled at user-manager startup with
+`Restart=on-failure`. The installed unit sets the explicit operator env-file and
+engine port; its key is stored outside Git with private file permissions. The
+Python listener remains on loopback behind the existing NestJS and Vite proxy.
+The Tailscale Serve endpoint is unchanged. Synthetic test runners intentionally
+retain `SUM_LLM_PROVIDER=disabled`; they do not start the interactive service.
+
+### Maintainer setup
+
+Each installation supplies its own credential outside Git. Create a protected
+directory (`chmod 700`) and key file (`chmod 600`), then create an operator env
+file with these settings (replace the paths; never commit the key or env file):
+
+```dotenv
+AWS_REGION=us-east-2
+SUM_LLM_MODEL=us.amazon.nova-lite-v1:0
+AWS_BEARER_TOKEN_BEDROCK_FILE=/absolute/protected/path/bedrock.key
+```
+
+After installing the Python dependencies in `planning-engine/.venv`, start the
+engine from a stable checkout:
+
+```sh
+SUM_PLANNING_ENV_FILE=/absolute/protected/path/operator.env \
+PORT=3637 node scripts/start-planning-engine-live.mjs
+```
+
+For persistence, install a user systemd unit with the following service section,
+using absolute paths for the checkout and the Node executable on that machine:
+
+```ini
+[Unit]
+Description=SUM planning engine with explicit Bedrock configuration
+
+[Service]
+Type=simple
+WorkingDirectory=/absolute/path/to/SUM-reverse
+Environment=SUM_PLANNING_ENV_FILE=/absolute/protected/path/operator.env
+Environment=PORT=3637
+ExecStart=/absolute/path/to/node /absolute/path/to/SUM-reverse/scripts/start-planning-engine-live.mjs
+Restart=on-failure
+RestartSec=3
+UMask=0077
+
+[Install]
+WantedBy=default.target
+```
+
+Save as `~/.config/systemd/user/sum-planning-engine-live.service`, then run
+`systemctl --user daemon-reload` and
+`systemctl --user enable --now sum-planning-engine-live.service`.
+The service runs only the engine; configure the existing backend engine URL to
+the same local port. User lingering is an operator decision if the service must
+remain active after logout. The unit installed on the validation machine is
+local configuration and is not installed automatically by cloning this repo.
+
+Reproduction and measured limitations are documented in
+[the LLM-assisted E2E guide](../docs/testing/generacion-horario-llm-e2e.md).
+
+Acceptance: `node --test scripts/start-planning-engine-live.test.mjs` verifies the
+live flag, credential/path requirements and isolation from disabled/private test
+settings. A bounded synthetic invocation against the actual service returned
+`source.mode=llm-assisted`, provider `bedrock_converse / us.amazon.nova-lite-v1:0`,
+with no simulation on initial consultation. Enabling AI does not guarantee provider
+availability or override evidence-based abstention and honest fallback states.
