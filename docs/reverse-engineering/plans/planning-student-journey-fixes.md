@@ -35,6 +35,7 @@ Entrega: commits, pruebas reales, capturas comparables, aceptación por criterio
 - B integrado en `e38cd60`: principal ejecutó 5 regresiones de horas (incluye SSR real), todas verdes; las 5 pruebas normative compartidas también pasan con backend compilado.
 - C integrado en `669dcf7`: principal ejecutó 6 regresiones de recuperación, todas verdes. Ajuste aislado del principal: textos de EnrollmentResultDialog, contrato histórico L-06 y expectativa browser AC-SUM-08 alineados con conservación autorizada; scripts browser solo comprobados por sintaxis hasta E2E final. Check SSR preexistente T044 esperaba h2/dl/local-only del reporte anterior: se actualizó a heading enfocable, totales y aviso local del reporte SUM actual; 10/10 SSR pasan sin cambiar UI del reporte.
 - D se descompone en D1 (shared + backend, contrato aditivo MR-SESSION-DETAILS-1 fijado en `9d95d37`) y D2 (consumo frontend). E integrado en `50308c3` (2 regresiones de etiqueta de versión vs ronda pasan). D1 integrado en `76a590b` (6 tests shared de `matricula-session-details` y 17 tests backend de sesión/proyección/oferta pasan). H integrado en `2f9f084` (3 regresiones SSR de legibilidad y regiones accesibles pasan).
-- F y D2 en curso en workers aislados (`gemini-4-hydrogen`); G espera D2 por ownership de `WeeklySchedule.tsx`, `LocalAcademicView.tsx` y `localAcademicView.ts`.
+- F integrado en `67b6078` (38/38 pruebas de `planningSession` y `planningPublicationFlow` pasan). D2 en curso en worker aislado (`gemini-4-hydrogen`); G espera D2 por ownership de `WeeklySchedule.tsx`, `LocalAcademicView.tsx` y `localAcademicView.ts`.
 - Auditoría final e integración con navegador todavía pendientes. No considerar los checks de cada ticket aceptación global.
+
 
