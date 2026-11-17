@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto'
 import { HttpException, Injectable } from '@nestjs/common'
-import { validateAcademicDraftList, validateAcademicDraftSaveRequest, validateAcademicPublication, validateAcademicPublicationList, validateAcademicPublicationRequest, validateAcademicReleasePreview, validateAcademicScheduleSnapshot, validateAcademicReviewDecision, validateAcademicReviewSubmission, validateAcademicSavedDraft } from '../../../shared/programacion-academica-api.mjs'
-import type { AcademicDraftList, AcademicDraftSaveRequest, AcademicSavedDraft, AcademicReviewDecision, AcademicTeacherReview, AcademicPublication, AcademicPublicationList, AcademicPublicationRequest, AcademicReleasePreview } from '../../../shared/programacion-academica-api.mjs'
+import { validateAcademicDraftList, validateAcademicDraftSaveRequest, validateAcademicPublication, validateAcademicPublicationList, validateAcademicPublicationRequest, validateAcademicReleasePreview, validateAcademicScheduleSnapshot, validateAcademicReviewBatchDecision, validateAcademicReviewDecision, validateAcademicReviewSubmission, validateAcademicSavedDraft } from '../../../shared/programacion-academica-api.mjs'
+import type { AcademicDraftList, AcademicDraftSaveRequest, AcademicSavedDraft, AcademicReviewBatchDecision, AcademicReviewDecision, AcademicTeacherReview, AcademicPublication, AcademicPublicationList, AcademicPublicationRequest, AcademicReleasePreview } from '../../../shared/programacion-academica-api.mjs'
 import { DemoProposalService } from './demo-proposal.service.js'
 import type { TrustedDraftRetention } from './demo-proposal.service.js'
 import { SavedDraftStore, SavedDraftStoreError } from './saved-draft-store.js'
 import type { PersistedDraft } from './saved-draft-store.js'
-import { hasCompleteNonemptyProposal, isReviewReady, makeReviewTeacher, reviewEvent, reviewMatchesSnapshot, teacherFingerprints } from './teacher-review.js'
+import { hasCompleteNonemptyProposal, isReviewReady, normalizeReviewOrigins, makeReviewTeacher, reviewEvent, reviewMatchesSnapshot, teacherFingerprints } from './teacher-review.js'
 import { approvalFingerprint, createScheduleSnapshot } from './academic-release.js'
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
@@ -56,7 +56,7 @@ export class SavedDraftService {
       catch (error) { this.rethrowStoreError(error) }
       if (request.id && !previous) throw this.httpError(404, 'DRAFT_NOT_FOUND', 'No se encontró la propuesta guardada')
       if (request.id && previous && !this.isValidPayload(previous, id)) throw this.httpError(409, 'DRAFT_CORRUPT', 'La propuesta guardada no superó su validación')
-      const previousDraft = previous?.document as AcademicSavedDraft | undefined
+      const previousDraft = previous ? normalizeReviewOrigins(structuredClone(previous.document as AcademicSavedDraft)) : undefined
       if (previousDraft && previousDraft.version !== request.expectedVersion) throw this.httpError(409, 'VERSION_MISMATCH', 'La propuesta cambió en otra sesión; recárgala antes de guardar')
       if (previousDraft && this.isLocked(previousDraft)) throw this.httpError(409, 'DRAFT_LOCKED', 'La propuesta aprobada o publicada es inmutable; crea un nuevo borrador para editarla')
       if (!request.id && entries.length >= 50) throw this.httpError(429, 'DRAFT_CAPACITY', 'Se alcanzó el máximo de propuestas guardadas')
@@ -106,7 +106,7 @@ export class SavedDraftService {
       try { payload = this.store.read(id) } catch (error) { this.rethrowStoreError(error) }
       if (!payload) throw this.httpError(404, 'DRAFT_NOT_FOUND', 'No se encontró la propuesta guardada')
       if (!this.isValidPayload(payload, id)) throw this.httpError(409, 'DRAFT_CORRUPT', 'La propuesta guardada no superó su validación')
-      const draft = structuredClone(payload.document as AcademicSavedDraft)
+      const draft = normalizeReviewOrigins(structuredClone(payload.document as AcademicSavedDraft))
       if (draft.version !== (value as { expectedVersion: number }).expectedVersion) throw this.httpError(409, 'VERSION_MISMATCH', 'La propuesta cambió en otra sesión; recárgala antes de continuar')
       if (this.isLocked(draft)) return { draft }
       let restored = null
@@ -313,20 +313,60 @@ export class SavedDraftService {
       if (decision.round !== review.round) throw this.httpError(409, 'REVIEW_ROUND_MISMATCH', 'La ronda de revisión cambió; recarga la propuesta')
       const teacher = review.teachers.find((item) => item.teacherId === decision.teacherId)
       if (!teacher) throw this.httpError(422, 'TEACHER_NOT_ASSIGNED', 'El docente no está asignado al horario actual')
+      if (teacher.source === 'teacher') throw this.httpError(409, 'TEACHER_RESPONSE_PROTECTED', 'El coordinador no puede sobrescribir una respuesta registrada por el docente')
       if (teacher.status === 'outdated') throw this.httpError(422, 'TEACHER_REVIEW_OUTDATED', 'El horario del docente cambió; vuelve a enviarlo a revisión')
       const current = teacherFingerprints(draft).get(teacher.teacherId)
       if (!current || current.fingerprint !== teacher.fingerprint) throw this.httpError(422, 'TEACHER_REVIEW_OUTDATED', 'El horario del docente cambió; vuelve a enviarlo a revisión')
       const observation = decision.observation.trim()
-      if (teacher.status === decision.decision && teacher.observation.trim() === observation) return { draft: structuredClone(draft) }
+      const reference = decision.reference === undefined ? teacher.reference ?? null : decision.reference?.trim() || null
+      if (teacher.status === decision.decision && teacher.observation.trim() === observation && (teacher.reference ?? null) === reference) return { draft: structuredClone(draft) }
       if (draft.version !== decision.expectedVersion) throw this.httpError(409, 'VERSION_MISMATCH', 'La propuesta cambió en otra sesión; recárgala antes de continuar')
       const now = new Date().toISOString()
       const version = draft.version + 1
       this.requireHistoryCapacity(review.history, 1)
+      teacher.source = 'coordinator-transcription'
+      teacher.reference = reference
       teacher.status = decision.decision
       teacher.observation = observation
       teacher.decisionVersion = version
       teacher.decidedAt = now
-      review.history.push(reviewEvent('decision', version, review.round, now, teacher.teacherId, teacher.fingerprint, decision.decision, observation))
+      review.history.push(reviewEvent('decision', version, review.round, now, teacher.teacherId, teacher.fingerprint, decision.decision, observation, reference))
+      draft.version = version
+      draft.updatedAt = now
+      draft.state = isReviewReady(draft) ? 'ready-for-approval' : 'in-review'
+      this.writeReviewDraft(payload, draft)
+      return { draft: structuredClone(draft) }
+    })
+  }
+
+  decideReviewBatch(id: string, value: unknown): Promise<{ draft: AcademicSavedDraft }> {
+    return this.store.exclusive(() => {
+      this.requireConfigured()
+      try { validateAcademicReviewBatchDecision(value) } catch { throw this.httpError(400, 'INVALID_REQUEST', 'Lote de conformidades inválido') }
+      const request = value as AcademicReviewBatchDecision
+      const { payload, draft } = this.readStoredDraft(id)
+      if (this.isLocked(draft)) throw this.httpError(409, 'DRAFT_LOCKED', 'La propuesta aprobada o publicada es inmutable')
+      const review = draft.review
+      if (!review?.round) throw this.httpError(422, 'REVIEW_NOT_SUBMITTED', 'La propuesta no se ha enviado a revisión')
+      if (request.round !== review.round) throw this.httpError(409, 'REVIEW_ROUND_MISMATCH', 'La ronda de revisión cambió; recarga la propuesta')
+      if (draft.version !== request.expectedVersion) throw this.httpError(409, 'VERSION_MISMATCH', 'La propuesta cambió en otra sesión; recárgala antes de continuar')
+      if (!hasCompleteNonemptyProposal(draft.proposal)) throw this.httpError(422, 'REVIEW_INCOMPLETE', 'Se requiere un horario completo y validado para responder')
+      const current = teacherFingerprints(draft)
+      const byId = new Map(review.teachers.map((teacher) => [teacher.teacherId, teacher]))
+      const invalid = request.teacherIds.filter((id) => {
+        const teacher = byId.get(id)
+        return !teacher || teacher.status !== 'pending' || teacher.source === 'teacher' || current.get(id)?.fingerprint !== teacher.fingerprint
+      })
+      if (invalid.length) throw this.httpError(422, 'TEACHER_BATCH_INVALID', `No se registró el lote. Docentes sin revisión pendiente vigente: ${invalid.map((id) => byId.get(id)?.teacherName ?? id).join(', ')}`)
+      this.requireHistoryCapacity(review.history, request.teacherIds.length)
+      const version = draft.version + 1
+      const now = new Date().toISOString()
+      const reference = request.reference?.trim() || null
+      for (const id of request.teacherIds) {
+        const teacher = byId.get(id)!
+        Object.assign(teacher, { status: 'conformity', observation: '', decisionVersion: version, decidedAt: now, source: 'coordinator-transcription', reference })
+        review.history.push(reviewEvent('decision', version, review.round, now, id, teacher.fingerprint, 'conformity', '', reference))
+      }
       draft.version = version
       draft.updatedAt = now
       draft.state = isReviewReady(draft) ? 'ready-for-approval' : 'in-review'
@@ -368,7 +408,7 @@ export class SavedDraftService {
     try { payload = this.store.read(id) } catch (error) { this.rethrowStoreError(error) }
     if (!payload) throw this.httpError(404, 'DRAFT_NOT_FOUND', 'No se encontró la propuesta guardada')
     if (!this.isValidPayload(payload, id)) throw this.httpError(409, 'DRAFT_CORRUPT', 'La propuesta guardada no superó su validación')
-    const draft = structuredClone(payload.document as AcademicSavedDraft)
+    const draft = normalizeReviewOrigins(structuredClone(payload.document as AcademicSavedDraft))
     if (draft.version !== expectedVersion) throw this.httpError(409, 'VERSION_MISMATCH', 'La propuesta cambió en otra sesión; recárgala antes de continuar')
     if (this.isLocked(draft)) throw this.httpError(409, 'DRAFT_LOCKED', 'La propuesta aprobada o publicada es inmutable')
     return { payload, draft }
@@ -380,7 +420,7 @@ export class SavedDraftService {
     try { payload = this.store.read(id) } catch (error) { this.rethrowStoreError(error) }
     if (!payload) throw this.httpError(404, 'DRAFT_NOT_FOUND', 'No se encontró la propuesta guardada')
     if (!this.isValidPayload(payload, id)) throw this.httpError(409, 'DRAFT_CORRUPT', 'La propuesta guardada no superó su validación')
-    return { payload, draft: structuredClone(payload.document as AcademicSavedDraft) }
+    return { payload, draft: normalizeReviewOrigins(structuredClone(payload.document as AcademicSavedDraft)) }
   }
 
   private expectedVersion(value: unknown): number {
@@ -468,6 +508,7 @@ export class SavedDraftService {
           && event.fingerprint === lastInvalidation.fingerprint && event.version < lastInvalidation.version).at(-1)
         if (lastInvalidation) {
           nextTeachers.push({ ...makeReviewTeacher(teacherId, currentTeacher.teacherName, currentTeacher.fingerprint), status: 'outdated',
+            source: previousDecision ? previousDecision.source ?? 'coordinator-transcription' : null, reference: previousDecision?.reference ?? null,
             observation: previousDecision?.observation ?? '', decisionVersion: previousDecision?.version ?? null, decidedAt: previousDecision?.at ?? null })
         } else nextTeachers.push(makeReviewTeacher(teacherId, currentTeacher.teacherName, currentTeacher.fingerprint))
       } else if (existing.fingerprint === currentTeacher.fingerprint) {

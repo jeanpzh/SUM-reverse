@@ -157,8 +157,8 @@
 @media (min-width: 720px) {
   .planning-root .academic-teacher-review .academic-teacher-review__table-wrap :is(th, td):first-child { padding-left: 16px; }
   .planning-root .academic-teacher-review .academic-teacher-review__table-wrap :is(th, td):last-child { padding-right: 16px; }
-  .planning-root .academic-teacher-review .academic-teacher-review__table-wrap td:first-child { min-width: 140px; max-width: 240px; }
-  .planning-root .academic-teacher-review .academic-teacher-review__table-wrap td:is(:nth-child(2), :nth-child(4)) { white-space: nowrap; }
+  .planning-root .academic-teacher-review .academic-teacher-review__table-wrap td:nth-child(2) { min-width: 140px; max-width: 240px; }
+  .planning-root .academic-teacher-review .academic-teacher-review__table-wrap td:is(:nth-child(3), :nth-child(5)) { white-space: nowrap; }
   .planning-root .academic-teacher-review .academic-teacher-review__observation-cell { min-width: 140px; max-width: 260px; }
 }
 
@@ -330,3 +330,51 @@
   .planning-root .academic-teacher-review__pane { padding: 16px; }
   .planning-root .academic-teacher-review__blocks td:nth-child(2)::before { content: 'Secc. '; }
 }
+
+.planning-root .academic-teacher-review__checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  cursor: pointer;
+}
+.planning-root .academic-teacher-review__checkbox input {
+  inline-size: 1.25em;
+  block-size: 1.25em;
+  accent-color: var(--plan-ink);
+}
+.planning-root .academic-teacher-review__origin { display: block; max-inline-size: 24em; }
+.planning-root .academic-teacher-review__dialog {
+  box-sizing: border-box;
+  inline-size: min(32rem, calc(100vw - 2rem));
+  max-block-size: calc(100dvh - 2rem);
+  overflow-y: auto;
+  padding: 24px;
+  border: 1px solid var(--plan-control-border);
+  border-radius: var(--radius-plan-input);
+  background: var(--plan-paper);
+  color: var(--plan-ink);
+  font: inherit;
+}
+.planning-root .academic-teacher-review__dialog:modal { overscroll-behavior: contain; }
+.planning-root .academic-teacher-review__dialog::backdrop {
+  background: rgb(0 0 0 / 45%);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+.planning-root .academic-teacher-review__dialog input {
+  box-sizing: border-box;
+  inline-size: 100%;
+  padding: 8px;
+  border: 1px solid var(--plan-control-border);
+  border-radius: var(--radius-plan-input);
+  background: var(--plan-paper);
+  color: var(--plan-ink);
+  font: inherit;
+}
+
+.planning-root .academic-teacher-review__dialog input { font-size: max(1rem, 1em); min-block-size: 48px; }
+.planning-root .academic-teacher-review__dialog button { min-block-size: 48px; }
+.planning-root .academic-teacher-review__checkbox { min-inline-size: 48px; min-block-size: 48px; }
+.planning-root .academic-teacher-review__checkbox input:disabled { cursor: not-allowed; opacity: 0.5; }

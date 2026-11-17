@@ -192,6 +192,16 @@ export class DemoController {
     return this.savedDrafts.submitReview(id, body)
   }
 
+  @Post('borradores/:id/revision/responder-lote')
+  @HttpCode(200)
+  async decideDraftReviewBatch(@Req() request: Request, @Headers('origin') origin: string | undefined, @Headers('sec-fetch-site') fetchSite: string | undefined, @Body() body: unknown) {
+    await this.access.assertAllowed(request)
+    assertWriteScope(request, origin, fetchSite)
+    const id = request.params.id
+    if (typeof id !== 'string') return fail(404, 'DRAFT_NOT_FOUND', 'No se encontró la propuesta guardada')
+    return this.savedDrafts.decideReviewBatch(id, body)
+  }
+
   @Post('borradores/:id/revision/responder')
   @HttpCode(200)
   async decideDraftReview(@Req() request: Request, @Headers('origin') origin: string | undefined, @Headers('sec-fetch-site') fetchSite: string | undefined, @Body() body: unknown) {

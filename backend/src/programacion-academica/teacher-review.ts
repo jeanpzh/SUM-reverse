@@ -100,14 +100,18 @@ export function reviewMatchesSnapshot(draft: AcademicSavedDraft): boolean {
           const laterDecision = review.history.slice(decisionIndex + 1, invalidatedAt).some((event) => event.type === 'decision'
             && event.teacherId === teacherId && event.round >= (previousDecision?.round ?? 0))
           if (decisionIndex < 0 || decisionIndex >= invalidatedAt || laterDecision || previousDecision?.at !== teacher.decidedAt
-            || previousDecision.observation !== teacher.observation) return false
+            || previousDecision.observation !== teacher.observation
+            || (previousDecision.source ?? 'coordinator-transcription') !== (teacher.source ?? 'coordinator-transcription')
+            || (previousDecision.reference ?? null) !== (teacher.reference ?? null)) return false
         } else if (teacher.observation !== '' || teacher.decidedAt !== null) return false
       } else if (teacher.fingerprint !== expected.fingerprint) return false
       const latest = review.history.filter((event) => event.type === 'decision' && event.teacherId === teacherId
         && event.fingerprint === teacher.fingerprint).at(-1)
       if (teacher.status === 'conformity' || teacher.status === 'changes-requested') {
         if (!latest || latest.decision !== teacher.status || latest.fingerprint !== teacher.fingerprint
-          || latest.version !== teacher.decisionVersion || latest.at !== teacher.decidedAt || latest.observation !== teacher.observation) return false
+          || latest.version !== teacher.decisionVersion || latest.at !== teacher.decidedAt || latest.observation !== teacher.observation
+          || (latest.source ?? 'coordinator-transcription') !== (teacher.source ?? 'coordinator-transcription')
+          || (latest.reference ?? null) !== (teacher.reference ?? null)) return false
       } else if (teacher.status === 'pending' && (teacher.observation !== '' || teacher.decisionVersion !== null || teacher.decidedAt !== null)) return false
       else if (teacher.status === 'pending' && latest?.round === review.round) return false
     }
@@ -126,13 +130,13 @@ export function reviewMatchesSnapshot(draft: AcademicSavedDraft): boolean {
 }
 
 export function makeReviewTeacher(teacherId: string, teacherName: string, fingerprint: string): AcademicReviewTeacher {
-  return { teacherId, teacherName, fingerprint, status: 'pending', observation: '', decisionVersion: null, decidedAt: null }
+  return { teacherId, teacherName, fingerprint, status: 'pending', observation: '', decisionVersion: null, decidedAt: null, source: null, reference: null }
 }
 
 export function reviewEvent(type: AcademicReviewEvent['type'], version: number, round: number, at: string,
   teacherId: string | null = null, fingerprint: string | null = null, decision: AcademicReviewEvent['decision'] = null,
-  observation = ''): AcademicReviewEvent {
-  return { type, version, round, at, teacherId, fingerprint, decision, observation }
+  observation = '', reference: string | null = null): AcademicReviewEvent {
+  return { type, version, round, at, teacherId, fingerprint, decision, observation, source: type === 'decision' ? 'coordinator-transcription' : null, reference }
 }
 
 export function isReviewReady(draft: Pick<AcademicSavedDraft, 'proposal' | 'review'>): boolean {
@@ -142,4 +146,17 @@ export function isReviewReady(draft: Pick<AcademicSavedDraft, 'proposal' | 'revi
 
 export function hasCompleteNonemptyProposal(proposal: AcademicProposal | null): boolean {
   return !!proposal && proposal.status === 'complete' && proposal.coverageComplete && proposal.assignments.length > 0
+}
+
+// Normalize only after validating the persisted payload; legacy defaults require no disk migration.
+export function normalizeReviewOrigins(draft: AcademicSavedDraft): AcademicSavedDraft {
+  for (const teacher of draft.review?.teachers ?? []) {
+    teacher.source ??= teacher.decisionVersion === null ? null : 'coordinator-transcription'
+    teacher.reference ??= null
+  }
+  for (const event of draft.review?.history ?? []) {
+    event.source ??= event.type === 'decision' ? 'coordinator-transcription' : null
+    event.reference ??= null
+  }
+  return draft
 }

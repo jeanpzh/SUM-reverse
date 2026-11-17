@@ -6,12 +6,19 @@ const canonical = (value: unknown): string => Array.isArray(value) ? `[${value.m
     : JSON.stringify(value) ?? 'undefined'
 
 export function approvalFingerprint(draft: AcademicSavedDraft): string {
+  // Default provenance is semantically identical to missing legacy fields. Exclude defaults
+  // from the seal so reading an approved legacy draft does not invalidate its approval.
+  const review = structuredClone(draft.review)
+  for (const record of [...(review?.teachers ?? []), ...(review?.history ?? [])]) {
+    if (record.source === null || record.source === 'coordinator-transcription') delete record.source
+    if (record.reference === null) delete record.reference
+  }
   return createHash('sha256').update(canonical({
     title: draft.title,
     configuration: draft.configuration,
     demandBase: draft.demandBase,
     proposal: draft.proposal,
-    review: draft.review,
+    review,
   })).digest('hex')
 }
 

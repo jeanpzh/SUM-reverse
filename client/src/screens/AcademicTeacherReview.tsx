@@ -20,6 +20,7 @@ type Props = {
   busy: boolean
   error: string | null
   onSubmit: () => void
+  onRespondBatch: (teacherIds: string[], reference: string | null) => Promise<boolean>
   onRespond: (teacherId: string, decision: 'conformity' | 'changes-requested', observation: string) => Promise<boolean>
 }
 
@@ -43,10 +44,15 @@ function plural(count: number, one: string, many: string) {
   return `${count} ${count === 1 ? one : many}`
 }
 
-export function AcademicTeacherReview({ actionContainer, primaryActionId, review, proposal, draftId, draftVersion, dirty, busy, error, onSubmit, onRespond }: Props) {
+export function AcademicTeacherReview({ actionContainer, primaryActionId, review, proposal, draftId, draftVersion, dirty, busy, error, onSubmit, onRespond, onRespondBatch }: Props) {
   const { state } = usePlanningSessionContext()
   const sectionRef = useRef<HTMLElement>(null)
   const responseInFlight = useRef(false)
+  const batchDialog = useRef<HTMLDialogElement>(null)
+  const [selection, setSelection] = useState<{ key: string; ids: string[] }>({ key: '', ids: [] })
+  const [batch, setBatch] = useState<{ key: string; version: number | null; ids: string[] } | null>(null)
+  const [reference, setReference] = useState('')
+  const [batchError, setBatchError] = useState<string | null>(null)
   const [role, setRole] = useState<'school' | 'teacher'>('school')
   const [teacherId, setTeacherId] = useState('')
   const [paneOpen, setPaneOpen] = useState(true)
@@ -66,6 +72,31 @@ export function AcademicTeacherReview({ actionContainer, primaryActionId, review
   const blocks = proposal && selectedTeacher ? aggregateAcademicBlocks(proposal).filter((block) => block.teacherId === selectedTeacher.teacherId) : []
   const hasSchedule = Boolean(proposal?.status === 'complete' && proposal.coverageComplete && proposal.assignments.length)
   const enabled = Boolean(draftId && draftVersion && !dirty && !busy)
+  const selectionKey = `${draftId}:${review?.round}:${draftVersion}`
+  const pendingIds = teachers.filter((teacher) => teacher.status === 'pending').map((teacher) => teacher.teacherId)
+  const selectedIds = selection.key === selectionKey ? selection.ids.filter((id) => pendingIds.includes(id)) : []
+  const canRespond = enabled && !['approved', 'published'].includes(state.draft.savedState)
+  const originLabel = (source: ReviewTeacher['source']) => source === 'teacher' ? 'Respondió el docente' : 'Transcrita por el coordinador'
+  const openBatch = () => {
+    setBatch({ key: selectionKey, version: draftVersion, ids: [...selectedIds] })
+    setReference('')
+    setBatchError(null)
+    batchDialog.current?.showModal()
+  }
+  const respondBatch = async () => {
+    if (responseInFlight.current || busy || !batch || !canRespond) return
+    if (batch.key !== selectionKey || batch.version !== draftVersion) {
+      setBatchError('La propuesta cambió; cierra esta confirmación y selecciona nuevamente los docentes.')
+      return
+    }
+    responseInFlight.current = true
+    try {
+      if (await onRespondBatch(batch.ids, reference.trim() || null)) {
+        batchDialog.current?.close()
+        setSelection({ key: selectionKey, ids: [] })
+      } else setBatchError('No se registraron las conformidades. Revisa el error e inténtalo de nuevo.')
+    } finally { responseInFlight.current = false }
+  }
   // A round is open for the saved version while it is in review or already past it (approval, publication).
   const roundOpen = ['in-review', 'ready-for-approval', 'approved', 'published'].includes(state.draft.savedState)
   const canSubmit = !roundOpen && enabled && hasSchedule
@@ -117,7 +148,7 @@ export function AcademicTeacherReview({ actionContainer, primaryActionId, review
     requestAnimationFrame(() => document.querySelector<HTMLTextAreaElement>('#academic-review-detail textarea')?.focus())
   }
   const respond = async (decision: 'conformity' | 'changes-requested') => {
-    if (responseInFlight.current || busy || !selectedTeacher) return
+    if (responseInFlight.current || !canRespond || !selectedTeacher || selectedTeacher.source === 'teacher') return
     responseInFlight.current = true
     try {
       const recorded = await onRespond(selectedTeacher.teacherId, decision, currentObservation.trim())
@@ -158,14 +189,26 @@ export function AcademicTeacherReview({ actionContainer, primaryActionId, review
         <input type="search" aria-label="Buscar docente" placeholder="Buscar docente" value={query} onChange={(event) => setQuery(event.currentTarget.value)} />
         <span>{normalizedQuery ? `${visible.length} de ${plural(teachers.length, 'docente', 'docentes')}` : plural(teachers.length, 'docente', 'docentes')} · los que requieren atención primero</span>
       </div>
+      <div className="academic-teacher-review__toolbar">
+        <Button type="button" variant="outline" disabled={!canRespond || !pendingIds.length} onClick={() =>
+          setSelection({ key: selectionKey, ids: selectedIds.length === pendingIds.length ? [] : pendingIds })}>
+          {selectedIds.length === pendingIds.length && pendingIds.length ? 'Quitar selección' : 'Seleccionar pendientes'}
+        </Button>
+        <Button type="button" disabled={!canRespond || !selectedIds.length} onClick={openBatch}>Registrar conformidades recibidas ({selectedIds.length})</Button>
+      </div>
       <div className="academic-teacher-review__split">
         <div className="academic-teacher-review__table-wrap" role="region" aria-label="Lista de docentes en revisión" tabIndex={0}>
           <table aria-label="Docentes en revisión">
-            <thead><tr><th scope="col">Docente</th><th scope="col">Estado</th><th scope="col">Observación</th><th scope="col">Respuesta</th></tr></thead>
+            <thead><tr><th scope="col">Selección</th><th scope="col">Docente</th><th scope="col">Estado</th><th scope="col">Observación</th><th scope="col">Respuesta</th></tr></thead>
             <tbody>{visible.map((teacher) => {
               const selected = paneOpen && teacher.teacherId === selectedTeacher?.teacherId
               const response = responseLabel(teacher)
               return <tr key={teacher.teacherId} data-teacher-id={teacher.teacherId} aria-selected={selected} data-selected={selected || undefined}>
+                <td>{teacher.status === 'pending' && <label className="academic-teacher-review__checkbox">
+                  <input type="checkbox" aria-label={`Seleccionar ${teacher.teacherName}`} checked={selectedIds.includes(teacher.teacherId)} disabled={!canRespond}
+                    onChange={(event) => setSelection({ key: selectionKey, ids: event.currentTarget.checked
+                      ? [...selectedIds, teacher.teacherId] : selectedIds.filter((id) => id !== teacher.teacherId) })} />
+                </label>}</td>
                 <td><button type="button" className="academic-teacher-review__name" aria-controls="academic-review-detail" aria-expanded={selected}
                   onClick={() => openTeacher(teacher.teacherId)}>{teacher.teacherName}</button></td>
                 <td><span className="academic-teacher-review__status" data-status={teacher.status}><span aria-hidden="true">{statusGlyphs[teacher.status]}</span>{statusLabels[teacher.status]}</span></td>
@@ -173,10 +216,11 @@ export function AcademicTeacherReview({ actionContainer, primaryActionId, review
                 <td>{teacher.status === 'pending'
                   ? <button type="button" className="academic-teacher-review__row-action" aria-label={`Registrar respuesta de ${teacher.teacherName}`} aria-controls="academic-review-detail"
                     onClick={() => openTeacher(teacher.teacherId, 'teacher')}>Registrar respuesta</button>
-                  : <span className="academic-teacher-review__mono academic-teacher-review__muted">{response ?? '—'}</span>}</td>
+                  : <span className="academic-teacher-review__mono academic-teacher-review__muted">{response ?? '—'}</span>}
+                  {teacher.decisionVersion !== null && <small className="academic-teacher-review__origin academic-teacher-review__muted">{originLabel(teacher.source)}{teacher.reference && <> · {teacher.reference}</>}</small>}</td>
               </tr>
             })}
-            {visible.length === 0 && <tr><td colSpan={4} className="academic-teacher-review__muted">Ningún docente coincide con la búsqueda.</td></tr>}</tbody>
+            {visible.length === 0 && <tr><td colSpan={5} className="academic-teacher-review__muted">Ningún docente coincide con la búsqueda.</td></tr>}</tbody>
           </table>
         </div>
         {paneOpen && selectedTeacher && <aside id="academic-review-detail" className="academic-teacher-review__pane" aria-labelledby="academic-review-pane-title">
@@ -189,6 +233,7 @@ export function AcademicTeacherReview({ actionContainer, primaryActionId, review
               <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.5" /></svg>
             </button>
           </div>
+          {selectedTeacher.decisionVersion !== null && <p className="academic-teacher-review__small">{originLabel(selectedTeacher.source)}{selectedTeacher.reference && <> · Referencia: {selectedTeacher.reference}</>}</p>}
           {dirty && <p className="academic-teacher-review__warning">La tabla muestra la edición local; la conformidad guardada corresponde al horario anterior.</p>}
           {role === 'school' && selectedTeacher.observation && <p className="academic-teacher-review__observation-readonly"><span className="academic-teacher-review__eyebrow">Observación docente</span>{selectedTeacher.observation}</p>}
           {blocks.length ? <div className="academic-teacher-review__blocks" role="region" aria-label={`Horario asignado de ${selectedTeacher.teacherName}`} tabIndex={0}>
@@ -214,9 +259,9 @@ export function AcademicTeacherReview({ actionContainer, primaryActionId, review
             </label>
             {!currentObservation.trim() && <p className="academic-teacher-review__small">Escribe una observación para solicitar cambios; la conformidad puede enviarse sin texto.</p>}
             <div className="academic-teacher-review__actions">
-              <button type="button" className="academic-teacher-review__button" disabled={!enabled || !review || selectedTeacher.status === 'outdated' || (selectedTeacher.status === 'changes-requested' && currentObservation.trim() === selectedTeacher.observation) || !currentObservation.trim()}
+              <button type="button" className="academic-teacher-review__button" disabled={!canRespond || !review || selectedTeacher.source === 'teacher' || selectedTeacher.status === 'outdated' || (selectedTeacher.status === 'changes-requested' && currentObservation.trim() === selectedTeacher.observation) || !currentObservation.trim()}
                 onClick={() => void respond('changes-requested')}>Solicitar cambios</button>
-              <button type="button" className="academic-teacher-review__button" disabled={!enabled || !review || selectedTeacher.status === 'outdated' || (selectedTeacher.status === 'conformity' && currentObservation.trim() === selectedTeacher.observation)}
+              <button type="button" className="academic-teacher-review__button" disabled={!canRespond || !review || selectedTeacher.source === 'teacher' || selectedTeacher.status === 'outdated' || (selectedTeacher.status === 'conformity' && currentObservation.trim() === selectedTeacher.observation)}
                 onClick={() => void respond('conformity')}>Dar conformidad</button>
             </div>
           </div>}
@@ -224,11 +269,26 @@ export function AcademicTeacherReview({ actionContainer, primaryActionId, review
       </div>
     </>}
 
+    <dialog ref={batchDialog} className="academic-teacher-review__dialog" aria-labelledby="academic-review-batch-title" aria-describedby="academic-review-batch-description">
+      <form aria-labelledby="academic-review-batch-title" method="post" onSubmit={(event) => { event.preventDefault(); void respondBatch() }}>
+        <h2 id="academic-review-batch-title">Registrar conformidades recibidas</h2>
+        <p id="academic-review-batch-description">Se registrará la conformidad de {plural(batch?.ids.length ?? 0, 'docente', 'docentes')} como «Transcrita por el coordinador».</p>
+        <label className="academic-teacher-review__observation" htmlFor="academic-review-reference">Referencia del documento (opcional)</label>
+        <p id="academic-review-reference-hint" className="academic-teacher-review__small">Hasta 200 caracteres.</p>
+        <input id="academic-review-reference" name="reference" aria-describedby="academic-review-reference-hint" maxLength={200} value={reference} onChange={(event) => setReference(event.currentTarget.value)} disabled={busy} autoFocus />
+        {(batchError || error) && <p role="alert" className="academic-teacher-review__warning">{error || batchError}</p>}
+        <div className="academic-teacher-review__actions">
+          <Button type="button" variant="outline" onClick={() => batchDialog.current?.close()}>Cancelar</Button>
+          <Button type="submit" disabled={!canRespond || !batch?.ids.length}>Registrar conformidades</Button>
+        </div>
+      </form>
+    </dialog>
     {review && <details className="academic-teacher-review__history"><summary>Historial ({review.history.length})</summary><ol>
       {review.history.map((event, index) => <li key={`${event.version}-${event.round}-${event.type}-${index}`}>
         <strong>{event.type === 'submitted' ? 'Envío' : event.type === 'invalidated' ? 'Revisión invalidada' : statusLabels[event.decision === 'conformity' ? 'conformity' : 'changes-requested']}</strong>
         <span className="academic-teacher-review__muted">Ronda {event.round} · v{event.version} · {new Date(event.at).toLocaleString('es-PE')}</span>
         {event.teacherId && <span>{teachers.find((teacher) => teacher.teacherId === event.teacherId)?.teacherName ?? event.teacherId}</span>}
+        {event.type === 'decision' && <span className="academic-teacher-review__muted">{originLabel(event.source)}{event.reference && <> · Referencia: {event.reference}</>}</span>}
         {event.observation && <p>{event.observation}</p>}
       </li>)}
     </ol></details>}

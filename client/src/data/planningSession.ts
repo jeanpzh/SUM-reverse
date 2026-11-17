@@ -31,12 +31,12 @@ import type {
   AcademicAdjustment, AcademicAdvisorPatch, AcademicAllocationPolicy, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest,
   AcademicDemandSourceId, AcademicDraftList, AcademicDraftResume, AcademicDraftSaveRequest, AcademicDraftState,
   AcademicPlanningResources, AcademicProposal, AcademicPublicationRequest, AcademicRequest, AcademicReviewDecision,
-  AcademicReviewSubmission, AcademicSavedDraft, AcademicTeacherAssignmentMode, AcademicTeacherReview, AcademicWorkspace,
+  AcademicReviewSubmission, AcademicReviewBatchDecision, AcademicSavedDraft, AcademicTeacherAssignmentMode, AcademicTeacherReview, AcademicWorkspace,
 } from '../../../shared/programacion-academica-api.mjs'
 import {
   PLANNING_LIMITS, academicPlanningErrorMessage, academicSectionCoverage, adjustAcademicProposal, aggregateAcademicBlocks, approveAcademicDraft,
   buildAcademicPlanningRequest, clonePlanningPolicy, createAcademicPlanningDefaults, createAcademicProposal, estimateAcademicDemand,
-  fetchAcademicCatalog, fetchAcademicDrafts, forkAcademicDraft, publishAcademicDraft, respondAcademicTeacherReview,
+  fetchAcademicCatalog, fetchAcademicDrafts, forkAcademicDraft, publishAcademicDraft, respondAcademicTeacherReview, respondAcademicTeacherReviewBatch,
   resumeAcademicDraft, saveAcademicDraft, submitAcademicTeacherReview, syntheticTeachingMetadata,
 } from './academicScheduling.ts'
 import type { PlanningPeriod, PlanningPolicy } from './academicScheduling.ts'
@@ -61,6 +61,7 @@ export interface PlanningSessionClient {
   saveDraft(request: AcademicDraftSaveRequest, signal?: AbortSignal): Promise<AcademicSavedDraft>
   resumeDraft(id: string, expectedVersion: number, signal?: AbortSignal): Promise<AcademicDraftResume>
   submitReview(id: string, request: AcademicReviewSubmission): Promise<AcademicSavedDraft>
+  respondReviewBatch(id: string, request: AcademicReviewBatchDecision): Promise<AcademicSavedDraft>
   respondReview(id: string, request: AcademicReviewDecision): Promise<AcademicSavedDraft>
   approveDraft(id: string, expectedVersion: number): Promise<AcademicSavedDraft>
   publishDraft(id: string, request: AcademicPublicationRequest): Promise<AcademicSavedDraft>
@@ -76,6 +77,7 @@ export const defaultPlanningSessionClient: PlanningSessionClient = {
   saveDraft: (request, signal) => saveAcademicDraft(request, globalThis.fetch, signal),
   resumeDraft: (id, expectedVersion, signal) => resumeAcademicDraft(id, expectedVersion, globalThis.fetch, signal),
   submitReview: (id, request) => submitAcademicTeacherReview(id, request),
+  respondReviewBatch: (id, request) => respondAcademicTeacherReviewBatch(id, request),
   respondReview: (id, request) => respondAcademicTeacherReview(id, request),
   approveDraft: (id, expectedVersion) => approveAcademicDraft(id, expectedVersion),
   publishDraft: (id, request) => publishAcademicDraft(id, request),
@@ -935,6 +937,23 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
         void refreshDrafts()
       } catch (error) {
         dispatch({ type: 'review/failed', message: error instanceof Error ? academicPlanningErrorMessage(error) : 'No se pudo enviar la revisión local.' })
+      }
+    },
+
+    async respondReviewBatch(teacherIds: string[], reference: string | null): Promise<boolean> {
+      const { id, version, review } = state.draft
+      if (!id || !version || !review || state.dirty || state.busy.draft) return false
+      const mutation = state.mutation
+      dispatch({ type: 'review/started' })
+      try {
+        const saved = await client.respondReviewBatch(id, { expectedVersion: version, round: review.round, teacherIds, decision: 'conformity', reference: reference?.trim() || null })
+        dispatch({ type: 'review/succeeded', mutation, saved, message: `${teacherIds.length} conformidades registradas · versión ${saved.version}.`,
+          staleMessage: 'Las conformidades se guardaron sobre la versión anterior; los cambios locales siguen pendientes de guardar.' })
+        void refreshDrafts()
+        return true
+      } catch (error) {
+        dispatch({ type: 'review/failed', message: error instanceof Error ? academicPlanningErrorMessage(error) : 'No se pudo registrar el lote de conformidades.' })
+        return false
       }
     },
 

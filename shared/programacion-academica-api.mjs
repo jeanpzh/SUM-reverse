@@ -183,11 +183,30 @@ export function validateAcademicReviewSubmission(value) {
   number(value.expectedVersion, 'expectedVersion', 1)
 }
 export function validateAcademicReviewDecision(value) {
-  object(value, ['expectedVersion', 'round', 'teacherId', 'decision', 'observation'], 'reviewDecision')
+  object(value, ['expectedVersion', 'round', 'teacherId', 'decision', 'observation'], 'reviewDecision', ['reference'])
   number(value.expectedVersion, 'expectedVersion', 1)
   number(value.round, 'round', 1)
+  if (Object.hasOwn(value, 'reference')) reviewReference(value.reference)
   string(value.teacherId, 'teacherId')
   if (!['conformity', 'changes-requested'].includes(value.decision) || typeof value.observation !== 'string' || value.observation.length > 1000 || value.observation.trim() !== value.observation || (value.decision === 'changes-requested' && !value.observation)) throw new TypeError('Decisión u observación inválida')
+}
+function reviewReference(value) {
+  if (value !== null && (typeof value !== 'string' || value.length > 200 || value.trim() !== value)) throw new TypeError('Referencia inválida')
+}
+function reviewOrigin(value, hasDecision) {
+  if (Object.hasOwn(value, 'source') && !(hasDecision ? ['teacher', 'coordinator-transcription'] : [null]).includes(value.source)) throw new TypeError('Origen de respuesta inválido')
+  if (Object.hasOwn(value, 'reference')) {
+    reviewReference(value.reference)
+    if (!hasDecision && value.reference !== null) throw new TypeError('Referencia sin decisión')
+  }
+}
+export function validateAcademicReviewBatchDecision(value) {
+  object(value, ['expectedVersion', 'round', 'teacherIds', 'decision', 'reference'], 'reviewBatchDecision')
+  number(value.expectedVersion, 'expectedVersion', 1)
+  number(value.round, 'round', 1)
+  array(value.teacherIds, 'teacherIds', 500).forEach((id) => string(id, 'teacherId'))
+  if (!value.teacherIds.length || new Set(value.teacherIds).size !== value.teacherIds.length || value.decision !== 'conformity') throw new TypeError('Lote de conformidades inválido')
+  reviewReference(value.reference)
 }
 export function validateAcademicTeacherReview(value, version = Number.MAX_SAFE_INTEGER) {
   object(value, ['round', 'submittedVersion', 'submittedAt', 'teachers', 'history'], 'teacherReview')
@@ -198,7 +217,8 @@ export function validateAcademicTeacherReview(value, version = Number.MAX_SAFE_I
   date(value.submittedAt)
   const ids = new Set()
   array(value.teachers, 'reviewTeachers', 200).forEach((teacher) => {
-    object(teacher, ['teacherId', 'teacherName', 'fingerprint', 'status', 'observation', 'decisionVersion', 'decidedAt'], 'reviewTeacher')
+    object(teacher, ['teacherId', 'teacherName', 'fingerprint', 'status', 'observation', 'decisionVersion', 'decidedAt'], 'reviewTeacher', ['source', 'reference'])
+    reviewOrigin(teacher, teacher.decisionVersion !== null)
     string(teacher.teacherId, 'teacherId'); string(teacher.teacherName, 'teacherName'); fingerprint(teacher.fingerprint)
     if (ids.has(teacher.teacherId) || !['pending', 'conformity', 'changes-requested', 'outdated'].includes(teacher.status) || typeof teacher.observation !== 'string' || teacher.observation.length > 1000) throw new TypeError('Respuesta docente inválida')
     ids.add(teacher.teacherId)
@@ -208,7 +228,8 @@ export function validateAcademicTeacherReview(value, version = Number.MAX_SAFE_I
     if (teacher.status === 'changes-requested' && !teacher.observation.trim()) throw new TypeError('Observación requerida')
   })
   array(value.history, 'reviewHistory', 200).forEach((event) => {
-    object(event, ['type', 'version', 'round', 'at', 'teacherId', 'decision', 'observation', 'fingerprint'], 'reviewEvent')
+    object(event, ['type', 'version', 'round', 'at', 'teacherId', 'decision', 'observation', 'fingerprint'], 'reviewEvent', ['source', 'reference'])
+    reviewOrigin(event, event.type === 'decision')
     if (!['submitted', 'decision', 'invalidated'].includes(event.type)) throw new TypeError('Evento inválido')
     number(event.version, 'version', 1, version); number(event.round, 'round', 1, value.round); date(event.at)
     if (typeof event.observation !== 'string' || event.observation.length > 1000) throw new TypeError('Observación inválida')

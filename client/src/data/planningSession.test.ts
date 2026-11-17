@@ -71,6 +71,7 @@ function memoryClient(overrides: Partial<PlanningSessionClient> = {}) {
     },
     resumeDraft: async (id) => ({ draft: drafts.get(id)! }),
     submitReview: async () => { throw new Error('not used') },
+    respondReviewBatch: async () => { throw new Error('not used') },
     respondReview: async () => { throw new Error('not used') },
     approveDraft: async (id) => { const draft = { ...drafts.get(id)!, state: 'approved' as const, version: drafts.get(id)!.version + 1 }; drafts.set(id, draft); return draft },
     publishDraft: async (id) => { const draft = { ...drafts.get(id)!, state: 'published' as const, version: drafts.get(id)!.version + 1 }; drafts.set(id, draft); return draft },
@@ -606,4 +607,42 @@ test('updatePlanningException and applyPeriodDefaults preserve facultyId, source
   assert.equal(disabledSaturday.policy?.facultyId, 'FISI')
   assert.equal(disabledSaturday.policy?.source, 'synthetic-faculty-exception')
   assert.equal(disabledSaturday.policy?.exceptions, undefined)
+})
+
+
+test('bulk response shares the mutation guard, trims references and reports success or failure', async () => {
+  const pending = deferred<AcademicSavedDraft>()
+  let calls = 0
+  const { session, drafts } = await loadedSession({ respondReviewBatch: async (id, request) => {
+    calls++
+    assert.equal(id, draftId)
+    assert.deepEqual(request, { expectedVersion: 1, round: 1, teacherIds: ['T1'], decision: 'conformity', reference: 'Acta 08' })
+    return pending.promise
+  } })
+  session.commands.edit({ type: 'toggleCourse', courseId: 'CS101', checked: true })
+  await session.commands.generate()
+  await session.commands.save()
+  const review: AcademicTeacherReview = { round: 1, submittedVersion: 1, submittedAt: '2026-11-17T10:00:00Z', teachers: [], history: [] }
+  const saved = { ...drafts.get(draftId)!, state: 'in-review' as const, review }
+  drafts.set(draftId, saved)
+  await session.commands.resume(draftId, 1)
+  const response = session.commands.respondReviewBatch(['T1'], '  Acta 08  ')
+  assert.equal(session.getState().busy.draft, true)
+  assert.equal(await session.commands.respondReviewBatch(['T1'], null), false)
+  pending.resolve({ ...saved, version: 2 })
+  assert.equal(await response, true)
+  assert.equal(calls, 1)
+  assert.equal(session.getState().draft.version, 2)
+  assert.equal(session.getState().busy.draft, false)
+  assert.match(session.getState().message ?? '', /1 conformidades registradas/)
+  session.commands.edit({ type: 'setTitle', title: 'Cambios locales' })
+  assert.equal(await session.commands.respondReviewBatch(['T1'], null), false)
+  assert.equal(calls, 1)
+
+  const failed = await loadedSession({ respondReviewBatch: async () => { throw new Error('Docente sin revisión pendiente') } })
+  failed.drafts.set(draftId, saved)
+  await failed.session.commands.resume(draftId, 1)
+  assert.equal(await failed.session.commands.respondReviewBatch(['T1'], null), false)
+  assert.match(failed.session.getState().errors.review ?? '', /Docente sin revisión pendiente/)
+  assert.equal(failed.session.getState().busy.draft, false)
 })
