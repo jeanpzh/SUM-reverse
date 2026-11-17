@@ -35,7 +35,7 @@ import type {
 } from '../../../shared/programacion-academica-api.mjs'
 import {
   PLANNING_LIMITS, academicPlanningErrorMessage, academicSectionCoverage, adjustAcademicProposal, aggregateAcademicBlocks, approveAcademicDraft,
-  buildAcademicPlanningRequest, createAcademicPlanningDefaults, createAcademicProposal, estimateAcademicDemand,
+  buildAcademicPlanningRequest, clonePlanningPolicy, createAcademicPlanningDefaults, createAcademicProposal, estimateAcademicDemand,
   fetchAcademicCatalog, fetchAcademicDrafts, forkAcademicDraft, publishAcademicDraft, respondAcademicTeacherReview,
   resumeAcademicDraft, saveAcademicDraft, submitAcademicTeacherReview, syntheticTeachingMetadata,
 } from './academicScheduling.ts'
@@ -228,14 +228,14 @@ function hydrate(state: PlanningSessionState, draft: AcademicSavedDraft, message
     dirty: false,
     mutation: state.mutation + 1,
     period: config.academicPeriod,
-    policy: config.request.planningPolicy ? { ...config.request.planningPolicy } : null,
+    policy: config.request.planningPolicy ? clonePlanningPolicy(config.request.planningPolicy) : null,
     allocationPolicy: config.request.allocationPolicy ?? 'preferences',
     selectedCourses: demands.map((item) => item.courseId),
     demands: { ...state.demands, ...Object.fromEntries(demands.map((item) => [item.courseId, String(item.estimatedDemand)])) },
     capacities: { ...state.capacities, ...Object.fromEntries(demands.map((item) => [item.courseId, String(item.targetCapacity ?? '')])) },
     patterns: { ...state.patterns, ...Object.fromEntries(demands.flatMap((item) => item.patternId ? [[item.courseId, item.patternId]] : [])) },
-    deliveryModes: { ...state.deliveryModes, ...Object.fromEntries(demands.map((item) => [item.courseId, item.deliveryMode ?? 'continuous'])) },
-    teacherAssignmentModes: { ...state.teacherAssignmentModes, ...Object.fromEntries(demands.map((item) => [item.courseId, item.teacherAssignmentMode ?? 'single-teacher-section'])) },
+    deliveryModes: Object.fromEntries(demands.map((item) => [item.courseId, item.deliveryMode ?? 'continuous'])),
+    teacherAssignmentModes: Object.fromEntries(demands.map((item) => [item.courseId, item.teacherAssignmentMode ?? 'single-teacher-section'])),
     demandSourceId: config.demandSourceId,
     demandBaseRequest: config.demandBaseRequest,
     demandEstimate: draft.demandBase,
@@ -306,15 +306,22 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
     case 'updateAllocationPolicy':
       return { ...markDirty(invalidateProposal(state), true), allocationPolicy: event.value }
     case 'updatePlanningException': {
-      const policy: PlanningPolicy = { revision: 'FISI-PLANNING-1', period: state.period,
-        allowAfternoon: state.policy?.allowAfternoon ?? false, allowSaturday: state.policy?.allowSaturday ?? false,
-        [event.key]: event.checked }
+      const base = state.policy ? clonePlanningPolicy(state.policy) : {
+        revision: 'FISI-PLANNING-1' as const,
+        period: state.period,
+        allowAfternoon: false,
+        allowSaturday: false,
+      }
+      const policy: PlanningPolicy = { ...base, period: state.period, [event.key]: event.checked }
+      if (!policy.allowSaturday && policy.exceptions) {
+        delete policy.exceptions
+      }
       return { ...markDirty(invalidateProposal(state), true), policy }
     }
     case 'applyAdvisorPatches': {
       if (!event.patches.length) return state
       let nextResources = cloneResources(state.resources)
-      let nextPolicy: PlanningPolicy | null = state.policy ? { ...state.policy } : null
+      let nextPolicy: PlanningPolicy | null = state.policy ? clonePlanningPolicy(state.policy) : null
       const nextDeliveryModes = { ...state.deliveryModes }
       const nextTeacherAssignmentModes = { ...state.teacherAssignmentModes }
       const defaultWindows = [1, 2, 3, 4, 5].map((day) => ({ day, startMinute: 480, endMinute: 1320 }))
@@ -393,7 +400,7 @@ export function reducePlanningSession(state: PlanningSessionState, event: Planni
       if (!state.catalog || (event.period === state.period && !event.force)) return state
       const defaults = createAcademicPlanningDefaults(state.catalog, event.period)
       const next = markDirty(invalidateProposal(invalidateDemand(state)), true)
-      return { ...next, period: event.period, policy: { ...(state.policy ?? defaults.planningPolicy), period: event.period },
+      return { ...next, period: event.period, policy: { ...clonePlanningPolicy(state.policy ?? defaults.planningPolicy), period: event.period },
         demands: defaults.demands, capacities: defaults.capacities }
     }
     case 'setTitle':

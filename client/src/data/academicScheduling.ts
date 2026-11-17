@@ -2,11 +2,11 @@ import { validateAcademicNormativeRequest, validateAcademicNormativeResponse } f
 import type { AcademicNormativeRequest, AcademicNormativeResponse } from '../../../shared/programacion-academica-api.mjs'
 import { ACADEMIC_API, ACADEMIC_REVISION, ACADEMIC_ROUTE, validateAcademicAdjustment, validateAcademicAdvisorRequest, validateAcademicAdvisorResponse, validateAcademicCatalog, validateAcademicDemandEstimate, validateAcademicDemandRequest, validateAcademicProposal, validateAcademicRequest, validateAcademicDraftList, validateAcademicDraftResume, validateAcademicDraftSaveRequest, validateAcademicSavedDraft, validateAcademicReviewSubmission, validateAcademicReviewDecision, validateAcademicPublicationRequest, validateAcademicReleasePreview, validateAcademicPublication, validateAcademicPublicationList } from '../../../shared/programacion-academica-api.mjs'
 import type { AcademicAdjustment, AcademicAdvisorRequest, AcademicAdvisorResponse, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest, AcademicProposal, AcademicRequest, AcademicInterval, AcademicDraftList, AcademicDraftResume, AcademicDraftSaveRequest, AcademicSavedDraft, AcademicReviewSubmission, AcademicReviewDecision, AcademicReleasePreview, AcademicPublication, AcademicPublicationList, AcademicPublicationRequest } from '../../../shared/programacion-academica-api.mjs'
-import { planningDefaults as getPlanningDefaults, PLANNING_LIMITS, syntheticTeachingMetadata, validatePlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
+import { planningDefaults as getPlanningDefaults, PLANNING_LIMITS, resolvePlanningTimeProfile, syntheticTeachingMetadata, validatePlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
 import type { PlanningPeriod, PlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
 
 export type { AcademicAdvisorBottleneck, AcademicAdvisorPatch, AcademicAdvisorRecommendation, AcademicAdvisorResponse, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest, AcademicProposal, AcademicRequest, AcademicTeacherAssignmentMode } from '../../../shared/programacion-academica-api.mjs'
-export { PLANNING_LIMITS, syntheticTeachingMetadata }
+export { PLANNING_LIMITS, resolvePlanningTimeProfile, syntheticTeachingMetadata }
 export type { PlanningPeriod, PlanningPolicy }
 
 export function normalizeAcademicSearch(value: string) {
@@ -36,10 +36,17 @@ export function createAcademicPlanningDefaults(catalog: AcademicCatalog, period:
   } }
 }
 
+export function clonePlanningPolicy(policy: PlanningPolicy): PlanningPolicy {
+  return {
+    ...policy,
+    ...(policy.exceptions ? { exceptions: { ...policy.exceptions } } : {}),
+  }
+}
+
 export function buildAcademicPlanningRequest<T extends Omit<AcademicRequest, 'planningPolicy'>>(request: T,
   planningPolicy: PlanningPolicy): T & { planningPolicy: PlanningPolicy } {
   validatePlanningPolicy(planningPolicy)
-  return { ...request, planningPolicy: { ...planningPolicy } }
+  return { ...request, planningPolicy: clonePlanningPolicy(planningPolicy) }
 }
 
 type AcademicSchedulingFlags = { VITE_SUM_ACADEMIC_SCHEDULING?: string; VITE_SUM_SIMULATOR?: string }

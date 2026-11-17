@@ -495,3 +495,21 @@ test('proposal render index preserves aggregate blocks, session order and missin
   assert.equal(index.adjustedSections.size, 0)
   assert.deepEqual(proposal, before)
 })
+
+test('planning request builder deep-clones additive faculty policy and exception bounds without mutating caller state', () => {
+  const policy = {
+    revision: 'FISI-PLANNING-1' as const,
+    period: '2027-I' as const,
+    allowAfternoon: true,
+    allowSaturday: true,
+    facultyId: 'FISI' as const,
+    source: 'synthetic-policy-override',
+    exceptions: { saturdayStartMinute: 540, saturdayEndMinute: 840 },
+  }
+  const built = buildAcademicPlanningRequest({ revision: ACADEMIC_REVISION, demands: [] }, policy)
+  assert.deepEqual(built.planningPolicy, policy)
+  assert.notEqual(built.planningPolicy, policy)
+  assert.notEqual(built.planningPolicy.exceptions, policy.exceptions)
+  policy.exceptions.saturdayStartMinute = 480
+  assert.equal(built.planningPolicy.exceptions?.saturdayStartMinute, 540)
+})

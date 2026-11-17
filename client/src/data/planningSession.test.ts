@@ -426,3 +426,104 @@ test('planning progress marks every step done after publication', () => {
   assert.deepEqual(derivePlanningProgress({ ...state, draft: { ...state.draft, savedState: 'published' } }),
     { preparacion: 'done', horario: 'done', revision: 'done', aprobacion: 'done' })
 })
+
+test('teacherAssignmentMode sends non-legacy modes, invalidates review state, and persists cleanly across save, resume and fork', async () => {
+  let lastRequest: AcademicProposal | null = null
+  const sentRequests: Array<{ demands: Array<{ courseId: string; teacherAssignmentMode?: string }>; planningPolicy?: unknown }> = []
+  const forkedId = '123e4567-e89b-42d3-a456-426614174009'
+  const shared = memoryClient({
+    createProposal: async (request) => {
+      sentRequests.push(request as unknown as typeof sentRequests[number])
+      lastRequest = makeProposal({
+        sections: [{ sectionId: 'A', courseId: 'CS101', courseName: 'Curso sintético', capacity: 20, deliveryMode: 'continuous', teacherAssignmentMode: 'per-session' }],
+      })
+      return lastRequest
+    },
+    forkDraft: async (id) => ({
+      ...shared.drafts.get(id)!,
+      id: forkedId,
+      version: 1,
+      state: 'draft' as const,
+      origin: { draftId: id, version: 1, publicationVersion: null },
+    }),
+  })
+  const writer = createPlanningSession(shared.client)
+  await writer.commands.loadCatalog()
+  writer.commands.edit({ type: 'selectCourses', courseIds: ['CS101', 'CS102'] })
+  writer.commands.edit({ type: 'updateTeacherAssignmentMode', courseId: 'CS101', value: 'per-session' })
+  writer.commands.edit({ type: 'updateTeacherAssignmentMode', courseId: 'CS102', value: 'tp-grouped-l-independent' })
+  assert.equal(await writer.commands.generate(), true)
+  assert.equal(sentRequests.at(-1)?.demands.find((d) => d.courseId === 'CS101')?.teacherAssignmentMode, 'per-session')
+  assert.equal(sentRequests.at(-1)?.demands.find((d) => d.courseId === 'CS102')?.teacherAssignmentMode, 'tp-grouped-l-independent')
+
+  // Invalidation check: changing back to single-teacher-section clears proposal, marks dirty, and keeps demandEstimate
+  const estimate = { revision: ACADEMIC_REVISION } as unknown as PlanningSessionState['demandEstimate']
+  const readyState: PlanningSessionState = {
+    ...writer.getState(),
+    demandEstimate: estimate,
+    draft: { ...writer.getState().draft, state: 'ready-for-review' },
+  }
+  const invalidated = reducePlanningSession(readyState, { type: 'updateTeacherAssignmentMode', courseId: 'CS102', value: 'single-teacher-section' })
+  assert.equal(invalidated.proposal, null)
+  assert.equal(invalidated.advisorOutcome, null)
+  assert.equal(invalidated.demandEstimate, estimate)
+  assert.equal(invalidated.draft.state, 'draft')
+  assert.equal(invalidated.dirty, true)
+
+  // Apply only CS101 as per-session and CS102 as legacy, verify legacy omits field, then save
+  writer.commands.edit({ type: 'updateTeacherAssignmentMode', courseId: 'CS102', value: 'single-teacher-section' })
+  assert.equal(await writer.commands.generate(), true)
+  assert.equal('teacherAssignmentMode' in (sentRequests.at(-1)?.demands.find((d) => d.courseId === 'CS102') ?? {}), false)
+  await writer.commands.save()
+
+  // Reader has stale in-memory mode on CS102; resuming must clear stale mode back to single-teacher-section
+  const reader = createPlanningSession(shared.client)
+  await reader.commands.loadCatalog()
+  reader.commands.edit({ type: 'updateTeacherAssignmentMode', courseId: 'CS102', value: 'per-session' })
+  assert.equal(await reader.commands.resume(draftId, 1), true)
+  assert.equal(reader.getState().teacherAssignmentModes.CS101, 'per-session')
+  assert.equal(reader.getState().teacherAssignmentModes.CS102, 'single-teacher-section')
+
+  // Fork preserves CS101 per-session
+  assert.equal(await reader.commands.fork(draftId, 1), true)
+  assert.equal(reader.getState().teacherAssignmentModes.CS101, 'per-session')
+  assert.equal(reader.getState().teacherAssignmentModes.CS102, 'single-teacher-section')
+})
+
+test('updatePlanningException and applyPeriodDefaults preserve facultyId, source and valid Saturday exception bounds', async () => {
+  const { session } = await loadedSession()
+  session.commands.edit({ type: 'toggleCourse', courseId: 'CS101', checked: true })
+  const withExceptions: PlanningSessionState = {
+    ...session.getState(),
+    policy: {
+      revision: 'FISI-PLANNING-1',
+      period: '2027-I',
+      allowAfternoon: false,
+      allowSaturday: true,
+      facultyId: 'FISI',
+      source: 'synthetic-faculty-exception',
+      exceptions: { saturdayStartMinute: 540, saturdayEndMinute: 840 },
+    },
+  }
+  const toggledAfternoon = reducePlanningSession(withExceptions, { type: 'updatePlanningException', key: 'allowAfternoon', checked: true })
+  assert.deepEqual(toggledAfternoon.policy, {
+    revision: 'FISI-PLANNING-1',
+    period: '2027-I',
+    allowAfternoon: true,
+    allowSaturday: true,
+    facultyId: 'FISI',
+    source: 'synthetic-faculty-exception',
+    exceptions: { saturdayStartMinute: 540, saturdayEndMinute: 840 },
+  })
+  const periodChanged = reducePlanningSession(toggledAfternoon, { type: 'applyPeriodDefaults', period: '2026-II' })
+  assert.deepEqual(periodChanged.policy?.exceptions, { saturdayStartMinute: 540, saturdayEndMinute: 840 })
+  assert.equal(periodChanged.policy?.facultyId, 'FISI')
+  assert.equal(periodChanged.policy?.source, 'synthetic-faculty-exception')
+
+  // Disabling allowSaturday drops saturdayStartMinute/saturdayEndMinute so validatePlanningPolicy remains valid
+  const disabledSaturday = reducePlanningSession(toggledAfternoon, { type: 'updatePlanningException', key: 'allowSaturday', checked: false })
+  assert.equal(disabledSaturday.policy?.allowSaturday, false)
+  assert.equal(disabledSaturday.policy?.facultyId, 'FISI')
+  assert.equal(disabledSaturday.policy?.source, 'synthetic-faculty-exception')
+  assert.equal(disabledSaturday.policy?.exceptions, undefined)
+})
