@@ -63,3 +63,16 @@ test('whole synthetic inventory fits the new bounds without removing request lim
     assert.throws(() => validateAcademicResources(overflow))
   }
 })
+
+
+test('effective Saturday windows replace earlier values and remain idempotent', () => {
+  const policy = { revision: 'FISI-PLANNING-1', period: '2027-I', allowAfternoon: false, allowSaturday: true,
+    exceptions: { saturdayStartMinute: 840, saturdayEndMinute: 1080 } }
+  const base = [{ day: 1, startMinute: 480, endMinute: 1320 }, { day: 6, startMinute: 480, endMinute: 780 }]
+  const effective = getEffectivePlanningWindows(base, policy)
+  assert.deepEqual(effective, [base[0], { day: 6, startMinute: 840, endMinute: 1080 }])
+  assert.deepEqual(getEffectivePlanningWindows(effective, policy), effective)
+  const closed = { ...policy, allowSaturday: false }
+  delete closed.exceptions
+  assert.deepEqual(getEffectivePlanningWindows(base, closed), [base[0]])
+})

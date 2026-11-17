@@ -19,6 +19,7 @@ await mkdir(evidence, { recursive: true })
 
 const TARGET_REQUIRED_SESSIONS = 332
 const EXPECTED_COURSES = 56
+const includeLoad = process.env.SUM_ASSISTANT_CASES === 'completion-with-explicit-load'
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } })
 page.setDefaultTimeout(15000)
@@ -138,8 +139,7 @@ try {
     const checkedNow = (await checkbox.getAttribute('aria-checked')) === 'true'
     if (rec.patch.kind === 'increase_teacher_load') {
       assert.equal(checkedNow, false, `Load recommendation ${rec.id} must not be selected by default`)
-      excludedLoadIds.push(rec.id)
-      continue
+      if (!includeLoad) { excludedLoadIds.push(rec.id); continue }
     }
     if (!checkedNow) {
       await checkbox.click()
@@ -150,7 +150,8 @@ try {
   const selectedRecommendations = initial.recommendations.filter((rec) => selectedIds.includes(rec.id))
   check('select-new-options-without-silent-load-increase', () => {
     assert.ok(selectedIds.length > 0)
-    assert.equal(selectedRecommendations.some((rec) => rec.patch.kind === 'increase_teacher_load'), false)
+    assert.equal(selectedRecommendations.some((rec) => rec.patch.kind === 'increase_teacher_load'), includeLoad)
+    assert.ok(selectedRecommendations.some((rec) => rec.patch.kind === 'change_teacher_assignment_mode'))
   })
   await page.screenshot({ path: resolve(evidence, 'completion-selection.png') })
 
@@ -240,8 +241,16 @@ try {
       assert.equal(regeneratedDemand.estimatedDemand, initialDemand.estimatedDemand)
       assert.equal(regeneratedDemand.targetCapacity, initialDemand.targetCapacity)
     }
-    const silentLoadIncreases = teacherLoadDeltas.filter((item) => item.delta !== null && item.delta > 0)
-    assert.deepEqual(silentLoadIncreases, [], 'Silent teacher load increase detected without increase_teacher_load selection')
+    const approvedChanges = new Map(selectedRecommendations.flatMap(rec => rec.patch.kind === 'increase_teacher_load' ? rec.patch.adjustments.map(row => [row.teacherId, row]) : []))
+    for (const teacher of generationInputs[1].resources.teachers) {
+      const previous = initialTeachers.get(teacher.id)
+      const explicit = approvedChanges.get(teacher.id)
+      if (explicit) {
+        assert.equal(previous, explicit.previousMaxWeeklyMinutes)
+        assert.equal(teacher.maxWeeklyMinutes, explicit.nextMaxWeeklyMinutes)
+      } else if (previous !== undefined) assert.equal(teacher.maxWeeklyMinutes, previous, 'Unselected teacher load changed')
+    }
+    for (const id of approvedChanges.keys()) assert.ok(generationInputs[1].resources.teachers.some(t => t.id === id))
     for (const rec of selectedRecommendations) {
       const patch = rec.patch
       if (patch.kind === 'enable_planning_window') {
@@ -271,6 +280,11 @@ try {
     assert.ok(gains.scheduledSessions > 0 || after.scheduledSessions === after.requiredSessions)
   })
 
+  if (includeLoad) check('complete-target-with-explicit-selected-load', () => {
+    assert.equal(targetMet, true, 'Explicit synthetic scenario must regenerate all 332 sessions')
+    assert.equal(after.totalSections, 166)
+  })
+
   await statusBar(page).waitFor()
   const uiStatus = await statusBar(page).getAttribute('data-status')
   check('partial-result-never-claims-complete-in-ui', () => {
@@ -293,6 +307,7 @@ try {
   await browser.close()
   await writeFile(resolve(evidence, 'acceptance.json'), JSON.stringify({
     source: 'Own synthetic React/NestJS/Python, LLM-free, no API key required',
+    includeLoad,
     targetMet,
     completion,
     checks,

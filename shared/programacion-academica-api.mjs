@@ -518,6 +518,9 @@ export function validateAcademicProposal(value) {
   if (value.status === 'complete' && value.sections.some((section) => !value.assignments.some((assignment) => assignment.sectionId === section.sectionId))) throw new TypeError('Propuesta completa con sección sin asignar')
   for (const section of value.sections) {
     const assignments = value.assignments.filter((assignment) => assignment.sectionId === section.sectionId)
+    if (section.teacherAssignmentMode === 'tp-grouped-l-independent' && assignments.some((assignment) => !assignment.sessionType)) {
+      throw new TypeError('La asignación por grupos requiere tipo de sesión explícito')
+    }
     const groups = getSectionComponentGroups(assignments, section.teacherAssignmentMode ?? 'single-teacher-section')
     for (const group of groups) {
       if (new Set(group.map((assignment) => assignment.teacherId)).size > 1) throw new TypeError('Sección con docentes responsables distintos')

@@ -1,6 +1,11 @@
 export const PLANNING_LIMITS: Readonly<{ courses: 96; teachers: 128; rooms: 128; sessions: 1024 }>
 export const THESIS_COURSE_IDS: readonly string[]
 export const KNOWN_FACULTY_IDS: readonly ['FISI']
+export const FACULTY_PLANNING_PROFILES: Readonly<Record<'FISI', Readonly<{
+  facultyId: 'FISI'; weekdayStartMinute: number; weekdayEndMinute: number
+  seniorCycleThreshold: number; seniorDefaultStartMinute: number; seniorAfternoonStartMinute: number
+  saturdayStartMinute: number; saturdayDefaultEndMinute: number
+}>>>
 export type PlanningPeriod = `${number}-${'I' | 'II'}`
 export type PlanningPolicyExceptions = { saturdayStartMinute?: number; saturdayEndMinute?: number }
 export type PlanningPolicy = {

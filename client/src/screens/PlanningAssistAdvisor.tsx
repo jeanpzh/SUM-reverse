@@ -1,6 +1,6 @@
 import { BookOpen, ListFilter, Search, ShieldAlert } from 'lucide-react'
 import { PlanningFetchLoading } from '../components/PlanningFetchLoading'
-import type { AcademicAdvisorResponse, AcademicProposal, PlanningPeriod } from '../data/academicScheduling'
+import type { AcademicAdvisorResponse, AcademicProposal, PlanningPeriod, PlanningPolicy } from '../data/academicScheduling'
 import { AdvisorFindings } from '../components/ai-elements/AdvisorFindings'
 import { AdvisorImpact } from '../components/ai-elements/AdvisorImpact'
 import { MessageResponse } from '../components/ai-elements/MessageResponse'
@@ -17,6 +17,7 @@ export interface PlanningAssistAdvisorProps {
   simulating: boolean
   impactInvalidated: boolean
   academicPeriod: PlanningPeriod
+  planningPolicy?: PlanningPolicy | null
   /** Saved version of the draft being analysed (null before the first save). */
   draftVersion: number | null
   /** Sections still partial or pending in the proposal being analysed. */
@@ -101,7 +102,7 @@ export function PlanningAssistAdvisor(props: PlanningAssistAdvisorProps) {
       <p className="planning-assist-advisor__note">El alcance es estimado y puede solaparse entre opciones. Solo la simulación mide esta combinación.</p>
       {recommendations.map((rec, index) => <SuggestionCard key={rec.id} index={index + 1}
         recommendation={rec} checked={selectedIds.includes(rec.id)} disabled={busy || isLocked}
-        measured={props.previewCurrent && selectedIds.includes(rec.id)}
+        measured={props.previewCurrent && selectedIds.includes(rec.id)} planningPolicy={props.planningPolicy}
         onCheckedChange={(checked) => props.onToggle(rec.id, checked)}
         teacherNames={props.teacherNames} courseNames={props.courseNames} roomNames={props.roomNames} />)}
     </fieldset> : <p className="planning-assist-advisor__note">No se encontraron opciones ejecutables adicionales para esta configuración. Puedes consultar la normativa.</p>}

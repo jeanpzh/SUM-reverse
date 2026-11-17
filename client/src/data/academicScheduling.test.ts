@@ -513,3 +513,13 @@ test('planning request builder deep-clones additive faculty policy and exception
   policy.exceptions.saturdayStartMinute = 480
   assert.equal(built.planningPolicy.exceptions?.saturdayStartMinute, 540)
 })
+
+test('editing blocks preserve declared teacher groups even when the same teacher teaches adjacent sessions', () => {
+  const assignments = ['T', 'P', 'L'].map((type, index) => ({ ...proposal.assignments[0],
+    sessionId: `GROUP-${type}`, sessionType: type, startMinute: 480 + index * 60, endMinute: 540 + index * 60 }))
+  const grouped = aggregateAcademicBlocks({ sections: [{ ...proposal.sections[0], teacherAssignmentMode: 'tp-grouped-l-independent' }], assignments })
+  assert.deepEqual(grouped.map(block => block.sessionIds), [['GROUP-T', 'GROUP-P'], ['GROUP-L']])
+  const independent = aggregateAcademicBlocks({ sections: [{ ...proposal.sections[0], teacherAssignmentMode: 'per-session' }], assignments })
+  assert.equal(independent.length, 3)
+  assert.equal(aggregateAcademicBlocks({ sections: proposal.sections, assignments }).length, 1)
+})

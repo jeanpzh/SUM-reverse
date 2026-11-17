@@ -462,7 +462,10 @@ export function aggregateAcademicBlocks(proposal: Pick<AcademicProposal, 'sectio
     roomNames: string[]; sessionIds: string[]; capacity: number | null }> = []
   for (const assignment of sorted) {
     const previous = blocks[blocks.length - 1]
-    if (previous && previous.sectionId === assignment.sectionId && previous.teacherId === assignment.teacherId
+    const teacherMode = sections.get(assignment.sectionId)?.teacherAssignmentMode ?? 'single-teacher-section'
+    const sameGroup = teacherMode === 'single-teacher-section' || (teacherMode === 'tp-grouped-l-independent'
+      && assignment.sessionType !== 'L' && previous?.componentTypes.every(type => type !== 'L'))
+    if (sameGroup && previous && previous.sectionId === assignment.sectionId && previous.teacherId === assignment.teacherId
       && previous.day === assignment.day && previous.endMinute === assignment.startMinute) {
       previous.endMinute = assignment.endMinute
       previous.durationMinutes += assignment.endMinute - assignment.startMinute

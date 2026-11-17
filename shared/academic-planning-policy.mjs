@@ -113,8 +113,8 @@ export function isAllowedPlanningInterval(cycle, interval, policy) {
   return planningIntervalRank(cycle, interval.startMinute, interval.day, interval.endMinute - interval.startMinute, policy) !== null
 }
 export function getEffectivePlanningWindows(baseWindows, policy) {
-  const result = baseWindows.map((w) => ({ ...w }))
-  if (!policy) return result
+  if (!policy) return baseWindows.map((w) => ({ ...w }))
+  const result = baseWindows.filter((w) => w.day !== 6).map((w) => ({ ...w }))
   const profile = resolvePlanningTimeProfile(policy)
   if (profile.saturdayAllowed) {
     result.push({ day: 6, startMinute: profile.saturdayStartMinute, endMinute: profile.saturdayEndMinute })

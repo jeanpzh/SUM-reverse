@@ -101,7 +101,8 @@ export function PlanningStatusBar({ contextContainer, mobileActionContainer, onR
   useEffect(() => () => requestRef.current?.abort(), [proposal.proposalId, editVersion])
   useEffect(() => planningAssist.registerAdvisor(), [])
   const { slot: advisorSlot } = usePlanningAssist()
-  const draftVersion = usePlanningSessionContext().state.draft.version
+  const sessionState = usePlanningSessionContext().state
+  const draftVersion = sessionState.draft.version
 
   const currentAdvice = advisorData?.proposalId === proposal.proposalId && advisorData.editVersion === editVersion
     ? advisorData : null
@@ -275,7 +276,7 @@ export function PlanningStatusBar({ contextContainer, mobileActionContainer, onR
       </Dialog>
       {advisorSlot && createPortal(<PlanningAssistAdvisor
         chat={chat} proposal={proposal} simulating={advisorLoading && simulationRequested} impactInvalidated={impactInvalidated}
-        academicPeriod={academicPeriod} draftVersion={draftVersion} openSections={coverage.partial + coverage.pending}
+        academicPeriod={academicPeriod} planningPolicy={sessionState.policy} draftVersion={draftVersion} openSections={coverage.partial + coverage.pending}
         requested={advisorRequested} loading={advisorLoading} error={advisorError} advice={currentAdvice} impact={impact}
         selectedIds={selectedRecIds} applying={applying} isLocked={isLocked} canApply={Boolean(onApplyAdvisorPatches)}
         previewCurrent={previewCurrent} applyDisabledReason={applyDisabledReason} applyDisabledReasonId={applyDisabledReasonId}

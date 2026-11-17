@@ -141,6 +141,9 @@ test('component grouping preserves legacy section ownership by default and suppo
     stats: { exploredCandidates: 1, candidateVisits: 1, backtracks: 0, limitReason: null },
   }
   assert.doesNotThrow(() => validateAcademicProposal(proposal))
+  const missingType = structuredClone(proposal)
+  delete missingType.assignments[0].sessionType
+  assert.throws(() => validateAcademicProposal(missingType), /tipo de sesión explícito/)
   const splitTP = structuredClone(proposal)
   splitTP.assignments[1].teacherId = 'TB'
   assert.throws(() => validateAcademicProposal(splitTP))
