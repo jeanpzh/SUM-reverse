@@ -294,3 +294,30 @@ rechazando claves no declaradas.
 | ReportRow | `cycle`, `label`, `teacher` | como arriba | Copiados de la oferta al aceptar. |
 
 El backend los rellena con datos sintéticos (L-13). Un `historyKnown` falso produce `retakeCourseIds: []`.
+# Extensión local MR-SESSION-DETAILS-1 (2026-11-17)
+
+Corrección autorizada del recorrido publicación → oferta → alumno. Es contrato propio sintético, no evidencia del backend SUM. Amplía de forma aditiva `MatriculaRegularMeeting` y el tipo interno `Meeting`, sin cambiar rutas, revisión de política, selección, reglas ni campos temporales existentes.
+
+```ts
+interface MeetingDetails {
+  sessionId: string
+  teacherId: string
+  teacherName: string
+  roomId: string
+  roomName: string
+  sessionType?: 'T' | 'P' | 'L'
+}
+// Dentro de cada meeting de sección y de reporte aceptado:
+// { day, startMinute, endMinute, details?: MeetingDetails }
+```
+
+`details` es opcional para productores/documentos legacy. Si aparece, todos sus seis identificadores/nombres son strings no vacíos; son referencias del planificador, no IDs `SYN-*` de matrícula. `sessionType`, si se conoce, solo admite T/P/L. Validación runtime estricta de claves y tipos, también al recuperar persistencia y al consumir HTTP. No fabricar valores para completar el objeto ni inferir una clase por posición de la sesión.
+
+La factory de oferta operativa conserva una entrada por asignación publicada, con el mismo día/inicio/fin y sus detalles de origen. Resolver clase a partir de la asignación o del requisito/patrón explícito; si falta evidencia, omitir `sessionType`. Campos escalares de sección `teacher` y `room` permanecen compatibles: resumen de todos los nombres distintos presentes, orden estable, nunca ocultar el docente de laboratorio eligiendo solo el primero.
+
+El reporte aceptado copia profundamente `schedule`, incluidos `details`. No consulta una oferta/publicación posterior para completar metadatos de una matrícula ya aceptada. La persistencia conserva la instantánea; documentos antiguos sin details siguen válidos y muestran datos desconocidos, no rellenados desde otra oferta.
+
+Consumidores autorizados: proyección de Programación de Asignaturas, detalle expandible del selector de sección existente y bloques del calendario del alumno. Conservar estructura SUM, componentes y navegación; mostrar tipo/docente/aula reales por sesión en el detalle y nombres accesibles, con resumen breve en bloque. No añadir una segunda API o lista paralela de sesiones. El calendario podrá recibir campos opcionales de presentación derivados de details; el reloj de contexto queda para ticket G.
+
+Aceptación: publicación sintética T/P con docente A y L con docente B y ambientes distintos llega a oferta, selección, reporte aceptado, reinicio y calendario/proyección con datos exactos; varios docentes/ambientes no se colapsan a uno; legacy válido; metadata inválida rechazada; una publicación nueva no modifica reporte anterior; aislamiento de alumnos/ofertas y cero cambios en reglas de matrícula.
+
