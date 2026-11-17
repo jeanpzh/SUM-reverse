@@ -239,6 +239,14 @@ def _requires_authorization(rec: AdvisorRecommendation) -> bool:
     return bool(rec.normativeContrast and rec.normativeContrast.requiresExternalAuthorization)
 
 
+def _authorization_scope(rec: AdvisorRecommendation) -> int:
+    """How many authorizations an option asks for: one per teacher whose load rises, one for
+    any other option that requires authorization, none otherwise."""
+    if rec.patch.kind == "increase_teacher_load":
+        return max(1, len(rec.patch.adjustments))
+    return int(_requires_authorization(rec))
+
+
 _SCOPED_TITLE = re.compile(r"solo (?:para|en) (.+?)(?:\s*\(|$)")
 _LEVER_CUE = {"increase_teacher_load": "carga", "change_delivery_mode": "divid"}
 
@@ -271,8 +279,8 @@ LLM_OUTPUT_RULE_HINTS = {
     ),
     "zero_impact_option_first": "No empieces por una opción que no destrabó componentes cuando otra sí destrabó.",
     "dominated_option_first": (
-        "Empieza por la opción con más componentes destrabados, salvo que otra destrabe lo mismo "
-        "y requiera menos autorización."
+        "Empezaste por una opción que otra supera: destraba al menos lo mismo con igual o menos "
+        "autorizaciones. Empieza por la mejor, o por una que pida menos autorizaciones."
     ),
 }
 
@@ -302,16 +310,16 @@ def llm_output_issue(
         return "authorization_claim"
     # The summary must not lead with an option measured at zero when another one unlocks
     # components, nor with one another option dominates: at least the same measured impact,
-    # no stricter authorization, and strictly better on one of the two.
+    # no more authorizations, and strictly better on one of the two.
     lead = _first_mentioned(parsed["summary"], recommendations)
     if lead is not None and unlocked_by_id and lead.id in unlocked_by_id:
-        lead_impact, lead_auth = unlocked_by_id[lead.id], _requires_authorization(lead)
+        lead_impact, lead_auth = unlocked_by_id[lead.id], _authorization_scope(lead)
         if lead_impact == 0 and max(unlocked_by_id.values()) > 0:
             return "zero_impact_option_first"
         for other in recommendations:
             if other.id == lead.id or other.id not in unlocked_by_id:
                 continue
-            impact, auth = unlocked_by_id[other.id], _requires_authorization(other)
+            impact, auth = unlocked_by_id[other.id], _authorization_scope(other)
             if impact >= lead_impact and auth <= lead_auth and (impact > lead_impact or auth < lead_auth):
                 return "dominated_option_first"
     return None

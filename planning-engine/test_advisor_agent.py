@@ -421,11 +421,13 @@ def test_authorization_guard_follows_the_subject_of_the_claim(text, kinds, claim
     assert _claims_no_authorization(text, kinds) is claims
 
 
-def _load_rec(rec_id, title):
+def _load_rec(rec_id, title, teachers=1):
     from models import AdvisorRecommendation, IncreaseTeacherLoadPatch, TeacherLoadAdjustment
     return AdvisorRecommendation(
         id=rec_id, title=title, rationale='r', impactSummary='i', recommendedByDefault=False,
-        patch=IncreaseTeacherLoadPatch(adjustments=[TeacherLoadAdjustment(teacherId='t', previousMaxWeeklyMinutes=1, nextMaxWeeklyMinutes=2)]),
+        patch=IncreaseTeacherLoadPatch(adjustments=[
+            TeacherLoadAdjustment(teacherId=f't{i}', previousMaxWeeklyMinutes=1, nextMaxWeeklyMinutes=2) for i in range(teachers)
+        ]),
     )
 
 
@@ -433,17 +435,22 @@ def test_summary_leading_with_a_dominated_option_is_rejected():
     from advisor import _apply_validated_llm_output
     _, _, _, codec = build_deterministic_analysis(sample())
     recs = [
-        _load_rec('load-all', 'Ampliar carga máxima semanal de 22 docente(s) habilitados'),
+        _load_rec('load-all', 'Ampliar carga máxima semanal de 22 docente(s) habilitados', teachers=22),
         _load_rec('load-course', 'Ampliar carga docente solo para PROGRAMACIÓN Y FUNDAMENTOS DE ALGORÍTMICA (1 docente(s))'),
+        _load_rec('load-calc', 'Ampliar carga docente solo para CÁLCULO I (1 docente(s))'),
     ]
-    impacts = {'load-all': 79, 'load-course': 9}
-    real = ("Primero, considera aumentar la carga docente para el curso 'PROGRAMACIÓN Y FUNDAMENTOS DE ALGORÍTMICA' "
-            "ya que tiene el mayor impacto medido (9 componentes).")
-    source, _, _ = _apply_validated_llm_output({'summary': real, 'prioritizedIds': []}, 'fake', 'base', recs, codec, unlocked_by_id=impacts)
-    assert source.fallbackReason == 'invalid_llm_output'
-    fine = 'Primero aplica Ampliar carga máxima semanal de 22 docente(s) habilitados; requiere autorización.'
-    source, _, _ = _apply_validated_llm_output({'summary': fine, 'prioritizedIds': []}, 'fake', 'base', recs, codec, unlocked_by_id=impacts)
-    assert source.mode == 'llm-assisted'
+    impacts = {'load-all': 79, 'load-course': 9, 'load-calc': 6}
+
+    def mode(summary):
+        return _apply_validated_llm_output({'summary': summary, 'prioritizedIds': []}, 'fake', 'base', recs, codec, unlocked_by_id=impacts)[0].mode
+
+    # One teacher for 9 components is not dominated by 22 teachers for 79: fewer authorizations.
+    start_small = ("Primero, considera aumentar la carga docente para el curso 'PROGRAMACIÓN Y FUNDAMENTOS DE ALGORÍTMICA' "
+                   "ya que pide una sola autorización (9 componentes).")
+    assert mode(start_small) == 'llm-assisted'
+    # Same single authorization, fewer components: dominated.
+    assert mode('Primero amplía la carga docente solo para CÁLCULO I, ya que destraba 6 componentes.') == 'deterministic-fallback'
+    assert mode('Primero aplica Ampliar carga máxima semanal de 22 docente(s) habilitados; requiere autorización.') == 'llm-assisted'
 
 
 def test_cut_off_run_below_the_current_schedule_is_labelled_inconclusive():
