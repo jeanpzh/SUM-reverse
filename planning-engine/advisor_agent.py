@@ -59,6 +59,7 @@ def run_cpsat_dry_run(req, recommendations, recommendation_ids, *, max_time_seco
     )
 
 
+from advisor_capacity import DAY_NAMES, ROOM_KIND_NAMES
 from rag_models import create_chat_model
 
 
@@ -86,6 +87,27 @@ class RegisteredTool:
     lc_tool: Any
     validate_args: Callable[[dict[str, Any]], dict[str, Any]]
     handler: Callable[[dict[str, Any]], tuple[str, str]]
+
+
+def _free_slot_context(diag: BlockerDiagnosis, limit: int = 8) -> dict[str, Any]:
+    return {
+        "note": "Huecos libres sin mover lo asignado, sección por sección: candidatos, no impacto medido.",
+        "fitSectionCount": len(diag.freeSlots.fits),
+        "unfitSectionCount": len(diag.freeSlots.unfitSectionIds),
+        "fits": [
+            {
+                "courseId": fit.courseId,
+                "sectionId": fit.sectionId,
+                "sessionCount": fit.sessionCount,
+                "windowLevers": fit.windowLevers,
+                "needsTeacherLoad": fit.needsTeacherLoad,
+                "slots": [
+                    f"{DAY_NAMES[s.day]} {s.band} ({ROOM_KIND_NAMES[s.roomKind]})" for s in fit.slots[:3]
+                ],
+            }
+            for fit in diag.freeSlots.fits[:limit]
+        ],
+    }
 
 
 def _summarize_diagnosis_for_agent(
@@ -177,6 +199,7 @@ def _summarize_diagnosis_for_agent(
         "topTeacherSlack": top_teacher_slack,
         "pendingByCycle": pending_by_cycle,
         "pendingByCourse": pending_by_course,
+        "freeSlotFits": _free_slot_context(diag),
         "bottlenecks": [b.model_dump() for b in bottlenecks],
         "recommendations": [
             {
@@ -436,6 +459,9 @@ async def run_advisor_agent(
                         "Si requiresExternalAuthorization es true, dilo; toda ampliación de carga docente la requiere. "
                         "Menciona solo combinaciones que simulaste con simulate_patches_cpsat en esta conversación. "
                         "Nombra las opciones por su title, nunca por su id. "
+                        "freeSlotFits indica dónde hay huecos libres y qué palanca los abre; úsalo para elegir qué variantes "
+                        "pedir o simular y para nombrar días y franjas concretos, pero nunca como impacto: no digas cuántos "
+                        "componentes se destraban a partir de él. "
                         "rationalesById: para las 3 primeras recomendaciones, una frase que explique por qué esa opción encaja en "
                         "este diagnóstico concreto (cuello de botella, franja o resultado de simulación), no qué cambia. "
                         "Las herramientas aceptan solo IDs de recomendaciones, kinds y scopes cerrados (ver variantScopes), nunca identidades docentes. "
@@ -468,6 +494,7 @@ async def run_advisor_agent(
                             "normativeContext": normative_context,
                             "verifiedImpact": impact.model_dump(),
                             "variantScopes": variant_scopes(req, diag),
+                            "freeSlotFits": _free_slot_context(diag),
                         }
                     ),
                 },

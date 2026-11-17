@@ -12,7 +12,8 @@ from advisor_catalog import (
     rank_recommendations,
     resolve_catalog_variants,
 )
-from advisor_diagnosis import diagnose
+from advisor_capacity import describe_free_slots
+from advisor_diagnosis import BlockerDiagnosis, diagnose
 from models import (
     AcademicAdvisorResponse,
     AdvisorAnalyzeRequest,
@@ -61,6 +62,28 @@ class AdvisorPrivacyCodec:
         ):
             result = result.replace(alias, real_name)
         return result
+
+
+def _free_slot_finding(diag: BlockerDiagnosis) -> AdvisorBottleneck | None:
+    if diag.totalPendingCount == 0:
+        return None
+    screen = diag.freeSlots
+    window_fits = sum(1 for fit in screen.fits if fit.windowLevers and not fit.needsTeacherLoad)
+    load_fits = sum(1 for fit in screen.fits if fit.needsTeacherLoad)
+    if not screen.fits:
+        category = "other"
+    elif window_fits >= load_fits and window_fits:
+        category = "planning_window"
+    elif load_fits:
+        category = "teacher_load"
+    else:
+        category = "other"
+    return AdvisorBottleneck(
+        category=category,
+        title="Huecos libres sin mover lo asignado",
+        detail=describe_free_slots(screen, len(diag.pendingSectionIds)),
+        affectedSessionCount=screen.fitSessionCount,
+    )
 
 
 def build_deterministic_analysis(
@@ -123,6 +146,10 @@ def build_deterministic_analysis(
         f"La propuesta cubre {scheduled_count}/{total_count} componentes requeridos y deja {diag.totalPendingCount} componentes pendientes en {len(diag.pendingSectionIds)} sección(es). "
         f"Se identificaron {len(bottlenecks)} cuello(s) de botella principales y {len(recommendations)} recomendación(es) aplicables sobre el workspace antes de regenerar con el solver CP-SAT."
     )
+    # A finding, not a bottleneck: appended after the summary counts the bottlenecks.
+    free_slot_finding = _free_slot_finding(diag)
+    if free_slot_finding is not None:
+        bottlenecks.append(free_slot_finding)
     return summary, bottlenecks, recommendations, codec
 
 

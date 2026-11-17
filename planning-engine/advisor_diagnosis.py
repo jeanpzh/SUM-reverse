@@ -13,6 +13,7 @@ from models import (
     PlanningPolicyInput,
 )
 from solver import is_eligible_for_course
+from advisor_capacity import FreeSlotScreen, screen_free_slots
 
 BandName = Literal["mañana", "tarde", "noche"]
 RoomKind = Literal["classroom", "laboratory"]
@@ -76,6 +77,7 @@ class BlockerDiagnosis(BaseModel):
     potentialAfternoonFreeMinutes: int = 0
     weekdayAvailableMinutes: int = 0
     weekdayUsedMinutes: int = 0
+    freeSlots: FreeSlotScreen = Field(default_factory=lambda: FreeSlotScreen(fits=[], unfitSectionIds=[]))
 
     @property
     def weekdaySaturationRatio(self) -> float | None:
@@ -330,4 +332,5 @@ def diagnose(req: AdvisorAnalyzeRequest) -> BlockerDiagnosis:
         potentialAfternoonFreeMinutes=max(0, potential_afternoon_available - afternoon_used),
         weekdayAvailableMinutes=weekday_available,
         weekdayUsedMinutes=weekday_used,
+        freeSlots=screen_free_slots(req),
     )
