@@ -124,15 +124,18 @@ test('verified impact renders actual before/after counters and honest solver lim
   for (const text of ['Simulación verificada en CP-SAT', 'Actual', 'Simulada', '1/3', '2/3', '2/4', '3/4', 'Búsqueda inconclusa', 'Alcance de la simulación']) assert.ok(html.includes(text), text)
   assert.doesNotMatch(html, /imposible|puede obtener otra cobertura/)
   const pending = render(AdvisorImpact, {})
-  assert.ok(pending.includes('Sin vista previa vigente'))
+  assert.ok(pending.includes('Impacto no simulado.'))
+  assert.ok(pending.includes('Simular selección actual'))
   assert.doesNotMatch(pending, /<table|Simulación verificada/)
 })
 
-test('advisor prioritizes measured bottlenecks while full diagnosis remains behind disclosure', () => {
+test('advisor exposes bottleneck counts and keeps supporting evidence behind disclosure', () => {
   const html = render(AdvisorFindings, { advice: { summary: 'Explicación sintética completa.', bottlenecks: [
     { category: 'teacher_load', title: 'Carga insuficiente', detail: 'Detalle sintético del cuello.', affectedSessionCount: 5 },
   ] } })
-  for (const text of ['Qué limita la cobertura', 'Carga insuficiente', '5 componentes afectados', 'Ver explicación completa']) assert.ok(html.includes(text), text)
+  const visibleText = html.replace(/<[^>]*>/g, '')
+  for (const text of ['Qué limita la cobertura', 'Carga insuficiente', '5 componentes afectados:', 'Ver evidencia y motivos']) assert.ok(visibleText.includes(text), text)
+  assert.ok(html.includes('aria-expanded="false"'))
   assert.doesNotMatch(html, /Explicación sintética completa|Detalle sintético del cuello/)
   const noFindings = render(AdvisorFindings, { advice: { summary: 'Diagnóstico sin cuellos identificados.', bottlenecks: [] } })
   assert.ok(noFindings.includes('Diagnóstico sin cuellos identificados.'))
