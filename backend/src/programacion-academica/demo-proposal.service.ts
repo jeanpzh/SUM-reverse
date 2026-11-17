@@ -290,9 +290,14 @@ export class DemoProposalService {
     })
     if (!effectiveChange) return structuredClone(current)
 
-    const nextSectionAssignments = assignments.filter((assignment) => assignment.sectionId === section.sectionId)
-    const nonLabAssignment = nextSectionAssignments.find((assignment) => assignment.sessionType !== 'L')
-    const responsibleTeacherId = (nonLabAssignment ?? nextSectionAssignments[0])?.teacherId
+    const nextAssignmentById = new Map(
+      assignments.filter((assignment) => assignment.sectionId === section.sectionId).map((assignment) => [assignment.sessionId, assignment]),
+    )
+    const orderedSectionAssignments = requirements
+      .map((requirement) => nextAssignmentById.get(requirement.id))
+      .filter((assignment): assignment is NonNullable<typeof assignment> => Boolean(assignment))
+    const nonLabAssignment = orderedSectionAssignments.find((assignment) => assignment.sessionType !== 'L')
+    const responsibleTeacherId = (nonLabAssignment ?? orderedSectionAssignments[0])?.teacherId
     const sections = current.sections.map((item) => item.sectionId === section.sectionId && responsibleTeacherId !== undefined
       ? { ...item, responsibleTeacherId }
       : item)
@@ -445,9 +450,17 @@ export class DemoProposalService {
     const sections = (result.schedule?.sections ?? []).map((section) => {
       const course = input.courses.find((course) => course.courseId === section.courseId)!
       const teacherMode = course.teacherAssignmentMode ?? 'single-teacher-section'
-      const sectionAssignments = assignments.filter((assignment) => assignment.sectionId === section.id)
-      const nonLabAssignment = sectionAssignments.find((assignment) => result.requirements.find((required) => required.id === assignment.id)?.type !== 'L')
-      const responsibleTeacherId = (nonLabAssignment ?? sectionAssignments[0])?.teacherId
+      const sectionAssignmentById = new Map(
+        assignments.filter((assignment) => assignment.sectionId === section.id).map((assignment) => [assignment.id, assignment]),
+      )
+      const orderedRequirements = result.requirements
+        .filter((requirement) => requirement.sectionId === section.id)
+        .sort((left, right) => left.order - right.order)
+      const orderedSectionAssignments = orderedRequirements
+        .map((requirement) => ({ requirement, assignment: sectionAssignmentById.get(requirement.id) }))
+        .filter((item): item is { requirement: RequiredSession, assignment: NonNullable<typeof item.assignment> } => Boolean(item.assignment))
+      const nonLabAssignment = orderedSectionAssignments.find(({ requirement }) => requirement.type !== 'L')?.assignment
+      const responsibleTeacherId = (nonLabAssignment ?? orderedSectionAssignments[0]?.assignment)?.teacherId
       return {
         sectionId: section.id,
         courseId: section.courseId,
