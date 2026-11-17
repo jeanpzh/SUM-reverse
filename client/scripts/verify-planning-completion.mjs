@@ -280,6 +280,36 @@ try {
     assert.ok(gains.scheduledSessions > 0 || after.scheduledSessions === after.requiredSessions)
   })
 
+  check('regeneration-respects-eligibility-availability-capacity-and-selected-loads', () => {
+    const input = generationInputs[1]
+    const teachers = new Map(input.resources.teachers.map(t => [t.id, t]))
+    const rooms = new Map(input.resources.rooms.map(r => [r.id, r]))
+    const loads = new Map()
+    const sectionsByTeacherCourse = new Map()
+    const covers = (windows, assignment) => windows.some(w => w.day === assignment.day
+      && w.startMinute <= assignment.startMinute && w.endMinute >= assignment.endMinute)
+    for (const a of regenerated.assignments) {
+      const teacher = teachers.get(a.teacherId), room = rooms.get(a.roomId)
+      assert.ok(teacher && room)
+      assert.ok(teacher.courseIds.includes(a.courseId))
+      assert.ok(covers(teacher.availability, a), 'Teacher availability violated')
+      assert.ok(covers(room.availability, a), 'Room availability violated')
+      const section = regenerated.sections.find(s => s.sectionId === a.sectionId)
+      assert.ok(room.capacity >= section.capacity)
+      if (input.planningPolicy && a.sessionType === 'L') assert.equal(room.kind, 'laboratory')
+      loads.set(a.teacherId, (loads.get(a.teacherId) ?? 0) + a.endMinute - a.startMinute)
+      const key = `${a.teacherId}:${a.courseId}`
+      if (!sectionsByTeacherCourse.has(key)) sectionsByTeacherCourse.set(key, new Set())
+      sectionsByTeacherCourse.get(key).add(a.sectionId)
+    }
+    for (const [id, teacher] of teachers) {
+      assert.ok((loads.get(id) ?? 0) <= teacher.maxWeeklyMinutes, 'Selected weekly load exceeded')
+      for (const limit of teacher.sectionLimits ?? []) {
+        assert.ok((sectionsByTeacherCourse.get(`${id}:${limit.courseId}`)?.size ?? 0) <= limit.maxSections)
+      }
+    }
+  })
+
   if (includeLoad) check('complete-target-with-explicit-selected-load', () => {
     assert.equal(targetMet, true, 'Explicit synthetic scenario must regenerate all 332 sessions')
     assert.equal(after.totalSections, 166)
