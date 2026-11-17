@@ -80,6 +80,30 @@ describe('E1 teacher review persistence', () => {
     expect(resumed.body.draft.review.history.map((event: { type: string }) => event.type)).toEqual(['submitted', ...teacherIds.map(() => 'decision')])
   })
 
+  it('treats an identical teacher response as idempotent, including a stale retry', async () => {
+    const saved = await createSavedDraft()
+    const submitted = await supertest(app.getHttpServer()).post(`${api}/borradores/${saved.id}/revision/enviar`).send({ expectedVersion: saved.version }).expect(200)
+    const teacherId = submitted.body.draft.review.teachers[0].teacherId
+    const response = (expectedVersion: number, observation = 'Synthetic note') => supertest(app.getHttpServer())
+      .post(`${api}/borradores/${saved.id}/revision/responder`).send({ expectedVersion, round: submitted.body.draft.review.round,
+        teacherId, decision: 'changes-requested', observation })
+    const first = await response(submitted.body.draft.version).expect(200)
+    const retry = await response(first.body.draft.version, 'Synthetic note').expect(200)
+    const staleRetry = await response(submitted.body.draft.version).expect(200)
+    expect(retry.body.draft.version).toBe(first.body.draft.version)
+    expect(staleRetry.body.draft.version).toBe(first.body.draft.version)
+    expect(staleRetry.body.draft.review.history.filter((event: { type: string }) => event.type === 'decision')).toHaveLength(1)
+
+    const changedObservation = await response(first.body.draft.version, 'Different note').expect(200)
+    expect(changedObservation.body.draft.version).toBe(first.body.draft.version + 1)
+    expect(changedObservation.body.draft.review.history.filter((event: { type: string }) => event.type === 'decision')).toHaveLength(2)
+    const changedDecision = await supertest(app.getHttpServer()).post(`${api}/borradores/${saved.id}/revision/responder`).send({
+      expectedVersion: changedObservation.body.draft.version, round: submitted.body.draft.review.round, teacherId, decision: 'conformity', observation: '',
+    }).expect(200)
+    expect(changedDecision.body.draft.version).toBe(changedObservation.body.draft.version + 1)
+    expect(changedDecision.body.draft.review.history.filter((event: { type: string }) => event.type === 'decision')).toHaveLength(3)
+  })
+
   it('requires an observation for changes, rejects stale version and round, and creates a new review round on resubmission', async () => {
     const saved = await createSavedDraft()
     const submitted = await supertest(app.getHttpServer()).post(`${api}/borradores/${saved.id}/revision/enviar`).send({ expectedVersion: saved.version }).expect(200)
@@ -228,10 +252,10 @@ describe('E1 teacher review persistence', () => {
     let draft = await service.submitReview(saved.id, { expectedVersion: saved.version }).then((result) => result.draft)
     const teacherId = draft.review!.teachers[0]!.teacherId
     for (let round = 1; round < 100; round++) {
-      draft = (await service.decideReview(saved.id, { expectedVersion: draft.version, round, teacherId, decision: 'conformity', observation: '' })).draft
+      draft = (await service.decideReview(saved.id, { expectedVersion: draft.version, round, teacherId, decision: 'changes-requested', observation: `Synthetic observation ${round}` })).draft
       draft = (await service.submitReview(saved.id, { expectedVersion: draft.version })).draft
     }
-    draft = (await service.decideReview(saved.id, { expectedVersion: draft.version, round: 100, teacherId, decision: 'conformity', observation: '' })).draft
+    draft = (await service.decideReview(saved.id, { expectedVersion: draft.version, round: 100, teacherId, decision: 'changes-requested', observation: 'Synthetic observation 100' })).draft
     const fileBefore = new SavedDraftStore(directory).read(saved.id)
     await expect(service.submitReview(saved.id, { expectedVersion: draft.version })).rejects.toMatchObject({ status: 429, response: { error: { code: 'REVIEW_HISTORY_LIMIT' } } })
     expect(new SavedDraftStore(directory).read(saved.id)).toEqual(fileBefore)

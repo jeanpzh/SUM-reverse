@@ -305,7 +305,8 @@ export class SavedDraftService {
       if (!uuidPattern.test(id)) throw this.httpError(404, 'DRAFT_NOT_FOUND', 'No se encontró la propuesta guardada')
       try { validateAcademicReviewDecision(value) } catch { throw this.httpError(400, 'INVALID_REQUEST', 'Respuesta docente inválida') }
       const decision = value as AcademicReviewDecision
-      const { payload, draft } = this.readReviewDraft(id, decision.expectedVersion)
+      const { payload, draft } = this.readStoredDraft(id)
+      if (this.isLocked(draft)) throw this.httpError(409, 'DRAFT_LOCKED', 'La propuesta aprobada o publicada es inmutable')
       const review = draft.review
       if (!review || !review.round) throw this.httpError(422, 'REVIEW_NOT_SUBMITTED', 'La propuesta no se ha enviado a revisión')
       if (!hasCompleteNonemptyProposal(draft.proposal)) throw this.httpError(422, 'REVIEW_INCOMPLETE', 'Se requiere un horario completo y validado para responder')
@@ -315,14 +316,17 @@ export class SavedDraftService {
       if (teacher.status === 'outdated') throw this.httpError(422, 'TEACHER_REVIEW_OUTDATED', 'El horario del docente cambió; vuelve a enviarlo a revisión')
       const current = teacherFingerprints(draft).get(teacher.teacherId)
       if (!current || current.fingerprint !== teacher.fingerprint) throw this.httpError(422, 'TEACHER_REVIEW_OUTDATED', 'El horario del docente cambió; vuelve a enviarlo a revisión')
+      const observation = decision.observation.trim()
+      if (teacher.status === decision.decision && teacher.observation.trim() === observation) return { draft: structuredClone(draft) }
+      if (draft.version !== decision.expectedVersion) throw this.httpError(409, 'VERSION_MISMATCH', 'La propuesta cambió en otra sesión; recárgala antes de continuar')
       const now = new Date().toISOString()
       const version = draft.version + 1
       this.requireHistoryCapacity(review.history, 1)
       teacher.status = decision.decision
-      teacher.observation = decision.observation
+      teacher.observation = observation
       teacher.decisionVersion = version
       teacher.decidedAt = now
-      review.history.push(reviewEvent('decision', version, review.round, now, teacher.teacherId, teacher.fingerprint, decision.decision, decision.observation))
+      review.history.push(reviewEvent('decision', version, review.round, now, teacher.teacherId, teacher.fingerprint, decision.decision, observation))
       draft.version = version
       draft.updatedAt = now
       draft.state = isReviewReady(draft) ? 'ready-for-approval' : 'in-review'
@@ -492,7 +496,7 @@ export class SavedDraftService {
   }
 
   private requireHistoryCapacity(history: AcademicTeacherReview['history'], additions: number): void {
-    if (history.length + additions > 200) throw this.httpError(429, 'REVIEW_HISTORY_LIMIT', 'Se alcanzó el máximo de eventos del historial de revisión')
+    if (history.length + additions > 200) throw this.httpError(429, 'REVIEW_HISTORY_LIMIT', 'Se alcanzó el máximo de eventos del historial de revisión. Guarda la propuesta como un borrador nuevo para continuar.')
   }
 
   private writeReviewDraft(payload: PersistedDraft, draft: AcademicSavedDraft): void {
