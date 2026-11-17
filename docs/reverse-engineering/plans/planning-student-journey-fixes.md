@@ -28,3 +28,11 @@ Cada worker reproduce el síntoma con una prueba de regresión antes de corregir
 Principal integra secuencialmente y ejecuta checks afectados. Luego auditoría independiente de estándares y requisitos sobre base fija, seguida de E2E T3 Browser en stack propio: 56 cursos → consejero LLM real → simular/aplicar → guardar → revisión → aprobar/publicar/activar → SYN-SIS-A/B → programación consultable → rechazo recuperable → matrícula válida → horario con aulas y docentes por sesión. Repetir 390 px, teclado/foco y recuperación sin alterar publicación anterior. Si el solver no completa una corrida, registrar resultado y diagnosticar sin reducir demanda ni inventar autorizaciones.
 
 Entrega: commits, pruebas reales, capturas comparables, aceptación por criterio y límites pendientes. Sin push o publicación externa nuevos salvo instrucción vigente explícita.
+
+## Checkpoint de integración
+
+- A integrado en `9fd285e`: programación desde oferta operativa. Principal ejecutó 21 tests (nuevo spec, local-profile-academic, enrollment-offer.integration), todos verdes.
+- B integrado en `e38cd60`: principal ejecutó 5 regresiones de horas (incluye SSR real), todas verdes; las 5 pruebas normative compartidas también pasan con backend compilado.
+- C integrado en `669dcf7`: principal ejecutó 6 regresiones de recuperación, todas verdes. Ajuste aislado del principal: textos de EnrollmentResultDialog, contrato histórico L-06 y expectativa browser AC-SUM-08 alineados con conservación autorizada; scripts browser solo comprobados por sintaxis hasta E2E final. Check SSR preexistente T044 esperaba h2/dl/local-only del reporte anterior: se actualizó a heading enfocable, totales y aviso local del reporte SUM actual; 10/10 SSR pasan sin cambiar UI del reporte.
+- D se descompone en D1 (shared + backend, contrato aditivo MR-SESSION-DETAILS-1 fijado en `9d95d37`) y D2 (consumo frontend, pendiente de D1). Así no se despachan capas con contrato indefinido. E y H son independientes de D1; F espera E por ownership de planningSession, G espera D2 por ownership de adaptadores.
+- Auditoría final e integración con navegador todavía pendientes. No considerar los checks de cada ticket aceptación global.

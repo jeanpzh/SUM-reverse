@@ -52,14 +52,14 @@ try {
   await check('T044/P1: report heading is programmatically focusable and rows/total come from the accepted report', async () => {
     const { RegularEnrollmentReportView } = await server.ssrLoadModule('/src/screens/RegularEnrollmentReport.tsx')
     const markup = html(RegularEnrollmentReportView, { report: kit.enrollmentReport() })
-    assert.match(markup, /<h2[^>]*id="regular-enrollment-report-heading"[^>]*tabindex="-1"/)
+    assert.match(markup, /<h[1-6][^>]*id="regular-enrollment-report-heading"[^>]*tabindex="-1"/)
     assert.match(markup, /SYN-SIS-C1/)
     assert.match(markup, /SYN-SIS-C2/)
-    assert.match(markup, /Total de créditos<\/dt><dd>7</)
-    assert.match(markup, /Cursos aceptados<\/dt><dd>2</)
+    assert.match(markup, /Créditos matriculados : 7/)
+    assert.match(markup, /Asignaturas matriculadas : 2/)
     assert.match(markup, /Descargar/)
     assert.match(markup, /Ventana sintética de prueba/)
-    assert.match(markup, /local-only/)
+    assert.match(markup, /no es un documento oficial ni equivale a un visado/)
     assert.doesNotMatch(markup, /REDIRECCIONANDO|M-?01/)
   })
 
