@@ -20,7 +20,7 @@ type Props = {
   busy: boolean
   error: string | null
   onSubmit: () => void
-  onRespond: (teacherId: string, decision: 'conformity' | 'changes-requested', observation: string) => void
+  onRespond: (teacherId: string, decision: 'conformity' | 'changes-requested', observation: string) => Promise<void>
 }
 
 type ReviewTeacher = AcademicTeacherReview['teachers'][number]
@@ -46,6 +46,7 @@ function plural(count: number, one: string, many: string) {
 export function AcademicTeacherReview({ actionContainer, primaryActionId, review, proposal, draftId, draftVersion, dirty, busy, error, onSubmit, onRespond }: Props) {
   const { state } = usePlanningSessionContext()
   const sectionRef = useRef<HTMLElement>(null)
+  const responseInFlight = useRef(false)
   const [role, setRole] = useState<'school' | 'teacher'>('school')
   const [teacherId, setTeacherId] = useState('')
   const [paneOpen, setPaneOpen] = useState(true)
@@ -115,6 +116,20 @@ export function AcademicTeacherReview({ actionContainer, primaryActionId, review
     setRole('teacher')
     requestAnimationFrame(() => document.querySelector<HTMLTextAreaElement>('#academic-review-detail textarea')?.focus())
   }
+  const respond = async (decision: 'conformity' | 'changes-requested') => {
+    if (responseInFlight.current || busy || !selectedTeacher) return
+    responseInFlight.current = true
+    try {
+      await onRespond(selectedTeacher.teacherId, decision, currentObservation.trim())
+      const next = ordered.find((teacher) => teacher.teacherId !== selectedTeacher.teacherId && teacher.status === 'pending')
+      if (next) {
+        openTeacher(next.teacherId, 'teacher')
+        requestAnimationFrame(() => document.querySelector<HTMLTextAreaElement>('#academic-review-detail textarea')?.focus())
+      } else closeDetail()
+    } finally {
+      responseInFlight.current = false
+    }
+  }
 
   const roleControl = <label className="academic-teacher-review__role"><span>Vista simulada</span>
     <select aria-label="Rol simulado de revisión" value={role} onChange={(event) => setRole(event.currentTarget.value as 'school' | 'teacher')}>
@@ -134,7 +149,7 @@ export function AcademicTeacherReview({ actionContainer, primaryActionId, review
 
     {!review && <p className="academic-teacher-review__empty">{emptyMessage}</p>}
     {dirty && review && <p className="academic-teacher-review__warning" role="status">Revisión guardada, cambios locales pendientes. Guarda el horario antes de enviar o responder; el estado no refleja todavía la edición actual.</p>}
-    {error && <div className="academic-teacher-review__alert" role="alert"><span aria-hidden="true">△</span>{error}</div>}
+    {error && <div className="academic-teacher-review__alert" role="alert"><span aria-hidden="true">△</span>{error}{error.includes('REVIEW_HISTORY_LIMIT') && <p>Recuperación: inicia una nueva ronda de revisión para continuar registrando respuestas.</p>}</div>}
     {busy && <p className="academic-teacher-review__note" role="status">Actualizando revisión…</p>}
 
     {teachers.length > 0 && <>
@@ -198,10 +213,10 @@ export function AcademicTeacherReview({ actionContainer, primaryActionId, review
             </label>
             {!currentObservation.trim() && <p className="academic-teacher-review__small">Escribe una observación para solicitar cambios; la conformidad puede enviarse sin texto.</p>}
             <div className="academic-teacher-review__actions">
-              <button type="button" className="academic-teacher-review__button" disabled={!enabled || !review || selectedTeacher.status === 'outdated' || !currentObservation.trim()}
-                onClick={() => onRespond(selectedTeacher.teacherId, 'changes-requested', currentObservation.trim())}>Solicitar cambios</button>
-              <button type="button" className="academic-teacher-review__button" disabled={!enabled || !review || selectedTeacher.status === 'outdated'}
-                onClick={() => onRespond(selectedTeacher.teacherId, 'conformity', currentObservation.trim())}>Dar conformidad</button>
+              <button type="button" className="academic-teacher-review__button" disabled={!enabled || !review || responseInFlight.current || selectedTeacher.status === 'outdated' || (selectedTeacher.status === 'changes-requested' && currentObservation.trim() === selectedTeacher.observation) || !currentObservation.trim()}
+                onClick={() => void respond('changes-requested')}>Solicitar cambios</button>
+              <button type="button" className="academic-teacher-review__button" disabled={!enabled || !review || responseInFlight.current || selectedTeacher.status === 'outdated' || (selectedTeacher.status === 'conformity' && currentObservation.trim() === selectedTeacher.observation)}
+                onClick={() => void respond('conformity')}>Dar conformidad</button>
             </div>
           </div>}
         </aside>}
