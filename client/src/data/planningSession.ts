@@ -938,9 +938,9 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
       }
     },
 
-    async respondReview(teacherId: string, decision: 'conformity' | 'changes-requested', observation: string) {
+    async respondReview(teacherId: string, decision: 'conformity' | 'changes-requested', observation: string): Promise<boolean> {
       const { id, version, review } = state.draft
-      if (!id || !version || !review || state.dirty || state.busy.draft) return
+      if (!id || !version || !review || state.dirty || state.busy.draft) return false
       const mutation = state.mutation
       dispatch({ type: 'review/started' })
       try {
@@ -948,8 +948,10 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
         dispatch({ type: 'review/succeeded', mutation, saved, message: `Respuesta guardada · versión ${saved.version}.`,
           staleMessage: 'La respuesta se guardó sobre la versión anterior; los cambios locales siguen pendientes de guardar.' })
         void refreshDrafts()
+        return true
       } catch (error) {
         dispatch({ type: 'review/failed', message: error instanceof Error ? academicPlanningErrorMessage(error) : 'No se pudo guardar la respuesta local.' })
+        return false
       }
     },
   }

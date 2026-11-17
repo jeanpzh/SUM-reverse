@@ -262,7 +262,7 @@ async function postAcademicReview(path: string, request: AcademicReviewSubmissio
     || !('draft' in body)) throw new Error('La respuesta de revisión local tiene un formato inválido.')
   const draft = (body as { draft: unknown }).draft
   validateAcademicSavedDraft(draft)
-  if (draft.id !== decodeURIComponent(path.split('/')[2] ?? '') || draft.version !== request.expectedVersion + 1) {
+  if (draft.id !== decodeURIComponent(path.split('/')[2] ?? '') || (draft.version !== request.expectedVersion + 1 && draft.version !== request.expectedVersion)) {
     throw new Error('La respuesta de revisión no corresponde a la versión solicitada.')
   }
   return draft
