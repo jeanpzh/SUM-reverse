@@ -260,11 +260,33 @@ def test_http_partial_window_patch_omits_absent_flags_but_keeps_provider_null(mo
     assert body['verifiedImpact']['solverStatus'] in ('complete', 'impossible', 'search-limit')
 
 
+def test_final_answer_breaking_a_rule_gets_one_repair_turn():
+    req = sample()
+    req.selectedRecommendationIds = []
+    ids = [r.id for r in build_deterministic_analysis(req)[2]]
+    tool_args_as_text = AIMessage(content=json.dumps({'recommendation_ids': ids[:1]}))
+    final = AIMessage(content=json.dumps({'summary': 'Aplicar primero la opción medida.', 'prioritizedIds': []}))
+    model = FakeModel([tool_args_as_text, final])
+    result = run(req, model)
+    assert result.source.mode == 'llm-assisted'
+    assert result.summary == 'Aplicar primero la opción medida.'
+    assert 'JSON final corregido' in json.dumps(model.histories[-1], ensure_ascii=False)
+    # Prose instead of JSON gets the same single repair turn.
+    prose = AIMessage(content='Conviene aplicar primero la opción medida.')
+    assert run(req, FakeModel([prose, final])).source.mode == 'llm-assisted'
+    # Only one repair: a second malformed answer falls back.
+    again = FakeModel([tool_args_as_text, tool_args_as_text, final])
+    assert run(req, again).source.fallbackReason == 'invalid_llm_output'
+    assert run(req, FakeModel([prose, prose, final])).source.mode == 'deterministic-fallback'
+
+
 def test_llm_prose_claiming_load_without_authorization_is_rejected():
     req = sample()
     req.selectedRecommendationIds = []
     claim = 'Ampliar la carga de un docente no requiere autorización externa.'
-    result = run(req, FakeModel([AIMessage(content=json.dumps({'summary': claim, 'prioritizedIds': []}))]))
+    reply = AIMessage(content=json.dumps({'summary': claim, 'prioritizedIds': []}))
+    # The repair turn repeats the claim, so the answer falls back.
+    result = run(req, FakeModel([reply, reply]))
     assert result.source.mode == 'deterministic-fallback'
     assert result.source.fallbackReason == 'invalid_llm_output'
     assert result.summary != claim
@@ -375,19 +397,28 @@ def test_model_is_offered_only_action_tools_and_gets_the_diagnosis_up_front():
     assert {'freeSlotFits', 'pendingByCourse', 'topTeacherSlack'} <= set(first_user['diagnosis'])
 
 
-@pytest.mark.parametrize('text,claims', [
-    ('Ampliar la carga de un docente no requiere autorización externa.', True),
-    ('Se puede ampliar la carga sin autorización.', True),
-    ('Amplía la carga de un docente, ya que no requiere autorización externa.', True),
-    ('Primero, pruebe aumentar la carga docente solo para un curso, ya que tiene un impacto medido y no requiere autorización externa.', True),
-    ('Prioriza la tarde sobre ampliar la carga, ya que no requiere autorización externa.', False),
-    ('Habilita la tarde antes que la carga porque no requiere autorización externa.', False),
-    ('Ampliar la carga requiere autorización externa; la tarde no requiere autorización.', False),
-    ('Aplica primero la franja de tarde, ya que no requiere autorización externa. Luego amplía la carga si es necesario.', False),
+LOAD_AND_WINDOW = {'increase_teacher_load', 'enable_planning_window'}
+
+
+@pytest.mark.parametrize('text,kinds,claims', [
+    ('Ampliar la carga de un docente no requiere autorización externa.', LOAD_AND_WINDOW, True),
+    ('Se puede ampliar la carga sin autorización.', LOAD_AND_WINDOW, True),
+    ('Amplía la carga de un docente, ya que no requiere autorización externa.', LOAD_AND_WINDOW, True),
+    ('Primero, pruebe aumentar la carga docente solo para un curso, ya que tiene un impacto medido y no requiere autorización externa.', LOAD_AND_WINDOW, True),
+    ('Primero conviene aplicar la opción de ampliar la carga máxima semanal de 21 docentes habilitados porque tiene el mayor impacto medido (77 componentes) y no requiere autorización externa', LOAD_AND_WINDOW, True),
+    # Opening the afternoon requires authorization too, whenever its options say so.
+    ('La primera palanca es habilitar la franja de tarde y sábado, ya que destraba más componentes y no requiere autorización externa.', LOAD_AND_WINDOW, True),
+    ('Prioriza la tarde sobre ampliar la carga, ya que no requiere autorización externa.', LOAD_AND_WINDOW, True),
+    ('Prioriza la tarde sobre ampliar la carga, ya que no requiere autorización externa.', {'increase_teacher_load'}, False),
+    ('Ampliar la carga requiere autorización externa; la tarde no requiere autorización.', {'increase_teacher_load'}, False),
+    ('Aplica primero la franja de tarde, ya que no requiere autorización externa. Luego amplía la carga si es necesario.', {'increase_teacher_load'}, False),
+    # Splitting sessions needs no authorization, so saying so is fine.
+    ('Aplica primero las sesiones divididas porque destraba más componentes y no requiere autorización externa.', LOAD_AND_WINDOW, False),
+    ('Prioriza dividir las sesiones sobre ampliar la carga, ya que no requiere autorización externa.', LOAD_AND_WINDOW, False),
 ])
-def test_authorization_guard_follows_the_subject_of_the_claim(text, claims):
-    from advisor import _claims_load_without_authorization
-    assert _claims_load_without_authorization(text) is claims
+def test_authorization_guard_follows_the_subject_of_the_claim(text, kinds, claims):
+    from advisor import _claims_no_authorization
+    assert _claims_no_authorization(text, kinds) is claims
 
 
 def _load_rec(rec_id, title):

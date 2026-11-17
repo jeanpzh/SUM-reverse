@@ -36,6 +36,12 @@ MAX_AGENT_SIMULATIONS = 4
 _UNLOCKED_SUMMARY_RE = re.compile(r"^Destraba (\d+) componentes? en simulación$")
 
 
+FINAL_ANSWER_REMINDER = (
+    "No llames herramientas; responde solo con el JSON final corregido: "
+    '{"summary": "...", "prioritizedIds": [...], "rationalesById": {...}}.'
+)
+# A repair turn is only attempted when this much of the LLM time budget remains.
+REPAIR_MIN_SECONDS = 3.0
 INCONCLUSIVE_RETRY_FACTOR = 3
 OFFERED_TOOLS = frozenset({"request_variants", "simulate_patches_cpsat"})
 SHARED_DRY_RUN_LIMIT = 256
@@ -436,7 +442,7 @@ async def run_advisor_agent(
     normative_cache: dict[str, AdvisorNormativeContrast] | None = None,
 ):
     from langchain_core.messages import ToolMessage
-    from advisor import _apply_validated_llm_output, _extract_json_object
+    from advisor import LLM_OUTPUT_RULE_HINTS, _apply_validated_llm_output, _extract_json_object, llm_output_issue
 
     environ = dict(os.environ) if env is None else env
     started = time.monotonic()
@@ -572,8 +578,10 @@ async def run_advisor_agent(
             ]
             calls = 0
             budget_exhausted = False
-            # One extra turn past the tool rounds lets the model answer after the budget runs out.
-            for round_index in range(MAX_TOOL_ROUNDS + 2):
+            output_repaired = False
+            # Extra turns past the tool rounds let the model answer after the budget runs out
+            # and correct one final answer that breaks a rule.
+            for round_index in range(MAX_TOOL_ROUNDS + 3):
                 if time.monotonic() - started >= timeout:
                     return fallback("timeout")
                 call_started = time.monotonic()
@@ -584,7 +592,10 @@ async def run_advisor_agent(
                 )
                 tool_calls = answer.tool_calls
                 if not tool_calls:
-                    parsed = _extract_json_object(answer.text)
+                    try:
+                        parsed = _extract_json_object(answer.text)
+                    except ValueError:
+                        parsed = None
                     final_catalog_recs = recommendations
                     agent_measured = {
                         ids[0] for ids in cache if len(ids) == 1 and ids[0] in known_catalog
@@ -637,6 +648,21 @@ async def run_advisor_agent(
                         }
                     else:
                         unlocked_by_id = _infer_unlocked_from_recommendations(final_catalog_recs)
+                    allowed_ids = set(known_catalog.keys())
+                    issue = llm_output_issue(
+                        parsed, final_catalog_recs, unlocked_by_id=unlocked_by_id, allowed_ids=allowed_ids
+                    )
+                    remaining = timeout - (time.monotonic() - started)
+                    if issue is not None and not output_repaired and remaining > REPAIR_MIN_SECONDS:
+                        # One repair turn: tell the model which rule its answer broke. Only the
+                        # rule code is logged, never the model text.
+                        output_repaired = True
+                        logging.getLogger("planning.advisor").warning("advisor_llm_output_repair rule=%s", issue)
+                        messages.append({"role": "assistant", "content": codec.sanitize_text(answer.text)})
+                        messages.append(
+                            {"role": "user", "content": f"{LLM_OUTPUT_RULE_HINTS[issue]} {FINAL_ANSWER_REMINDER}"}
+                        )
+                        continue
                     source, final_summary, final_recs = _apply_validated_llm_output(
                         parsed,
                         label,
@@ -644,7 +670,7 @@ async def run_advisor_agent(
                         final_catalog_recs,
                         codec,
                         unlocked_by_id=unlocked_by_id,
-                        allowed_ids=set(known_catalog.keys()),
+                        allowed_ids=allowed_ids,
                     )
                     return source, final_summary, final_recs, impact, steps
 

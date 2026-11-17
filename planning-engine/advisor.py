@@ -175,21 +175,27 @@ def _extract_json_object(raw_text: str) -> dict:
     return parsed
 
 
-# Teacher-load increases always need external authorization; prose saying otherwise is false.
+# Prose must not say a lever needs no authorization when its options require it.
 _NO_AUTHORIZATION = re.compile(
     r"\b(?:no\s+(?:requiere|necesita)\w*|sin\s+(?:necesidad\s+de\s+)?)\s*(?:una\s+|ninguna\s+)?autorizaci",
     re.IGNORECASE,
 )
 _CAUSAL = re.compile(r"\b(?:porque|ya que|pues|dado que|puesto que)\b", re.IGNORECASE)
 _LEVER_WORDS = re.compile(
-    r"\b(?P<load>carga)\b|\b(?P<other>tarde|s[aá]bado|franja|turno|ventana|dividid\w*|divisi[oó]n|modalidad|"
-    r"ambiente\w*|laboratorio\w*|aula\w*|referencia)\b",
+    r"\b(?P<increase_teacher_load>carga)\b"
+    r"|\b(?P<enable_planning_window>tarde|s[aá]bado|franja\w*|turno\w*|ventana\w*)\b"
+    r"|\b(?P<change_delivery_mode>divid\w*|divisi[oó]n|modalidad)\b"
+    r"|\b(?P<incorporate_reference_resource>ambiente\w*|laboratorio\w*|aula\w*|referencia)\b",
     re.IGNORECASE,
 )
 
 
-def _claims_load_without_authorization(text: str) -> bool:
-    """True when a clause says the load lever needs no authorization.
+def _authorization_kinds(recommendations: list[AdvisorRecommendation]) -> set[str]:
+    return {"increase_teacher_load"} | {r.patch.kind for r in recommendations if _requires_authorization(r)}
+
+
+def _claims_no_authorization(text: str, authorized_kinds: set[str]) -> bool:
+    """True when a clause says a lever in `authorized_kinds` needs no authorization.
 
     The subject is the lever the claim grammatically hangs on: the one named in the same
     clause before the claim, or, when a causal connector ("ya que", "porque") introduces
@@ -204,7 +210,7 @@ def _claims_load_without_authorization(text: str) -> bool:
             if not levers:
                 continue
             subject = levers[0] if causal else levers[-1]
-            if subject.group("load"):
+            if subject.lastgroup in authorized_kinds:
                 return True
     return False
 
@@ -254,6 +260,63 @@ def _first_mentioned(text: str, recommendations: list[AdvisorRecommendation]) ->
     return min(found, key=lambda item: item[0])[1] if found else None
 
 
+# What the model is told when one of its answers breaks a rule, for its single repair turn.
+LLM_OUTPUT_RULE_HINTS = {
+    "not_json": "Esa respuesta no es JSON.",
+    "summary_shape": "Esa respuesta no trae un summary de texto (máximo 2048 caracteres).",
+    "unknown_prioritized_id": "prioritizedIds solo puede contener IDs de candidateRecommendations o de variantes medidas.",
+    "authorization_claim": (
+        "Afirmaste que una palanca no requiere autorización, pero sus opciones tienen "
+        "requiresExternalAuthorization=true. Indica que sí la requieren."
+    ),
+    "zero_impact_option_first": "No empieces por una opción que no destrabó componentes cuando otra sí destrabó.",
+    "dominated_option_first": (
+        "Empieza por la opción con más componentes destrabados, salvo que otra destrabe lo mismo "
+        "y requiera menos autorización."
+    ),
+}
+
+
+def llm_output_issue(
+    parsed: dict | None,
+    recommendations: list[AdvisorRecommendation],
+    *,
+    unlocked_by_id: dict[str, int] | None = None,
+    allowed_ids: set[str] | None = None,
+) -> str | None:
+    """The first rule the model's final answer breaks, as a key of LLM_OUTPUT_RULE_HINTS."""
+    if parsed is None:
+        return "not_json"
+    if not isinstance(parsed.get("summary"), str) or not parsed["summary"].strip() or len(parsed["summary"]) > 2048:
+        return "summary_shape"
+    valid_ids = allowed_ids if allowed_ids is not None else {r.id for r in recommendations}
+    prioritized_ids = parsed.get("prioritizedIds")
+    if not isinstance(prioritized_ids, list) or any(
+        not isinstance(x, str) or x not in valid_ids for x in prioritized_ids
+    ):
+        return "unknown_prioritized_id"
+    rationales = parsed.get("rationalesById") or {}
+    prose = [parsed["summary"], *(v for v in rationales.values() if isinstance(v, str))] if isinstance(rationales, dict) else [parsed["summary"]]
+    authorized_kinds = _authorization_kinds(recommendations)
+    if any(_claims_no_authorization(text, authorized_kinds) for text in prose):
+        return "authorization_claim"
+    # The summary must not lead with an option measured at zero when another one unlocks
+    # components, nor with one another option dominates: at least the same measured impact,
+    # no stricter authorization, and strictly better on one of the two.
+    lead = _first_mentioned(parsed["summary"], recommendations)
+    if lead is not None and unlocked_by_id and lead.id in unlocked_by_id:
+        lead_impact, lead_auth = unlocked_by_id[lead.id], _requires_authorization(lead)
+        if lead_impact == 0 and max(unlocked_by_id.values()) > 0:
+            return "zero_impact_option_first"
+        for other in recommendations:
+            if other.id == lead.id or other.id not in unlocked_by_id:
+                continue
+            impact, auth = unlocked_by_id[other.id], _requires_authorization(other)
+            if impact >= lead_impact and auth <= lead_auth and (impact > lead_impact or auth < lead_auth):
+                return "dominated_option_first"
+    return None
+
+
 def _apply_validated_llm_output(
     parsed: dict,
     provider_label: str,
@@ -264,33 +327,11 @@ def _apply_validated_llm_output(
     unlocked_by_id: dict[str, int] | None = None,
     allowed_ids: set[str] | None = None,
 ) -> tuple[AdvisorSource, str, list[AdvisorRecommendation]]:
-    if not isinstance(parsed.get("summary"), str) or not parsed["summary"].strip() or len(parsed["summary"]) > 2048:
-        return _reject("summary_shape", summary, recommendations)
-    valid_ids = allowed_ids if allowed_ids is not None else {r.id for r in recommendations}
-    prioritized_ids = parsed.get("prioritizedIds")
-    if not isinstance(prioritized_ids, list) or any(
-        not isinstance(x, str) or x not in valid_ids for x in prioritized_ids
-    ):
-        return _reject("unknown_prioritized_id", summary, recommendations)
-
+    issue = llm_output_issue(parsed, recommendations, unlocked_by_id=unlocked_by_id, allowed_ids=allowed_ids)
+    if issue is not None:
+        return _reject(issue, summary, recommendations)
+    prioritized_ids = parsed["prioritizedIds"]
     rationales = parsed.get("rationalesById") or {}
-    prose = [parsed["summary"], *(v for v in rationales.values() if isinstance(v, str))] if isinstance(rationales, dict) else [parsed["summary"]]
-    if any(_claims_load_without_authorization(text) for text in prose):
-        return _reject("load_without_authorization", summary, recommendations)
-    # The summary must not lead with an option measured at zero when another one unlocks
-    # components, nor with one another option dominates: at least the same measured impact,
-    # no stricter authorization, and strictly better on one of the two.
-    lead = _first_mentioned(parsed["summary"], recommendations)
-    if lead is not None and unlocked_by_id and lead.id in unlocked_by_id:
-        lead_impact, lead_auth = unlocked_by_id[lead.id], _requires_authorization(lead)
-        if lead_impact == 0 and max(unlocked_by_id.values()) > 0:
-            return _reject("zero_impact_option_first", summary, recommendations)
-        for other in recommendations:
-            if other.id == lead.id or other.id not in unlocked_by_id:
-                continue
-            impact, auth = unlocked_by_id[other.id], _requires_authorization(other)
-            if impact >= lead_impact and auth <= lead_auth and (impact > lead_impact or auth < lead_auth):
-                return _reject("dominated_option_first", summary, recommendations)
     rec_map = {r.id: r.model_copy(deep=True) for r in recommendations}
     llm_pos: dict[str, int] = {}
     for r_id in prioritized_ids:
