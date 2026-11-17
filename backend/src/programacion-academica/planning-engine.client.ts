@@ -395,6 +395,11 @@ export function buildLocalDeterministicAdvisor(
   return { summary, bottlenecks, recommendations, codec }
 }
 
+/** The selected recommendation IDs are not in the catalog of whoever analysed them. */
+export class AdvisorSelectionRejected extends Error {
+  constructor() { super('Recomendación desconocida') }
+}
+
 export async function analyzeProposalAdvisor(
   proposal: AcademicProposal,
   input: GeneratorInput,
@@ -450,7 +455,10 @@ export async function analyzeProposalAdvisor(
         if (body.verifiedImpact && selectedRecommendationIds && JSON.stringify([...body.verifiedImpact.recommendationIds].sort()) !== JSON.stringify([...selectedRecommendationIds].sort())) throw new Error('Selection mismatch')
         return body
       }
-    } catch {
+      // The engine owns the recommendation catalog; its 422 is a rejected selection, not an outage.
+      if (response.status === 422 && selectedRecommendationIds?.length) throw new AdvisorSelectionRejected()
+    } catch (error) {
+      if (error instanceof AdvisorSelectionRejected) throw error
       // Fall through to in-process deterministic + LLM router fallback
     }
   }
@@ -461,6 +469,7 @@ export async function analyzeProposalAdvisor(
     resources,
     catalog,
   )
+  if (selectedRecommendationIds?.some((id) => !recommendations.some((r) => r.id === id))) throw new AdvisorSelectionRejected()
 
   const normativeRequest: AcademicNormativeRequest = { question: 'carga lectiva máximo hora académica excepciones autorización', facultyId: 'FISI', academicPeriod: input.planningPolicy?.period ?? `${new Date().getUTCFullYear()}-II`, asOf: new Date().toISOString().slice(0, 10), teacherType: 'unknown' }
   let normativeContext: AcademicNormativeResponse

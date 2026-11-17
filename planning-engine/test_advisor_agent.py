@@ -107,7 +107,7 @@ def test_round_and_call_limits_and_unknown_tools():
         model = FakeModel(replies)
         result = run(sample(), model)
         assert result.source.mode == 'deterministic-fallback'
-        assert len(model.histories) <= 3
+        assert len(model.histories) <= 4
         assert len(result.reasoningSteps) <= 5
 
 
@@ -258,3 +258,215 @@ def test_http_partial_window_patch_omits_absent_flags_but_keeps_provider_null(mo
     assert patch == {'kind': 'enable_planning_window', **expected}
     assert body['source']['providerLabel'] is None
     assert body['verifiedImpact']['solverStatus'] in ('complete', 'impossible', 'search-limit')
+
+
+def test_final_answer_breaking_a_rule_gets_one_repair_turn():
+    req = sample()
+    req.selectedRecommendationIds = []
+    ids = [r.id for r in build_deterministic_analysis(req)[2]]
+    tool_args_as_text = AIMessage(content=json.dumps({'recommendation_ids': ids[:1]}))
+    final = AIMessage(content=json.dumps({'summary': 'Aplicar primero la opción medida.', 'prioritizedIds': []}))
+    model = FakeModel([tool_args_as_text, final])
+    result = run(req, model)
+    assert result.source.mode == 'llm-assisted'
+    assert result.summary == 'Aplicar primero la opción medida.'
+    assert 'JSON final corregido' in json.dumps(model.histories[-1], ensure_ascii=False)
+    # Prose instead of JSON gets the same single repair turn.
+    prose = AIMessage(content='Conviene aplicar primero la opción medida.')
+    assert run(req, FakeModel([prose, final])).source.mode == 'llm-assisted'
+    # Only one repair: a second malformed answer falls back.
+    again = FakeModel([tool_args_as_text, tool_args_as_text, final])
+    assert run(req, again).source.fallbackReason == 'invalid_llm_output'
+    assert run(req, FakeModel([prose, prose, final])).source.mode == 'deterministic-fallback'
+
+
+def test_llm_prose_claiming_load_without_authorization_is_rejected():
+    req = sample()
+    req.selectedRecommendationIds = []
+    claim = 'Ampliar la carga de un docente no requiere autorización externa.'
+    reply = AIMessage(content=json.dumps({'summary': claim, 'prioritizedIds': []}))
+    # The repair turn repeats the claim, so the answer falls back.
+    result = run(req, FakeModel([reply, reply]))
+    assert result.source.mode == 'deterministic-fallback'
+    assert result.source.fallbackReason == 'invalid_llm_output'
+    assert result.summary != claim
+
+
+def test_llm_prose_uses_titles_instead_of_recommendation_ids():
+    req = sample()
+    req.selectedRecommendationIds = []
+    recs = build_deterministic_analysis(req)[2]
+    first = recs[0]
+    text = f"Prueba primero '{first.id}' por su impacto medido."
+    result = run(req, FakeModel([AIMessage(content=json.dumps({'summary': text, 'prioritizedIds': [], 'rationalesById': {first.id: f'Ver {first.id}.'}}))]))
+    assert result.source.mode == 'llm-assisted'
+    assert first.id not in result.summary and f'«{first.title}»' in result.summary
+    rationale = next(r.rationale for r in result.recommendations if r.id == first.id)
+    if first.patch.kind != 'increase_teacher_load':
+        assert first.id not in rationale
+
+
+def test_summary_leading_with_a_zero_impact_option_is_rejected():
+    from advisor import _apply_validated_llm_output
+    req = sample()
+    _, _, recs, codec = build_deterministic_analysis(req)
+    assert len(recs) >= 2
+    zero, best = recs[0], recs[1]
+    parsed = {'summary': f'Primero aplica {zero.title}; luego {best.title}.', 'prioritizedIds': []}
+    source, _, _ = _apply_validated_llm_output(parsed, 'fake', 'base', recs, codec, unlocked_by_id={zero.id: 0, best.id: 5})
+    assert source.fallbackReason == 'invalid_llm_output'
+    parsed['summary'] = f'Primero aplica {best.title}; {zero.title} no destrabó nada.'
+    source, _, _ = _apply_validated_llm_output(parsed, 'fake', 'base', recs, codec, unlocked_by_id={zero.id: 0, best.id: 5})
+    assert source.mode == 'llm-assisted'
+
+
+def test_inconclusive_dry_run_gets_one_longer_attempt(monkeypatch):
+    import advisor_agent
+    from models import SolveScheduleResponse
+    req = sample()
+    _, _, recs, _ = build_deterministic_analysis(req)
+    budgets = []
+
+    from models import AssignmentOutput
+    req.assignments = [AssignmentOutput.model_validate(
+        {"id": "seed", "sectionId": "S1", "teacherId": "x", "roomId": "y", "interval": {"day": 1, "startMinute": 480, "endMinute": 540}}
+    )]
+
+    def fake_solve(solve_req):
+        budgets.append(solve_req.maxTimeSeconds)
+        found = [] if len(budgets) == 1 else [
+            {'id': r.id, 'sectionId': r.sectionId, 'teacherId': 'x', 'roomId': 'y',
+             'interval': {'day': 1, 'startMinute': 480, 'endMinute': 480 + r.durationMinutes}}
+            for r in solve_req.requirements
+        ]
+        return SolveScheduleResponse(status='search-limit', assignments=found, exploredCandidates=0,
+                                     candidateVisits=0, backtracks=0, limitReason='time', diagnostics=[])
+
+    monkeypatch.setattr(advisor_agent, 'solve_academic_schedule', fake_solve)
+    impact = run_cpsat_dry_run(req, recs, [recs[0].id], max_time_seconds=0.5)
+    assert budgets == [0.5, 0.5 * advisor_agent.INCONCLUSIVE_RETRY_FACTOR]
+    assert impact.projectedScheduledSessions == len(req.requirements)
+
+
+def test_repeated_consult_on_the_same_workspace_reuses_conclusive_dry_runs(monkeypatch):
+    import advisor_agent
+    req = sample()
+    req.selectedRecommendationIds = []
+    real = advisor_agent.run_cpsat_dry_run
+    calls = []
+
+    def counting(r, recs, ids, **kw):
+        calls.append(tuple(ids))
+        return real(r, recs, ids, **kw)
+
+    monkeypatch.setattr(advisor_agent, 'run_cpsat_dry_run', counting)
+    first = asyncio.run(analyze_proposal_with_advisor(req, env={'SUM_LLM_PROVIDER': 'disabled'}))
+    first_calls = len(calls)
+    again = req.model_copy(update={'editVersion': req.editVersion + 1, 'selectedRecommendationIds': [first.recommendations[0].id]})
+    second = asyncio.run(analyze_proposal_with_advisor(again, env={'SUM_LLM_PROVIDER': 'disabled'}))
+    assert first_calls > 0
+    assert len(calls) - first_calls <= first_calls
+    assert [r.impactSummary for r in second.recommendations] == [r.impactSummary for r in first.recommendations]
+
+
+def test_inconclusive_dry_run_is_not_shared_between_requests(monkeypatch):
+    import advisor_agent
+    from models import SolveScheduleResponse
+    req = sample()
+    _, _, recs, _ = build_deterministic_analysis(req)
+    runs = []
+
+    def cut_off(solve_req):
+        runs.append(1)
+        return SolveScheduleResponse(status='search-limit', assignments=[], exploredCandidates=0,
+                                     candidateVisits=0, backtracks=0, limitReason='time', diagnostics=[])
+
+    monkeypatch.setattr(advisor_agent, 'solve_academic_schedule', cut_off)
+    advisor_agent.measured_dry_run(req, recs, [recs[0].id], {})
+    advisor_agent.measured_dry_run(req, recs, [recs[0].id], {})
+    assert len(runs) == 2
+
+
+def test_model_is_offered_only_action_tools_and_gets_the_diagnosis_up_front():
+    req = sample()
+    req.selectedRecommendationIds = []
+    model = FakeModel([AIMessage(content=json.dumps({'summary': 'Sin cambios medidos.', 'prioritizedIds': []}))])
+    run(req, model)
+    assert sorted(t.name for t in model.tools) == ['request_variants', 'simulate_patches_cpsat']
+    first_user = json.loads(model.histories[0][1]['content'])
+    assert {'freeSlotFits', 'pendingByCourse', 'topTeacherSlack'} <= set(first_user['diagnosis'])
+
+
+LOAD_AND_WINDOW = {'increase_teacher_load', 'enable_planning_window'}
+
+
+@pytest.mark.parametrize('text,kinds,claims', [
+    ('Ampliar la carga de un docente no requiere autorización externa.', LOAD_AND_WINDOW, True),
+    ('Se puede ampliar la carga sin autorización.', LOAD_AND_WINDOW, True),
+    ('Amplía la carga de un docente, ya que no requiere autorización externa.', LOAD_AND_WINDOW, True),
+    ('Primero, pruebe aumentar la carga docente solo para un curso, ya que tiene un impacto medido y no requiere autorización externa.', LOAD_AND_WINDOW, True),
+    ('Primero conviene aplicar la opción de ampliar la carga máxima semanal de 21 docentes habilitados porque tiene el mayor impacto medido (77 componentes) y no requiere autorización externa', LOAD_AND_WINDOW, True),
+    # Opening the afternoon requires authorization too, whenever its options say so.
+    ('La primera palanca es habilitar la franja de tarde y sábado, ya que destraba más componentes y no requiere autorización externa.', LOAD_AND_WINDOW, True),
+    ('Prioriza la tarde sobre ampliar la carga, ya que no requiere autorización externa.', LOAD_AND_WINDOW, True),
+    ('Prioriza la tarde sobre ampliar la carga, ya que no requiere autorización externa.', {'increase_teacher_load'}, False),
+    ('Ampliar la carga requiere autorización externa; la tarde no requiere autorización.', {'increase_teacher_load'}, False),
+    ('Aplica primero la franja de tarde, ya que no requiere autorización externa. Luego amplía la carga si es necesario.', {'increase_teacher_load'}, False),
+    # Splitting sessions needs no authorization, so saying so is fine.
+    ('Aplica primero las sesiones divididas porque destraba más componentes y no requiere autorización externa.', LOAD_AND_WINDOW, False),
+    ('Prioriza dividir las sesiones sobre ampliar la carga, ya que no requiere autorización externa.', LOAD_AND_WINDOW, False),
+])
+def test_authorization_guard_follows_the_subject_of_the_claim(text, kinds, claims):
+    from advisor import _claims_no_authorization
+    assert _claims_no_authorization(text, kinds) is claims
+
+
+def _load_rec(rec_id, title, teachers=1):
+    from models import AdvisorRecommendation, IncreaseTeacherLoadPatch, TeacherLoadAdjustment
+    return AdvisorRecommendation(
+        id=rec_id, title=title, rationale='r', impactSummary='i', recommendedByDefault=False,
+        patch=IncreaseTeacherLoadPatch(adjustments=[
+            TeacherLoadAdjustment(teacherId=f't{i}', previousMaxWeeklyMinutes=1, nextMaxWeeklyMinutes=2) for i in range(teachers)
+        ]),
+    )
+
+
+def test_summary_leading_with_a_dominated_option_is_rejected():
+    from advisor import _apply_validated_llm_output
+    _, _, _, codec = build_deterministic_analysis(sample())
+    recs = [
+        _load_rec('load-all', 'Ampliar carga máxima semanal de 22 docente(s) habilitados', teachers=22),
+        _load_rec('load-course', 'Ampliar carga docente solo para PROGRAMACIÓN Y FUNDAMENTOS DE ALGORÍTMICA (1 docente(s))'),
+        _load_rec('load-calc', 'Ampliar carga docente solo para CÁLCULO I (1 docente(s))'),
+    ]
+    impacts = {'load-all': 79, 'load-course': 9, 'load-calc': 6}
+
+    def mode(summary):
+        return _apply_validated_llm_output({'summary': summary, 'prioritizedIds': []}, 'fake', 'base', recs, codec, unlocked_by_id=impacts)[0].mode
+
+    # One teacher for 9 components is not dominated by 22 teachers for 79: fewer authorizations.
+    start_small = ("Primero, considera aumentar la carga docente para el curso 'PROGRAMACIÓN Y FUNDAMENTOS DE ALGORÍTMICA' "
+                   "ya que pide una sola autorización (9 componentes).")
+    assert mode(start_small) == 'llm-assisted'
+    # Same single authorization, fewer components: dominated.
+    assert mode('Primero amplía la carga docente solo para CÁLCULO I, ya que destraba 6 componentes.') == 'deterministic-fallback'
+    assert mode('Primero aplica Ampliar carga máxima semanal de 22 docente(s) habilitados; requiere autorización.') == 'llm-assisted'
+
+
+def test_cut_off_run_below_the_current_schedule_is_labelled_inconclusive():
+    from advisor_catalog import INCONCLUSIVE_IMPACT_SUMMARY, rank_recommendations
+    from models import AdvisorVerifiedImpact, AssignmentOutput
+    req = sample()
+    req.assignments = [AssignmentOutput.model_validate(
+        {"id": "seed", "sectionId": "S1", "teacherId": "x", "roomId": "y", "interval": {"day": 1, "startMinute": 480, "endMinute": 540}}
+    )]
+    _, _, recs, _ = build_deterministic_analysis(sample())
+
+    def dry_run(r, rs, ids):
+        projected = 1 if not ids else 0
+        return AdvisorVerifiedImpact(currentScheduledSessions=1, projectedScheduledSessions=projected, requiredSessions=2,
+                                     currentCompleteSections=0, projectedCompleteSections=0, totalSections=1,
+                                     recommendationIds=list(ids), solverStatus='search-limit')
+
+    ranked = rank_recommendations(req, [r.model_copy(deep=True) for r in recs], dry_run)
+    assert ranked and all(r.impactSummary == INCONCLUSIVE_IMPACT_SUMMARY for r in ranked if 'no simulado' not in r.impactSummary)

@@ -583,7 +583,7 @@ export function validateAcademicAdvisorPatch(value) {
 }
 
 export function validateAcademicAdvisorResponse(value) {
-  object(value, ['proposalId', 'editVersion', 'source', 'summary', 'bottlenecks', 'recommendations'], 'advisorResponse', ['verifiedImpact', 'reasoningSteps', 'normativeContext'])
+  object(value, ['proposalId', 'editVersion', 'source', 'summary', 'bottlenecks', 'recommendations'], 'advisorResponse', ['verifiedImpact', 'reasoningSteps', 'normativeContext', 'managementActions'])
   if (value.normativeContext !== undefined) validateAcademicNormativeResponse(value.normativeContext)
   string(value.proposalId, 'proposalId')
   number(value.editVersion, 'editVersion', 0)
@@ -596,7 +596,7 @@ export function validateAcademicAdvisorResponse(value) {
   }
   if (value.reasoningSteps !== undefined) array(value.reasoningSteps, 'reasoningSteps').forEach((step) => {
     object(step, ['toolName', 'inputSummary', 'outputSummary'], 'reasoningStep')
-    if (!['inspect_bottlenecks', 'simulate_patches_cpsat'].includes(step.toolName)) throw new TypeError('Herramienta desconocida')
+    if (!['inspect_bottlenecks', 'inspect_diagnosis', 'request_variants', 'simulate_patches_cpsat'].includes(step.toolName)) throw new TypeError('Herramienta desconocida')
     string(step.inputSummary, 'inputSummary')
     string(step.outputSummary, 'outputSummary')
   })
@@ -625,14 +625,37 @@ export function validateAcademicAdvisorResponse(value) {
     number(row.affectedSessionCount, 'affectedSessionCount', 0)
   })
   array(value.recommendations, 'recommendations').forEach((row) => {
-    object(row, ['id', 'title', 'rationale', 'impactSummary', 'recommendedByDefault', 'patch'], 'recommendation')
+    object(row, ['id', 'title', 'rationale', 'impactSummary', 'recommendedByDefault', 'patch'], 'recommendation', ['normativeContrast'])
     string(row.id, 'id')
     string(row.title, 'title')
     string(row.rationale, 'rationale')
     string(row.impactSummary, 'impactSummary')
     if (typeof row.recommendedByDefault !== 'boolean') throw new TypeError('recommendedByDefault debe ser booleano')
     validateAcademicAdvisorPatch(row.patch)
+    if (Object.hasOwn(row, 'normativeContrast')) validateAdvisorNormativeContrast(row.normativeContrast)
   })
+  if (value.managementActions !== undefined) {
+    const actionIds = new Set()
+    array(value.managementActions, 'managementActions', 5).forEach((action) => {
+      object(action, ['id', 'kind', 'title', 'detail', 'relatedCategory', 'affectedSessionCount', 'citations', 'executable'], 'managementAction')
+      string(action.id, 'managementAction.id')
+      if (actionIds.has(action.id)) throw new TypeError('managementAction.id duplicado')
+      actionIds.add(action.id)
+      if (!['negotiate_teacher_availability', 'request_external_room', 'process_load_authorization', 'review_room_requirement', 'review_section_demand'].includes(action.kind)) {
+        throw new TypeError('managementAction.kind inválido')
+      }
+      string(action.title, 'managementAction.title')
+      string(action.detail, 'managementAction.detail')
+      if (!['teacher_load', 'planning_window', 'missing_resource', 'delivery_mode', 'other'].includes(action.relatedCategory)) {
+        throw new TypeError('managementAction.relatedCategory inválido')
+      }
+      number(action.affectedSessionCount, 'managementAction.affectedSessionCount', 0)
+      const citations = array(action.citations, 'managementAction.citations', 2)
+      citations.forEach((citation) => validateNormativeCitation(citation))
+      if (new Set(citations.map((c) => c.id)).size !== citations.length) throw new TypeError('managementAction.citations duplicadas')
+      if (action.executable !== false) throw new TypeError('managementAction.executable debe ser false')
+    })
+  }
 }
 
 const normativeSourceBase = 'https://medicina.unmsm.edu.pe/wp-content/uploads/2026/03/RESOLUCION-RECTORAL-001380-2026-R'
@@ -640,6 +663,32 @@ const normativeSources = [`${normativeSourceBase}.pdf`, `${normativeSourceBase}-
 function normativeDate(value) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(Date.parse(value))
     || value.startsWith('0000-') || new Date(value).toISOString().slice(0, 10) !== value) throw new TypeError('Fecha normativa inválida')
+}
+function validateNormativeCitation(c, asOf = undefined) {
+  object(c, ['id', 'documentId', 'title', 'article', 'page', 'url', 'excerpt', 'sourceClass', 'scope', 'reviewedAt', 'effectiveFrom', 'effectiveTo'], 'citation')
+  for (const key of ['id', 'documentId', 'title', 'article', 'excerpt']) string(c[key], key)
+  number(c.page, 'page', 1)
+  if (!normativeSources.includes(c.url) || c.sourceClass !== 'normative' || !['UNMSM', 'FISI'].includes(c.scope)) throw new TypeError('Fuente normativa inválida')
+  normativeDate(c.reviewedAt)
+  for (const key of ['effectiveFrom', 'effectiveTo']) if (c[key] !== null) normativeDate(c[key])
+  if (c.effectiveFrom && c.effectiveTo && c.effectiveFrom > c.effectiveTo) throw new TypeError('Vigencia invertida')
+  if (asOf !== undefined && ((c.effectiveFrom && c.effectiveFrom > asOf) || (c.effectiveTo && c.effectiveTo < asOf))) throw new TypeError('Cita fuera de fecha')
+}
+function validateAdvisorNormativeContrast(value) {
+  object(value, ['topic', 'status', 'citations', 'gaps', 'requiresExternalAuthorization', 'authorizationNote'], 'normativeContrast')
+  if (!['teacher_load', 'planning_window', 'delivery_mode', 'reference_resource'].includes(value.topic)) throw new TypeError('normativeContrast.topic inválido')
+  if (!['supported', 'not-determined', 'conflict'].includes(value.status)) throw new TypeError('normativeContrast.status inválido')
+  const citations = array(value.citations, 'normativeContrast.citations', 3)
+  citations.forEach((c) => validateNormativeCitation(c))
+  if (new Set(citations.map((c) => c.id)).size !== citations.length) throw new TypeError('normativeContrast.citations duplicadas')
+  array(value.gaps, 'normativeContrast.gaps', 4).forEach((gap) => string(gap, 'normativeContrast.gap'))
+  if (typeof value.requiresExternalAuthorization !== 'boolean') throw new TypeError('requiresExternalAuthorization debe ser booleano')
+  if (value.requiresExternalAuthorization) {
+    string(value.authorizationNote, 'normativeContrast.authorizationNote')
+    if (!value.authorizationNote.trim()) throw new TypeError('normativeContrast.authorizationNote vacío')
+  } else if (value.authorizationNote !== null) {
+    throw new TypeError('normativeContrast.authorizationNote debe ser null cuando no requiere autorización')
+  }
 }
 export function validateAcademicNormativeRequest(value) {
   object(value, ['question', 'facultyId', 'academicPeriod', 'asOf', 'teacherType'], 'normativeRequest', ['previousQuestion'])
@@ -658,16 +707,7 @@ export function validateAcademicNormativeResponse(value, request) {
     || !['hybrid', 'lexical-only', 'unavailable'].includes(value.retrievalMode)) throw new TypeError('Respuesta normativa inválida')
   if (typeof value.answer !== 'string' || !value.answer.trim() || value.answer.length > 6000) throw new TypeError('Respuesta normativa sin texto válido')
   if (value.nextStep !== undefined && (typeof value.nextStep !== 'string' || !value.nextStep.trim() || value.nextStep.length > 500)) throw new TypeError('Siguiente paso normativo inválido')
-  array(value.citations, 'citations', 8).forEach((c) => {
-    object(c, ['id', 'documentId', 'title', 'article', 'page', 'url', 'excerpt', 'sourceClass', 'scope', 'reviewedAt', 'effectiveFrom', 'effectiveTo'], 'citation')
-    for (const key of ['id', 'documentId', 'title', 'article', 'excerpt']) string(c[key], key)
-    number(c.page, 'page', 1)
-    if (!normativeSources.includes(c.url) || c.sourceClass !== 'normative' || !['UNMSM', 'FISI'].includes(c.scope)) throw new TypeError('Fuente normativa inválida')
-    normativeDate(c.reviewedAt)
-    for (const key of ['effectiveFrom', 'effectiveTo']) if (c[key] !== null) normativeDate(c[key])
-    if (c.effectiveFrom && c.effectiveTo && c.effectiveFrom > c.effectiveTo) throw new TypeError('Vigencia invertida')
-    if ((c.effectiveFrom && c.effectiveFrom > value.context.asOf) || (c.effectiveTo && c.effectiveTo < value.context.asOf)) throw new TypeError('Cita fuera de fecha')
-  })
+  array(value.citations, 'citations', 8).forEach((c) => validateNormativeCitation(c, value.context.asOf))
   if (new Set(value.citations.map((c) => c.id)).size !== value.citations.length || (value.status !== 'not-determined' && !value.citations.length)) throw new TypeError('Citas inconsistentes')
   strings(value.gaps, 'gaps')
   if (value.generation !== undefined) {

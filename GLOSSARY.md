@@ -21,3 +21,6 @@ _Evitar_: generador IA, solver IA, copiloto de horarios
 
 **Recomendación**: ajuste candidato y verificable sobre el workspace (carga docente, habilitación de curso, excepción horaria o modalidad de entrega) que el planificador confirma para que el motor determinista regenere la **Propuesta**.
 _Evitar_: auto-corrección, asignación automática IA
+
+**Acción de gestión**: sugerencia administrativa externa derivada del diagnóstico (contratación, solicitud de ambientes, habilitación o coordinación académica) sin parche ni ejecución en el motor.
+_Evitar_: parche automático, **Recomendación**
