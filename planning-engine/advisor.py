@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 
 from advisor_catalog import (
@@ -181,6 +182,23 @@ def _replace_ids_with_titles(text: str, recommendations: list[AdvisorRecommendat
     return text
 
 
+def _reject(
+    code: str, summary: str, recommendations: list[AdvisorRecommendation]
+) -> tuple[AdvisorSource, str, list[AdvisorRecommendation]]:
+    # Only the rule code is logged, never the model text.
+    logging.getLogger("planning.advisor").warning("advisor_llm_output_rejected rule=%s", code)
+    return (
+        AdvisorSource(mode="deterministic-fallback", providerLabel=None, fallbackReason="invalid_llm_output"),
+        summary,
+        recommendations,
+    )
+
+
+def _first_mentioned(text: str, recommendations: list[AdvisorRecommendation]) -> AdvisorRecommendation | None:
+    found = [(text.find(r.title), r) for r in recommendations if r.title and r.title in text]
+    return min(found, key=lambda item: item[0])[1] if found else None
+
+
 def _apply_validated_llm_output(
     parsed: dict,
     provider_label: str,
@@ -192,42 +210,27 @@ def _apply_validated_llm_output(
     allowed_ids: set[str] | None = None,
 ) -> tuple[AdvisorSource, str, list[AdvisorRecommendation]]:
     if not isinstance(parsed.get("summary"), str) or not parsed["summary"].strip() or len(parsed["summary"]) > 2048:
-        return (
-            AdvisorSource(
-                mode="deterministic-fallback",
-                providerLabel=None,
-                fallbackReason="invalid_llm_output",
-            ),
-            summary,
-            recommendations,
-        )
+        return _reject("summary_shape", summary, recommendations)
     valid_ids = allowed_ids if allowed_ids is not None else {r.id for r in recommendations}
     prioritized_ids = parsed.get("prioritizedIds")
     if not isinstance(prioritized_ids, list) or any(
         not isinstance(x, str) or x not in valid_ids for x in prioritized_ids
     ):
-        return (
-            AdvisorSource(
-                mode="deterministic-fallback",
-                providerLabel=None,
-                fallbackReason="invalid_llm_output",
-            ),
-            summary,
-            recommendations,
-        )
+        return _reject("unknown_prioritized_id", summary, recommendations)
 
     rationales = parsed.get("rationalesById") or {}
     prose = [parsed["summary"], *(v for v in rationales.values() if isinstance(v, str))] if isinstance(rationales, dict) else [parsed["summary"]]
     if any(_LOAD_WITHOUT_AUTHORIZATION.search(text) for text in prose):
-        return (
-            AdvisorSource(
-                mode="deterministic-fallback",
-                providerLabel=None,
-                fallbackReason="invalid_llm_output",
-            ),
-            summary,
-            recommendations,
-        )
+        return _reject("load_without_authorization", summary, recommendations)
+    # The summary must not lead with an option measured at zero when another one unlocks components.
+    lead = _first_mentioned(parsed["summary"], recommendations)
+    if (
+        lead is not None
+        and unlocked_by_id
+        and unlocked_by_id.get(lead.id) == 0
+        and max(unlocked_by_id.values()) > 0
+    ):
+        return _reject("zero_impact_option_first", summary, recommendations)
     rec_map = {r.id: r.model_copy(deep=True) for r in recommendations}
     llm_pos: dict[str, int] = {}
     for r_id in prioritized_ids:

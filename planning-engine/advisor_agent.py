@@ -1,6 +1,7 @@
 """Bounded provider adapter; only closed, deterministic tools can change simulations."""
 from __future__ import annotations
 
+import logging
 import asyncio
 import json
 import os
@@ -33,6 +34,9 @@ MAX_AGENT_SIMULATIONS = 4
 _UNLOCKED_SUMMARY_RE = re.compile(r"^Destraba (\d+) componentes? en simulación$")
 
 
+INCONCLUSIVE_RETRY_FACTOR = 3
+
+
 def run_cpsat_dry_run(req, recommendations, recommendation_ids, *, max_time_seconds: float = 0.8):
     catalog = {r.id: r for r in recommendations}
     if len(set(recommendation_ids)) != len(recommendation_ids) or any(i not in catalog for i in recommendation_ids):
@@ -41,13 +45,21 @@ def run_cpsat_dry_run(req, recommendations, recommendation_ids, *, max_time_seco
     for rec_id in recommendation_ids:
         patch = catalog[rec_id].patch
         CATALOG_BY_KIND[patch.kind].apply(copy, patch, original_req=req)
-    result = solve_academic_schedule(SolveScheduleRequest(
-        courses=copy.courses, teachers=copy.teachers, rooms=copy.rooms,
-        sections=copy.sections, requirements=copy.requirements,
-        windows=copy.windows, startStepMinutes=copy.startStepMinutes,
-        planningPolicy=copy.planningPolicy, maxTimeSeconds=max_time_seconds,
-        numSearchWorkers=1, randomSeed=42,
-    ))
+    def solve(seconds: float):
+        return solve_academic_schedule(SolveScheduleRequest(
+            courses=copy.courses, teachers=copy.teachers, rooms=copy.rooms,
+            sections=copy.sections, requirements=copy.requirements,
+            windows=copy.windows, startStepMinutes=copy.startStepMinutes,
+            planningPolicy=copy.planningPolicy, maxTimeSeconds=seconds,
+            numSearchWorkers=1, randomSeed=42,
+        ))
+    result = solve(max_time_seconds)
+    # The budget is wall-clock: under CPU contention the search can stop before it even
+    # matches the current schedule. A run that ends at the limit without improving on what is
+    # already assigned is inconclusive, so it gets one longer attempt before being reported.
+    floor = len(req.assignments) + (1 if recommendation_ids else 0)
+    if result.status == "search-limit" and len(result.assignments) < floor:
+        result = solve(max_time_seconds * INCONCLUSIVE_RETRY_FACTOR)
     def complete_sections(assignments):
         ids = {a.id for a in assignments}
         return sum(bool(items := [r.id for r in req.requirements if r.sectionId == s.id]) and all(i in ids for i in items) for s in req.sections)
@@ -573,6 +585,7 @@ async def run_advisor_agent(
                     return source, final_summary, final_recs, impact, steps
 
                 if budget_exhausted:
+                    logging.getLogger("planning.advisor").warning("advisor_llm_output_rejected rule=tool_call_after_budget")
                     return fallback("invalid_llm_output")
                 if round_index == MAX_TOOL_ROUNDS or calls + len(tool_calls) > MAX_TOOL_CALLS:
                     # The over-budget calls are dropped unexecuted; ask once for the final answer.
@@ -633,7 +646,8 @@ async def run_advisor_agent(
                     )
     except TimeoutError:
         return fallback("timeout")
-    except (ValueError, TypeError, KeyError):
+    except (ValueError, TypeError, KeyError) as error:
+        logging.getLogger("planning.advisor").warning("advisor_llm_output_rejected rule=%s", type(error).__name__)
         return fallback("invalid_llm_output")
     except Exception as error:
         return fallback("rate_limited" if getattr(error, "status_code", None) == 429 else "upstream_error")

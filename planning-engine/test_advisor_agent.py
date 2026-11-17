@@ -282,3 +282,40 @@ def test_llm_prose_uses_titles_instead_of_recommendation_ids():
     rationale = next(r.rationale for r in result.recommendations if r.id == first.id)
     if first.patch.kind != 'increase_teacher_load':
         assert first.id not in rationale
+
+
+def test_summary_leading_with_a_zero_impact_option_is_rejected():
+    from advisor import _apply_validated_llm_output
+    req = sample()
+    _, _, recs, codec = build_deterministic_analysis(req)
+    assert len(recs) >= 2
+    zero, best = recs[0], recs[1]
+    parsed = {'summary': f'Primero aplica {zero.title}; luego {best.title}.', 'prioritizedIds': []}
+    source, _, _ = _apply_validated_llm_output(parsed, 'fake', 'base', recs, codec, unlocked_by_id={zero.id: 0, best.id: 5})
+    assert source.fallbackReason == 'invalid_llm_output'
+    parsed['summary'] = f'Primero aplica {best.title}; {zero.title} no destrabó nada.'
+    source, _, _ = _apply_validated_llm_output(parsed, 'fake', 'base', recs, codec, unlocked_by_id={zero.id: 0, best.id: 5})
+    assert source.mode == 'llm-assisted'
+
+
+def test_inconclusive_dry_run_gets_one_longer_attempt(monkeypatch):
+    import advisor_agent
+    from models import SolveScheduleResponse
+    req = sample()
+    _, _, recs, _ = build_deterministic_analysis(req)
+    budgets = []
+
+    def fake_solve(solve_req):
+        budgets.append(solve_req.maxTimeSeconds)
+        found = [] if len(budgets) == 1 else [
+            {'id': r.id, 'sectionId': r.sectionId, 'teacherId': 'x', 'roomId': 'y',
+             'interval': {'day': 1, 'startMinute': 480, 'endMinute': 480 + r.durationMinutes}}
+            for r in solve_req.requirements
+        ]
+        return SolveScheduleResponse(status='search-limit', assignments=found, exploredCandidates=0,
+                                     candidateVisits=0, backtracks=0, limitReason='time', diagnostics=[])
+
+    monkeypatch.setattr(advisor_agent, 'solve_academic_schedule', fake_solve)
+    impact = run_cpsat_dry_run(req, recs, [recs[0].id], max_time_seconds=0.5)
+    assert budgets == [0.5, 0.5 * advisor_agent.INCONCLUSIVE_RETRY_FACTOR]
+    assert impact.projectedScheduledSessions == len(req.requirements)
