@@ -6,7 +6,8 @@ import { EnrollmentCalendarPanel } from '../components/EnrollmentCalendarPanel'
 import { PreEnrollmentPanel } from '../components/PreEnrollmentPanel'
 import { buildScheduleFromCommittedReport, localAcademicContext, buildProgrammingRows, formatProgrammingRow,
   buildPreEnrollmentRows, buildStudyPlanRows, PROGRAMMING_HEADERS, PRE_ENROLLMENT_HEADERS,
-  ENROLLMENT_HEADERS, STUDY_PLAN_HEADERS, buildScheduleEvents, buildProgrammingScheduleDialog } from '../data/localAcademicView'
+  ENROLLMENT_HEADERS, STUDY_PLAN_HEADERS, buildScheduleEvents, buildProgrammingScheduleDialog,
+  resolveScheduleReferenceNow } from '../data/localAcademicView'
 import type { LocalAcademicKind, LocalAcademicResponse, ProgrammingRow } from '../data/localAcademicView'
 import { useStudent } from '../data/useStudent'
 import { WeeklySchedule } from './WeeklySchedule'
@@ -68,7 +69,11 @@ function ProgrammingTable({ rows }: { rows: ProgrammingRow[] }) {
   </>
 }
 
-export function LocalAcademicView({ kind, response }: { kind: LocalAcademicKind; response: LocalAcademicResponse }) {
+export function LocalAcademicView({ kind, response, serverNow }: {
+  kind: LocalAcademicKind
+  response: LocalAcademicResponse
+  serverNow?: string | null
+}) {
   const student = useStudent()
   if (kind === 'perfil') return <section className="screen-profile">
     <PageTitle>Mi Perfil</PageTitle><p>{student.name} · {student.code}</p>
@@ -82,7 +87,7 @@ export function LocalAcademicView({ kind, response }: { kind: LocalAcademicKind;
     if (kind === 'horarios') return <section className="screen-reportes-horarios">
       <PageTitle>{title}</PageTitle><StudentSummary student={{ ...student, period: report?.scope.period ?? student.period }} />
       <p className="local-only-note">Horario del reporte de matrícula sintético; no se usa la oferta pendiente.</p>
-      <WeeklySchedule data={null} displayEvents={buildScheduleEvents(report)} />
+      <WeeklySchedule data={null} displayEvents={buildScheduleEvents(report)} referenceNow={resolveScheduleReferenceNow(report, serverNow)} />
     </section>
     return <section className="screen-reportes-matricula">
       <PageTitle>{title}</PageTitle><StudentSummary student={{ ...student, period: report?.scope.period ?? student.period }} />

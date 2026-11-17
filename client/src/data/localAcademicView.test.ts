@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { buildScheduleFromCommittedReport, localAcademicContext, buildProgrammingRows, formatProgrammingRow,
-  buildPreEnrollmentRows, buildStudyPlanRows, buildScheduleEvents, buildProgrammingScheduleDialog } from './localAcademicView.ts'
+  buildPreEnrollmentRows, buildStudyPlanRows, buildScheduleEvents, buildProgrammingScheduleDialog,
+  resolveScheduleReferenceNow } from './localAcademicView.ts'
 import type { MatriculaRegularContext, MatriculaRegularEnrollmentReport } from './matriculaRegular.ts'
 
 const reportFor = (actorId: 'SYN-SIS-A' | 'SYN-SIS-B' = 'SYN-SIS-A'): MatriculaRegularEnrollmentReport => ({
@@ -176,4 +177,19 @@ test('D2: buildProgrammingScheduleDialog shows per-session type, room and teache
     ],
   })
 })
+
+test('G: resolveScheduleReferenceNow prefers serverNow, falls back to report.acceptedAt, and returns null without valid context clock', () => {
+  const marchReport: MatriculaRegularEnrollmentReport = {
+    ...reportFor(),
+    acceptedAt: '2027-03-09T14:45:00.000Z',
+  }
+  assert.equal(resolveScheduleReferenceNow(marchReport, '2027-03-10T15:30:00.000Z'), '2027-03-10T15:30:00.000Z')
+  assert.equal(resolveScheduleReferenceNow(null, '2027-03-10T15:30:00.000Z'), '2027-03-10T15:30:00.000Z')
+  assert.equal(resolveScheduleReferenceNow(marchReport, undefined), '2027-03-09T14:45:00.000Z')
+  assert.equal(resolveScheduleReferenceNow(marchReport, null), '2027-03-09T14:45:00.000Z')
+  assert.equal(resolveScheduleReferenceNow(marchReport, 'not-a-date'), '2027-03-09T14:45:00.000Z')
+  assert.equal(resolveScheduleReferenceNow(null, null), null)
+  assert.equal(resolveScheduleReferenceNow({ ...marchReport, acceptedAt: 'invalid' }, undefined), null)
+})
+
 

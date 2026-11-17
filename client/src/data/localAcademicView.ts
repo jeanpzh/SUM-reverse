@@ -148,3 +148,18 @@ export function buildScheduleEvents(report: MatriculaRegularEnrollmentReport | n
     }
   })) ?? []
 }
+
+function validDateString(value?: string | null): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  return Number.isNaN(new Date(trimmed).getTime()) ? null : trimmed
+}
+
+export function resolveScheduleReferenceNow(
+  report: MatriculaRegularEnrollmentReport | null,
+  serverNow?: string | null,
+): string | null {
+  return validDateString(serverNow) ?? validDateString(report?.acceptedAt)
+}
+

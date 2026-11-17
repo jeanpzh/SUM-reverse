@@ -318,6 +318,76 @@ try {
     assert.match(markup, /Sección 1 · Laboratorio · Lab 2/)
     assert.match(markup, /DOCENTE B/)
   })
+
+  // ---- G: consistent synthetic context clock in WeeklySchedule and LocalAcademicView ----
+  await check('G: WeeklySchedule uses referenceNow in America/Lima with explicit context label and preserves legacy clock fallback', async () => {
+    const { WeeklySchedule } = await server.ssrLoadModule('/src/screens/WeeklySchedule.tsx')
+    const { buildScheduleEvents } = await server.ssrLoadModule('/src/data/localAcademicView.ts')
+    const marchReport = kit.enrollmentReport({
+      acceptedAt: '2027-03-10T15:30:00.000Z',
+      rows: [{
+        courseId: 'SYN-SIS-C1',
+        sectionId: 'SYN-SIS-S1',
+        planId: 'SYN-PLAN-SIS',
+        name: 'Sistemas Operativos',
+        credits: 4,
+        label: '1',
+        schedule: [
+          { day: 3, startMinute: 480, endMinute: 720 },
+        ],
+      }],
+    })
+    const events = buildScheduleEvents(marchReport)
+
+    // 2027-03-10T15:30:00.000Z == Miércoles 10/03/2027 10:30 America/Lima
+    const wedMarkup = html(WeeklySchedule, { data: null, displayEvents: events, referenceNow: '2027-03-10T15:30:00.000Z' })
+    assert.match(wedMarkup, /Reloj del contexto:.*Miércoles.*10:30.*\(Lima\).*contexto sintético/)
+    assert.doesNotMatch(wedMarkup, /<span>Hoy:/)
+    assert.match(wedMarkup, /<span class="is-today">Miércoles<small>/)
+    assert.match(wedMarkup, /<span>Ahora 10:30<\/span>/)
+
+    // A second distinct instant proves it is not tied to the host's current weekday/time:
+    // 2027-03-14T20:15:00.000Z == Domingo 14/03/2027 15:15 America/Lima
+    const sunMarkup = html(WeeklySchedule, { data: null, displayEvents: events, referenceNow: new Date('2027-03-14T20:15:00.000Z') })
+    assert.match(sunMarkup, /Reloj del contexto:.*Domingo.*15:15.*\(Lima\).*contexto sintético/)
+    assert.match(sunMarkup, /<span class="is-today">Domingo<small>/)
+
+    // Legacy fallback when referenceNow is omitted, null, or invalid
+    const legacyMarkup = html(WeeklySchedule, { data: null, displayEvents: events })
+    assert.match(legacyMarkup, /<span>Hoy: (Lunes|Martes|Miércoles|Jueves|Viernes|Sábado|Domingo) · \d{2}:\d{2} <small>\(Lima\)<\/small><\/span>/)
+    assert.doesNotMatch(legacyMarkup, /Reloj del contexto:|contexto sintético/)
+
+    const invalidMarkup = html(WeeklySchedule, { data: null, displayEvents: events, referenceNow: 'invalid-date' })
+    assert.match(invalidMarkup, /<span>Hoy: (Lunes|Martes|Miércoles|Jueves|Viernes|Sábado|Domingo) · \d{2}:\d{2} <small>\(Lima\)<\/small><\/span>/)
+    assert.doesNotMatch(invalidMarkup, /Reloj del contexto:|contexto sintético/)
+  })
+
+  await check('G: LocalAcademicView horarios uses serverNow over report.acceptedAt and falls back to report.acceptedAt when serverNow is absent', async () => {
+    const { LocalAcademicView } = await server.ssrLoadModule('/src/screens/LocalAcademicView.tsx')
+    const marchReport = kit.enrollmentReport({
+      // 2027-03-09T14:45:00.000Z == Martes 09/03/2027 09:45 America/Lima
+      acceptedAt: '2027-03-09T14:45:00.000Z',
+    })
+
+    const acceptedFallbackMarkup = html(LocalAcademicView, { kind: 'horarios', response: marchReport })
+    assert.match(acceptedFallbackMarkup, /Reloj del contexto:.*Martes.*09:45.*\(Lima\).*contexto sintético/)
+    assert.doesNotMatch(acceptedFallbackMarkup, /<span>Hoy:/)
+
+    // 2027-03-12T19:15:00.000Z == Viernes 12/03/2027 14:15 America/Lima
+    const serverNowMarkup = html(LocalAcademicView, {
+      kind: 'horarios',
+      response: marchReport,
+      serverNow: '2027-03-12T19:15:00.000Z',
+    })
+    assert.match(serverNowMarkup, /Reloj del contexto:.*Viernes.*14:15.*\(Lima\).*contexto sintético/)
+
+    const emptyReportWithServerNow = html(LocalAcademicView, {
+      kind: 'horarios',
+      response: null,
+      serverNow: '2027-03-12T19:15:00.000Z',
+    })
+    assert.match(emptyReportWithServerNow, /Reloj del contexto:.*Viernes.*14:15.*\(Lima\).*contexto sintético/)
+  })
 } finally {
   await server.close()
 }

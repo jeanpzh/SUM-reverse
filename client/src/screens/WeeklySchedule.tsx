@@ -10,20 +10,40 @@ const hourHeight = 80
 const timeZone = 'America/Lima'
 const clockFormatter = new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
 const dayFormatter = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short' })
+const dateFormatter = new Intl.DateTimeFormat('es-PE', { timeZone, day: '2-digit', month: '2-digit', year: 'numeric' })
 
 function formatTime(minutes: number) {
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(Math.floor(minutes % 60)).padStart(2, '0')}`
 }
 
-export function WeeklySchedule({ data, displayEvents }: {
+function parseReferenceNow(referenceNow?: string | Date | null): Date | null {
+  if (referenceNow == null) return null
+  if (referenceNow instanceof Date) {
+    return Number.isNaN(referenceNow.getTime()) ? null : referenceNow
+  }
+  if (typeof referenceNow === 'string') {
+    const trimmed = referenceNow.trim()
+    if (!trimmed) return null
+    const parsed = new Date(trimmed)
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+  }
+  return null
+}
+
+export function WeeklySchedule({ data, displayEvents, referenceNow }: {
   data: ApiResponseMap['horarios']['data'] | null
   displayEvents?: ScheduleDisplayEvent[]
+  referenceNow?: string | Date | null
 }) {
-  const [now, setNow] = useState(() => new Date())
+  const contextNow = parseReferenceNow(referenceNow)
+  const hasContextNow = contextNow !== null
+  const [liveNow, setLiveNow] = useState(() => new Date())
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 60_000)
+    if (hasContextNow) return
+    const timer = setInterval(() => setLiveNow(new Date()), 60_000)
     return () => clearInterval(timer)
-  }, [])
+  }, [hasContextNow])
+  const now = contextNow ?? liveNow
   const events = displayEvents ?? toScheduleEvents(data ?? [])
   const clock = clockFormatter.format(now)
   const [currentHour, currentMinute] = clock.split(':').map(Number)
@@ -38,7 +58,14 @@ export function WeeklySchedule({ data, displayEvents }: {
   return <section className="weekly-schedule" aria-label="Horario semanal">
     <header className="weekly-schedule__heading">
       <h2>Horario semanal</h2>
-      <span>Hoy: {days[currentDay]} · {clock} <small>(Lima)</small></span>
+      {hasContextNow ? (
+        <span>
+          Reloj del contexto: {days[currentDay]} {dateFormatter.format(now)} · {clock}{' '}
+          <small>(Lima) · contexto sintético</small>
+        </span>
+      ) : (
+        <span>Hoy: {days[currentDay]} · {clock} <small>(Lima)</small></span>
+      )}
     </header>
     {!events.length && displayEvents === undefined ? <p className="weekly-schedule__empty" role="status">No hay horarios registrados.</p> : <>
       <div className="weekly-schedule__scroll" tabIndex={0} role="region" aria-label="Calendario semanal con horas; desplázate horizontalmente para ver todos los días">
@@ -46,7 +73,7 @@ export function WeeklySchedule({ data, displayEvents }: {
           <div className="weekly-schedule__days">
             <span className="weekly-schedule__hour-heading">Hora</span>
             {days.map((day, index) => <span key={day} className={index === currentDay ? 'is-today' : ''}>
-              {day}{index === currentDay && <small>Hoy</small>}
+              {day}{index === currentDay && <small>{hasContextNow ? 'Contexto' : 'Hoy'}</small>}
             </span>)}
           </div>
           <div className="weekly-schedule__body" style={{ height }}>
@@ -97,7 +124,8 @@ export function WeeklySchedule({ data, displayEvents }: {
                   )
                 })}
                 {dayIndex === currentDay && showNow && <div className="weekly-schedule__now"
-                  style={{ top: (currentTime - firstMinute) / 60 * hourHeight }} aria-label={`Hora actual: ${clock}`}>
+                  style={{ top: (currentTime - firstMinute) / 60 * hourHeight }}
+                  aria-label={hasContextNow ? `Hora del contexto: ${clock}` : `Hora actual: ${clock}`}>
                   <span>Ahora {clock}</span>
                 </div>}
               </div>
@@ -106,7 +134,9 @@ export function WeeklySchedule({ data, displayEvents }: {
         </div>
       </div>
       <p className="weekly-schedule__footer">{events.length} sesiones · {formatTime(firstMinute)}–{formatTime(lastMinute)}
-        <span>La línea roja indica la hora actual dentro de la franja visible.</span>
+        <span>{hasContextNow
+          ? 'La línea roja indica la hora del reloj de contexto dentro de la franja visible.'
+          : 'La línea roja indica la hora actual dentro de la franja visible.'}</span>
       </p>
     </>}
   </section>
