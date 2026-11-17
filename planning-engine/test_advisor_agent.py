@@ -375,11 +375,16 @@ def test_model_is_offered_only_action_tools_and_gets_the_diagnosis_up_front():
     assert {'freeSlotFits', 'pendingByCourse', 'topTeacherSlack'} <= set(first_user['diagnosis'])
 
 
-@pytest.mark.parametrize('text', [
-    'Prioriza la tarde sobre ampliar la carga, ya que no requiere autorización externa.',
-    'Habilita la tarde antes que la carga porque no requiere autorización externa.',
-    'Ampliar la carga requiere autorización externa; la tarde no requiere autorización.',
+@pytest.mark.parametrize('text,claims', [
+    ('Ampliar la carga de un docente no requiere autorización externa.', True),
+    ('Se puede ampliar la carga sin autorización.', True),
+    ('Amplía la carga de un docente, ya que no requiere autorización externa.', True),
+    ('Primero, pruebe aumentar la carga docente solo para un curso, ya que tiene un impacto medido y no requiere autorización externa.', True),
+    ('Prioriza la tarde sobre ampliar la carga, ya que no requiere autorización externa.', False),
+    ('Habilita la tarde antes que la carga porque no requiere autorización externa.', False),
+    ('Ampliar la carga requiere autorización externa; la tarde no requiere autorización.', False),
+    ('Aplica primero la franja de tarde, ya que no requiere autorización externa. Luego amplía la carga si es necesario.', False),
 ])
-def test_authorization_guard_ignores_claims_about_other_options(text):
-    from advisor import _LOAD_WITHOUT_AUTHORIZATION
-    assert not _LOAD_WITHOUT_AUTHORIZATION.search(text)
+def test_authorization_guard_follows_the_subject_of_the_claim(text, claims):
+    from advisor import _claims_load_without_authorization
+    assert _claims_load_without_authorization(text) is claims

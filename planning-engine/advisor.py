@@ -176,14 +176,37 @@ def _extract_json_object(raw_text: str) -> dict:
 
 
 # Teacher-load increases always need external authorization; prose saying otherwise is false.
-# The claim must stay inside one clause after "carga": crossing a comma or a causal connector
-# ("porque", "ya que") usually moves to another option, and rejecting a sound answer drops the
-# whole LLM output. A causal clause whose subject is ambiguous is therefore let through.
-_LOAD_WITHOUT_AUTHORIZATION = re.compile(
-    r"\bcarga\b(?:(?!\b(?:porque|ya que|pues|mientras)\b)[^.,;:]){0,50}?"
+_NO_AUTHORIZATION = re.compile(
     r"\b(?:no\s+(?:requiere|necesita)\w*|sin\s+(?:necesidad\s+de\s+)?)\s*(?:una\s+|ninguna\s+)?autorizaci",
     re.IGNORECASE,
 )
+_CAUSAL = re.compile(r"\b(?:porque|ya que|pues|dado que|puesto que)\b", re.IGNORECASE)
+_LEVER_WORDS = re.compile(
+    r"\b(?P<load>carga)\b|\b(?P<other>tarde|s[aá]bado|franja|turno|ventana|dividid\w*|divisi[oó]n|modalidad|"
+    r"ambiente\w*|laboratorio\w*|aula\w*|referencia)\b",
+    re.IGNORECASE,
+)
+
+
+def _claims_load_without_authorization(text: str) -> bool:
+    """True when a clause says the load lever needs no authorization.
+
+    The subject is the lever the claim grammatically hangs on: the one named in the same
+    clause before the claim, or, when a causal connector ("ya que", "porque") introduces
+    the claim, the first lever named in the main clause before that connector.
+    """
+    for clause in re.split(r"[.;:]", text):
+        for match in _NO_AUTHORIZATION.finditer(clause):
+            before = clause[: match.start()]
+            causal = list(_CAUSAL.finditer(before))
+            scope = before[: causal[-1].start()] if causal else before.split(",")[-1]
+            levers = list(_LEVER_WORDS.finditer(scope))
+            if not levers:
+                continue
+            subject = levers[0] if causal else levers[-1]
+            if subject.group("load"):
+                return True
+    return False
 
 
 def _replace_ids_with_titles(text: str, recommendations: list[AdvisorRecommendation]) -> str:
@@ -230,7 +253,7 @@ def _apply_validated_llm_output(
 
     rationales = parsed.get("rationalesById") or {}
     prose = [parsed["summary"], *(v for v in rationales.values() if isinstance(v, str))] if isinstance(rationales, dict) else [parsed["summary"]]
-    if any(_LOAD_WITHOUT_AUTHORIZATION.search(text) for text in prose):
+    if any(_claims_load_without_authorization(text) for text in prose):
         return _reject("load_without_authorization", summary, recommendations)
     # The summary must not lead with an option measured at zero when another one unlocks components.
     lead = _first_mentioned(parsed["summary"], recommendations)
