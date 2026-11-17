@@ -1,0 +1,306 @@
+{
+  "planning": {
+    "source": "Own isolated synthetic createDemoCatalog and built-in synthetic operational students",
+    "browser": "T3 Browser native",
+    "initial": {
+      "assigned": 211,
+      "pending": 121
+    },
+    "final": {
+      "assigned": 332,
+      "pending": 0,
+      "status": "complete",
+      "overlaps": 0
+    },
+    "advisor": [
+      {
+        "source": {
+          "mode": "llm-assisted",
+          "providerLabel": "bedrock_converse / us.amazon.nova-lite-v1:0"
+        },
+        "simulated": false
+      },
+      {
+        "source": {
+          "mode": "llm-assisted",
+          "providerLabel": "bedrock_converse / us.amazon.nova-lite-v1:0"
+        },
+        "simulated": true
+      }
+    ],
+    "review": {
+      "responses": 82,
+      "state": "ready-for-approval",
+      "round": 1
+    },
+    "published": "published",
+    "offer": {
+      "runId": "0901270a-b8d6-4f3c-93c2-263ee0764f9b",
+      "publicationId": "127129b3-aaf6-4b37-94e9-a319e222be59",
+      "publicationVersion": 1,
+      "offerVersion": 1,
+      "academicPeriod": "2027-I",
+      "schoolId": "SISTEMAS",
+      "planId": "SYN-SIS-PLAN",
+      "activatedAt": "2026-11-17T14:43:26.568Z",
+      "clockBase": "2027-03-02T03:30:00.000Z",
+      "courseCount": 56,
+      "sectionCount": 166
+    },
+    "errors": []
+  },
+  "student": {
+    "status": 200,
+    "totalCredits": 12,
+    "actorId": "SYN-SIS-A",
+    "rows": [
+      {
+        "courseId": "SYN-SIS-C09",
+        "sectionId": "SYN-SIS-E3-41C32003F64102D644F0",
+        "schedule": [
+          {
+            "day": 4,
+            "startMinute": 1200,
+            "endMinute": 1260
+          },
+          {
+            "day": 5,
+            "startMinute": 1200,
+            "endMinute": 1320
+          }
+        ]
+      },
+      {
+        "courseId": "SYN-SIS-C10",
+        "sectionId": "SYN-SIS-E3-677D8D73DE9508CB89A3",
+        "schedule": [
+          {
+            "day": 1,
+            "startMinute": 840,
+            "endMinute": 1020
+          },
+          {
+            "day": 3,
+            "startMinute": 1200,
+            "endMinute": 1320
+          }
+        ]
+      },
+      {
+        "courseId": "SYN-SIS-C11",
+        "sectionId": "SYN-SIS-E3-C037581154E707A6BA37",
+        "schedule": [
+          {
+            "day": 1,
+            "startMinute": 1200,
+            "endMinute": 1320
+          },
+          {
+            "day": 5,
+            "startMinute": 1080,
+            "endMinute": 1200
+          }
+        ]
+      },
+      {
+        "courseId": "SYN-SIS-C12",
+        "sectionId": "SYN-SIS-E3-3BA8F1F8F5A60C608174",
+        "schedule": [
+          {
+            "day": 2,
+            "startMinute": 840,
+            "endMinute": 960
+          },
+          {
+            "day": 2,
+            "startMinute": 960,
+            "endMinute": 1080
+          }
+        ]
+      }
+    ],
+    "firstRowKeys": [
+      "courseId",
+      "sectionId",
+      "planId",
+      "name",
+      "credits",
+      "schedule",
+      "cycle",
+      "label",
+      "teacher"
+    ],
+    "selected": [
+      {
+        "courseId": "SYN-SIS-C09",
+        "sectionId": "SYN-SIS-E3-41C32003F64102D644F0",
+        "meetings": [
+          {
+            "day": 4,
+            "startMinute": 1200,
+            "endMinute": 1260
+          },
+          {
+            "day": 5,
+            "startMinute": 1200,
+            "endMinute": 1320
+          }
+        ],
+        "credits": 2
+      },
+      {
+        "courseId": "SYN-SIS-C10",
+        "sectionId": "SYN-SIS-E3-677D8D73DE9508CB89A3",
+        "meetings": [
+          {
+            "day": 1,
+            "startMinute": 840,
+            "endMinute": 1020
+          },
+          {
+            "day": 3,
+            "startMinute": 1200,
+            "endMinute": 1320
+          }
+        ],
+        "credits": 4
+      },
+      {
+        "courseId": "SYN-SIS-C11",
+        "sectionId": "SYN-SIS-E3-C037581154E707A6BA37",
+        "meetings": [
+          {
+            "day": 1,
+            "startMinute": 1200,
+            "endMinute": 1320
+          },
+          {
+            "day": 5,
+            "startMinute": 1080,
+            "endMinute": 1200
+          }
+        ],
+        "credits": 3
+      },
+      {
+        "courseId": "SYN-SIS-C12",
+        "sectionId": "SYN-SIS-E3-3BA8F1F8F5A60C608174",
+        "meetings": [
+          {
+            "day": 2,
+            "startMinute": 840,
+            "endMinute": 960
+          },
+          {
+            "day": 2,
+            "startMinute": 960,
+            "endMinute": 1080
+          }
+        ],
+        "credits": 3
+      }
+    ],
+    "selectionAndScheduleMatch": true,
+    "sessions": 8
+  },
+  "smoke": [
+    {
+      "name": "21-profile",
+      "url": "/alumnoWebSum/v2/informacion/perfil",
+      "text": "Estudiante sintético A\n\nSYN-SIS-A\n\nALUMNO\n\nINGENIERÍA DE SISTEMAS E INFORMÁTICA\n\nIngeniería de Sistemas\n\n⇩ Descargar Perfil\nInformación Personal\nInformación Académica\nCambio de Contraseña\nInformación Personal\nDocumento de Identidad\nDocumento sintético SYN-DOC-SIS-A\nEstado Civil\nSoltero/a\nSexo\nFemenino\nFecha de Nacimiento\n2003-04-18\nLugar de Nacimiento\nLima / Lima / San Miguel\nTeléfono\nNo registrado\nCelular\nSYN-TEL-0001\nCorreo Institucional\nsyn-sis-a@example.test\nCorreo Personal\nsyn-sis-a.personal@example.test\nDomicilio\nLima / Lima / San Miguel\nDirección\nAv. Demostración 120 — domicilio sintético",
+      "error": false,
+      "overflow": false,
+      "screenshot": "21-profile.png"
+    },
+    {
+      "name": "22-history",
+      "url": "/alumnoWebSum/v2/informacion/historial",
+      "text": "Historial Académico\n\nHistorial sintético para demostración; no corresponde a un registro académico oficial.\n\nMI INFORMACIÓN\nResumen académico\nEstudiante\nEstudiante sintético A\nCódigo\nSYN-SIS-A\nFacultad\nINGENIERÍA DE SISTEMAS E INFORMÁTICA\nPrograma\nIngeniería de Sistemas\nPlan de estudios\nSYN-SIS-PLAN - Plan de Estudios 2018 (base sintética)\nCréditos aprobados\n183\nAsignaturas aprobadas\n60\nPromedio ponderado\n15.72\nTENDENCIA\nPromedio por periodo\n9 periodos\n\nGráfico de promedios de 9 periodos. Usa las flechas del teclado para consultar cada promedio.\n\n2022-1\n2022-2\n2023-1\n2023-2\n2024-1\n2024-2\n2025-1\n2025-2\n2026-1\n14\n16\n18\n19\nDETALLE\nAsignaturas cu",
+      "error": false,
+      "overflow": false,
+      "screenshot": "22-history.png"
+    },
+    {
+      "name": "23-personal-form",
+      "url": "/alumnoWebSum/v2/informacion/formularioDatos",
+      "text": "Formulario de Datos Personales\n\nDatos personales no disponibles para perfiles sintéticos. No se muestran valores personales sin una fuente local válida.",
+      "error": false,
+      "overflow": false,
+      "screenshot": "23-personal-form.png"
+    },
+    {
+      "name": "24-socioeconomic",
+      "url": "/alumnoWebSum/v2/informacion/fichaSocioeconomica",
+      "text": "Ficha Socioeconómica\nDatos Alumno\nColegio de Procedencia\nDependencia Económica\nContacto\nSalud\nInterés Académico\nTransporte\nFamilia Salud\nRecursos de Estudio\nDatos Vivienda\nSituación Económica\nRecreación\nAptitudes y Habilidades\nDescargar Formulario\nFicha Socioeconómica\n\nEstudiante sintético A\n\nCódigo de estudiante: SYN-SIS-A\n\nLos datos se muestran por sección.\n\nDatos Alumno\nCódigo de Estudiante\nNombre de Estudiante\nSexo\nIdentidad Étnica\nTeléfono Fijo\nFecha de Nacimiento\nPaís\nDepartamento\nProvincia\nDistrito\nEstado Civil\nCorreo Personal\nTipo de Doc. de Identidad\nNúmero de Doc. de Identidad\nTeléfono Móvil\nReligión\nLengua Materna\nCuenta de Facebook\nModificar\nColegio de Procedencia\nPaís\nPerú\nDepartamento\nLima\nProvincia\nLima\nDistrito\nSan Miguel\nTi",
+      "error": false,
+      "screenshot": "24-socioeconomic.png"
+    },
+    {
+      "name": "25-prematricula",
+      "url": "/alumnoWebSum/v2/reportes/prematricula",
+      "text": "Prematrícula\nDatos del Estudiante\nPeriodo Académico\n2027-I\nFacultad\nINGENIERÍA DE SISTEMAS E INFORMÁTICA\nPrograma\nIngeniería de Sistemas\nEspecialidad\nEstudios de especialidad\nPlan de Estudios\nSYN-SIS-PLAN - Plan de Estudios 2018 (base sintética)\n\nDocumento de prematrícula sintético del perfil activo.\n\n⇩\nDescargar\nPlan\tCiclo\tAsignatura\tCréditos\tNro. Rep\tNro. Mat. Equiv\tNro. Rep. Total\tEtapa\nSYN-SIS-PLAN\t9\tSYN-SIS-C09 - DESARROLLO DE PROYECTOS DE TESIS I\t2\t—\t—\t—\t—\nSYN-SIS-PLAN\t9\tSYN-SIS-C10 - INNOVACIÓN, CAMBIO ORGANIZACIONAL Y EMPRENDIMIENTO\t4\t—\t—\t—\t—\nSYN-SIS-PLAN\t9\tSYN-SIS-C11 - ARQUITECTURA EMPRESARIAL\t3\t—\t—\t—\t—\nSYN-SIS-PLAN\t9\tSYN-SIS-C12 - TENDENCIAS EN SISTEMAS DE INFORMACIÓN\t3\t—\t—\t—\t—\nSYN-SIS-PLAN\t10\tSYN-SIS-C14 - GESTIÓN DE CONOCIMIENT",
+      "error": false,
+      "screenshot": "25-prematricula.png"
+    },
+    {
+      "name": "26-evaluations",
+      "url": "/alumnoWebSum/v2/reportes/evaluaciones",
+      "text": "Reporte de Evaluaciones\nDatos del Estudiante\nPeriodo Académico\n2027-1\nFacultad\nINGENIERÍA DE SISTEMAS E INFORMÁTICA\nPrograma\nIngeniería de Sistemas\nEspecialidad\nEstudios de especialidad\nPlan de Estudios\nSYN-SIS-PLAN - Plan de Estudios 2018 (base sintética)\nCiclo\tAsignatura\tTipo Evaluación\tCalificación\tFórmula\nSin registros sintéticos en esta demostración.\n\nMostrando 0 registros",
+      "error": false,
+      "screenshot": "26-evaluations.png"
+    },
+    {
+      "name": "27-debts",
+      "url": "/alumnoWebSum/v2/reportes/deudas",
+      "text": "Reporte de Deudas\nDatos del Estudiante\nPeriodo Académico\n2027-1\nFacultad\nINGENIERÍA DE SISTEMAS E INFORMÁTICA\nPrograma\nIngeniería de Sistemas\nEspecialidad\nEstudios de especialidad\nPlan de Estudios\nSYN-SIS-PLAN - Plan de Estudios 2018 (base sintética)\nFecha Registro\tPeriodo Académico\tConcepto\tMonto Inicial\tMonto Final\tObservación\nSin registros sintéticos en esta demostración. Esto no indica que una deuda esté pagada.\n\nMostrando 0 registros",
+      "error": false,
+      "screenshot": "27-debts.png"
+    },
+    {
+      "name": "28-attendance",
+      "url": "/alumnoWebSum/v2/asistencia",
+      "text": "Mis Asistencias\nDatos del Estudiante\nPeriodo Académico\n2027-1\nFacultad\nINGENIERÍA DE SISTEMAS E INFORMÁTICA\nPrograma\nIngeniería de Sistemas\nEspecialidad\nEstudios de especialidad\nPlan de Estudios\nSYN-SIS-PLAN - Plan de Estudios 2018 (base sintética)\n⇩\nDescargar\n\nLa consulta del calendario de asistencia no está disponible en esta réplica.\n\nAsignatura\tSección\t# Clases\tPuntual\tTardanzas\tFaltas\tAsistencia Total\tAcción\nN°\t(%)\tN°\t(%)\tN°\t(%)\tN°\t(%)\nSin registros sintéticos en esta demostración. Esto no indica cumplimiento institucional.\n\nMostrando 0 registros",
+      "error": false,
+      "screenshot": "28-attendance.png"
+    },
+    {
+      "name": "29-tutoring",
+      "url": "/alumnoWebSum/v2/tutoria",
+      "text": "Mis Tutorias\nDatos del Estudiante\nPeriodo Académico\n2027-1\nFacultad\nINGENIERÍA DE SISTEMAS E INFORMÁTICA\nPrograma\nIngeniería de Sistemas\nEspecialidad\nEstudios de especialidad\nPlan de Estudios\nSYN-SIS-PLAN - Plan de Estudios 2018 (base sintética)\nDocente\tCod. Asignatura\tResolucion\tFecha\tObservacion\tAcción\nSin registros sintéticos en esta demostración. Esto no confirma que un requisito se haya cumplido.\n\nMostrando 0 registros",
+      "error": false,
+      "screenshot": "29-tutoring.png"
+    },
+    {
+      "name": "30-study-plan",
+      "url": "/alumnoWebSum/v2/planEstudios",
+      "text": "Plan de Estudios\n⇩\nDescargar CSV local\nEsp.\tAsignatura\tCréd.\tTipo\tGrupo\tPre-Requisito\tGrupo\n0\tINE001 - PROCESO CULTURAL ANDINO\t2\tE\tGEG\tNR - NR\t--\n0\tINE002 - PROGRAMACIÓN Y COMPUTACIÓN\t2\tE\tGEG\tNR - NR\t--\n0\tINE003 - DIBUJO TÉCNICO\t2\tE\tGEG\tNR - NR\t--\n0\tINE004 - INGLÉS PARA ESCRITURA ACADÉMICA\t2\tE\tGEG\tNR - NR\t--\n0\tINE005 - MATLAB\t2\tE\tGEG\tNR - NR\t--\n0\tINE006 - CÁLCULOS BÁSICOS EN QUÍMICA\t2\tE\tGEG\tNR - NR\t--\n0\tINE007 - SEGURIDAD E HIGIENE EN LABORATORIO\t2\tE\tGEG\tNR - NR\t--\n0\tINE008 - FUNDAMENTOS DE RIESGOS DE DESASTRES Y CAMBIO CLIMÁTICO\t2\tE\tGEG\tNR - NR\t--\n0\tINE009 - GEOGRAFIA ECONÓMICA DEL PERÚ\t2\tE\tG",
+      "error": false,
+      "screenshot": "30-study-plan.png"
+    },
+    {
+      "name": "31-manuals",
+      "url": "/alumnoWebSum/v2/manuales",
+      "text": "VideoTutoriales\nMi perfil\n\nGuia para el usuario para verificar sus datos personales.\n\n29/01/2024\nWebSUM 2.0\nHistorial Academico\n\nGuia para el usuario para visualizar sus calificaciones.\n\n29/01/2024\nWebSUM 2.0\nMatricula Via Internet\n\nGuia para el usuario para que realize su matricula via internet.\n\n29/01/2024\nWebSUM 2.0\nReporte de Matricula\n\nGuia para el usuario para visualizar y descargar el Reporte de Matricula.\n\n29/01/2024\nWebSUM 2.0\nReporte de Prematricula\n\nGuia para el usuario para visualizar y descargar el Reporte de Prematricula.\n\n29/01/2024\nWebSUM 2.0\nReporte de Evaluaciones\n\nGuia para ",
+      "error": false,
+      "screenshot": "31-manuals.png"
+    }
+  ],
+  "overallPassed": false,
+  "reason": "Student programming screen LOCAL_FAILURE and incomplete student metadata",
+  "scope": "Synthetic local replica only; no production SUM",
+  "viewport": {
+    "desktop": [
+      1280,
+      800
+    ],
+    "mobile": [
+      390,
+      844
+    ]
+  },
+  "restart": {
+    "publicationAndOfferRestored": true,
+    "enrollmentVisibleAfterRelogin": true,
+    "sessionsRecreated": true
+  }
+}
