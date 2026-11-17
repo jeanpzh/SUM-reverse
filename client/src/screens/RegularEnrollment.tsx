@@ -673,6 +673,7 @@ export function RegularEnrollmentScreen() {
   const [selectedActorId, setSelectedActorId] = useState<MatriculaRegularId>('SYN-SIS-A')
   const [contextEnvelope, setContextEnvelope] = useState<MatriculaRegularEnvelope<MatriculaRegularContext> | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
+  const [contextRefreshing, setContextRefreshing] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
   const [session, setSession] = useState<MatriculaRegularSession | null>(null)
   const [sessionBusy, setSessionBusy] = useState(false)
@@ -687,6 +688,7 @@ export function RegularEnrollmentScreen() {
   const [storage] = useState(browserStorage)
   const [flow] = useState(() => createSubmissionFlow({ api: createMatriculaRegularApi({ mode: 'local', publicAccess: import.meta.env.VITE_SUM_SIMULATOR === '1' }), storage }))
   const navigate = useNavigate()
+  const contextEnvelopeRef = useRef<MatriculaRegularEnvelope<MatriculaRegularContext> | null>(contextEnvelope)
   const sessionRef = useRef<MatriculaRegularSession | null>(null)
   const sessionControllerRef = useRef<AbortController | null>(null)
   const submitControllerRef = useRef<AbortController | null>(null)
@@ -742,6 +744,7 @@ export function RegularEnrollmentScreen() {
     }
     updateSelectedChoices(nextSelection)
     if (selectionNotice) setNotice(selectionNotice)
+    contextEnvelopeRef.current = envelope
     setContextEnvelope(envelope)
   }, [updateSession, updateUncertain, updateSelectedChoices, flow, storage])
 
@@ -753,7 +756,8 @@ export function RegularEnrollmentScreen() {
     const controller = new AbortController()
     activeControllerRef.current = controller
 
-    setLoading(true)
+    if (contextEnvelopeRef.current === null) setLoading(true)
+    else setContextRefreshing(true)
     setError(null)
 
     const api = createMatriculaRegularApi({ mode: 'local', publicAccess: import.meta.env.VITE_SUM_SIMULATOR === '1' })
@@ -762,10 +766,12 @@ export function RegularEnrollmentScreen() {
         if (controller.signal.aborted) return
         acceptEnvelope(envelope)
         setLoading(false)
+        setContextRefreshing(false)
       })
       .catch((err: unknown) => {
         if (controller.signal.aborted) return
         setLoading(false)
+        setContextRefreshing(false)
         if (err instanceof MatriculaRegularApiError) {
           if (err.status === 401 || err.status === 403) localProfileSessionStore.markAccessExpired()
           setError(err.message)
@@ -820,7 +826,9 @@ export function RegularEnrollmentScreen() {
       return
     }
     activeControllerRef.current?.abort()
+    contextEnvelopeRef.current = null
     setContextEnvelope(null)
+    setContextRefreshing(false)
     setError(null)
     setLoading(true)
     sessionControllerRef.current?.abort()
@@ -921,7 +929,7 @@ export function RegularEnrollmentScreen() {
 
   const handleSubmit = async () => {
     const current = sessionRef.current
-    if (!contextEnvelope || !current || loading || error !== null || submitting || flow.isBusy()
+    if (!contextEnvelope || !current || loading || contextRefreshing || error !== null || submitting || flow.isBusy()
       || uncertainRef.current !== null || resultOutcomeRef.current?.state === 'accepted') return
     if (selectedChoices.length === 0 || contextEnvelope.data.eligibility.state !== 'eligible'
       || !contextEnvelope.data.preEnrollmentComplete || !contextEnvelope.data.offerKnown) return
@@ -1026,7 +1034,7 @@ export function RegularEnrollmentScreen() {
             className="regular-enrollment__select"
             value={selectedActorId}
             onChange={handleActorChange}
-            disabled={loading || sessionBusy || submitting}
+            disabled={loading || contextRefreshing || sessionBusy || submitting}
           >
             {AUTHORIZED_SYNTHETIC_ACTORS.map((actor) => (
               <option key={actor.id} value={actor.id}>
@@ -1040,9 +1048,9 @@ export function RegularEnrollmentScreen() {
           type="button"
           className="regular-enrollment__refresh-button"
           onClick={handleRefresh}
-          disabled={loading || sessionBusy}
+          disabled={loading || contextRefreshing || sessionBusy}
         >
-          {loading ? 'Cargando contexto…' : 'Actualizar contexto'}
+          {loading || contextRefreshing ? 'Cargando contexto…' : 'Actualizar contexto'}
         </button>
       </section>
 
@@ -1062,7 +1070,7 @@ export function RegularEnrollmentScreen() {
         </section>
       )}
 
-      {!loading && !error && contextData && (
+      {!loading && contextData && (
         <div className="regular-enrollment__content">
           <RegularEnrollmentBody
             context={contextData}
@@ -1072,7 +1080,7 @@ export function RegularEnrollmentScreen() {
             onSession={(renew) => { void handleSession(renew) }}
             choices={displayedChoices}
             onChoices={updateSelectedChoices}
-            selectionDisabled={loading || error !== null || session === null || sessionBusy || submitting || uncertain !== null
+            selectionDisabled={loading || contextRefreshing || error !== null || session === null || sessionBusy || submitting || uncertain !== null
               || acceptedOutcome !== null || contextData.eligibility.state !== 'eligible'
               || !contextData.preEnrollmentComplete || !contextData.offerKnown}
             outcome={resultOutcome}
@@ -1082,7 +1090,7 @@ export function RegularEnrollmentScreen() {
               uncertain={uncertain ? { reason: uncertain.reason, lookup: uncertain.lookup } : null}
               storageNotice={uncertain !== null && !uncertain.persisted}
               notice={notice}
-              hasSession={session !== null}
+              hasSession={session !== null && !contextRefreshing && error === null}
               selectionCount={displayedChoices.length}
               eligible={contextData.eligibility.state === 'eligible'}
               acceptedOutcome={acceptedOutcome}

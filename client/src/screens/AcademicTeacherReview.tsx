@@ -126,8 +126,8 @@ export function AcademicTeacherReview({ actionContainer, primaryActionId, review
   return <section ref={sectionRef} className="academic-teacher-review" aria-label="Revisión docente simulada">
     {inHead(roleControl)}
     {actionContainer && primaryActionId === 'record-response' && createPortal(<Button id="planning-tour-primary" onClick={respondToFirstPending}>Registrar respuesta ({counts.pending})</Button>, actionContainer)}
-    {actionContainer && canSubmit && createPortal(<Button type="button" variant="outline" onClick={onSubmit}>Enviar a revisión</Button>, actionContainer)}
-    {!actionContainer && canSubmit && <Button type="button" variant="outline" onClick={onSubmit}>Enviar a revisión</Button>}
+    {actionContainer && canSubmit && primaryActionId !== 'submit-review' && createPortal(<Button type="button" variant="outline" onClick={onSubmit}>Enviar a revisión</Button>, actionContainer)}
+    {!actionContainer && canSubmit && primaryActionId !== 'submit-review' && <Button type="button" variant="outline" onClick={onSubmit}>Enviar a revisión</Button>}
     <PlanningResultStrip status={review && teachers.every((teacher) => teacher.status === 'conformity') ? 'ready' : 'incomplete'}
       ariaLabel="Estado de la ronda" label={stripLabel} facts={stripFacts} />
     <p className="academic-teacher-review__note">La vista simulada no otorga permisos: solo cambia qué controles muestra el prototipo. No hay plazos ni escalamiento automático.</p>

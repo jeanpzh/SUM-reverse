@@ -55,7 +55,7 @@ function PickerRows({ courseLabel, rows, capacityHeading, selected, expanded, se
               {option.sessions?.length ? (
                 <ul
                   aria-label={`Sesiones de la sección ${option.label}`}
-                  style={{ margin: 0, paddingLeft: '1.1rem', textAlign: 'left', display: 'grid', gap: '0.2rem' }}
+                  className="sum-section-dialog__sessions"
                 >
                   {option.sessions.map((session, index) => (
                     <li key={`${option.sectionId}-session-${index}`}>

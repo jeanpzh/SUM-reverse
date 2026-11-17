@@ -32,11 +32,9 @@ export function CourseScheduleModal({ course, onClose }: { course: Course | null
 
   const rows = course ? toCourseScheduleRows(course.horarios) : []
   const showTeacher = rows.some((row) => row.length > 5)
-  const columnWidths = ['8%', '14%', '21%', '16%', '14%', '27%']
   return (
-    <dialog ref={dialogRef} className="course-schedule-dialog" aria-labelledby="course-schedule-title"
+    <dialog ref={dialogRef} className={`course-schedule-dialog${showTeacher ? ' course-schedule-dialog--detailed' : ''}`} aria-labelledby="course-schedule-title"
       aria-describedby="course-schedule-context" onClose={dismiss}
-      style={showTeacher ? { width: 'min(640px, calc(100vw - 28px))' } : undefined}
       onCancel={(event) => { event.preventDefault(); dismiss() }}
       onClick={(event) => {
         const bounds = event.currentTarget.getBoundingClientRect()
@@ -51,15 +49,15 @@ export function CourseScheduleModal({ course, onClose }: { course: Course | null
         <button className="course-schedule-dialog__close" onClick={dismiss} aria-label="Cerrar horarios">×</button>
       </header>
       <div className="course-schedule-dialog__body">
-        <table style={showTeacher ? { minWidth: '520px', width: '100%' } : undefined}>
+        <table>
           <thead>
             <tr>
-              <th style={showTeacher ? { width: columnWidths[0] } : undefined}>Horario</th>
-              <th style={showTeacher ? { width: columnWidths[1] } : undefined}>Día</th>
-              <th style={showTeacher ? { width: columnWidths[2] } : undefined}>Horas de clase</th>
-              <th style={showTeacher ? { width: columnWidths[3] } : undefined}>Aula</th>
-              <th style={showTeacher ? { width: columnWidths[4] } : undefined}>Tipo</th>
-              {showTeacher && <th style={{ width: columnWidths[5] }}>Docente</th>}
+              <th>Horario</th>
+              <th>Día</th>
+              <th>Horas de clase</th>
+              <th>Aula</th>
+              <th>Tipo</th>
+              {showTeacher && <th>Docente</th>}
             </tr>
           </thead>
           <tbody>

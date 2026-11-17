@@ -250,7 +250,7 @@ function PreEnrollmentPanel({ identity }: { identity: E2Identity }) {
         <dl><div><dt>Créditos seleccionados</dt><dd>{validation?.credits ?? '…'}</dd></div><div><dt>Asignaturas</dt><dd>{validation?.courseCount ?? selection.length}</dd></div>
           <div><dt>Estado de validación</dt><dd>{validation ? ({ valid: 'Válido', unmet: 'Requisitos incumplidos', insufficient: 'Información insuficiente', incomplete: 'Borrador incompleto' } as const)[validation.status] : 'Validando'}</dd></div></dl>
         {validation?.issues.map((issue, index) => <p key={`${issue.code}-${index}`} className="student-premat__warning">{issue.message}</p>)}
-        <WeeklySchedule data={null} displayEvents={events} />
+        <WeeklySchedule data={null} displayEvents={events} referenceNow={publication.publication.publishedAt} />
         {selectedCourse && <PickerDialog course={selectedCourse} sections={selectedSections} assignments={publication.publication.schedule.assignments} selection={selection} onCancel={() => setDialogCourse(null)}
           onAccept={(sectionId) => { const next = chooseSection(selection, selectedCourse.courseId, sectionId); editSelection(next); setDialogCourse(null) }} />}
       </>}

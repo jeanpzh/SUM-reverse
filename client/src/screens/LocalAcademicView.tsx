@@ -53,9 +53,8 @@ function ProgrammingTable({ rows }: { rows: ProgrammingRow[] }) {
         </tr>
       </Fragment>) : <tr><td className="empty-cell" colSpan={8}>No hay registros que coincidan.</td></tr>}</tbody>
     </table></div><p className="table-footer">Mostrando {visible.length} registros</p></div>
-    <dialog ref={dialogRef} className="course-schedule-dialog" aria-labelledby="local-course-schedule-title"
+    <dialog ref={dialogRef} className={`course-schedule-dialog${scheduleDialog && scheduleDialog.headers.length > 2 ? ' course-schedule-dialog--detailed' : ''}`} aria-labelledby="local-course-schedule-title"
       aria-describedby="local-course-schedule-context" onClose={() => setSelected(null)}
-      style={scheduleDialog && scheduleDialog.headers.length > 2 ? { width: 'min(640px, calc(100vw - 28px))' } : undefined}
       onCancel={(event) => { event.preventDefault(); setSelected(null) }}>
       <header className="course-schedule-dialog__header">
         <h2 id="local-course-schedule-title">Horarios</h2>

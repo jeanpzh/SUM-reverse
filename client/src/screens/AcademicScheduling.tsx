@@ -201,33 +201,6 @@ export function AcademicScheduling({ currentStage = 'preparacion', preparationVi
       : currentStage === 'aprobacion' ? 'Aprobación y publicación'
         : preparationView === 'cursos' ? 'Oferta de cursos'
           : preparationView === 'recursos' ? 'Docentes y ambientes' : 'Resumen de preparación'
-  const suppressSecondarySubmitReview = currentStage === 'revision' && reviewAction?.id === 'submit-review'
-  useLayoutEffect(() => {
-    if (!headActions) return
-    const syncHeadActions = () => {
-      for (const child of Array.from(headActions.children)) {
-        if (!(child instanceof HTMLButtonElement) || child.id === 'planning-tour-primary') continue
-        if (child.textContent?.trim() === 'Enviar a revisión') {
-          child.hidden = suppressSecondarySubmitReview
-          if (suppressSecondarySubmitReview) child.setAttribute('aria-hidden', 'true')
-          else child.removeAttribute('aria-hidden')
-        }
-      }
-    }
-    syncHeadActions()
-    const observer = new MutationObserver(syncHeadActions)
-    observer.observe(headActions, { childList: true })
-    return () => {
-      observer.disconnect()
-      for (const child of Array.from(headActions.children)) {
-        if (!(child instanceof HTMLButtonElement) || child.id === 'planning-tour-primary') continue
-        if (child.textContent?.trim() === 'Enviar a revisión') {
-          child.hidden = false
-          child.removeAttribute('aria-hidden')
-        }
-      }
-    }
-  }, [headActions, suppressSecondarySubmitReview])
 
   useEffect(() => {
     if (!draftMessage) return
