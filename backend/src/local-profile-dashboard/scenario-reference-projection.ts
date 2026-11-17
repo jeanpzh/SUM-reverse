@@ -6,6 +6,12 @@ import { projectStudent } from './profile-projection.js'
 const time = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
 const days = ['', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO']
 
+const sessionTypeDescriptions: Record<'T' | 'P' | 'L', string> = {
+  T: 'Teoría',
+  P: 'Práctica',
+  L: 'Laboratorio',
+}
+
 function resolveSectionNumber(section: Section, sectionIndex: number): number {
   const rawLabel = section.label?.trim()
   if (rawLabel && /^\d+$/.test(rawLabel)) {
@@ -34,22 +40,40 @@ function projectOperationalSectionRow(
     throw new TypeError('Ciclo de curso operativo inválido')
   }
 
+  const schedule = section.schedule ?? []
   const codSeccion = resolveSectionNumber(section, sectionIndex)
   const codEscuela = actor.scope.schoolId === 'SISTEMAS' ? 1 : 2
-  const teacherName = section.teacher?.trim()
+  const detailTeachers = [...new Set(
+    schedule.map((meeting) => meeting.details?.teacherName).filter((name): name is string => Boolean(name && name.trim() !== '')),
+  )]
+  const detailRooms = [...new Set(
+    schedule.map((meeting) => meeting.details?.roomName).filter((name): name is string => Boolean(name && name.trim() !== '')),
+  )]
+  const rawTeacher = section.teacher === undefined
+    ? (detailTeachers.length > 0 ? detailTeachers.join(' / ') : undefined)
+    : section.teacher
+  const rawRoom = section.room === undefined
+    ? (detailRooms.length > 0 ? detailRooms.join(' / ') : undefined)
+    : section.room
+  const teacherName = rawTeacher?.trim()
   const hasTeacher = Boolean(teacherName && teacherName !== '--')
   const codDocente = hasTeacher ? '' : '--'
   const nomDocente = hasTeacher ? teacherName! : '--'
   const apePatDocente = hasTeacher ? '' : '--'
   const apeMatDocente = hasTeacher ? '' : '--'
-  const codAula = section.room?.trim() || '--'
+  const codAula = rawRoom?.trim() || '--'
 
-  const horarios: HorarioProgramacion[] = (section.schedule ?? []).map((meeting, meetingIndex) => {
+  const horarios: HorarioProgramacion[] = schedule.map((meeting, meetingIndex) => {
     const dayName = Number.isInteger(meeting.day) ? days[meeting.day] : undefined
     if (!dayName || !Number.isSafeInteger(meeting.startMinute) || !Number.isSafeInteger(meeting.endMinute)
       || meeting.startMinute < 0 || meeting.endMinute > 1440 || meeting.startMinute >= meeting.endMinute) {
       throw new TypeError('Horario de sección operativa inválido')
     }
+    const details = meeting.details
+    const meetingTeacherName = section.teacher === null ? null : (details?.teacherName ?? null)
+    const meetingTeacherCode = section.teacher === null ? '--' : (details?.teacherId ?? codDocente)
+    const meetingRoomName = section.room === null ? '--' : (details?.roomName ?? codAula)
+    const sessionType = details?.sessionType
     return {
       codSemestre: null,
       codFacultad: 0,
@@ -59,19 +83,19 @@ function projectOperationalSectionRow(
       codAsignatura,
       desAsignatura: null,
       codSeccion,
-      codDocente,
-      nomDocente: null,
+      codDocente: meetingTeacherCode,
+      nomDocente: meetingTeacherName,
       horario: meetingIndex + 1,
       dia: dayName,
       horaInicio: time(meeting.startMinute),
       horaFin: time(meeting.endMinute),
       horaInicioMin: meeting.startMinute,
       horaFinMin: meeting.endMinute,
-      codAula,
+      codAula: meetingRoomName,
       topeAlumnosLab: 0,
       matriculadosLab: 0,
-      codTipoHoraAsignatura: '--',
-      desTipoHoraAsignatura: '--',
+      codTipoHoraAsignatura: sessionType ?? '--',
+      desTipoHoraAsignatura: sessionType ? sessionTypeDescriptions[sessionType] : '--',
     }
   })
 

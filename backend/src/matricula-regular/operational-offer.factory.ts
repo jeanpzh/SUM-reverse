@@ -3,11 +3,21 @@ import type { AcademicPublication } from '../../../shared/programacion-academica
 import type { OperationalOffer } from '../../../shared/enrollment-offer.mjs'
 import { buildBuiltInEnrollmentScenarioBundles } from './enrollment-scenarios.js'
 import { regularTurnWindowsForDate } from './windows.js'
-import type { ActorProfile, EnrollmentProfile, OfferedCourse, SyntheticFixture } from './profile.types.js'
+import type { ActorProfile, EnrollmentProfile, Meeting, OfferedCourse, SessionType, SyntheticFixture } from './profile.types.js'
 import type { RunState } from './store.types.js'
 
 export const E3_CLOCK_BASE = '2027-03-02T03:30:00.000Z'
 const LOCAL_SOURCE_ID = 'E3-PUBLICATION-1'
+
+function isNonBlank(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
+function parseSessionType(value: unknown): SessionType | undefined {
+  if (value === undefined) return undefined
+  if (value === 'T' || value === 'P' || value === 'L') return value
+  throw new Error('ACADEMIC_CONTEXT_UNAVAILABLE')
+}
 
 function stableSectionId(offer: OperationalOffer, sourceCourseId: string, sourceSectionId: string): string {
   const digest = createHash('sha256')
@@ -77,19 +87,44 @@ function mapPublishedOffer(publication: AcademicPublication, offer: OperationalO
       const sessions = publication.schedule.assignments.filter((assignment) =>
         assignment.courseId === course.courseId && assignment.sectionId === sourceSection.sectionId,
       )
-      const meetings = [...new Map(sessions.map((session) => [`${session.day}:${session.startMinute}:${session.endMinute}`, {
-        day: session.day as 1 | 2 | 3 | 4 | 5 | 6 | 7,
-        startMinute: session.startMinute,
-        endMinute: session.endMinute,
-      }])).values()].sort((left, right) => left.day - right.day || left.startMinute - right.startMinute)
+      const orderedSessions = [...sessions].sort((left, right) =>
+        left.day - right.day
+        || left.startMinute - right.startMinute
+        || left.endMinute - right.endMinute
+        || left.sessionId.localeCompare(right.sessionId),
+      )
+      const meetings: Meeting[] = orderedSessions.map((session) => {
+        if (!isNonBlank(session.sessionId) || !isNonBlank(session.teacherId) || !isNonBlank(session.teacherName)
+          || !isNonBlank(session.roomId) || !isNonBlank(session.roomName)
+          || !Number.isInteger(session.day) || session.day < 1 || session.day > 7
+          || !Number.isSafeInteger(session.startMinute) || !Number.isSafeInteger(session.endMinute)
+          || session.startMinute < 0 || session.endMinute > 1440 || session.startMinute >= session.endMinute) {
+          throw new Error('ACADEMIC_CONTEXT_UNAVAILABLE')
+        }
+        const sessionType = parseSessionType(session.sessionType)
+        return {
+          day: session.day as 1 | 2 | 3 | 4 | 5 | 6 | 7,
+          startMinute: session.startMinute,
+          endMinute: session.endMinute,
+          details: {
+            sessionId: session.sessionId,
+            teacherId: session.teacherId,
+            teacherName: session.teacherName,
+            roomId: session.roomId,
+            roomName: session.roomName,
+            ...(sessionType === undefined ? {} : { sessionType }),
+          },
+        }
+      })
       if (meetings.length === 0 || !Number.isSafeInteger(sourceSection.capacity) || sourceSection.capacity < 1) {
         throw new Error('ACADEMIC_CONTEXT_UNAVAILABLE')
       }
-      const first = sessions[0]!
+      const teacher = [...new Set(orderedSessions.map((session) => session.teacherName))].join(' / ')
+      const room = [...new Set(orderedSessions.map((session) => session.roomName))].join(' / ')
       originEntries.push({ publicationId: publication.id, publicationVersion: publication.publicationVersion,
         courseId: course.courseId, sectionId: sourceSection.sectionId, offeredSectionId: sectionId })
       return { sectionId, capacity: sourceSection.capacity, occupied: 0, schedule: meetings,
-        label: String(index + 1), teacher: first.teacherName, room: [...new Set(sessions.map((session) => session.roomName))].join(' / ') }
+        label: String(index + 1), teacher, room }
     })
     if (sections.length === 0) throw new Error('ACADEMIC_CONTEXT_UNAVAILABLE')
     mappedOffer.push({ ...structuredClone(regularCourse), courseId: targetId, name: course.name, cycle: course.cycle,

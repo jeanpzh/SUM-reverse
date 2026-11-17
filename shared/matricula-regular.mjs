@@ -16,6 +16,7 @@ export const matriculaRegularGapCodes = Object.freeze([
 ])
 
 export const matriculaRegularWindowOrigins = Object.freeze(['published-derived', 'synthetic'])
+export const matriculaRegularSessionTypes = Object.freeze(['T', 'P', 'L'])
 
 const causeCodes = new Set(matriculaRegularCauseCodes)
 const gapCodes = new Set(matriculaRegularGapCodes)
@@ -68,6 +69,11 @@ function string(value, path) {
 function nonEmpty(value, path) {
   string(value, path)
   if (value.length === 0) fail(path, 'string no vacío')
+}
+
+function nonBlank(value, path) {
+  nonEmpty(value, path)
+  if (value.trim().length === 0) fail(path, 'string no vacío')
 }
 
 function boolean(value, path) {
@@ -220,12 +226,26 @@ function courseDocument(value, path) {
   }, path)
 }
 
+function meetingDetails(value, path) {
+  exact(value, {
+    sessionId: nonBlank,
+    teacherId: nonBlank,
+    teacherName: nonBlank,
+    roomId: nonBlank,
+    roomName: nonBlank,
+  }, path, {
+    sessionType: (item, itemPath) => enumValue(matriculaRegularSessionTypes, item, itemPath),
+  })
+}
+
 function meeting(value, path) {
   exact(value, {
     day: (item, itemPath) => integer(item, itemPath, 1, 7),
     startMinute: (item, itemPath) => integer(item, itemPath, 0, 1439),
     endMinute: (item, itemPath) => integer(item, itemPath, 1, 1440),
-  }, path)
+  }, path, {
+    details: meetingDetails,
+  })
   if (value.startMinute >= value.endMinute) fail(path, 'inicio menor que fin')
 }
 
@@ -465,6 +485,7 @@ function responseEnvelope(value, dataValidator, path = 'response') {
   exact(value, { runId: uuid, data: dataValidator }, path)
 }
 
+export function validateMeeting(value) { meeting(value, 'meeting') }
 export function validateChoice(value) { choice(value, 'choice') }
 export function validateScope(value) { scope(value, 'scope') }
 export function validateSource(value) { source(value, 'source') }

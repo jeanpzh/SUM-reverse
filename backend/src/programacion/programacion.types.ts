@@ -5,7 +5,7 @@ export type HorarioProgramacion = {
   codSemestre: null
   codPlan: null
   desAsignatura: null
-  nomDocente: null
+  nomDocente: string | null
   codAsignatura: string
   codDocente: string
   dia: string
