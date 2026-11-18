@@ -36,9 +36,20 @@ export interface ScheduleDisplayEvent {
   section: string
   kind: string
   time: string
+  sessionType?: string
+  room?: string
+  teacher?: string
 }
 
 const unknown = '—'
+
+const SESSION_TYPE_LABELS: Record<'T' | 'P' | 'L', string> = {
+  T: 'Teoría',
+  P: 'Práctica',
+  L: 'Laboratorio',
+}
+
+const FULL_DAYS = ['—', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
 export function buildProgrammingRows(context: MatriculaRegularContext): ProgrammingRow[] {
   return context.offer.flatMap((course) => course.sections.map((section) => ({
@@ -59,11 +70,42 @@ export function formatProgrammingRow(row: ProgrammingRow): string[] {
 
 function formatMeeting(meeting: MatriculaRegularMeeting) {
   const day = ['—', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'][meeting.day] ?? unknown
-  return `${day} ${formatMinute(meeting.startMinute)}-${formatMinute(meeting.endMinute)}`
+  const base = `${day} ${formatMinute(meeting.startMinute)}-${formatMinute(meeting.endMinute)}`
+  if (!meeting.details) return base
+  const sessionType = meeting.details.sessionType ? SESSION_TYPE_LABELS[meeting.details.sessionType] : null
+  const parts = [sessionType, meeting.details.roomName, meeting.details.teacherName].filter(Boolean)
+  return parts.length > 0 ? `${base} (${parts.join(' · ')})` : base
 }
 
 function formatMinute(minutes: number) {
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
+}
+
+export function buildProgrammingScheduleDialog(section: MatriculaRegularSection): {
+  headers: string[]
+  rows: string[][]
+} {
+  const schedule = section.schedule ?? []
+  const hasDetails = schedule.some((meeting) => Boolean(meeting.details))
+  if (!hasDetails) {
+    return {
+      headers: ['Día', 'Horas de clase'],
+      rows: schedule.map((meeting) => [
+        FULL_DAYS[meeting.day] ?? unknown,
+        `${formatMinute(meeting.startMinute)}-${formatMinute(meeting.endMinute)}`,
+      ]),
+    }
+  }
+  return {
+    headers: ['Día', 'Horas de clase', 'Tipo', 'Aula', 'Docente'],
+    rows: schedule.map((meeting) => [
+      FULL_DAYS[meeting.day] ?? unknown,
+      `${formatMinute(meeting.startMinute)}-${formatMinute(meeting.endMinute)}`,
+      meeting.details?.sessionType ? SESSION_TYPE_LABELS[meeting.details.sessionType] : unknown,
+      meeting.details?.roomName ?? unknown,
+      meeting.details?.teacherName ?? unknown,
+    ]),
+  }
 }
 
 export function buildPreEnrollmentRows(context: MatriculaRegularContext): string[][] {
@@ -82,13 +124,42 @@ export function buildStudyPlanRows(context: MatriculaRegularContext): string[][]
 }
 
 export function buildScheduleEvents(report: MatriculaRegularEnrollmentReport | null): ScheduleDisplayEvent[] {
-  return report?.rows.flatMap((row) => row.schedule.map((meeting) => ({
-    day: meeting.day,
-    start: meeting.startMinute,
-    end: meeting.endMinute,
-    course: row.name,
-    section: row.label ?? row.sectionId,
-    kind: unknown,
-    time: `${formatMinute(meeting.startMinute)}-${formatMinute(meeting.endMinute)}`,
-  }))) ?? []
+  return report?.rows.flatMap((row) => row.schedule.map((meeting) => {
+    const details = meeting.details
+    const sessionType = details?.sessionType ? SESSION_TYPE_LABELS[details.sessionType] : undefined
+    const kind = details
+      ? [sessionType, details.roomName].filter(Boolean).join(' · ') || unknown
+      : unknown
+    return {
+      day: meeting.day,
+      start: meeting.startMinute,
+      end: meeting.endMinute,
+      course: row.name,
+      section: row.label ?? row.sectionId,
+      kind,
+      time: `${formatMinute(meeting.startMinute)}-${formatMinute(meeting.endMinute)}`,
+      ...(details
+        ? {
+            ...(sessionType ? { sessionType } : {}),
+            room: details.roomName,
+            teacher: details.teacherName,
+          }
+        : {}),
+    }
+  })) ?? []
 }
+
+function validDateString(value?: string | null): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  return Number.isNaN(new Date(trimmed).getTime()) ? null : trimmed
+}
+
+export function resolveScheduleReferenceNow(
+  report: MatriculaRegularEnrollmentReport | null,
+  serverNow?: string | null,
+): string | null {
+  return validDateString(serverNow) ?? validDateString(report?.acceptedAt)
+}
+

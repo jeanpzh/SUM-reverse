@@ -1,7 +1,7 @@
 import { validateAcademicNormativeRequest, validateAcademicNormativeResponse } from '../../../shared/programacion-academica-api.mjs'
 import type { AcademicNormativeRequest, AcademicNormativeResponse } from '../../../shared/programacion-academica-api.mjs'
-import { ACADEMIC_API, ACADEMIC_REVISION, ACADEMIC_ROUTE, validateAcademicAdjustment, validateAcademicAdvisorRequest, validateAcademicAdvisorResponse, validateAcademicCatalog, validateAcademicDemandEstimate, validateAcademicDemandRequest, validateAcademicProposal, validateAcademicRequest, validateAcademicDraftList, validateAcademicDraftResume, validateAcademicDraftSaveRequest, validateAcademicSavedDraft, validateAcademicReviewSubmission, validateAcademicReviewDecision, validateAcademicPublicationRequest, validateAcademicReleasePreview, validateAcademicPublication, validateAcademicPublicationList } from '../../../shared/programacion-academica-api.mjs'
-import type { AcademicAdjustment, AcademicAdvisorRequest, AcademicAdvisorResponse, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest, AcademicProposal, AcademicRequest, AcademicInterval, AcademicDraftList, AcademicDraftResume, AcademicDraftSaveRequest, AcademicSavedDraft, AcademicReviewSubmission, AcademicReviewDecision, AcademicReleasePreview, AcademicPublication, AcademicPublicationList, AcademicPublicationRequest } from '../../../shared/programacion-academica-api.mjs'
+import { ACADEMIC_API, ACADEMIC_REVISION, ACADEMIC_ROUTE, validateAcademicAdjustment, validateAcademicAdvisorRequest, validateAcademicAdvisorResponse, validateAcademicCatalog, validateAcademicDemandEstimate, validateAcademicDemandRequest, validateAcademicProposal, validateAcademicRequest, validateAcademicDraftList, validateAcademicDraftResume, validateAcademicDraftSaveRequest, validateAcademicSavedDraft, validateAcademicReviewBatchDecision, validateAcademicReviewSubmission, validateAcademicReviewDecision, validateAcademicPublicationRequest, validateAcademicReleasePreview, validateAcademicPublication, validateAcademicPublicationList } from '../../../shared/programacion-academica-api.mjs'
+import type { AcademicAdjustment, AcademicAdvisorRequest, AcademicAdvisorResponse, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest, AcademicProposal, AcademicRequest, AcademicInterval, AcademicDraftList, AcademicDraftResume, AcademicDraftSaveRequest, AcademicSavedDraft, AcademicReviewSubmission, AcademicReviewDecision, AcademicReviewBatchDecision, AcademicReleasePreview, AcademicPublication, AcademicPublicationList, AcademicPublicationRequest } from '../../../shared/programacion-academica-api.mjs'
 import { planningDefaults as getPlanningDefaults, PLANNING_LIMITS, resolvePlanningTimeProfile, syntheticTeachingMetadata, validatePlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
 import type { PlanningPeriod, PlanningPolicy } from '../../../shared/academic-planning-policy.mjs'
 
@@ -252,7 +252,7 @@ function validateReviewDraftId(id: string) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) throw new TypeError('Identificación de propuesta inválida.')
 }
 
-async function postAcademicReview(path: string, request: AcademicReviewSubmission | AcademicReviewDecision,
+async function postAcademicReview(path: string, request: AcademicReviewSubmission | AcademicReviewDecision | AcademicReviewBatchDecision,
   fetchImpl: typeof fetch, signal?: AbortSignal): Promise<AcademicSavedDraft> {
   const body = await readJson(await fetchImpl(`${ACADEMIC_API}${path}`, {
     method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
@@ -262,7 +262,7 @@ async function postAcademicReview(path: string, request: AcademicReviewSubmissio
     || !('draft' in body)) throw new Error('La respuesta de revisión local tiene un formato inválido.')
   const draft = (body as { draft: unknown }).draft
   validateAcademicSavedDraft(draft)
-  if (draft.id !== decodeURIComponent(path.split('/')[2] ?? '') || draft.version !== request.expectedVersion + 1) {
+  if (draft.id !== decodeURIComponent(path.split('/')[2] ?? '') || (draft.version !== request.expectedVersion + 1 && draft.version !== request.expectedVersion)) {
     throw new Error('La respuesta de revisión no corresponde a la versión solicitada.')
   }
   return draft
@@ -288,6 +288,21 @@ export function respondAcademicTeacherReview(id: string, request: AcademicReview
     if (draft.review?.round !== request.round || teacher?.status !== expectedStatus || teacher.decisionVersion !== draft.version) {
       throw new Error('La respuesta docente no corresponde a la ronda y versión solicitadas.')
     }
+    return draft
+  })
+}
+
+export function respondAcademicTeacherReviewBatch(id: string, request: AcademicReviewBatchDecision,
+  fetchImpl: typeof fetch = globalThis.fetch, signal?: AbortSignal) {
+  validateReviewDraftId(id)
+  validateAcademicReviewBatchDecision(request)
+  return postAcademicReview(`/borradores/${encodeURIComponent(id)}/revision/responder-lote`, request, fetchImpl, signal).then((draft) => {
+    if (draft.version !== request.expectedVersion + 1 || draft.review?.round !== request.round
+      || request.teacherIds.some((id) => {
+        const teacher = draft.review?.teachers.find((item) => item.teacherId === id)
+        return teacher?.status !== 'conformity' || teacher.decisionVersion !== draft.version
+          || teacher.source !== 'coordinator-transcription' || teacher.reference !== (request.reference || null)
+      })) throw new Error('El lote de conformidades no corresponde a la ronda y versión solicitadas.')
     return draft
   })
 }

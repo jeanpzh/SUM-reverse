@@ -71,6 +71,7 @@ function memoryClient(overrides: Partial<PlanningSessionClient> = {}) {
     },
     resumeDraft: async (id) => ({ draft: drafts.get(id)! }),
     submitReview: async () => { throw new Error('not used') },
+    respondReviewBatch: async () => { throw new Error('not used') },
     respondReview: async () => { throw new Error('not used') },
     approveDraft: async (id) => { const draft = { ...drafts.get(id)!, state: 'approved' as const, version: drafts.get(id)!.version + 1 }; drafts.set(id, draft); return draft },
     publishDraft: async (id) => { const draft = { ...drafts.get(id)!, state: 'published' as const, version: drafts.get(id)!.version + 1 }; drafts.set(id, draft); return draft },
@@ -350,21 +351,101 @@ test('primary action follows every D7 row', () => {
   assert.equal(derivePlanningPrimaryAction(withDraft({ savedState: 'published' }), 'aprobacion'), null)
 })
 
+test('revision without round offers submit-review only when saved, clean, complete coverage and unlocked', () => {
+  const base = baseState()
+  const savedComplete = (patch: Partial<PlanningSessionState['draft']> = {}, extra: Partial<PlanningSessionState> = {}): PlanningSessionState => ({
+    ...base,
+    proposal: makeProposal(),
+    dirty: false,
+    ...extra,
+    draft: { ...base.draft, id: draftId, version: 2, savedState: 'draft', ...patch },
+  })
 
-test('draft label distinguishes unsaved work from every persisted lifecycle state', () => {
+  assert.equal(derivePlanningPrimaryAction(savedComplete(), 'revision')?.id, 'submit-review')
+  assert.equal(derivePlanningPrimaryAction(savedComplete({ savedState: 'ready-for-review' }), 'revision')?.id, 'submit-review')
+
+  // Unsaved changes, missing draft id/version, incomplete coverage, or locked states never offer submit-review.
+  assert.equal(derivePlanningPrimaryAction(savedComplete({}, { dirty: true }), 'revision')?.id, 'back-schedule')
+  assert.equal(derivePlanningPrimaryAction(savedComplete({ id: null }), 'revision')?.id, 'back-schedule')
+  assert.equal(derivePlanningPrimaryAction(savedComplete({ version: null }), 'revision')?.id, 'back-schedule')
+
+  const incomplete = makeProposal({
+    status: 'search-limit',
+    coverageComplete: false,
+    assignments: [],
+    pending: [{ sessionId: 'CS101-L1', sectionId: 'A' }] as AcademicProposal['pending'],
+  })
+  assert.equal(derivePlanningPrimaryAction(savedComplete({}, { proposal: incomplete }), 'revision')?.id, 'back-schedule')
+
+  const emptyAssignments = makeProposal({ assignments: [] })
+  assert.equal(derivePlanningPrimaryAction(savedComplete({}, { proposal: emptyAssignments }), 'revision')?.id, 'back-schedule')
+
+  assert.equal(derivePlanningPrimaryAction(savedComplete({ savedState: 'approved' }), 'revision')?.id, 'back-schedule')
+  assert.equal(derivePlanningPrimaryAction(savedComplete({ savedState: 'published' }), 'revision')?.id, 'back-schedule')
+  assert.equal(derivePlanningPrimaryAction(savedComplete({ savedState: 'in-review' }), 'revision')?.id, 'back-schedule')
+})
+
+
+
+test('draft label distinguishes unsaved work from every persisted lifecycle state without inventing rounds', () => {
   const state = initialPlanningSessionState()
   assert.equal(derivePlanningDraftLabel(state), 'Borrador nuevo · Sin guardar')
   assert.equal(derivePlanningDraftLabel({ ...state, dirty: true }), 'Cambios sin guardar.')
+  assert.equal(derivePlanningDraftLabel({ ...state, draft: { ...state.draft, id: draftId, version: null } }), 'Borrador nuevo · Sin guardar')
+  assert.equal(derivePlanningDraftLabel({ ...state, draft: { ...state.draft, id: null, version: 84 } }), 'Borrador nuevo · Sin guardar')
+
   const labels = {
     draft: 'Borrador', 'ready-for-review': 'Lista para revisión', 'in-review': 'En revisión docente',
     'ready-for-approval': 'Lista para aprobación', approved: 'Aprobada (simulada)', published: 'Publicada (simulada)',
   } as const
   for (const savedState of Object.keys(labels) as (keyof typeof labels)[]) {
-    const persisted = { ...state, draft: { ...state.draft, id: draftId, version: 4, savedState } }
-    assert.equal(derivePlanningDraftLabel(persisted), `${labels[savedState]} r4 · Guardado`)
+    const persisted = { ...state, draft: { ...state.draft, id: draftId, version: 4, savedState, review: undefined } }
+    const label = derivePlanningDraftLabel(persisted)
+    assert.equal(label, `${labels[savedState]} · versión 4 · Guardado`)
+    assert.doesNotMatch(label, /\br4\b|\bronda\b/)
     assert.equal(derivePlanningDraftLabel({ ...persisted, dirty: true }), 'Cambios sin guardar · versión guardada 4.')
   }
 })
+
+test('draft label keeps real review.round separate from saved version across multiple responses and publication', () => {
+  const base = initialPlanningSessionState()
+  const roundOne = review(['conformity', 'conformity'])
+  const inReviewV2 = {
+    ...base,
+    draft: { ...base.draft, id: draftId, version: 2, savedState: 'in-review' as const, review: roundOne },
+  }
+  const inReviewV84 = {
+    ...base,
+    draft: { ...base.draft, id: draftId, version: 84, savedState: 'in-review' as const, review: roundOne },
+  }
+  const readyForApprovalV84 = {
+    ...base,
+    draft: { ...base.draft, id: draftId, version: 84, savedState: 'ready-for-approval' as const, review: roundOne },
+  }
+  const inReviewRoundTwoV84 = {
+    ...base,
+    draft: { ...base.draft, id: draftId, version: 84, savedState: 'in-review' as const, review: { ...roundOne, round: 2 } },
+  }
+  const approvedV85 = {
+    ...base,
+    draft: { ...base.draft, id: draftId, version: 85, savedState: 'approved' as const, review: roundOne },
+  }
+  const publishedV86 = {
+    ...base,
+    draft: { ...base.draft, id: draftId, version: 86, savedState: 'published' as const, review: roundOne },
+  }
+
+  assert.equal(derivePlanningDraftLabel(inReviewV2), 'En revisión docente · ronda 1 · versión 2 · Guardado')
+  assert.equal(derivePlanningDraftLabel(inReviewV84), 'En revisión docente · ronda 1 · versión 84 · Guardado')
+  assert.doesNotMatch(derivePlanningDraftLabel(inReviewV84), /\br84\b/)
+  assert.equal(derivePlanningDraftLabel(readyForApprovalV84), 'Lista para aprobación · ronda 1 · versión 84 · Guardado')
+  assert.equal(derivePlanningDraftLabel(inReviewRoundTwoV84), 'En revisión docente · ronda 2 · versión 84 · Guardado')
+  assert.equal(derivePlanningDraftLabel(approvedV85), 'Aprobada (simulada) · versión 85 · Guardado')
+  assert.equal(derivePlanningDraftLabel(publishedV86), 'Publicada (simulada) · versión 86 · Guardado')
+  assert.doesNotMatch(derivePlanningDraftLabel(publishedV86), /\br86\b/)
+  assert.equal(derivePlanningDraftLabel({ ...inReviewV84, dirty: true }), 'Cambios sin guardar · versión guardada 84.')
+})
+
 
 test('generation reports only an accepted result so the caller can navigate safely', async () => {
   const { session } = await loadedSession()
@@ -526,4 +607,42 @@ test('updatePlanningException and applyPeriodDefaults preserve facultyId, source
   assert.equal(disabledSaturday.policy?.facultyId, 'FISI')
   assert.equal(disabledSaturday.policy?.source, 'synthetic-faculty-exception')
   assert.equal(disabledSaturday.policy?.exceptions, undefined)
+})
+
+
+test('bulk response shares the mutation guard, trims references and reports success or failure', async () => {
+  const pending = deferred<AcademicSavedDraft>()
+  let calls = 0
+  const { session, drafts } = await loadedSession({ respondReviewBatch: async (id, request) => {
+    calls++
+    assert.equal(id, draftId)
+    assert.deepEqual(request, { expectedVersion: 1, round: 1, teacherIds: ['T1'], decision: 'conformity', reference: 'Acta 08' })
+    return pending.promise
+  } })
+  session.commands.edit({ type: 'toggleCourse', courseId: 'CS101', checked: true })
+  await session.commands.generate()
+  await session.commands.save()
+  const review: AcademicTeacherReview = { round: 1, submittedVersion: 1, submittedAt: '2026-11-17T10:00:00Z', teachers: [], history: [] }
+  const saved = { ...drafts.get(draftId)!, state: 'in-review' as const, review }
+  drafts.set(draftId, saved)
+  await session.commands.resume(draftId, 1)
+  const response = session.commands.respondReviewBatch(['T1'], '  Acta 08  ')
+  assert.equal(session.getState().busy.draft, true)
+  assert.equal(await session.commands.respondReviewBatch(['T1'], null), false)
+  pending.resolve({ ...saved, version: 2 })
+  assert.equal(await response, true)
+  assert.equal(calls, 1)
+  assert.equal(session.getState().draft.version, 2)
+  assert.equal(session.getState().busy.draft, false)
+  assert.match(session.getState().message ?? '', /1 conformidades registradas/)
+  session.commands.edit({ type: 'setTitle', title: 'Cambios locales' })
+  assert.equal(await session.commands.respondReviewBatch(['T1'], null), false)
+  assert.equal(calls, 1)
+
+  const failed = await loadedSession({ respondReviewBatch: async () => { throw new Error('Docente sin revisión pendiente') } })
+  failed.drafts.set(draftId, saved)
+  await failed.session.commands.resume(draftId, 1)
+  assert.equal(await failed.session.commands.respondReviewBatch(['T1'], null), false)
+  assert.match(failed.session.getState().errors.review ?? '', /Docente sin revisión pendiente/)
+  assert.equal(failed.session.getState().busy.draft, false)
 })

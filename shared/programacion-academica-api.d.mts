@@ -71,10 +71,15 @@ export function validateAcademicReleasePreview(value: unknown): asserts value is
 export function validateAcademicPublication(value: unknown): asserts value is AcademicPublication
 export function validateAcademicPublicationList(value: unknown): asserts value is AcademicPublicationList
 export type AcademicReviewSubmission = { expectedVersion: number }
-export type AcademicReviewDecision = { expectedVersion: number; round: number; teacherId: string; decision: 'conformity' | 'changes-requested'; observation: string }
-export type AcademicReviewTeacher = { teacherId: string; teacherName: string; fingerprint: string; status: 'pending' | 'conformity' | 'changes-requested' | 'outdated'; observation: string; decisionVersion: number | null; decidedAt: string | null }
-export type AcademicReviewEvent = { type: 'submitted' | 'decision' | 'invalidated'; version: number; round: number; at: string; teacherId: string | null; decision: 'conformity' | 'changes-requested' | null; observation: string; fingerprint: string | null }
+export type AcademicReviewDecision = { expectedVersion: number; round: number; teacherId: string; decision: 'conformity' | 'changes-requested'; observation: string; reference?: string | null }
+export type AcademicReviewSource = 'teacher' | 'coordinator-transcription'
+// teacherIds: 1–500 unique IDs. reference: trimmed, at most 200 characters; empty input normalizes to null.
+export type AcademicReviewBatchDecision = { expectedVersion: number; round: number; teacherIds: string[]; decision: 'conformity'; reference: string | null }
+// Pending teachers and non-decision events use source/reference null. Missing legacy response fields mean coordinator-transcription/null.
+export type AcademicReviewTeacher = { teacherId: string; teacherName: string; fingerprint: string; status: 'pending' | 'conformity' | 'changes-requested' | 'outdated'; observation: string; decisionVersion: number | null; decidedAt: string | null; source?: AcademicReviewSource | null; reference?: string | null }
+export type AcademicReviewEvent = { type: 'submitted' | 'decision' | 'invalidated'; version: number; round: number; at: string; teacherId: string | null; decision: 'conformity' | 'changes-requested' | null; observation: string; fingerprint: string | null; source?: AcademicReviewSource | null; reference?: string | null }
 export type AcademicTeacherReview = { round: number; submittedVersion: number; submittedAt: string; teachers: AcademicReviewTeacher[]; history: AcademicReviewEvent[] }
+export function validateAcademicReviewBatchDecision(value: unknown): asserts value is AcademicReviewBatchDecision
 export function validateAcademicReviewSubmission(value: unknown): asserts value is AcademicReviewSubmission
 export function validateAcademicReviewDecision(value: unknown): asserts value is AcademicReviewDecision
 export function validateAcademicTeacherReview(value: unknown, version?: number): asserts value is AcademicTeacherReview

@@ -31,8 +31,9 @@ export function CourseScheduleModal({ course, onClose }: { course: Course | null
   }, [course])
 
   const rows = course ? toCourseScheduleRows(course.horarios) : []
+  const showTeacher = rows.some((row) => row.length > 5)
   return (
-    <dialog ref={dialogRef} className="course-schedule-dialog" aria-labelledby="course-schedule-title"
+    <dialog ref={dialogRef} className={`course-schedule-dialog${showTeacher ? ' course-schedule-dialog--detailed' : ''}`} aria-labelledby="course-schedule-title"
       aria-describedby="course-schedule-context" onClose={dismiss}
       onCancel={(event) => { event.preventDefault(); dismiss() }}
       onClick={(event) => {
@@ -49,12 +50,21 @@ export function CourseScheduleModal({ course, onClose }: { course: Course | null
       </header>
       <div className="course-schedule-dialog__body">
         <table>
-          <thead><tr><th>Horario</th><th>Día</th><th>Horas de clase</th><th>Aula</th><th>Tipo</th></tr></thead>
+          <thead>
+            <tr>
+              <th scope="col">Horario</th>
+              <th scope="col">Día</th>
+              <th scope="col">Horas de clase</th>
+              <th scope="col">Aula</th>
+              <th scope="col">Tipo</th>
+              {showTeacher && <th scope="col">Docente</th>}
+            </tr>
+          </thead>
           <tbody>
             {rows.map((row, index) => <tr key={`${row[0]}-${index}`}>
               {row.map((cell, column) => <td key={column}>{cell}</td>)}
             </tr>)}
-            {!rows.length && <tr><td colSpan={5}>No hay horarios registrados.</td></tr>}
+            {!rows.length && <tr><td colSpan={showTeacher ? 6 : 5}>No hay horarios registrados.</td></tr>}
           </tbody>
         </table>
       </div>

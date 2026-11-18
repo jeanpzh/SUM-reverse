@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { ACADEMIC_API, ACADEMIC_REVISION } from '../../../shared/programacion-academica-api.mjs'
-import { academicPlanningErrorMessage, adjustAcademicProposal, calculatePresentedSections, createAcademicProposal, estimateAcademicDemand, fetchAcademicCatalog, fetchAcademicDrafts, saveAcademicDraft, resumeAcademicDraft, submitAcademicTeacherReview, respondAcademicTeacherReview, formatAcademicInterval, isAcademicSchedulingEnabled, isAcademicSchedulingRoute, isLocalAcademicArea, academicSectionLabel, toAcademicScheduleEvents, aggregateAcademicBlocks, academicSectionCoverage, fetchAcademicReleasePreview, approveAcademicDraft, publishAcademicDraft, forkAcademicDraft, fetchAcademicPublications, fetchAcademicPublication, fetchCurrentAcademicPublication, createAcademicPlanningDefaults, filterAcademicResources, buildAcademicPlanningRequest } from './academicScheduling.ts'
+import { academicPlanningErrorMessage, adjustAcademicProposal, calculatePresentedSections, createAcademicProposal, estimateAcademicDemand, fetchAcademicCatalog, fetchAcademicDrafts, saveAcademicDraft, resumeAcademicDraft, submitAcademicTeacherReview, respondAcademicTeacherReviewBatch, respondAcademicTeacherReview, formatAcademicInterval, isAcademicSchedulingEnabled, isAcademicSchedulingRoute, isLocalAcademicArea, academicSectionLabel, toAcademicScheduleEvents, aggregateAcademicBlocks, academicSectionCoverage, fetchAcademicReleasePreview, approveAcademicDraft, publishAcademicDraft, forkAcademicDraft, fetchAcademicPublications, fetchAcademicPublication, fetchCurrentAcademicPublication, createAcademicPlanningDefaults, filterAcademicResources, buildAcademicPlanningRequest } from './academicScheduling.ts'
 
 const catalog = {
   revision: ACADEMIC_REVISION,
@@ -522,4 +522,36 @@ test('editing blocks preserve declared teacher groups even when the same teacher
   const independent = aggregateAcademicBlocks({ sections: [{ ...proposal.sections[0], teacherAssignmentMode: 'per-session' }], assignments })
   assert.equal(independent.length, 3)
   assert.equal(aggregateAcademicBlocks({ sections: proposal.sections, assignments }).length, 1)
+})
+
+
+test('bulk review sends one request and verifies version, round and every transcription', async () => {
+  const request = { expectedVersion: 4, round: 1, teacherIds: Array.from({ length: 78 }, (_, n) => `SYN-T${n}`), decision: 'conformity' as const, reference: 'Acta 08' }
+  const at = '2026-11-17T10:00:00.000Z'
+  const teachers = Array.from({ length: 81 }, (_, n) => ({ teacherId: `SYN-T${n}`, teacherName: `Docente sintético ${n}`, fingerprint: 'a'.repeat(64),
+    status: n < 78 ? 'conformity' : 'pending', observation: '', decisionVersion: n < 78 ? 5 : null, decidedAt: n < 78 ? at : null,
+    source: n < 78 ? 'coordinator-transcription' : null, reference: n < 78 ? 'Acta 08' : null }))
+  const history = [{ type: 'submitted', version: 4, round: 1, at, teacherId: null, decision: null, observation: '', fingerprint: null },
+    ...teachers.slice(0, 78).map((teacher) => ({ type: 'decision', version: 5, round: 1, at, teacherId: teacher.teacherId, decision: 'conformity', observation: '', fingerprint: teacher.fingerprint, source: teacher.source, reference: teacher.reference }))]
+  const result = { ...savedDraft, version: 5, state: 'in-review', proposal, review: { round: 1, submittedVersion: 4, submittedAt: at, teachers, history } }
+  let calls = 0
+  const fetchMock: typeof fetch = async (url, init) => {
+    calls++
+    assert.equal(String(url), `${ACADEMIC_API}/borradores/${draftId}/revision/responder-lote`)
+    assert.deepEqual(JSON.parse(String(init?.body)), request)
+    assert.equal(init?.credentials, 'omit')
+    return new Response(JSON.stringify({ draft: result }), { status: 200 })
+  }
+  assert.equal((await respondAcademicTeacherReviewBatch(draftId, request, fetchMock)).version, 5)
+  assert.equal(calls, 1)
+  for (const change of [
+    { version: 4, review: { ...result.review, teachers: teachers.map((t) => ({ ...t, decisionVersion: t.decisionVersion === null ? null : 4 })), history: history.map((e) => ({ ...e, version: 4 })) } },
+    { review: { ...result.review, round: 2 } },
+    { review: { ...result.review, teachers: teachers.map((t, n) => n === 0 ? { ...t, source: 'teacher' } : t) } },
+    { review: { ...result.review, teachers: teachers.map((t, n) => n === 0 ? { ...t, reference: null } : t) } },
+    { review: { ...result.review, teachers: teachers.slice(1) } },
+  ]) await assert.rejects(respondAcademicTeacherReviewBatch(draftId, request, async () => new Response(JSON.stringify({ draft: { ...result, ...change } }), { status: 200 })))
+  await assert.rejects(respondAcademicTeacherReviewBatch(draftId, request, async () => new Response(JSON.stringify({ error: { code: 'VERSION_MISMATCH', message: 'La propuesta cambió' } }), { status: 409 })), /La propuesta cambió/)
+  assert.throws(() => respondAcademicTeacherReviewBatch(draftId, { ...request, teacherIds: ['T1', 'T1'] }, fetchMock))
+  assert.equal(calls, 1)
 })

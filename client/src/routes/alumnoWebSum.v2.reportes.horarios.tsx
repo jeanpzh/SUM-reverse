@@ -11,7 +11,7 @@ export const Route = createFileRoute('/alumnoWebSum/v2/reportes/horarios')({
   component: function RouteComponent() {
     const loaded = Route.useLoaderData()
     return loaded.mode === 'synthetic-actors'
-      ? <LocalAcademicView kind="horarios" response={loaded.response.data.payload} />
+      ? <LocalAcademicView kind="horarios" response={loaded.response.data.payload} serverNow={loaded.response.data.serverNow} />
       : <TableScreen id="reportes-horarios" response={loaded.response} />
   },
 })

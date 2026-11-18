@@ -1,0 +1,132 @@
+{
+  "date": "2026-11-17",
+  "browser": "T3 Browser native preview tools",
+  "mainCommit": "ba08183dd275eb90f0b6e14f1c6e495cb42be182",
+  "testedTree": "6899e268efa3353447553240d544afb9663a4024",
+  "source": "createDemoCatalog -> adaptSyntheticCatalog -> scenarioProgrammingRows; explicitly synthetic",
+  "route": "/local/programacion-academica",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "period": "2027-I",
+  "courses": 56,
+  "before": {
+    "status": "search-limit",
+    "required": 332,
+    "scheduled": 211,
+    "pending": 121,
+    "sections": 166,
+    "completeSections": 108,
+    "resourceConflicts": 0,
+    "sectionOverlaps": 0
+  },
+  "after": {
+    "status": "complete",
+    "required": 332,
+    "scheduled": 332,
+    "pending": 0,
+    "sections": 166,
+    "completeSections": 166,
+    "resourceConflicts": 0,
+    "sectionOverlaps": 0
+  },
+  "advice": [
+    {
+      "mode": "llm-assisted",
+      "provider": "bedrock_converse / us.amazon.nova-lite-v1:0",
+      "hasImpact": false,
+      "impact": null
+    },
+    {
+      "mode": "llm-assisted",
+      "provider": "bedrock_converse / us.amazon.nova-lite-v1:0",
+      "hasImpact": true,
+      "impact": {
+        "currentScheduledSessions": 211,
+        "projectedScheduledSessions": 332,
+        "requiredSessions": 332,
+        "currentCompleteSections": 108,
+        "projectedCompleteSections": 166,
+        "totalSections": 166,
+        "recommendationIds": [
+          "rec-enable-planning-window",
+          "rec-increase-teacher-load",
+          "rec-change-delivery-mode",
+          "rec-change-teacher-assignment-mode"
+        ],
+        "solverStatus": "complete"
+      }
+    },
+    {
+      "mode": "llm-assisted",
+      "provider": "bedrock_converse / us.amazon.nova-lite-v1:0",
+      "hasImpact": true,
+      "impact": {
+        "currentScheduledSessions": 211,
+        "projectedScheduledSessions": 332,
+        "requiredSessions": 332,
+        "currentCompleteSections": 108,
+        "projectedCompleteSections": 166,
+        "totalSections": 166,
+        "recommendationIds": [
+          "rec-enable-planning-window",
+          "rec-increase-teacher-load",
+          "rec-change-delivery-mode",
+          "rec-change-teacher-assignment-mode"
+        ],
+        "solverStatus": "complete"
+      }
+    }
+  ],
+  "initialCheck": {
+    "mountAdvisorRequests": 0,
+    "mode": "llm-assisted",
+    "hasInitialImpact": false,
+    "applyDisabled": true
+  },
+  "selectionInvalidation": {
+    "applyDisabled": true,
+    "stale": true,
+    "focus": "_r_1q_"
+  },
+  "keyboardReturn": {
+    "checked": "true",
+    "applyDisabled": true,
+    "stale": true
+  },
+  "expandedPreservesSelection": true,
+  "widths": {
+    "rail": 419,
+    "expanded": 1279
+  },
+  "sameDemand": true,
+  "exactSimulationSelection": true,
+  "teacherLoadChanges": {
+    "count": 25,
+    "previous": 600,
+    "minimumNew": 780,
+    "maximumNew": 1500,
+    "exactSelectedChanges": true
+  },
+  "uniqueSessions": 332,
+  "expectedSessions": 332,
+  "violations": {
+    "eligibility": 0,
+    "availability": 0,
+    "capacity": 0,
+    "lab": 0,
+    "duration": 0,
+    "grouping": 0,
+    "overload": 0,
+    "sectionLimit": 0
+  },
+  "generatedRequests": 2,
+  "advisorRequests": 3,
+  "savedDrafts": 0,
+  "errors": [],
+  "uiComplete": true,
+  "passed": true,
+  "multiTeacherSections": 15,
+  "groupedSections": 66
+}

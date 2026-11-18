@@ -14,12 +14,14 @@ export declare const matriculaRegularGapCodes: readonly [
 ]
 
 export declare const matriculaRegularWindowOrigins: readonly ['published-derived', 'synthetic']
+export declare const matriculaRegularSessionTypes: readonly ['T', 'P', 'L']
 
 export type MatriculaRegularId = `SYN-${string}`
 export type MatriculaRegularUuid = string
 export type MatriculaRegularCauseCode = (typeof matriculaRegularCauseCodes)[number]
 export type MatriculaRegularGapCode = (typeof matriculaRegularGapCodes)[number]
 export type MatriculaRegularWindowOrigin = (typeof matriculaRegularWindowOrigins)[number]
+export type MatriculaRegularSessionType = (typeof matriculaRegularSessionTypes)[number]
 export type MatriculaRegularSourceClass = 'normative' | 'observed' | 'testimony' | 'inferred'
 export type MatriculaRegularEligibilityState = 'eligible' | 'ineligible' | 'configuration-pending'
 export type MatriculaRegularOutcomeState = 'accepted' | 'rejected' | 'configuration-pending'
@@ -68,10 +70,21 @@ export interface MatriculaRegularSession {
   expiresAt: string
 }
 
+export interface MatriculaRegularMeetingDetails {
+  sessionId: string
+  teacherId: string
+  teacherName: string
+  roomId: string
+  roomName: string
+  sessionType?: MatriculaRegularSessionType
+}
+
 export interface MatriculaRegularMeeting {
   day: number
   startMinute: number
   endMinute: number
+  /** MR-SESSION-DETAILS-1 (optional for legacy producers/documents). */
+  details?: MatriculaRegularMeetingDetails
 }
 
 export interface MatriculaRegularSection {
@@ -239,6 +252,7 @@ export interface MatriculaRegularExpectedIdentity {
   sessionId?: MatriculaRegularUuid
 }
 
+export declare function validateMeeting(value: unknown): asserts value is MatriculaRegularMeeting
 export declare function validateChoice(value: unknown): asserts value is MatriculaRegularChoice
 export declare function validateScope(value: unknown): asserts value is MatriculaRegularScope
 export declare function validateSource(value: unknown): asserts value is MatriculaRegularSource

@@ -1,22 +1,29 @@
 import { createPortal } from 'react-dom'
 import { PlanningResultStrip } from './PlanningResultStrip'
 import { PlanningFetchLoading } from '../components/PlanningFetchLoading'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Button } from '../components/ui/Button'
 import { toast } from '../components/ui/Sonner'
-import type { AcademicDraftState, AcademicPublication, AcademicPublicationList, AcademicReleasePreview, AcademicScheduleSnapshot } from '../../../shared/programacion-academica-api.mjs'
+import type { AcademicDraftState } from '../../../shared/programacion-academica-api.mjs'
 import { aggregateAcademicBlocks, academicSectionCoverage, academicSectionLabel, formatAcademicDuration, formatAcademicMinute } from '../data/academicScheduling'
-import { fetchAcademicPublication, fetchAcademicPublications, fetchAcademicReleasePreview, fetchCurrentAcademicPublication } from '../data/academicScheduling'
+import {
+  createPublicationFlowController,
+  defaultPublicationFlowClient,
+  derivePublicationView,
+  nextAutoListRefreshReason,
+  type PublicationFlowClient,
+  type PublicationFlowState,
+  type PublicationPreviewSource,
+} from '../data/planningPublicationFlow'
 import { activateEnrollmentOffer, fetchOperationalOffers } from '../data/enrollmentOffer'
 import type { OperationalOffer, OperationalOfferCatalog } from '../data/enrollmentOffer'
 import { usePlanningSessionContext } from '../components/PlanningSessionProvider'
 import { usePlanningApprovalConfirm } from './PlanningApprovalDialog'
 import './AcademicPublicationPanel.css'
 
-type PreviewSource = { id: string; version: number; schedule: AcademicScheduleSnapshot; title: string; label: string; source: 'draft' | 'publication'; state: AcademicDraftState }
-
 type Props = {
+  active?: boolean
   actionContainer?: HTMLElement | null
   primaryActionId?: string
   draftId: string | null
@@ -30,6 +37,53 @@ type Props = {
   onFork: (id: string, version: number) => Promise<void>
   onError: (message: string | null) => void
   onMessage: (message: string | null) => void
+  flowClient?: PublicationFlowClient
+  initialFlowState?: PublicationFlowState
+}
+
+export function AcademicPublicationHeaderActions({
+  primaryActionId,
+  canPublish,
+  canApprove,
+  draftVersion,
+  reasonId,
+  onPublish,
+  onApprove,
+}: {
+  primaryActionId?: string
+  canPublish: boolean
+  canApprove: boolean
+  draftVersion: number | null
+  reasonId: string
+  onPublish: () => void
+  onApprove: () => void
+}) {
+  const publishIsPrimary = primaryActionId === 'publish'
+  return (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        id={publishIsPrimary ? 'planning-tour-primary' : undefined}
+        className="academic-publication__publish"
+        disabled={!canPublish}
+        aria-describedby="academic-publish-reason"
+        onClick={onPublish}
+      >
+        Publicar
+      </Button>
+      {primaryActionId === 'approve' && (
+        <Button
+          id="planning-tour-primary"
+          disabled={!canApprove}
+          aria-describedby={!canApprove ? reasonId : undefined}
+          onClick={onApprove}
+        >
+          Aprobar versión {draftVersion}
+        </Button>
+      )}
+    </>
+  )
 }
 
 const days = ['—', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
@@ -63,41 +117,143 @@ function versionDate(value: string | null | undefined) {
   return `${day} · ${date.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false })}`
 }
 
-export function AcademicPublicationPanel({ actionContainer, primaryActionId, draftId, draftVersion, draftTitle, draftState, dirty, busy,
-  onApprove, onPublish, onFork, onError, onMessage }: Props) {
+function AcademicPublicationPreviewDetails({
+  displayPreview,
+  hasSelectedPublication,
+}: {
+  displayPreview: PublicationPreviewSource
+  hasSelectedPublication: boolean
+}) {
+  const blocks = useMemo(() => aggregateAcademicBlocks(displayPreview.schedule), [displayPreview])
+  const cycleByCourse = useMemo(
+    () => new Map(displayPreview.schedule.courses.map((course) => [course.courseId, course.cycle])),
+    [displayPreview],
+  )
+  return (
+    <details
+      className="academic-publication__preview"
+      key={`${displayPreview.source}-${displayPreview.id}-${displayPreview.version}`}
+      open={hasSelectedPublication}
+    >
+      <summary>
+        Vista previa de {displayPreview.source === 'publication' ? 'la publicación' : 'la propuesta'} ·{' '}
+        {new Set(displayPreview.schedule.assignments.map((assignment) => assignment.sectionId)).size} secciones
+      </summary>
+      <p className="academic-publication__muted academic-publication__small">
+        {displayPreview.title} · {displayPreview.schedule.schoolId} · {displayPreview.schedule.academicPeriod} ·{' '}
+        {displayPreview.label}
+        {hasSelectedPublication ? ' · solo lectura' : ` · ${stateLabels[displayPreview.state]}`}
+      </p>
+      <div className="academic-publication__table academic-publication__preview-table">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Código</th>
+              <th scope="col">Asignatura</th>
+              <th scope="col">Ciclo</th>
+              <th scope="col">Sección</th>
+              <th scope="col">Capacidad</th>
+              <th scope="col">Docente</th>
+              <th scope="col">Ambiente</th>
+              <th scope="col">Día</th>
+              <th scope="col">Horario</th>
+              <th scope="col">Componentes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {blocks.map((block) => (
+              <tr key={`${block.sectionId}-${block.day}-${block.startMinute}`}>
+                <td className="academic-publication__mono">{block.courseId}</td>
+                <td>{block.courseName}</td>
+                <td className="academic-publication__mono">{cycleByCourse.get(block.courseId) ?? '—'}</td>
+                <td className="academic-publication__mono">
+                  {academicSectionLabel(displayPreview.schedule, block.sectionId)}
+                </td>
+                <td className="academic-publication__mono">{block.capacity ?? '—'}</td>
+                <td>{block.teacherName}</td>
+                <td>{block.roomNames.join(', ')}</td>
+                <td>{days[block.day]}</td>
+                <td className="academic-publication__mono">
+                  {formatAcademicMinute(block.startMinute)}–{formatAcademicMinute(block.endMinute)} ·{' '}
+                  {formatAcademicDuration(block.durationMinutes)}
+                </td>
+                <td>
+                  {block.componentDetails
+                    .map((component) => `${component.type} · ${formatAcademicDuration(component.durationMinutes)}`)
+                    .join(' + ')}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  )
+}
+
+export function AcademicPublicationPanel({
+  active = true,
+  actionContainer,
+  primaryActionId,
+  draftId,
+  draftVersion,
+  draftTitle,
+  draftState,
+  dirty,
+  busy,
+  onApprove,
+  onPublish,
+  onFork,
+  onError,
+  onMessage,
+  flowClient,
+  initialFlowState,
+}: Props) {
   const { state: session } = usePlanningSessionContext()
   const [confirmElement, openConfirm, confirm] = usePlanningApprovalConfirm()
-  const [publicationList, setPublicationList] = useState<AcademicPublicationList | null>(null)
-  const [listError, setListError] = useState<string | null>(null)
-  const [listLoading, setListLoading] = useState(false)
-  const [selectedPublicationId, setSelectedPublicationId] = useState('')
-  const [preview, setPreview] = useState<PreviewSource | null>(null)
-  const [previewError, setPreviewError] = useState<string | null>(null)
-  const [workingScope, setWorkingScope] = useState<string | null>(null)
+  const scope = useMemo(() => ({ draftId, draftVersion, draftState, dirty }), [draftId, draftVersion, draftState, dirty])
+  const resolvedFlowClient = flowClient ?? defaultPublicationFlowClient
+  const [flow] = useState(() => createPublicationFlowController(resolvedFlowClient, scope, initialFlowState))
+  const flowState = useSyncExternalStore(flow.subscribe, flow.getState, flow.getState)
   const [offerCatalog, setOfferCatalog] = useState<OperationalOfferCatalog | null>(null)
   const [offerError, setOfferError] = useState<string | null>(null)
   const [activation, setActivation] = useState<{ offer: OperationalOffer; reused: boolean } | null>(null)
   const [activating, setActivating] = useState(false)
-  const requestIntent = useRef(0)
-  const listIntent = useRef(0)
-  const scopeKey = `${draftId ?? ''}|${draftVersion ?? ''}|${dirty}|${selectedPublicationId}`
-  const working = workingScope === scopeKey
-  const selectedSummary = publicationList?.items.find((item) => item.id === selectedPublicationId) ?? null
-  const currentPreview = !dirty && preview && preview.source === 'draft' && preview.id === draftId && preview.version === draftVersion ? preview : null
-  const publicationPreview = selectedSummary && preview?.source === 'publication' && preview.id === selectedSummary.id ? preview : null
-  const currentLabel = publicationList?.items.find((item) => item.id === publicationList.currentId)
+  const activeRef = useRef(active)
+
+  useEffect(() => {
+    activeRef.current = active
+  }, [active])
+
+  useEffect(() => {
+    flow.mount()
+    return () => flow.dispose()
+  }, [flow])
+
+  useEffect(() => {
+    flow.syncScope(scope)
+  }, [flow, scope])
+
+  const flowView = derivePublicationView(flowState, { busy, activating, currentScope: scope })
+  const {
+    listLoading,
+    listFresh,
+    working,
+    selectedSummary,
+    currentPreview,
+    publicationPreview,
+    currentLabel,
+    canApprove,
+    canPublish,
+    canActivate,
+  } = flowView
+  const { publicationList, listError, selectedPublicationId, previewError } = flowState
+  const displayPreview = selectedSummary ? publicationPreview : currentPreview
   const frozen = draftState === 'approved' || draftState === 'published'
-  const canUseRelease = Boolean(draftId && draftVersion && !dirty && !busy && !working)
-  const canApprove = canUseRelease && draftState === 'ready-for-approval'
-    && currentPreview?.id === draftId && currentPreview.version === draftVersion && currentPreview.state === 'ready-for-approval'
-  const canPublish = canUseRelease && draftState === 'approved'
-    && currentPreview?.id === draftId && currentPreview.version === draftVersion && currentPreview.state === 'approved'
-    && Boolean(publicationList) && !listLoading && !listError && !selectedPublicationId
   const publishDisabledReason = draftState === 'published' ? 'Esta versión ya está publicada'
     : draftState !== 'approved' ? 'Primero aprueba la versión'
-    : !publicationList || listLoading
-    ? 'Cargando publicaciones…'
-    : listError ? 'No se pudieron cargar las publicaciones'
+    : listError ? 'No se pudieron cargar las publicaciones. Reintenta actualizar el historial.'
+    : !listFresh || listLoading ? 'Cargando publicaciones…'
     : selectedPublicationId ? 'Selecciona la versión actual (estás consultando una publicación anterior)'
     : dirty ? 'Hay cambios sin guardar'
     : previewError ? 'No se pudo cargar la vista previa. Usa Actualizar vista previa para reintentar.'
@@ -109,80 +265,27 @@ export function AcademicPublicationPanel({ actionContainer, primaryActionId, dra
     : !currentPreview ? 'Espera a que cargue la vista previa de la versión actual'
     : 'La versión debe estar lista para aprobación'
 
-  const blocks = useMemo(() => preview ? aggregateAcademicBlocks(preview.schedule) : [], [preview])
-  const cycleByCourse = useMemo(() => new Map(preview?.schedule.courses.map((course) => [course.courseId, course.cycle]) ?? []), [preview])
-  const refreshPublications = async () => {
-    const intent = ++listIntent.current
-    setListError(null)
-    setListLoading(true)
-    try {
-      const result = await fetchAcademicPublications(globalThis.fetch)
-      if (intent === listIntent.current) {
-        setPublicationList(result)
-        if (selectedPublicationId && !result.items.some((item) => item.id === selectedPublicationId)) setSelectedPublicationId('')
-      }
-    } catch (error) {
-      if (intent === listIntent.current) {
-        setPublicationList(null)
-        setListError(error instanceof Error ? error.message : 'No se pudo consultar el historial local.')
-      }
-    } finally {
-      if (intent === listIntent.current) setListLoading(false)
-    }
-  }
-
+  const autoListReason = flowView.scopeSynced ? nextAutoListRefreshReason(flowState, active) : null
   useEffect(() => {
-    const timer = window.setTimeout(() => { void refreshPublications() }, 0)
+    if (!autoListReason) return
+    const timer = window.setTimeout(() => {
+      void flow.refreshPublications(autoListReason, active)
+    }, 0)
     return () => window.clearTimeout(timer)
-    // Load once on mount; refreshes after writes are explicit.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [flow, autoListReason, active, flowState.scope])
 
-  const refreshPreview = async () => {
-    const selected = selectedSummary
-    if (!selected && (!draftId || !draftVersion)) return
-    const id = selected?.id ?? draftId!
-    const version = selected?.approvedVersion ?? draftVersion!
-    const intent = ++requestIntent.current
-    setPreview(null)
-    setPreviewError(null)
-    setWorkingScope(scopeKey)
-    try {
-      let next: PreviewSource
-      if (selected) {
-        const publication: AcademicPublication = id === publicationList?.currentId
-          ? await fetchCurrentAcademicPublication() : await fetchAcademicPublication(id)
-        if (publication.id !== id || publication.publicationVersion !== selected.publicationVersion) {
-          throw new Error('El historial cambió mientras se consultaba. Actualiza publicaciones y vuelve a seleccionar la versión.')
-        }
-        next = { id: publication.id, version: publication.approvedVersion, schedule: publication.schedule,
-          title: publication.title, label: `Publicación ${publication.publicationVersion}`, source: 'publication', state: 'published' }
-      } else {
-        const release: AcademicReleasePreview = await fetchAcademicReleasePreview(id)
-        if (release.version !== version) throw new Error('La propuesta cambió. Actualiza la versión y vuelve a consultar la vista previa.')
-        next = { id: release.id, version: release.version, schedule: release.schedule, title: release.title,
-          label: `Versión ${release.version}`, source: 'draft', state: release.state }
-      }
-      if (intent === requestIntent.current && (selected || (id === draftId && version === draftVersion))) setPreview(next)
-    } catch (error) {
-      if (intent === requestIntent.current) setPreviewError(error instanceof Error ? error.message : 'No se pudo consultar la vista previa local.')
-    } finally {
-      if (intent === requestIntent.current) setWorkingScope(null)
-    }
-  }
-
+  const previewTargetKey = selectedSummary
+    ? `pub:${selectedSummary.id}:${selectedSummary.publicationVersion}`
+    : draftId && draftVersion && !dirty
+      ? `draft:${draftId}:${draftVersion}:${draftState}`
+      : null
   useEffect(() => {
-    let timer: number | undefined
-    if (selectedSummary || (draftId && draftVersion && !dirty)) {
-      timer = window.setTimeout(() => { void refreshPreview() }, 0)
-    }
-    return () => {
-      if (timer !== undefined) window.clearTimeout(timer)
-      requestIntent.current += 1
-    }
-    // Reload on source/version changes; cleanup invalidates late responses from the previous source.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draftId, draftVersion, draftState, dirty, selectedPublicationId, selectedSummary?.id, selectedSummary?.publicationVersion])
+    if (!flowView.scopeSynced || !previewTargetKey) return
+    const timer = window.setTimeout(() => {
+      void flow.refreshPreview()
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [flow, flowView.scopeSynced, previewTargetKey])
 
   const approve = () => {
     if (!canApprove || !draftId || !draftVersion) return
@@ -194,14 +297,13 @@ export function AcademicPublicationPanel({ actionContainer, primaryActionId, dra
         onError(null)
         onMessage(null)
         await onApprove()
-        await refreshPublications()
       },
     })
   }
 
   const publish = () => {
-    if (!canPublish) return
-    const currentId = publicationList!.currentId
+    if (!canPublish || !publicationList) return
+    const currentId = publicationList.currentId
     const replacing = currentLabel ? ` La publicación vigente será la versión ${currentLabel.publicationVersion} (${currentLabel.title}).` : ' No hay una publicación vigente.'
     openConfirm({
       title: `¿Publicar la versión ${draftVersion}?`,
@@ -211,7 +313,11 @@ export function AcademicPublicationPanel({ actionContainer, primaryActionId, dra
         onError(null)
         onMessage(null)
         await onPublish(currentId)
-        await refreshPublications()
+        window.setTimeout(() => {
+          if (flow.getState().scope.draftState === 'approved') {
+            void flow.refreshPublications('manual', activeRef.current)
+          }
+        }, 0)
       },
     })
   }
@@ -228,15 +334,11 @@ export function AcademicPublicationPanel({ actionContainer, primaryActionId, dra
         onMessage(null)
         // The planning session tracks its own busy state for the new draft.
         await onFork(sourceId, sourceVersion)
-        setSelectedPublicationId('')
-        setPreview(null)
+        flow.selectPublication('')
+        setActivation(null)
       },
     })
   }
-
-  const displayPreview = selectedSummary ? preview?.source === 'publication' && preview.id === selectedSummary.id ? preview : null : currentPreview
-  const canActivate = Boolean(selectedSummary && publicationPreview?.schedule.schoolId === 'SISTEMAS'
-    && publicationPreview.schedule.academicPeriod === '2027-I' && !busy && !activating && !working)
 
   const refreshOffers = async () => {
     setOfferError(null)
@@ -256,7 +358,7 @@ export function AcademicPublicationPanel({ actionContainer, primaryActionId, dra
     setActivation(null)
     try {
       const publication = selectedSummary.id === publicationList?.currentId
-        ? await fetchCurrentAcademicPublication() : await fetchAcademicPublication(selectedSummary.id)
+        ? await resolvedFlowClient.fetchCurrentPublication() : await resolvedFlowClient.fetchPublication(selectedSummary.id)
       if (publication.id !== selectedSummary.id || publication.publicationVersion !== selectedSummary.publicationVersion
         || publication.schedule.schoolId !== 'SISTEMAS' || publication.schedule.academicPeriod !== '2027-I') {
         throw new Error('La publicación seleccionada cambió o no corresponde a la oferta Sistemas 2027-I.')
@@ -334,9 +436,8 @@ export function AcademicPublicationPanel({ actionContainer, primaryActionId, dra
   return <section className="academic-publication" aria-label="Aprobación y publicación simuladas">
     <PlanningResultStrip status={dirty ? 'incomplete' : draftState} label={stateLabels[draftState]}
       facts={[draftVersion ? `Versión ${draftVersion}` : 'Sin versión guardada', dirty ? 'Cambios sin guardar' : draftId ? 'Guardada' : 'Sin guardar']} />
-    {actionContainer && createPortal(<Button type="button" variant="outline" className="academic-publication__publish" disabled={!canPublish}
-      aria-describedby="academic-publish-reason" onClick={publish}>Publicar</Button>, actionContainer)}
-    {actionContainer && primaryActionId === 'approve' && createPortal(<Button id="planning-tour-primary" disabled={!canApprove} aria-describedby={!canApprove ? reasonId : undefined} onClick={approve}>Aprobar versión {draftVersion}</Button>, actionContainer)}
+    {actionContainer && createPortal(<AcademicPublicationHeaderActions primaryActionId={primaryActionId} canPublish={canPublish}
+      canApprove={canApprove} draftVersion={draftVersion} reasonId={reasonId} onPublish={publish} onApprove={approve} />, actionContainer)}
 
     <ol className="academic-publication__steps" aria-label="Ciclo de la versión">
       {steps.map((step, index) => <li key={step.label} className="academic-publication__step" data-tone={step.view.tone} aria-current={step.view.tone === 'now' ? 'step' : undefined}>
@@ -425,7 +526,7 @@ export function AcademicPublicationPanel({ actionContainer, primaryActionId, dra
         <h2 id="academic-publications-title">Publicaciones</h2>
         <label className="academic-publication__history"><span className="academic-publication__muted">Consultar publicación</span>
           <select id="academic-publication-select" aria-label="Consultar publicación" value={selectedPublicationId} disabled={working || busy}
-            onChange={(event) => { requestIntent.current += 1; setWorkingScope(null); setSelectedPublicationId(event.currentTarget.value); setPreview(null); setPreviewError(null) }}>
+            onChange={(event) => { flow.selectPublication(event.currentTarget.value); setActivation(null); setOfferError(null) }}>
             <option value="">Propuesta actual · {draftTitle}</option>
             {publicationList?.items.map((item) => <option key={item.id} value={item.id}>
               {item.id === publicationList.currentId ? 'Vigente' : 'Anterior'} · Publicación {item.publicationVersion} · {item.title} · {dateLabel(item.publishedAt)}
@@ -434,38 +535,25 @@ export function AcademicPublicationPanel({ actionContainer, primaryActionId, dra
         </label>
         <span className="academic-publication__spacer" />
         <button type="button" className="academic-publication__button" disabled={working || busy || listLoading}
-          onClick={() => void refreshPublications()}>{listLoading ? 'Actualizando…' : 'Actualizar publicaciones'}</button>
+          onClick={() => void flow.refreshPublications('manual', active)}>{listLoading ? 'Actualizando…' : 'Actualizar publicaciones'}</button>
         <button type="button" className="academic-publication__button" disabled={working || busy || (!selectedSummary && !draftId)}
-          onClick={() => void refreshPreview()}>{working ? 'Consultando…' : !selectedSummary && previewError ? 'Reintentar vista previa' : 'Actualizar vista previa'}</button>
+          onClick={() => void flow.refreshPreview()}>{working ? 'Consultando…' : !selectedSummary && previewError ? 'Reintentar vista previa' : 'Actualizar vista previa'}</button>
       </div>
       {publicationList && <p className="academic-publication__note" role="status">{publicationList.currentId
         ? `Vigente: publicación ${currentLabel?.publicationVersion ?? '—'} · ${currentLabel?.title ?? publicationList.currentId}.`
         : 'No hay una publicación vigente.'}</p>}
       {listLoading && <PlanningFetchLoading label="Cargando publicaciones…" layout="table" />}
       {working && <PlanningFetchLoading label="Consultando vista previa…" layout="publication-table" />}
-      {listError && <div className="academic-publication__alert" role="alert"><span aria-hidden="true">△</span>No se pudo actualizar el historial: {listError}</div>}
+      {listError && <div className="academic-publication__alert" role="alert">
+        <span aria-hidden="true">△</span>
+        <span>No se pudo actualizar el historial: {listError}</span>
+        <button type="button" className="academic-publication__button academic-publication__button--paper"
+          disabled={working || busy || listLoading} onClick={() => void flow.refreshPublications('manual', active)}>
+          Reintentar publicaciones
+        </button>
+      </div>}
       {previewError && <div className="academic-publication__alert" role="alert"><span aria-hidden="true">△</span>No se pudo consultar la vista previa: {previewError}</div>}
       {selectedSummary && <p className="academic-publication__note">{selectedSummary.id === publicationList?.currentId ? 'Vigente' : 'Anterior'} · publicación {selectedSummary.publicationVersion} · publicada {dateLabel(selectedSummary.publishedAt)} · versión aprobada {selectedSummary.approvedVersion}</p>}
-      {displayPreview ? <details className="academic-publication__preview" key={`${displayPreview.source}-${displayPreview.id}-${displayPreview.version}`} open={Boolean(selectedSummary)}>
-        <summary>Vista previa de {displayPreview.source === 'publication' ? 'la publicación' : 'la propuesta'} · {new Set(displayPreview.schedule.assignments.map((assignment) => assignment.sectionId)).size} secciones</summary>
-        <p className="academic-publication__muted academic-publication__small">{displayPreview.title} · {displayPreview.schedule.schoolId} · {displayPreview.schedule.academicPeriod} · {displayPreview.label}
-          {selectedSummary ? ' · solo lectura' : ` · ${stateLabels[displayPreview.state]}`}</p>
-        <div className="academic-publication__table academic-publication__preview-table"><table>
-          <thead><tr>
-            <th scope="col">Código</th><th scope="col">Asignatura</th><th scope="col">Ciclo</th><th scope="col">Sección</th><th scope="col">Capacidad</th><th scope="col">Docente</th><th scope="col">Ambiente</th><th scope="col">Día</th><th scope="col">Horario</th><th scope="col">Componentes</th>
-          </tr></thead>
-          <tbody>{blocks.map((block) => <tr key={`${block.sectionId}-${block.day}-${block.startMinute}`}>
-            <td className="academic-publication__mono">{block.courseId}</td><td>{block.courseName}</td><td className="academic-publication__mono">{cycleByCourse.get(block.courseId) ?? '—'}</td>
-            <td className="academic-publication__mono">{academicSectionLabel(preview!.schedule, block.sectionId)}</td><td className="academic-publication__mono">{block.capacity ?? '—'}</td><td>{block.teacherName}</td><td>{block.roomNames.join(', ')}</td>
-            <td>{days[block.day]}</td><td className="academic-publication__mono">{formatAcademicMinute(block.startMinute)}–{formatAcademicMinute(block.endMinute)} · {formatAcademicDuration(block.durationMinutes)}</td>
-            <td>{block.componentDetails.map((component) => `${component.type} · ${formatAcademicDuration(component.durationMinutes)}`).join(' + ')}</td>
-          </tr>)}</tbody>
-        </table></div>
-      </details> : <p className="academic-publication__note">{selectedSummary
-        ? 'La vista previa de esta publicación se carga automáticamente; puedes reintentar si falla.'
-        : draftId ? `Propuesta actual · ${draftTitle} · versión ${draftVersion} · ${stateLabels[draftState]}${dirty ? ' · cambios locales sin guardar' : ''}. La vista previa se carga al guardar los cambios.`
-          : 'Guarda una propuesta antes de consultar una vista previa.'}</p>}
-
       <details className="academic-publication__scope" open>
         <summary>Alcance de la activación · simulación local</summary>
         <div className="academic-publication__scope-row">
@@ -491,6 +579,12 @@ export function AcademicPublicationPanel({ actionContainer, primaryActionId, dra
           </p>)}
         </div>}
       </details>
+      {displayPreview ? (
+        <AcademicPublicationPreviewDetails displayPreview={displayPreview} hasSelectedPublication={Boolean(selectedSummary)} />
+      ) : <p className="academic-publication__note">{selectedSummary
+        ? 'La vista previa de esta publicación se carga automáticamente; puedes reintentar si falla.'
+        : draftId ? `Propuesta actual · ${draftTitle} · versión ${draftVersion} · ${stateLabels[draftState]}${dirty ? ' · cambios locales sin guardar' : ''}. La vista previa se carga al guardar los cambios.`
+          : 'Guarda una propuesta antes de consultar una vista previa.'}</p>}
     </section>
     {confirmElement}
   </section>

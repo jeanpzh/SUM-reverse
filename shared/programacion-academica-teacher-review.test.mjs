@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { validateAcademicReviewSubmission, validateAcademicReviewDecision, validateAcademicTeacherReview, validateAcademicDraftSaveRequest, validateAcademicSavedDraft } from './programacion-academica-api.mjs'
+import { validateAcademicReviewBatchDecision, validateAcademicReviewSubmission, validateAcademicReviewDecision, validateAcademicTeacherReview, validateAcademicDraftSaveRequest, validateAcademicSavedDraft } from './programacion-academica-api.mjs'
 
 const at = '2026-11-04T12:00:00Z'
 const fingerprint = 'a'.repeat(64)
@@ -45,4 +45,39 @@ test('review workflow states cannot be forged by a normal save request', () => {
   assert.throws(() => validateAcademicSavedDraft({ ...saved, state: 'in-review' }))
   assert.throws(() => validateAcademicSavedDraft({ ...saved, state: 'in-review', review: review() }))
   assert.throws(() => validateAcademicSavedDraft({ ...saved, state: 'ready-for-approval', review: review() }))
+})
+
+
+test('bulk conformity contract bounds unique IDs and rejects injected origin or observations', () => {
+  const body = { expectedVersion: 2, round: 1, teacherIds: ['T1'], decision: 'conformity', reference: null }
+  assert.doesNotThrow(() => validateAcademicReviewBatchDecision(body))
+  assert.doesNotThrow(() => validateAcademicReviewBatchDecision({ ...body, teacherIds: Array.from({ length: 500 }, (_, n) => `T${n}`), reference: 'x'.repeat(200) }))
+  for (const patch of [{ teacherIds: [] }, { teacherIds: ['T1', 'T1'] }, { teacherIds: Array.from({ length: 501 }, (_, n) => `T${n}`) },
+    { teacherIds: [''] }, { teacherIds: 'T1' }, { expectedVersion: 0 }, { round: 0 }, { decision: 'changes-requested' },
+    { reference: ' x ' }, { reference: 'x'.repeat(201) }, { reference: 1 }, { reference: undefined }, { source: 'teacher' }, { observation: 'text' }]) {
+    assert.throws(() => validateAcademicReviewBatchDecision({ ...body, ...patch }), TypeError)
+  }
+  const single = { expectedVersion: 2, round: 1, teacherId: 'T1', decision: 'conformity', observation: '', reference: 'Acta 8' }
+  assert.doesNotThrow(() => validateAcademicReviewDecision(single))
+  assert.throws(() => validateAcademicReviewDecision({ ...single, reference: 'x'.repeat(201) }))
+})
+
+test('legacy and explicit origins validate without allowing provenance on pending records', () => {
+  const legacy = review()
+  Object.assign(legacy.teachers[0], { status: 'conformity', decisionVersion: 3, decidedAt: at })
+  legacy.history.push({ type: 'decision', version: 3, round: 1, at, teacherId: 'T1', decision: 'conformity', observation: '', fingerprint })
+  assert.doesNotThrow(() => validateAcademicTeacherReview(legacy, 3))
+  for (const source of ['teacher', 'coordinator-transcription']) {
+    const explicit = structuredClone(legacy)
+    Object.assign(explicit.teachers[0], { source, reference: 'Acta 8' })
+    Object.assign(explicit.history[1], { source, reference: 'Acta 8' })
+    assert.doesNotThrow(() => validateAcademicTeacherReview(explicit, 3))
+    explicit.teachers[0].source = 'unknown'
+    assert.throws(() => validateAcademicTeacherReview(explicit, 3))
+  }
+  const pending = review()
+  Object.assign(pending.teachers[0], { source: null, reference: null })
+  assert.doesNotThrow(() => validateAcademicTeacherReview(pending, 2))
+  pending.teachers[0].source = 'teacher'
+  assert.throws(() => validateAcademicTeacherReview(pending, 2))
 })

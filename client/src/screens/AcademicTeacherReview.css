@@ -32,6 +32,8 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  max-width: 100%;
+  min-width: 0;
   padding: 2px 4px 2px 12px;
   border-radius: 9999px;
   background: var(--plan-cream);
@@ -41,6 +43,8 @@
 }
 .planning-root .academic-teacher-review__role select {
   box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
   height: 28px;
   padding: 0 10px;
   border: 1px solid var(--plan-control-border);
@@ -98,10 +102,17 @@
 .planning-root .academic-teacher-review__split {
   display: flex;
   flex-wrap: wrap;
+  container-type: inline-size;
   margin-inline: calc(var(--review-gutter) * -1);
   border-top: 1px solid var(--plan-dove);
 }
-.planning-root .academic-teacher-review__table-wrap { flex: 999 1 520px; min-width: 0; overflow-x: auto; }
+.planning-root .academic-teacher-review__table-wrap {
+  position: relative;
+  flex: 999 1 520px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
 .planning-root .academic-teacher-review table {
   width: 100%;
   border-collapse: collapse;
@@ -110,7 +121,7 @@
 }
 .planning-root .academic-teacher-review th {
   height: auto;
-  padding: 8px 12px;
+  padding: 8px 10px;
   border: 0;
   border-bottom: 1px solid var(--plan-dove);
   background: transparent;
@@ -123,27 +134,46 @@
 }
 .planning-root .academic-teacher-review td {
   height: auto;
-  padding: 9px 12px;
+  padding: 9px 10px;
   border: 0;
   border-bottom: 1px solid var(--plan-row-divider);
   background: transparent;
   text-align: left;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+.planning-root .academic-teacher-review .academic-teacher-review__table-wrap td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .planning-root .academic-teacher-review tbody tr:nth-child(even) { background: transparent; }
 .planning-root .academic-teacher-review__table-wrap tbody tr:hover td { background: var(--plan-cream); }
 .planning-root .academic-teacher-review__table-wrap tr[data-selected] td,
 .planning-root .academic-teacher-review__table-wrap tr[data-selected]:hover td { background: var(--plan-sand); }
 .planning-root .academic-teacher-review__table-wrap tr[data-selected] td:first-child { box-shadow: inset 3px 0 0 var(--plan-ink); }
-.planning-root .academic-teacher-review .academic-teacher-review__observation-cell { white-space: normal; max-width: 280px; min-width: 200px; }
+
+@media (min-width: 720px) {
+  .planning-root .academic-teacher-review .academic-teacher-review__table-wrap :is(th, td):first-child { padding-left: 16px; }
+  .planning-root .academic-teacher-review .academic-teacher-review__table-wrap :is(th, td):last-child { padding-right: 16px; }
+  .planning-root .academic-teacher-review .academic-teacher-review__table-wrap td:nth-child(2) { min-width: 140px; max-width: 240px; }
+  .planning-root .academic-teacher-review .academic-teacher-review__table-wrap td:is(:nth-child(3), :nth-child(5)) { white-space: nowrap; }
+  .planning-root .academic-teacher-review .academic-teacher-review__observation-cell { min-width: 140px; max-width: 260px; }
+}
+
 /* The board's first column is plain text; here it is a button so every row is keyboard-selectable. */
-.planning-root .academic-teacher-review__name {
+.planning-root .academic-teacher-review .academic-teacher-review__name {
+  max-width: 100%;
   padding: 0;
   border: 0;
   background: transparent;
   color: inherit;
   font: inherit;
   text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
   cursor: pointer;
 }
 .planning-root .academic-teacher-review__name:hover { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--plan-dove); }
@@ -179,7 +209,7 @@
 /* Detail pane */
 .planning-root .academic-teacher-review__pane {
   display: flex;
-  flex: 1 1 400px;
+  flex: 1 1 420px;
   flex-direction: column;
   gap: 16px;
   box-sizing: border-box;
@@ -189,11 +219,14 @@
   border-left: 1px solid var(--plan-dove);
 }
 .planning-root .academic-teacher-review__pane-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
-.planning-root .academic-teacher-review__pane-head > div { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+.planning-root .academic-teacher-review__pane-head > div { display: flex; flex: 1 1 auto; flex-direction: column; align-items: flex-start; min-width: 0; }
 .planning-root .academic-teacher-review__pane h2 {
+  max-width: 100%;
   margin: 4px 0 4px;
   font: 400 var(--text-plan-section)/30px var(--plan-font-sans);
   letter-spacing: var(--text-plan-section--letter-spacing);
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .planning-root .academic-teacher-review__close {
   display: inline-flex;
@@ -216,9 +249,23 @@
   border-radius: var(--radius-plan-strip);
   background: var(--plan-cream);
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .planning-root .academic-teacher-review__observation-readonly .academic-teacher-review__eyebrow { margin-bottom: 4px; }
-.planning-root .academic-teacher-review__blocks { min-width: 0; overflow-x: auto; }
+.planning-root .academic-teacher-review__blocks {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+@media (min-width: 720px) {
+  .planning-root .academic-teacher-review .academic-teacher-review__blocks :is(th, td) { padding: 8px 6px; }
+  .planning-root .academic-teacher-review .academic-teacher-review__blocks :is(th, td):first-child { padding-left: 0; }
+  .planning-root .academic-teacher-review .academic-teacher-review__blocks :is(th, td):last-child { padding-right: 0; }
+  .planning-root .academic-teacher-review .academic-teacher-review__blocks td:nth-child(1) { min-width: 104px; }
+  .planning-root .academic-teacher-review .academic-teacher-review__blocks td:is(:nth-child(2), :nth-child(3), :nth-child(4)) { white-space: nowrap; }
+  .planning-root .academic-teacher-review .academic-teacher-review__blocks td:nth-child(5) { min-width: 68px; }
+}
 .planning-root .academic-teacher-review__small {
   margin: 0;
   color: var(--plan-fog);
@@ -240,16 +287,23 @@
 .planning-root .academic-teacher-review__history { margin: 16px 0 0; }
 .planning-root .academic-teacher-review__history summary { cursor: pointer; font-weight: 500; min-height: 24px; }
 .planning-root .academic-teacher-review__history ol { display: grid; gap: 8px; margin: 8px 0 0; padding-left: 24px; }
-.planning-root .academic-teacher-review__history li { display: grid; gap: 4px; padding-bottom: 8px; border-bottom: 1px solid var(--plan-row-divider); }
-.planning-root .academic-teacher-review__history p { margin: 4px 0; white-space: pre-wrap; }
+.planning-root .academic-teacher-review__history li { display: grid; gap: 4px; min-width: 0; padding-bottom: 8px; border-bottom: 1px solid var(--plan-row-divider); overflow-wrap: anywhere; }
+.planning-root .academic-teacher-review__history p { margin: 4px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 
-/* Visible 2px ink focus ring (planning-v2 base rule covers focus-visible; summaries and plain buttons included). */
+/* Visible 2px ink focus ring (planning-v2 base rule covers focus-visible; summaries, plain buttons and scrollable regions included). */
 .planning-root .academic-teacher-review :is(button, select, input, textarea, summary):focus-visible,
 .planning-root .academic-teacher-review__role select:focus-visible {
   outline: 2px solid var(--plan-focus);
   outline-offset: 2px;
 }
+.planning-root .academic-teacher-review :is(.academic-teacher-review__table-wrap, .academic-teacher-review__blocks):focus-visible {
+  outline: 2px solid var(--plan-focus);
+  outline-offset: -2px;
+}
 
+@container (max-width: 939px) {
+  .planning-root .academic-teacher-review__pane { max-width: none; border-left: 0; border-top: 1px solid var(--plan-dove); flex-basis: 100%; }
+}
 @media (max-width: 1279px) {
   .planning-root .academic-teacher-review__pane { max-width: none; border-left: 0; border-top: 1px solid var(--plan-dove); flex-basis: 100%; }
 }
@@ -258,20 +312,69 @@
   .planning-root .academic-teacher-review__row-action,
   .planning-root .academic-teacher-review__button,
   .planning-root .academic-teacher-review__close { min-height: 44px; }
+  .planning-root .academic-teacher-review__row-action,
+  .planning-root .academic-teacher-review__button { max-width: 100%; white-space: normal; text-align: center; }
   .planning-root .academic-teacher-review__close { min-width: 44px; }
   .planning-root .academic-teacher-review__name { min-height: 44px; }
   .planning-root .academic-teacher-review__role select { height: 44px; }
-}
 
-@media (max-width: 719px) {
   .planning-root .academic-teacher-review__split { display: block; }
   .planning-root .academic-teacher-review table { display: block; min-width: 0; width: 100%; }
-  .planning-root .academic-teacher-review thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-  .planning-root .academic-teacher-review tbody { display: block; }
-  .planning-root .academic-teacher-review tbody tr { display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; border-bottom: 1px solid var(--plan-row-divider); }
+  .planning-root .academic-teacher-review thead { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .planning-root .academic-teacher-review tbody { display: block; width: 100%; }
+  .planning-root .academic-teacher-review tbody tr { display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; border-bottom: 1px solid var(--plan-row-divider); }
+  .planning-root .academic-teacher-review__blocks tbody tr { padding: 12px 0; }
   .planning-root .academic-teacher-review tbody tr[data-selected] { background: var(--plan-sand); box-shadow: inset 3px 0 0 var(--plan-ink); }
   .planning-root .academic-teacher-review tbody td { display: block; padding: 0; border: 0; min-width: 0; max-width: none; white-space: normal; background: transparent; overflow-wrap: anywhere; }
   .planning-root .academic-teacher-review__name { width: 100%; text-align: left; }
   .planning-root .academic-teacher-review__pane { padding: 16px; }
   .planning-root .academic-teacher-review__blocks td:nth-child(2)::before { content: 'Secc. '; }
 }
+
+.planning-root .academic-teacher-review__checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  cursor: pointer;
+}
+.planning-root .academic-teacher-review__checkbox input {
+  inline-size: 1.25em;
+  block-size: 1.25em;
+  accent-color: var(--plan-ink);
+}
+.planning-root .academic-teacher-review__origin { display: block; max-inline-size: 24em; }
+.planning-root .academic-teacher-review__dialog {
+  box-sizing: border-box;
+  inline-size: min(32rem, calc(100vw - 2rem));
+  max-block-size: calc(100dvh - 2rem);
+  overflow-y: auto;
+  padding: 24px;
+  border: 1px solid var(--plan-control-border);
+  border-radius: var(--radius-plan-input);
+  background: var(--plan-paper);
+  color: var(--plan-ink);
+  font: inherit;
+}
+.planning-root .academic-teacher-review__dialog:modal { overscroll-behavior: contain; }
+.planning-root .academic-teacher-review__dialog::backdrop {
+  background: rgb(0 0 0 / 45%);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+.planning-root .academic-teacher-review__dialog input {
+  box-sizing: border-box;
+  inline-size: 100%;
+  padding: 8px;
+  border: 1px solid var(--plan-control-border);
+  border-radius: var(--radius-plan-input);
+  background: var(--plan-paper);
+  color: var(--plan-ink);
+  font: inherit;
+}
+
+.planning-root .academic-teacher-review__dialog input { font-size: max(1rem, 1em); min-block-size: 48px; }
+.planning-root .academic-teacher-review__dialog button { min-block-size: 48px; }
+.planning-root .academic-teacher-review__checkbox { min-inline-size: 48px; min-block-size: 48px; }
+.planning-root .academic-teacher-review__checkbox input:disabled { cursor: not-allowed; opacity: 0.5; }

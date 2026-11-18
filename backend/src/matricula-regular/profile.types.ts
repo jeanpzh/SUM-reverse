@@ -75,10 +75,22 @@ export type CourseDocument = {
   credits: number
 }
 
+export type SessionType = 'T' | 'P' | 'L'
+
+export type MeetingDetails = {
+  sessionId: string
+  teacherId: string
+  teacherName: string
+  roomId: string
+  roomName: string
+  sessionType?: SessionType
+}
+
 export type Meeting = {
   day: 1 | 2 | 3 | 4 | 5 | 6 | 7
   startMinute: number
   endMinute: number
+  details?: MeetingDetails
 }
 
 export type Section = {

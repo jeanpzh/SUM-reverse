@@ -52,14 +52,14 @@ try {
   await check('T044/P1: report heading is programmatically focusable and rows/total come from the accepted report', async () => {
     const { RegularEnrollmentReportView } = await server.ssrLoadModule('/src/screens/RegularEnrollmentReport.tsx')
     const markup = html(RegularEnrollmentReportView, { report: kit.enrollmentReport() })
-    assert.match(markup, /<h2[^>]*id="regular-enrollment-report-heading"[^>]*tabindex="-1"/)
+    assert.match(markup, /<h[1-6][^>]*id="regular-enrollment-report-heading"[^>]*tabindex="-1"/)
     assert.match(markup, /SYN-SIS-C1/)
     assert.match(markup, /SYN-SIS-C2/)
-    assert.match(markup, /Total de créditos<\/dt><dd>7</)
-    assert.match(markup, /Cursos aceptados<\/dt><dd>2</)
+    assert.match(markup, /Créditos matriculados : 7/)
+    assert.match(markup, /Asignaturas matriculadas : 2/)
     assert.match(markup, /Descargar/)
     assert.match(markup, /Ventana sintética de prueba/)
-    assert.match(markup, /local-only/)
+    assert.match(markup, /no es un documento oficial ni equivale a un visado/)
     assert.doesNotMatch(markup, /REDIRECCIONANDO|M-?01/)
   })
 
@@ -160,6 +160,233 @@ try {
     assert.match(accepted, />Ver reporte local</)
     assert.doesNotMatch(accepted, /REDIRECCIONANDO|M-?01|Redirigiendo/)
     assert.match(accepted.match(/<button[^>]*>Enviar solicitud de matrícula/)?.[0] ?? '', /disabled/)
+  })
+
+  // ---- D2: per-session details in WeeklySchedule, SectionPickerDialog, and CourseScheduleModal ----
+  await check('D2: WeeklySchedule renders per-session type, room and teacher from MeetingDetails and keeps legacy fallback', async () => {
+    const { WeeklySchedule } = await server.ssrLoadModule('/src/screens/WeeklySchedule.tsx')
+    const { buildScheduleEvents } = await server.ssrLoadModule('/src/data/localAcademicView.ts')
+    const detailedReport = kit.enrollmentReport({
+      rows: [{
+        courseId: 'SYN-SIS-C1',
+        sectionId: 'SYN-SIS-S1',
+        planId: 'SYN-PLAN-SIS',
+        name: 'Algoritmos y Estructuras',
+        credits: 4,
+        label: '1',
+        teacher: 'DOCENTE A / DOCENTE B',
+        schedule: [
+          {
+            day: 1,
+            startMinute: 480,
+            endMinute: 600,
+            details: { sessionId: 's-t', teacherId: 't-a', teacherName: 'DOCENTE A', roomId: 'r-1', roomName: 'Aula 101', sessionType: 'T' },
+          },
+          {
+            day: 4,
+            startMinute: 840,
+            endMinute: 960,
+            details: { sessionId: 's-l', teacherId: 't-b', teacherName: 'DOCENTE B', roomId: 'r-2', roomName: 'Lab 2', sessionType: 'L' },
+          },
+        ],
+      }],
+    })
+    const detailedMarkup = html(WeeklySchedule, { data: null, displayEvents: buildScheduleEvents(detailedReport) })
+    assert.match(detailedMarkup, /Sección 1 · Teoría · Aula 101/)
+    assert.match(detailedMarkup, /DOCENTE A/)
+    assert.match(detailedMarkup, /Sección 1 · Laboratorio · Lab 2/)
+    assert.match(detailedMarkup, /DOCENTE B/)
+    assert.match(detailedMarkup, /aria-label="Lunes · Algoritmos y Estructuras · 08:00-10:00 · Sección 1 · Teoría · Aula 101 · DOCENTE A"/)
+    assert.match(detailedMarkup, /aria-label="Jueves · Algoritmos y Estructuras · 14:00-16:00 · Sección 1 · Laboratorio · Lab 2 · DOCENTE B"/)
+
+    const legacyMarkup = html(WeeklySchedule, { data: null, displayEvents: buildScheduleEvents(kit.enrollmentReport()) })
+    assert.match(legacyMarkup, /Sección SYN-SIS-S1 · —/)
+  })
+
+  await check('D2: SectionPickerDialog expanded schedule renders per-session teacher and room without collapsing T/P and L', async () => {
+    const { SectionPickerDialog } = await server.ssrLoadModule('/src/components/SectionPickerDialog.tsx')
+    const course = {
+      ...syntheticContext().offer[0],
+      sections: [{
+        sectionId: 'SYN-SIS-S1',
+        label: '1',
+        capacity: 30,
+        occupied: 4,
+        teacher: 'DOCENTE A / DOCENTE B',
+        room: 'Aula 101 / Lab 2',
+        schedule: [
+          {
+            day: 1,
+            startMinute: 480,
+            endMinute: 600,
+            details: { sessionId: 's-t', teacherId: 't-a', teacherName: 'DOCENTE A', roomId: 'r-1', roomName: 'Aula 101', sessionType: 'T' },
+          },
+          {
+            day: 3,
+            startMinute: 480,
+            endMinute: 600,
+            details: { sessionId: 's-p', teacherId: 't-a', teacherName: 'DOCENTE A', roomId: 'r-1', roomName: 'Aula 101', sessionType: 'P' },
+          },
+          {
+            day: 5,
+            startMinute: 840,
+            endMinute: 960,
+            details: { sessionId: 's-l', teacherId: 't-b', teacherName: 'DOCENTE B', roomId: 'r-2', roomName: 'Lab 2', sessionType: 'L' },
+          },
+        ],
+      }],
+    }
+    const markup = html(SectionPickerDialog, {
+      course,
+      currentSectionId: 'SYN-SIS-S1',
+      initialExpandedSectionId: 'SYN-SIS-S1',
+      onAccept: noop,
+      onCancel: noop,
+    })
+    assert.match(markup, /Lun 08:00-10:00.*Teoría.*Aula 101.*DOCENTE A/)
+    assert.match(markup, /Mié 08:00-10:00.*Práctica.*Aula 101.*DOCENTE A/)
+    assert.match(markup, /Vie 14:00-16:00.*Laboratorio.*Lab 2.*DOCENTE B/)
+
+    const legacyCourse = syntheticContext().offer[0]
+    const legacyMarkup = html(SectionPickerDialog, {
+      course: legacyCourse,
+      currentSectionId: 'SYN-SIS-S1',
+      initialExpandedSectionId: 'SYN-SIS-S1',
+      onAccept: noop,
+      onCancel: noop,
+    })
+    assert.match(legacyMarkup, /<td colSpan="6">Lun 08:00-10:00<\/td>|colspan="6">Lun 08:00-10:00<\/td>/)
+    assert.doesNotMatch(legacyMarkup, /<ul/)
+  })
+
+  await check('D2: CourseScheduleModal renders Docente column for operational slots and omits it for legacy slots', async () => {
+    const { CourseScheduleModal } = await server.ssrLoadModule('/src/components/CourseScheduleModal.tsx')
+    const { mockResponses } = await server.ssrLoadModule('/src/data/mocks/responses.ts')
+    const legacyCourse = mockResponses.programacion.data.programacion[0]
+    const legacyMarkup = html(CourseScheduleModal, { course: legacyCourse, onClose: noop })
+    assert.doesNotMatch(legacyMarkup, /<th>Docente<\/th>/)
+
+    const operationalCourse = {
+      ...legacyCourse,
+      codDocente: '',
+      apePatDocente: '',
+      apeMatDocente: '',
+      nomDocente: 'DOCENTE A / DOCENTE B',
+      horarios: [
+        { ...legacyCourse.horarios[0], codAula: 'Aula 101', nomDocente: 'DOCENTE A', desTipoHoraAsignatura: 'Teoría' },
+        { ...legacyCourse.horarios[1], codAula: 'Lab 2', nomDocente: 'DOCENTE B', desTipoHoraAsignatura: 'Laboratorio' },
+      ],
+    }
+    const opMarkup = html(CourseScheduleModal, { course: operationalCourse, onClose: noop })
+    assert.match(opMarkup, /<th[^>]*>Docente<\/th>/)
+    assert.match(opMarkup, /Aula 101/)
+    assert.match(opMarkup, /DOCENTE A/)
+    assert.match(opMarkup, /Lab 2/)
+    assert.match(opMarkup, /DOCENTE B/)
+  })
+
+  await check('D2: LocalAcademicView horarios view renders per-session room, type and teacher from committed report', async () => {
+    const { LocalAcademicView } = await server.ssrLoadModule('/src/screens/LocalAcademicView.tsx')
+    const detailedReport = kit.enrollmentReport({
+      rows: [{
+        courseId: 'SYN-SIS-C1',
+        sectionId: 'SYN-SIS-S1',
+        planId: 'SYN-PLAN-SIS',
+        name: 'Arquitectura de Computadoras',
+        credits: 4,
+        label: '1',
+        teacher: 'DOCENTE A / DOCENTE B',
+        schedule: [
+          {
+            day: 2,
+            startMinute: 480,
+            endMinute: 600,
+            details: { sessionId: 's-t', teacherId: 't-a', teacherName: 'DOCENTE A', roomId: 'r-1', roomName: 'Aula 101', sessionType: 'T' },
+          },
+          {
+            day: 5,
+            startMinute: 840,
+            endMinute: 960,
+            details: { sessionId: 's-l', teacherId: 't-b', teacherName: 'DOCENTE B', roomId: 'r-2', roomName: 'Lab 2', sessionType: 'L' },
+          },
+        ],
+      }],
+    })
+    const markup = html(LocalAcademicView, { kind: 'horarios', response: detailedReport })
+    assert.match(markup, /Sección 1 · Teoría · Aula 101/)
+    assert.match(markup, /DOCENTE A/)
+    assert.match(markup, /Sección 1 · Laboratorio · Lab 2/)
+    assert.match(markup, /DOCENTE B/)
+  })
+
+  // ---- G: consistent synthetic context clock in WeeklySchedule and LocalAcademicView ----
+  await check('G: WeeklySchedule uses referenceNow in America/Lima with explicit context label and preserves legacy clock fallback', async () => {
+    const { WeeklySchedule } = await server.ssrLoadModule('/src/screens/WeeklySchedule.tsx')
+    const { buildScheduleEvents } = await server.ssrLoadModule('/src/data/localAcademicView.ts')
+    const marchReport = kit.enrollmentReport({
+      acceptedAt: '2027-03-10T15:30:00.000Z',
+      rows: [{
+        courseId: 'SYN-SIS-C1',
+        sectionId: 'SYN-SIS-S1',
+        planId: 'SYN-PLAN-SIS',
+        name: 'Sistemas Operativos',
+        credits: 4,
+        label: '1',
+        schedule: [
+          { day: 3, startMinute: 480, endMinute: 720 },
+        ],
+      }],
+    })
+    const events = buildScheduleEvents(marchReport)
+
+    // 2027-03-10T15:30:00.000Z == Miércoles 10/03/2027 10:30 America/Lima
+    const wedMarkup = html(WeeklySchedule, { data: null, displayEvents: events, referenceNow: '2027-03-10T15:30:00.000Z' })
+    assert.match(wedMarkup, /Reloj del contexto:.*Miércoles.*10:30.*\(Lima\).*contexto sintético/)
+    assert.doesNotMatch(wedMarkup, /<span>Hoy:/)
+    assert.match(wedMarkup, /<span class="is-today">Miércoles<small>/)
+    assert.match(wedMarkup, /<span>Ahora 10:30<\/span>/)
+
+    // A second distinct instant proves it is not tied to the host's current weekday/time:
+    // 2027-03-14T20:15:00.000Z == Domingo 14/03/2027 15:15 America/Lima
+    const sunMarkup = html(WeeklySchedule, { data: null, displayEvents: events, referenceNow: new Date('2027-03-14T20:15:00.000Z') })
+    assert.match(sunMarkup, /Reloj del contexto:.*Domingo.*15:15.*\(Lima\).*contexto sintético/)
+    assert.match(sunMarkup, /<span class="is-today">Domingo<small>/)
+
+    // Legacy fallback when referenceNow is omitted, null, or invalid
+    const legacyMarkup = html(WeeklySchedule, { data: null, displayEvents: events })
+    assert.match(legacyMarkup, /<span>Hoy: (Lunes|Martes|Miércoles|Jueves|Viernes|Sábado|Domingo) · \d{2}:\d{2} <small>\(Lima\)<\/small><\/span>/)
+    assert.doesNotMatch(legacyMarkup, /Reloj del contexto:|contexto sintético/)
+
+    const invalidMarkup = html(WeeklySchedule, { data: null, displayEvents: events, referenceNow: 'invalid-date' })
+    assert.match(invalidMarkup, /<span>Hoy: (Lunes|Martes|Miércoles|Jueves|Viernes|Sábado|Domingo) · \d{2}:\d{2} <small>\(Lima\)<\/small><\/span>/)
+    assert.doesNotMatch(invalidMarkup, /Reloj del contexto:|contexto sintético/)
+  })
+
+  await check('G: LocalAcademicView horarios uses serverNow over report.acceptedAt and falls back to report.acceptedAt when serverNow is absent', async () => {
+    const { LocalAcademicView } = await server.ssrLoadModule('/src/screens/LocalAcademicView.tsx')
+    const marchReport = kit.enrollmentReport({
+      // 2027-03-09T14:45:00.000Z == Martes 09/03/2027 09:45 America/Lima
+      acceptedAt: '2027-03-09T14:45:00.000Z',
+    })
+
+    const acceptedFallbackMarkup = html(LocalAcademicView, { kind: 'horarios', response: marchReport })
+    assert.match(acceptedFallbackMarkup, /Reloj del contexto:.*Martes.*09:45.*\(Lima\).*contexto sintético/)
+    assert.doesNotMatch(acceptedFallbackMarkup, /<span>Hoy:/)
+
+    // 2027-03-12T19:15:00.000Z == Viernes 12/03/2027 14:15 America/Lima
+    const serverNowMarkup = html(LocalAcademicView, {
+      kind: 'horarios',
+      response: marchReport,
+      serverNow: '2027-03-12T19:15:00.000Z',
+    })
+    assert.match(serverNowMarkup, /Reloj del contexto:.*Viernes.*14:15.*\(Lima\).*contexto sintético/)
+
+    const emptyReportWithServerNow = html(LocalAcademicView, {
+      kind: 'horarios',
+      response: null,
+      serverNow: '2027-03-12T19:15:00.000Z',
+    })
+    assert.match(emptyReportWithServerNow, /Reloj del contexto:.*Viernes.*14:15.*\(Lima\).*contexto sintético/)
   })
 } finally {
   await server.close()

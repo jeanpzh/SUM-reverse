@@ -1098,6 +1098,14 @@ dd {
 .course-schedule-dialog th:nth-child(3) { width: 35%; }
 .course-schedule-dialog th:nth-child(4) { width: 15%; }
 .course-schedule-dialog th:nth-child(5) { width: 18%; }
+.course-schedule-dialog--detailed { width: min(640px, calc(100vw - 28px)); }
+.course-schedule-dialog--detailed table { min-width: 520px; width: 100%; }
+.course-schedule-dialog--detailed th:nth-child(1) { width: 8%; }
+.course-schedule-dialog--detailed th:nth-child(2) { width: 14%; }
+.course-schedule-dialog--detailed th:nth-child(3) { width: 21%; }
+.course-schedule-dialog--detailed th:nth-child(4) { width: 16%; }
+.course-schedule-dialog--detailed th:nth-child(5) { width: 14%; }
+.course-schedule-dialog--detailed th:nth-child(6) { width: 27%; }
 .form-completion {
   margin-bottom: 12px;
   color: #476887;

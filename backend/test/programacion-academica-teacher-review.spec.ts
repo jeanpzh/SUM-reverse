@@ -6,7 +6,7 @@ import { Test } from '@nestjs/testing'
 import type { INestApplication } from '@nestjs/common'
 import supertest from 'supertest'
 import { ACADEMIC_API } from '../../shared/programacion-academica-api.mjs'
-import type { AcademicWorkspace } from '../../shared/programacion-academica-api.mjs'
+import type { AcademicSavedDraft, AcademicWorkspace } from '../../shared/programacion-academica-api.mjs'
 import { AcademicSchedulingModule } from '../src/programacion-academica/demo-module.js'
 import { DemoProposalService } from '../src/programacion-academica/demo-proposal.service.js'
 import { SavedDraftStore } from '../src/programacion-academica/saved-draft-store.js'
@@ -54,13 +54,118 @@ describe('E1 teacher review persistence', () => {
 
   async function createSavedDraft(config = configuration()) {
     const generated = proposalService.createProposal(config.request)
-    expect(generated.status).toBe('complete')
+    expect(generated.status, JSON.stringify({ diagnostics: generated.diagnostics, stats: generated.stats })).toBe('complete')
     const response = await supertest(app.getHttpServer()).post(`${api}/borradores/guardar`).send({
       id: null, expectedVersion: null, title: 'Synthetic teacher review', state: 'draft', configuration: config,
       proposalId: generated.proposalId, proposalEditVersion: generated.editVersion ?? 0,
     }).expect(200)
     return response.body as { id: string; version: number; state: string; proposal: { proposalId: string; editVersion?: number; assignments: Array<{ teacherId: string }> } }
   }
+
+  async function submittedBatch(size: number) {
+    const config = configuration()
+    const catalog = proposalService.getCatalog()
+    // Independent synthetic teachers split across courses, with a bounded resource pool;
+    // this exercises 81 reviewers without stressing the unrelated solver search budget.
+    const courses = catalog.courses.filter((c) => c.weeklySessions.length && (c.cycle ?? 1) < 7).slice(0, size > 32 ? 6 : 1)
+    config.request.planningPolicy = { revision: 'FISI-PLANNING-1', period: '2027-I', allowAfternoon: true, allowSaturday: false }
+    config.request.allocationPolicy = 'first-feasible'
+    const teacher = config.request.resources.teachers[0]!
+    config.request.resources.teachers = Array.from({ length: size }, (_, n) => {
+      const courseId = courses[n % courses.length]!.courseId
+      return { ...structuredClone(teacher), id: `SYN-BULK-${n}`, name: `Docente sintético ${n}`, courseIds: [courseId], sectionLimits: [{ courseId, maxSections: 1 }] }
+    })
+    config.request.demands = courses.map((c, n) => ({ courseId: c.courseId, estimatedDemand: Math.floor(size / courses.length) + (n < size % courses.length ? 1 : 0), targetCapacity: 1 }))
+    const room = config.request.resources.rooms[0]!
+    config.request.resources.rooms = Array.from({ length: size > 32 ? 6 : 1 }, (_, n) => ({ ...structuredClone(room), id: `SYN-BULK-ROOM-${n}`, name: `Ambiente sintético ${n}` }))
+    const saved = await createSavedDraft(config)
+    return (await supertest(app.getHttpServer()).post(`${api}/borradores/${saved.id}/revision/enviar`).send({ expectedVersion: saved.version }).expect(200)).body.draft as AcademicSavedDraft
+  }
+
+  const batchBody = (draft: AcademicSavedDraft, teacherIds = draft.review!.teachers.map((t) => t.teacherId)) => ({
+    expectedVersion: draft.version, round: draft.review!.round, teacherIds, decision: 'conformity', reference: 'Acta sintética 08',
+  })
+
+  it('records 78 of 81 pending teachers in one atomic request and one version', async () => {
+    const draft = await submittedBatch(81)
+    expect(draft.review!.teachers).toHaveLength(81)
+    const ids = draft.review!.teachers.slice(0, 78).map((t) => t.teacherId)
+    const store = new SavedDraftStore(directory)
+    const write = vi.spyOn(SavedDraftStore.prototype, 'write')
+    const response = await supertest(app.getHttpServer()).post(`${api}/borradores/${draft.id}/revision/responder-lote`).send(batchBody(draft, ids)).expect(200)
+    expect(write).toHaveBeenCalledTimes(1)
+    write.mockRestore()
+    const result = response.body.draft as AcademicSavedDraft
+    expect(result.version).toBe(draft.version + 1)
+    expect(result.review!.teachers.filter((t) => t.status === 'pending')).toHaveLength(3)
+    expect(result.review!.history.filter((e) => e.type === 'decision')).toHaveLength(78)
+    expect(result.review!.teachers.filter((t) => t.status === 'conformity').every((t) => t.source === 'coordinator-transcription' && t.reference === 'Acta sintética 08')).toBe(true)
+    expect(store.read(draft.id)!.document).toEqual(result)
+  })
+
+  it('rejects the entire batch for answered or unassigned teachers without writing', async () => {
+    const draft = await submittedBatch(2)
+    const first = draft.review!.teachers[0]!
+    const store = new SavedDraftStore(directory)
+    const original = store.read(draft.id)
+    for (const patch of [{ expectedVersion: draft.version - 1 }, { round: draft.review!.round + 1 }]) {
+      await supertest(app.getHttpServer()).post(`${api}/borradores/${draft.id}/revision/responder-lote`).send({ ...batchBody(draft), ...patch }).expect(409)
+      expect(store.read(draft.id)).toEqual(original)
+    }
+    const answered = (await supertest(app.getHttpServer()).post(`${api}/borradores/${draft.id}/revision/responder-lote`).send(batchBody(draft, [first.teacherId])).expect(200)).body.draft as AcademicSavedDraft
+    const retry = await supertest(app.getHttpServer()).post(`${api}/borradores/${draft.id}/revision/responder`).send({
+      expectedVersion: draft.version, round: draft.review!.round, teacherId: first.teacherId, decision: 'conformity', observation: '',
+    }).expect(200)
+    expect(retry.body.draft.version).toBe(answered.version)
+    expect(retry.body.draft.review.teachers[0].reference).toBe('Acta sintética 08')
+    const before = new SavedDraftStore(directory).read(draft.id)
+    for (const ids of [answered.review!.teachers.map((t) => t.teacherId), [answered.review!.teachers[1]!.teacherId, 'SYN-NOT-ASSIGNED']]) {
+      const error = await supertest(app.getHttpServer()).post(`${api}/borradores/${draft.id}/revision/responder-lote`).send(batchBody(answered, ids)).expect(422)
+      expect(error.body.error.message).toContain(ids.includes(first.teacherId) ? first.teacherName : 'SYN-NOT-ASSIGNED')
+      expect(new SavedDraftStore(directory).read(draft.id)).toEqual(before)
+    }
+  })
+
+  it('normalizes legacy answers on read, preserves provenance on resubmission and protects teacher answers', async () => {
+    const draft = await submittedBatch(1)
+    const result = (await supertest(app.getHttpServer()).post(`${api}/borradores/${draft.id}/revision/responder-lote`).send(batchBody(draft)).expect(200)).body.draft as AcademicSavedDraft
+    const store = new SavedDraftStore(directory)
+    const payload = store.read(draft.id)!
+    const legacy = structuredClone(result)
+    for (const record of [...legacy.review!.teachers, ...legacy.review!.history]) { delete record.source; delete record.reference }
+    store.write(draft.id, { ...payload, document: legacy })
+    const resumed = await app.get(SavedDraftService).resume(draft.id, { expectedVersion: result.version })
+    expect(resumed.draft.review!.teachers[0]).toMatchObject({ source: 'coordinator-transcription', reference: null })
+    expect(resumed.draft.review!.history.at(-1)).toMatchObject({ source: 'coordinator-transcription', reference: null })
+    const approved = await app.get(SavedDraftService).approve(draft.id, { expectedVersion: result.version })
+    expect((await app.get(SavedDraftService).resume(draft.id, { expectedVersion: approved.draft.version })).draft.state).toBe('approved')
+    const teacherOwned = structuredClone(result)
+    teacherOwned.review!.teachers[0]!.source = 'teacher'
+    teacherOwned.review!.history.at(-1)!.source = 'teacher'
+    store.write(draft.id, { ...payload, document: teacherOwned })
+    const before = store.read(draft.id)
+    const teacherId = result.review!.teachers[0]!.teacherId
+    for (const decision of ['conformity', 'changes-requested']) {
+      const error = await supertest(app.getHttpServer()).post(`${api}/borradores/${draft.id}/revision/responder`).send({ expectedVersion: result.version,
+        round: result.review!.round, teacherId, decision, observation: decision === 'conformity' ? '' : 'Cambio sintético' }).expect(409)
+      expect(error.body.error.code).toBe('TEACHER_RESPONSE_PROTECTED')
+      expect(store.read(draft.id)).toEqual(before)
+    }
+    const resent = await app.get(SavedDraftService).submitReview(draft.id, { expectedVersion: result.version })
+    expect(resent.draft.review!.teachers[0]).toMatchObject({ status: 'conformity', source: 'teacher', reference: 'Acta sintética 08' })
+  })
+
+  it('checks batch history capacity before any write', async () => {
+    const draft = await submittedBatch(2)
+    const service = app.get(SavedDraftService)
+    let current = draft
+    // Only submitted events: both teachers remain pending and the persisted history stays valid.
+    for (let n = 1; n < 199; n++) current = (await service.submitReview(draft.id, { expectedVersion: current.version })).draft
+    const store = new SavedDraftStore(directory)
+    const before = store.read(draft.id)
+    await expect(service.decideReviewBatch(draft.id, batchBody(current))).rejects.toMatchObject({ status: 429, response: { error: { code: 'REVIEW_HISTORY_LIMIT' } } })
+    expect(store.read(draft.id)).toEqual(before)
+  })
 
   it('submits, records a teacher decision, and derives ready-for-approval from current conformities', async () => {
     const saved = await createSavedDraft()
@@ -78,6 +183,30 @@ describe('E1 teacher review persistence', () => {
     const resumed = await supertest(app.getHttpServer()).post(`${api}/borradores/${saved.id}/continuar`).send({ expectedVersion: submitted.body.draft.version }).expect(200)
     expect(resumed.body.draft.state).toBe('ready-for-approval')
     expect(resumed.body.draft.review.history.map((event: { type: string }) => event.type)).toEqual(['submitted', ...teacherIds.map(() => 'decision')])
+  })
+
+  it('treats an identical teacher response as idempotent, including a stale retry', async () => {
+    const saved = await createSavedDraft()
+    const submitted = await supertest(app.getHttpServer()).post(`${api}/borradores/${saved.id}/revision/enviar`).send({ expectedVersion: saved.version }).expect(200)
+    const teacherId = submitted.body.draft.review.teachers[0].teacherId
+    const response = (expectedVersion: number, observation = 'Synthetic note') => supertest(app.getHttpServer())
+      .post(`${api}/borradores/${saved.id}/revision/responder`).send({ expectedVersion, round: submitted.body.draft.review.round,
+        teacherId, decision: 'changes-requested', observation })
+    const first = await response(submitted.body.draft.version).expect(200)
+    const retry = await response(first.body.draft.version, 'Synthetic note').expect(200)
+    const staleRetry = await response(submitted.body.draft.version).expect(200)
+    expect(retry.body.draft.version).toBe(first.body.draft.version)
+    expect(staleRetry.body.draft.version).toBe(first.body.draft.version)
+    expect(staleRetry.body.draft.review.history.filter((event: { type: string }) => event.type === 'decision')).toHaveLength(1)
+
+    const changedObservation = await response(first.body.draft.version, 'Different note').expect(200)
+    expect(changedObservation.body.draft.version).toBe(first.body.draft.version + 1)
+    expect(changedObservation.body.draft.review.history.filter((event: { type: string }) => event.type === 'decision')).toHaveLength(2)
+    const changedDecision = await supertest(app.getHttpServer()).post(`${api}/borradores/${saved.id}/revision/responder`).send({
+      expectedVersion: changedObservation.body.draft.version, round: submitted.body.draft.review.round, teacherId, decision: 'conformity', observation: '',
+    }).expect(200)
+    expect(changedDecision.body.draft.version).toBe(changedObservation.body.draft.version + 1)
+    expect(changedDecision.body.draft.review.history.filter((event: { type: string }) => event.type === 'decision')).toHaveLength(3)
   })
 
   it('requires an observation for changes, rejects stale version and round, and creates a new review round on resubmission', async () => {
@@ -139,6 +268,13 @@ describe('E1 teacher review persistence', () => {
     expect(statuses[selected]).toBe('outdated')
     expect(statuses[unchangedTeacherId]).toBe('conformity')
     expect(updated.body.state).toBe('in-review')
+    const beforeBatch = new SavedDraftStore(directory).read(saved.id)
+    const outdatedBatch = await supertest(app.getHttpServer()).post(`${api}/borradores/${saved.id}/revision/responder-lote`).send({
+      expectedVersion: updated.body.version, round: updated.body.review.round, teacherIds: [selected], decision: 'conformity', reference: null,
+    }).expect(422)
+    expect(outdatedBatch.body.error.message).toContain(updated.body.review.teachers.find((t: { teacherId: string }) => t.teacherId === selected).teacherName)
+    expect(new SavedDraftStore(directory).read(saved.id)).toEqual(beforeBatch)
+
 
     const resent = await supertest(app.getHttpServer()).post(`${api}/borradores/${saved.id}/revision/enviar`).send({ expectedVersion: updated.body.version }).expect(200)
     expect(resent.body.draft.review.teachers.find((teacher: { teacherId: string }) => teacher.teacherId === unchangedTeacherId).status).toBe('conformity')
@@ -228,10 +364,10 @@ describe('E1 teacher review persistence', () => {
     let draft = await service.submitReview(saved.id, { expectedVersion: saved.version }).then((result) => result.draft)
     const teacherId = draft.review!.teachers[0]!.teacherId
     for (let round = 1; round < 100; round++) {
-      draft = (await service.decideReview(saved.id, { expectedVersion: draft.version, round, teacherId, decision: 'conformity', observation: '' })).draft
+      draft = (await service.decideReview(saved.id, { expectedVersion: draft.version, round, teacherId, decision: 'changes-requested', observation: `Synthetic observation ${round}` })).draft
       draft = (await service.submitReview(saved.id, { expectedVersion: draft.version })).draft
     }
-    draft = (await service.decideReview(saved.id, { expectedVersion: draft.version, round: 100, teacherId, decision: 'conformity', observation: '' })).draft
+    draft = (await service.decideReview(saved.id, { expectedVersion: draft.version, round: 100, teacherId, decision: 'changes-requested', observation: 'Synthetic observation 100' })).draft
     const fileBefore = new SavedDraftStore(directory).read(saved.id)
     await expect(service.submitReview(saved.id, { expectedVersion: draft.version })).rejects.toMatchObject({ status: 429, response: { error: { code: 'REVIEW_HISTORY_LIMIT' } } })
     expect(new SavedDraftStore(directory).read(saved.id)).toEqual(fileBefore)

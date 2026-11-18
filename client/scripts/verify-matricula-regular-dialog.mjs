@@ -203,8 +203,8 @@ try {
 
   const resetNotice = await page.textContent('.enrollment-result-dialog__reset-notice')
   assert.ok(resetNotice?.includes('principio de todo-o-nada'))
-  assert.ok(resetNotice?.includes('retorna a la pantalla de registro con la selección reiniciada'))
-  console.log('  ✔ Multicausas y aviso de reinicio mostrados correctamente.')
+  assert.ok(resetNotice?.includes('se conservarán las elecciones que sigan disponibles'))
+  console.log('  ✔ Multicausas y aviso de recuperación mostrados correctamente.')
 
   // C. Retorno de foco: Caso A (Opener disponible y habilitado)
   // Botón 'Aceptar y volver al registro' (.enrollment-result-dialog__btn--danger)

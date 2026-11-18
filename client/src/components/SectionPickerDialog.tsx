@@ -1,16 +1,27 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import type { MatriculaRegularId, MatriculaRegularOfferedCourse } from '../../../shared/matricula-regular.mjs'
+import type { MeetingSessionDetail } from '../data/selectionPanel'
 import { buildSectionOptions } from '../data/sumEnrollmentTable'
 import './SumEnrollment.css'
 
 export interface SectionPickerDialogProps {
   course: MatriculaRegularOfferedCourse
   currentSectionId: MatriculaRegularId | null
+  initialExpandedSectionId?: MatriculaRegularId | null
   onAccept: (sectionId: MatriculaRegularId) => void
   onCancel: () => void
 }
 
-export type SectionPickerRow = { sectionId: string; label: string; room: string; teacher: string; schedule: string; plannedCapacity: number | null; occupancy?: string }
+export type SectionPickerRow = {
+  sectionId: string
+  label: string
+  room: string
+  teacher: string
+  schedule: string
+  sessions?: MeetingSessionDetail[]
+  plannedCapacity: number | null
+  occupancy?: string
+}
 export type SectionPickerPresentationProps = { courseLabel: string; currentSectionId: string | null; rows: SectionPickerRow[]; capacityHeading: string; onAccept: (sectionId: string) => void; onCancel: () => void }
 
 /** Shared picker presentation. E3 keeps its original wrapper, labels and occupancy data. */
@@ -38,16 +49,42 @@ function PickerRows({ courseLabel, rows, capacityHeading, selected, expanded, se
           <td>{capacityHeading === 'Capacidad planificada' ? option.plannedCapacity ?? '—' : option.occupancy}</td>
           <td><input type="radio" name="sum-section" value={option.sectionId} checked={selected === option.sectionId} aria-label={`Seleccionar sección ${option.label}`}
             onChange={() => setSelected(option.sectionId)} /></td></tr>
-        {expanded === option.sectionId && <tr><td colSpan={6}>{option.schedule}</td></tr>}
+        {expanded === option.sectionId && (
+          <tr>
+            <td colSpan={6}>
+              {option.sessions?.length ? (
+                <ul
+                  aria-label={`Sesiones de la sección ${option.label}`}
+                  className="sum-section-dialog__sessions"
+                >
+                  {option.sessions.map((session, index) => (
+                    <li key={`${option.sectionId}-session-${index}`}>
+                      <span>{session.day} {session.time}</span>
+                      {session.sessionType && <span> · {session.sessionType}</span>}
+                      <span> · {session.room}</span>
+                      <span> · {session.teacher}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : option.schedule}
+            </td>
+          </tr>
+        )}
       </Fragment>)}</tbody></table>
   </>
 }
 
 /** V-04 «Secciones disponibles». Mount with `key={course.courseId}` while open. «Horarios» expands a row (L-09). */
-export function SectionPickerDialog({ course, currentSectionId, onAccept, onCancel }: SectionPickerDialogProps) {
+export function SectionPickerDialog({
+  course,
+  currentSectionId,
+  initialExpandedSectionId = null,
+  onAccept,
+  onCancel,
+}: SectionPickerDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [selected, setSelected] = useState<MatriculaRegularId | null>(currentSectionId)
-  const [expanded, setExpanded] = useState<MatriculaRegularId | null>(null)
+  const [expanded, setExpanded] = useState<MatriculaRegularId | null>(initialExpandedSectionId)
 
   useEffect(() => {
     const dialog = dialogRef.current

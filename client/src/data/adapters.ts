@@ -135,16 +135,24 @@ export function toProgrammingRows(data: ApiResponseMap['programacion']['data']['
     const extra = row.s
     const first = typeof extra === 'string' || typeof extra === 'number' || typeof extra === 'boolean'
       ? String(extra) : ''
-    const teacher = row.codDocente === '--' ? '--'
-      : `${row.codDocente} - ${row.apePatDocente} ${row.apeMatDocente}, ${row.nomDocente}`
+    const teacher = row.codDocente === '--'
+      ? '--'
+      : row.codDocente === '' && row.apePatDocente === '' && row.apeMatDocente === ''
+        ? (row.nomDocente.trim() ? row.nomDocente : '--')
+        : `${row.codDocente} - ${row.apePatDocente} ${row.apeMatDocente}, ${row.nomDocente}`
     return [first, `${row.codAsignatura} - ${row.desAsignatura}`, row.creditos, row.codSeccion,
       teacher, row.topeAlumnos, row.matriculados, `${row.horarios.length} horarios`]
   })
 }
 
 export function toCourseScheduleRows(data: ApiResponseMap['programacion']['data']['programacion'][number]['horarios']) {
-  return data.map((row) => [row.horario, row.dia,
-    `${row.horaInicio} - ${row.horaFin}`, row.codAula, row.desTipoHoraAsignatura])
+  const hasPerSlotTeacher = data.some((row) => typeof row.nomDocente === 'string' && row.nomDocente.trim() !== '')
+  return data.map((row) => {
+    const base = [row.horario, row.dia, `${row.horaInicio} - ${row.horaFin}`, row.codAula, row.desTipoHoraAsignatura]
+    if (!hasPerSlotTeacher) return base
+    const slotTeacher = typeof row.nomDocente === 'string' && row.nomDocente.trim() !== '' ? row.nomDocente : '--'
+    return [...base, slotTeacher]
+  })
 }
 
 function timeMinutes(value: string, path: string) {

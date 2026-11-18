@@ -106,12 +106,18 @@ export function buildSumReportView(report: MatriculaRegularEnrollmentReport): Su
     .sort((left, right) => cycleOrder(left.cycle) - cycleOrder(right.cycle))
     .map((row) => {
       const cycle = row.cycle ?? null
+      const sessionTeachers = [...new Set(
+        row.schedule
+          .map((meeting) => meeting.details?.teacherName?.trim())
+          .filter((name): name is string => Boolean(name)),
+      )]
+      const teacher = row.teacher?.trim() || (sessionTeachers.length > 0 ? sessionTeachers.join(' / ') : NO_TEACHER)
       return [
         cycle === null ? '--' : String(cycle),
         `${row.courseId} - ${row.name}`,
         String(row.credits),
         row.label ?? row.sectionId,
-        row.teacher ?? NO_TEACHER,
+        teacher,
       ]
     })
   return {

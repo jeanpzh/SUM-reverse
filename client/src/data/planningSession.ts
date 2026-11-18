@@ -31,12 +31,12 @@ import type {
   AcademicAdjustment, AcademicAdvisorPatch, AcademicAllocationPolicy, AcademicCatalog, AcademicDemandEstimate, AcademicDemandRequest,
   AcademicDemandSourceId, AcademicDraftList, AcademicDraftResume, AcademicDraftSaveRequest, AcademicDraftState,
   AcademicPlanningResources, AcademicProposal, AcademicPublicationRequest, AcademicRequest, AcademicReviewDecision,
-  AcademicReviewSubmission, AcademicSavedDraft, AcademicTeacherAssignmentMode, AcademicTeacherReview, AcademicWorkspace,
+  AcademicReviewSubmission, AcademicReviewBatchDecision, AcademicSavedDraft, AcademicTeacherAssignmentMode, AcademicTeacherReview, AcademicWorkspace,
 } from '../../../shared/programacion-academica-api.mjs'
 import {
   PLANNING_LIMITS, academicPlanningErrorMessage, academicSectionCoverage, adjustAcademicProposal, aggregateAcademicBlocks, approveAcademicDraft,
   buildAcademicPlanningRequest, clonePlanningPolicy, createAcademicPlanningDefaults, createAcademicProposal, estimateAcademicDemand,
-  fetchAcademicCatalog, fetchAcademicDrafts, forkAcademicDraft, publishAcademicDraft, respondAcademicTeacherReview,
+  fetchAcademicCatalog, fetchAcademicDrafts, forkAcademicDraft, publishAcademicDraft, respondAcademicTeacherReview, respondAcademicTeacherReviewBatch,
   resumeAcademicDraft, saveAcademicDraft, submitAcademicTeacherReview, syntheticTeachingMetadata,
 } from './academicScheduling.ts'
 import type { PlanningPeriod, PlanningPolicy } from './academicScheduling.ts'
@@ -61,6 +61,7 @@ export interface PlanningSessionClient {
   saveDraft(request: AcademicDraftSaveRequest, signal?: AbortSignal): Promise<AcademicSavedDraft>
   resumeDraft(id: string, expectedVersion: number, signal?: AbortSignal): Promise<AcademicDraftResume>
   submitReview(id: string, request: AcademicReviewSubmission): Promise<AcademicSavedDraft>
+  respondReviewBatch(id: string, request: AcademicReviewBatchDecision): Promise<AcademicSavedDraft>
   respondReview(id: string, request: AcademicReviewDecision): Promise<AcademicSavedDraft>
   approveDraft(id: string, expectedVersion: number): Promise<AcademicSavedDraft>
   publishDraft(id: string, request: AcademicPublicationRequest): Promise<AcademicSavedDraft>
@@ -76,6 +77,7 @@ export const defaultPlanningSessionClient: PlanningSessionClient = {
   saveDraft: (request, signal) => saveAcademicDraft(request, globalThis.fetch, signal),
   resumeDraft: (id, expectedVersion, signal) => resumeAcademicDraft(id, expectedVersion, globalThis.fetch, signal),
   submitReview: (id, request) => submitAcademicTeacherReview(id, request),
+  respondReviewBatch: (id, request) => respondAcademicTeacherReviewBatch(id, request),
   respondReview: (id, request) => respondAcademicTeacherReview(id, request),
   approveDraft: (id, expectedVersion) => approveAcademicDraft(id, expectedVersion),
   publishDraft: (id, request) => publishAcademicDraft(id, request),
@@ -595,9 +597,10 @@ export type PlanningPrimaryAction = { id: PlanningPrimaryActionId; label: string
 
 // D7 (local-only). Decisions beyond the plan table, recorded here:
 // - Horario counts as pending every section that is not complete (partial + pending coverage).
-// - Revisión docente without a review, or with changes requested/outdated teachers, sends back to Horario.
-// - Aprobación before 'ready-for-approval' sends back to Revisión docente; approve is primary.
-//   Approved/published versions have no primary action; publishing remains secondary with confirmation.
+// - Revisión docente without a review round offers 'submit-review' only when saved, clean,
+//   complete coverage, and unlocked; with changes requested/outdated teachers it sends back to Horario.
+// - Aprobación before 'ready-for-approval' sends back to Revisión docente; approve is primary,
+//   then publish is primary once approved. Published versions have no primary action.
 export function derivePlanningPrimaryAction(state: PlanningSessionState, stage: PlanningStageId): PlanningPrimaryAction | null {
   switch (stage) {
     case 'preparacion': {
@@ -617,7 +620,23 @@ export function derivePlanningPrimaryAction(state: PlanningSessionState, stage: 
     }
     case 'revision': {
       const teachers = state.draft.review?.teachers ?? []
-      if (!teachers.length) return { id: 'back-schedule', label: 'Volver a Horario' }
+      if (!teachers.length) {
+        if (
+          !state.draft.review &&
+          state.draft.id &&
+          state.draft.version !== null &&
+          !state.dirty &&
+          !isPlanningDraftLocked(state) &&
+          (state.draft.savedState === 'draft' || state.draft.savedState === 'ready-for-review') &&
+          proposalComplete(state.proposal)
+        ) {
+          const coverage = academicSectionCoverage(state.proposal!)
+          if (coverage.partial + coverage.pending === 0 && coverage.complete > 0) {
+            return { id: 'submit-review', label: 'Enviar a revisión docente' }
+          }
+        }
+        return { id: 'back-schedule', label: 'Volver a Horario' }
+      }
       const pending = teachers.filter((teacher) => teacher.status === 'pending').length
       if (pending > 0) return { id: 'record-response', label: `Registrar respuesta (${pending})`, count: pending }
       if (teachers.every((teacher) => teacher.status === 'conformity')) return { id: 'to-approval', label: 'Ir a aprobación' }
@@ -658,7 +677,10 @@ export function derivePlanningDraftLabel(state: Pick<PlanningSessionState, 'draf
     draft: 'Borrador', 'ready-for-review': 'Lista para revisión', 'in-review': 'En revisión docente',
     'ready-for-approval': 'Lista para aprobación', approved: 'Aprobada (simulada)', published: 'Publicada (simulada)',
   }
-  return `${labels[draft.savedState]} r${draft.version} · Guardado`
+  const round = (draft.savedState === 'in-review' || draft.savedState === 'ready-for-approval')
+    && typeof draft.review?.round === 'number' && Number.isSafeInteger(draft.review.round) && draft.review.round >= 1
+    ? `ronda ${draft.review.round} · ` : ''
+  return `${labels[draft.savedState]} · ${round}versión ${draft.version} · Guardado`
 }
 
 export function derivePlanningView(state: PlanningSessionState) {
@@ -918,9 +940,26 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
       }
     },
 
-    async respondReview(teacherId: string, decision: 'conformity' | 'changes-requested', observation: string) {
+    async respondReviewBatch(teacherIds: string[], reference: string | null): Promise<boolean> {
       const { id, version, review } = state.draft
-      if (!id || !version || !review || state.dirty || state.busy.draft) return
+      if (!id || !version || !review || state.dirty || state.busy.draft) return false
+      const mutation = state.mutation
+      dispatch({ type: 'review/started' })
+      try {
+        const saved = await client.respondReviewBatch(id, { expectedVersion: version, round: review.round, teacherIds, decision: 'conformity', reference: reference?.trim() || null })
+        dispatch({ type: 'review/succeeded', mutation, saved, message: `${teacherIds.length} conformidades registradas · versión ${saved.version}.`,
+          staleMessage: 'Las conformidades se guardaron sobre la versión anterior; los cambios locales siguen pendientes de guardar.' })
+        void refreshDrafts()
+        return true
+      } catch (error) {
+        dispatch({ type: 'review/failed', message: error instanceof Error ? academicPlanningErrorMessage(error) : 'No se pudo registrar el lote de conformidades.' })
+        return false
+      }
+    },
+
+    async respondReview(teacherId: string, decision: 'conformity' | 'changes-requested', observation: string): Promise<boolean> {
+      const { id, version, review } = state.draft
+      if (!id || !version || !review || state.dirty || state.busy.draft) return false
       const mutation = state.mutation
       dispatch({ type: 'review/started' })
       try {
@@ -928,8 +967,10 @@ export function createPlanningSession(client: PlanningSessionClient = defaultPla
         dispatch({ type: 'review/succeeded', mutation, saved, message: `Respuesta guardada · versión ${saved.version}.`,
           staleMessage: 'La respuesta se guardó sobre la versión anterior; los cambios locales siguen pendientes de guardar.' })
         void refreshDrafts()
+        return true
       } catch (error) {
         dispatch({ type: 'review/failed', message: error instanceof Error ? academicPlanningErrorMessage(error) : 'No se pudo guardar la respuesta local.' })
+        return false
       }
     },
   }

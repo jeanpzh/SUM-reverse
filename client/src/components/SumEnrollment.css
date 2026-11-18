@@ -30,6 +30,7 @@
 .sum-section-dialog__course { display: grid; gap: 0.15rem; margin: 0 0 1rem; padding: 0.75rem 1rem; border-radius: 0.35rem; background: var(--color-sum-accent-soft); font-size: 0.75rem; }
 .sum-section-dialog__course strong { color: var(--color-sum-accent); }
 .sum-section-dialog__schedule-toggle { width: 1.2rem; height: 1.2rem; border: 0; border-radius: 50%; background: #28c76f; color: #fff; line-height: 1; }
+.sum-section-dialog__sessions { margin: 0; padding-left: 1.1rem; text-align: left; display: grid; gap: 0.2rem; }
 .sum-section-dialog__actions { display: flex; justify-content: center; gap: 0.5rem; padding: 1rem; border-top: 1px solid var(--color-sum-border); }
 .course-schedule-dialog.sum-section-dialog[open] { display: flex; flex-direction: column; width: min(740px, calc(100vw - 28px)); overflow: hidden; }
 .sum-section-dialog > header, .sum-section-dialog > footer { flex-shrink: 0; }

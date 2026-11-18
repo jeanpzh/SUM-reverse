@@ -74,3 +74,57 @@ test('choose replaces the course section, remove drops it and the totals follow 
   assert.deepEqual(removeChoice(both, 'SYN-SIS-C1'), [{ courseId: 'SYN-SIS-C2', sectionId: 'SYN-SIS-S2' }])
   assert.equal(summarizeSelection(syntheticContext(), []).creditCap, '--')
 })
+
+test('D2: section options expose distinct per-session type, room and teacher without collapsing T/P and L', () => {
+  const course: MatriculaRegularOfferedCourse = {
+    ...syntheticContext().offer[0]!,
+    sections: [
+      {
+        sectionId: 'SYN-SIS-S10',
+        label: '1',
+        capacity: 30,
+        occupied: 4,
+        teacher: 'DOCENTE A / DOCENTE B',
+        room: 'Aula 101 / Lab 2',
+        schedule: [
+          {
+            day: 1,
+            startMinute: 480,
+            endMinute: 600,
+            details: { sessionId: 's-t', teacherId: 't-a', teacherName: 'DOCENTE A', roomId: 'r-1', roomName: 'Aula 101', sessionType: 'T' },
+          },
+          {
+            day: 3,
+            startMinute: 480,
+            endMinute: 600,
+            details: { sessionId: 's-p', teacherId: 't-a', teacherName: 'DOCENTE A', roomId: 'r-1', roomName: 'Aula 101', sessionType: 'P' },
+          },
+          {
+            day: 5,
+            startMinute: 840,
+            endMinute: 960,
+            details: { sessionId: 's-l', teacherId: 't-b', teacherName: 'DOCENTE B', roomId: 'r-2', roomName: 'Lab 2', sessionType: 'L' },
+          },
+          {
+            day: 6,
+            startMinute: 600,
+            endMinute: 660,
+            details: { sessionId: 's-u', teacherId: 't-b', teacherName: 'DOCENTE B', roomId: 'r-2', roomName: 'Lab 2' },
+          },
+        ],
+      },
+    ],
+  }
+  const [option] = buildSectionOptions(course)
+  assert.equal(option!.teacher, 'DOCENTE A / DOCENTE B')
+  assert.equal(option!.room, 'Aula 101 / Lab 2')
+  assert.match(option!.schedule, /Lun 08:00-10:00.*Teoría.*Aula 101.*DOCENTE A/)
+  assert.match(option!.schedule, /Vie 14:00-16:00.*Laboratorio.*Lab 2.*DOCENTE B/)
+  assert.deepEqual(option!.sessions, [
+    { day: 'Lun', time: '08:00-10:00', sessionType: 'Teoría', room: 'Aula 101', teacher: 'DOCENTE A', summary: 'Lun 08:00-10:00 (Teoría · Aula 101 · DOCENTE A)' },
+    { day: 'Mié', time: '08:00-10:00', sessionType: 'Práctica', room: 'Aula 101', teacher: 'DOCENTE A', summary: 'Mié 08:00-10:00 (Práctica · Aula 101 · DOCENTE A)' },
+    { day: 'Vie', time: '14:00-16:00', sessionType: 'Laboratorio', room: 'Lab 2', teacher: 'DOCENTE B', summary: 'Vie 14:00-16:00 (Laboratorio · Lab 2 · DOCENTE B)' },
+    { day: 'Sáb', time: '10:00-11:00', sessionType: null, room: 'Lab 2', teacher: 'DOCENTE B', summary: 'Sáb 10:00-11:00 (Lab 2 · DOCENTE B)' },
+  ])
+})
+

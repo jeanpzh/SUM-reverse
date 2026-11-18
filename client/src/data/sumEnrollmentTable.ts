@@ -5,7 +5,13 @@ import type {
   MatriculaRegularOfferedCourse,
   MatriculaRegularSection,
 } from '../../../shared/matricula-regular.mjs'
-import { calculateSelectionTotalCredits, computeSelectableCourses, formatMeetingSchedule } from './selectionPanel.ts'
+import {
+  calculateSelectionTotalCredits,
+  computeSelectableCourses,
+  describeMeetingSessions,
+  formatMeetingSchedule,
+  type MeetingSessionDetail,
+} from './selectionPanel.ts'
 
 /** V-02 shows «O - Obligatorio»; «E - Electivo» is an inferred label. */
 export const COURSE_TYPE_LABELS = { mandatory: 'O - Obligatorio', elective: 'E - Electivo' } as const
@@ -28,6 +34,7 @@ export interface SectionOption {
   teacher: string
   occupancy: string
   schedule: string
+  sessions?: MeetingSessionDetail[]
 }
 
 export interface SelectionSummary {
@@ -95,14 +102,26 @@ export function filterEnrollmentRows(rows: readonly SumEnrollmentRow[], query: s
 
 /** V-04: one row per section; full sections stay selectable (the server rejects SECTION_FULL on execute). */
 export function buildSectionOptions(course: MatriculaRegularOfferedCourse): SectionOption[] {
-  return course.sections.map((section) => ({
-    sectionId: section.sectionId,
-    label: sectionLabel(section),
-    room: section.room ?? '-',
-    teacher: section.teacher ?? '-',
-    occupancy: `${section.occupied} / ${section.capacity}`,
-    schedule: formatMeetingSchedule(section.schedule),
-  }))
+  return course.sections.map((section) => {
+    const sessions = describeMeetingSessions(section.schedule)
+    const detailTeachers = [...new Set(sessions.map((session) => session.teacher).filter((name) => name !== '—'))]
+    const detailRooms = [...new Set(sessions.map((session) => session.room).filter((name) => name !== '—'))]
+    const room = section.room !== undefined
+      ? (section.room ?? '-')
+      : (detailRooms.length > 0 ? detailRooms.join(' / ') : '-')
+    const teacher = section.teacher !== undefined
+      ? (section.teacher ?? '-')
+      : (detailTeachers.length > 0 ? detailTeachers.join(' / ') : '-')
+    return {
+      sectionId: section.sectionId,
+      label: sectionLabel(section),
+      room,
+      teacher,
+      occupancy: `${section.occupied} / ${section.capacity}`,
+      schedule: formatMeetingSchedule(section.schedule),
+      ...(sessions.length > 0 ? { sessions } : {}),
+    }
+  })
 }
 
 export function chooseSection<CourseId extends string, SectionId extends string>(

@@ -19,6 +19,14 @@ import {
   restoreIntent,
 } from '../data/matriculaRegularRecovery'
 import type { KeyValueStorage, PendingIntent, SubmitAttempt, UncertainReason } from '../data/matriculaRegularRecovery'
+import {
+  applyContextRefresh,
+  formatDroppedSelectionNotice,
+  reconcileSelectionWithContext,
+  resolveProfileSnapshotTransition,
+  resolveRejectionClose,
+} from '../data/enrollmentRejectionRecovery'
+import type { ProfileScopeIdentity } from '../data/enrollmentRejectionRecovery'
 import { formatOutcomeCauses, getDialogKind } from '../data/enrollmentResultDialog'
 import { REPORT_ROUTE_PATH, reportLinkFromOutcome } from '../data/regularEnrollmentReport'
 import { getLocalProfileActivation, localProfileSessionStore } from '../data/client'
@@ -137,6 +145,7 @@ function LocalProfileEnrollmentScreen() {
   const profileGeneration = snapshot.generation
   const [contextEnvelope, setContextEnvelope] = useState<MatriculaRegularEnvelope<MatriculaRegularContext> | null>(null)
   const [contextRevision, setContextRevision] = useState(0)
+  const [contextRefreshing, setContextRefreshing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedChoices, setSelectedChoices] = useState<MatriculaRegularChoice[]>([])
@@ -162,11 +171,23 @@ function LocalProfileEnrollmentScreen() {
   const contextEnvelopeRef = useRef(contextEnvelope)
   const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const uncertainRef = useRef<UncertainState | null>(null)
+  const resultOutcomeRef = useRef<MatriculaRegularOutcome | null>(null)
+  const scopeIdentityRef = useRef<ProfileScopeIdentity>({
+    status: snapshot.status,
+    runId: profileRunId,
+    actorId: profileActorId,
+    sessionId: profileSessionId,
+    generation: profileGeneration,
+  })
   const registerHeadingRef = useRef<HTMLHeadingElement>(null)
   const submitButtonRef = useRef<HTMLButtonElement>(null)
   const updateUncertain = useCallback((value: UncertainState | null) => {
     uncertainRef.current = value
     setUncertain(value)
+  }, [])
+  const updateResultOutcome = useCallback((value: MatriculaRegularOutcome | null) => {
+    resultOutcomeRef.current = value
+    setResultOutcome(value)
   }, [])
   const invalidateIntentionImport = useCallback(() => {
     intentionImportTokenRef.current += 1
@@ -186,11 +207,43 @@ function LocalProfileEnrollmentScreen() {
     if (importIdentity && (current.status !== 'active' || current.runId !== importIdentity.runId
       || current.actorId !== importIdentity.actorId || current.sessionId !== importIdentity.sessionId
       || current.generation !== importIdentity.generation)) invalidateIntentionImport()
-    if (current.status === 'expired') {
+    const nextIdentity: ProfileScopeIdentity = {
+      status: current.status,
+      runId: current.status === 'active' || current.status === 'expired' ? current.runId : null,
+      actorId: current.status === 'active' || current.status === 'expired' ? current.actorId : null,
+      sessionId: current.status === 'active' || current.status === 'expired' ? current.sessionId : null,
+      generation: current.generation,
+    }
+    const transition = resolveProfileSnapshotTransition(scopeIdentityRef.current, nextIdentity)
+    scopeIdentityRef.current = nextIdentity
+    if (transition === 'expired') {
       invalidateIntentionImport()
       updateSelectedChoices([])
+      setPickerCourseId(null)
+      setConfirmOpen(false)
+      setContextRefreshing(false)
+      if (resultOutcomeRef.current?.state === 'rejected') {
+        setDialogOpen(false)
+        updateResultOutcome(null)
+      }
+    } else if (transition === 'reset') {
+      invalidateIntentionImport()
+      submitControllerRef.current?.abort()
+      updateSelectedChoices([])
+      updateUncertain(null)
+      updateResultOutcome(null)
+      setDialogOpen(false)
+      setConfirmOpen(false)
+      setPickerCourseId(null)
+      setNotice(null)
+      setIntentionImportNotice(null)
+      setIntentionImportIssues([])
+      contextEnvelopeRef.current = null
+      setContextEnvelope(null)
+      setContextRefreshing(false)
+      setLoading(current.status === 'active' || current.status === 'entering')
     }
-  }), [invalidateIntentionImport, updateSelectedChoices])
+  }), [invalidateIntentionImport, updateResultOutcome, updateSelectedChoices, updateUncertain])
 
   useEffect(() => {
     if (localStatus !== 'active' || !profileRunId || !profileActorId || !profileSessionId) {
@@ -199,19 +252,33 @@ function LocalProfileEnrollmentScreen() {
     const identity = { runId: profileRunId, actorId: profileActorId, sessionId: profileSessionId }
     const controller = new AbortController()
     localProfileSessionStore.read('matriculaInfo', { signal: controller.signal })
-      .then(({ data }) => {
+      .then(({ runId: responseRunId, data }) => {
         if (controller.signal.aborted) return
+        const latest = localProfileSessionStore.getSnapshot()
+        if (latest.status !== 'active' || latest.runId !== profileRunId || latest.actorId !== profileActorId
+          || latest.sessionId !== profileSessionId || latest.generation !== profileGeneration) {
+          return
+        }
         const context = data.payload
-        if (context.actorId !== profileActorId) {
+        if (responseRunId !== profileRunId || context.actorId !== profileActorId) {
           throw new Error('El contexto no corresponde al perfil activo.')
         }
         invalidateIntentionImport()
         setIntentionImportIssues([])
         const envelope = { runId: profileRunId, data: context }
-        if (context.eligibility.state !== 'eligible' || !context.preEnrollmentComplete || !context.offerKnown) {
+        const refreshed = applyContextRefresh({
+          envelope,
+          currentSelection: selectedChoicesRef.current,
+          expectedRunId: profileRunId,
+          expectedActorId: profileActorId,
+        })
+        if (!refreshed.accepted) return
+        if (refreshed.reconciled.droppedChoices.length > 0) {
           invalidateIntentionImport()
-          updateSelectedChoices([])
         }
+        updateSelectedChoices(refreshed.reconciled.choices)
+        const dropNotice = formatDroppedSelectionNotice(refreshed.reconciled)
+        let resetNoticeSet = false
         if (!flow.isBusy()) {
           const restored = restoreIntent(storage, { runId: identity.runId, actorId: identity.actorId })
           if (restored.kind === 'restored' && uncertainRef.current?.intent.requestId !== restored.intent.requestId) {
@@ -221,16 +288,22 @@ function LocalProfileEnrollmentScreen() {
             invalidateIntentionImport()
             updateSelectedChoices([])
             setNotice({ tone: 'warning', message: RUN_RESET_MESSAGE })
+            resetNoticeSet = true
           }
+        }
+        if (!resetNoticeSet && dropNotice) {
+          setNotice({ tone: 'warning', message: dropNotice })
         }
         contextEnvelopeRef.current = envelope
         setContextEnvelope(envelope)
         setError(null)
         setLoading(false)
+        setContextRefreshing(false)
       })
       .catch((failure: unknown) => {
         if (controller.signal.aborted) return
         setLoading(false)
+        setContextRefreshing(false)
         setError(failure instanceof Error ? failure.message : 'No se pudo cargar el contexto local.')
       })
     return () => controller.abort()
@@ -250,7 +323,7 @@ function LocalProfileEnrollmentScreen() {
 
   /** V-07: success alert + automatic redirect; rejection opens the error alert (L-08); pending keeps a notice. */
   const showOutcome = (outcome: MatriculaRegularOutcome) => {
-    setResultOutcome(outcome)
+    updateResultOutcome(outcome)
     if (outcome.state === 'configuration-pending') {
       setNotice({ tone: 'warning', message: 'La solicitud requiere configuración local y no se presenta como matrícula.' })
       return
@@ -276,9 +349,30 @@ function LocalProfileEnrollmentScreen() {
     }, SUCCESS_REDIRECT_MS)
   }
 
+  const applyDefinitiveFailure = (code: string, status: number) => {
+    const handling = DEFINITIVE_HANDLING[code]
+    updateUncertain(null)
+    setNotice({ tone: 'warning', message: handling?.message ?? `La API local respondió ${code}.` })
+    if (code === 'SESSION_EXPIRED' || code === 'SESSION_NOT_FOUND'
+      || code === 'SESSION_CONTEXT_MISMATCH' || code === 'ACTOR_NOT_FOUND') {
+      localProfileSessionStore.markExpired()
+    }
+    if (status === 401 || status === 403) localProfileSessionStore.markAccessExpired()
+    if (handling?.resetSelection) {
+      invalidateIntentionImport()
+      updateSelectedChoices([])
+      if (localProfileSessionStore.getSnapshot().status === 'active') {
+        setContextRefreshing(true)
+        setContextRevision((value) => value + 1)
+      }
+    }
+  }
+
   const handleSubmit = async () => {
-    if (snapshot.status !== 'active' || !contextEnvelope || submitting || flow.isBusy() || uncertainRef.current) return
-    if (!selectedChoices.length || contextEnvelope.data.eligibility.state !== 'eligible') return
+    if (snapshot.status !== 'active' || !contextEnvelope || contextRefreshing || error !== null
+      || submitting || flow.isBusy() || uncertainRef.current || resultOutcomeRef.current?.state === 'accepted') return
+    if (!selectedChoices.length || contextEnvelope.data.eligibility.state !== 'eligible'
+      || !contextEnvelope.data.preEnrollmentComplete || !contextEnvelope.data.offerKnown) return
     invalidateIntentionImport()
     const generation = snapshot.generation
     const controller = new AbortController()
@@ -302,10 +396,7 @@ function LocalProfileEnrollmentScreen() {
     } else if (attempt.result.kind === 'run-changed') {
       localProfileSessionStore.markRunChanged()
     } else if (attempt.result.kind === 'definitive') {
-      updateUncertain(null)
-      setNotice({ tone: 'warning', message: DEFINITIVE_HANDLING[attempt.result.code]?.message ?? `La API local respondió ${attempt.result.code}.` })
-      if (attempt.result.code === 'SESSION_EXPIRED') localProfileSessionStore.markExpired()
-      if (attempt.result.status === 401 || attempt.result.status === 403) localProfileSessionStore.markAccessExpired()
+      applyDefinitiveFailure(attempt.result.code, attempt.result.status)
     } else {
       updateUncertain({ intent: attempt.intent, reason: attempt.result.kind === 'conflict' ? 'conflict' : attempt.result.reason,
         lookup: 'none', persisted: attempt.persisted })
@@ -319,9 +410,9 @@ function LocalProfileEnrollmentScreen() {
       && import.meta.env.VITE_SUM_DATA_MODE === 'local'
       && import.meta.env.VITE_SUM_API_BASE_URL === '/api'
       && import.meta.env.VITE_SUM_DEVTOOLS === '1'
-    if (!configAllowsImport || current.status !== 'active' || !contextEnvelope || intentionImportBusy
-      || submitting || lookupBusy || uncertainRef.current || resultOutcome !== null || dialogOpen || confirmOpen
-      || contextEnvelope.data.eligibility.state !== 'eligible'
+    if (!configAllowsImport || current.status !== 'active' || !contextEnvelope || contextRefreshing || error !== null
+      || intentionImportBusy || submitting || lookupBusy || uncertainRef.current || resultOutcome !== null
+      || dialogOpen || confirmOpen || contextEnvelope.data.eligibility.state !== 'eligible'
       || !['SYN-SIS-A', 'SYN-SIS-B'].includes(current.actorId)) return
 
     invalidateIntentionImport()
@@ -422,20 +513,35 @@ function LocalProfileEnrollmentScreen() {
     if (attempt.result.kind === 'outcome') {
       updateUncertain(null)
       showOutcome(attempt.result.outcome)
-    } else if (attempt.result.kind === 'run-changed') localProfileSessionStore.markRunChanged()
-    else if (attempt.result.kind === 'uncertain' || attempt.result.kind === 'conflict') {
+    } else if (attempt.result.kind === 'run-changed') {
+      localProfileSessionStore.markRunChanged()
+    } else if (attempt.result.kind === 'definitive') {
+      applyDefinitiveFailure(attempt.result.code, attempt.result.status)
+    } else if (attempt.result.kind === 'uncertain' || attempt.result.kind === 'conflict') {
       updateUncertain({ intent: attempt.intent, reason: attempt.result.kind === 'conflict' ? 'conflict' : attempt.result.reason,
         lookup: 'none', persisted: attempt.persisted })
     }
   }
 
-  // L-06/L-08 (T-01): closing the rejection returns to the registration with an empty selection and fresh vacancies.
+  // Ticket C: recoverable business rejections keep still-valid choices for adjustment and refresh context/vacancies;
+  // non-recoverable rejections clear selection and accepted outcomes stay immutable.
   const closeRejected = () => {
     setDialogOpen(false)
     invalidateIntentionImport()
-    updateSelectedChoices([])
-    setResultOutcome(null)
-    setContextRevision((value) => value + 1)
+    const currentOutcome = resultOutcomeRef.current
+    if (currentOutcome?.state === 'accepted') {
+      return
+    }
+    const resolution = resolveRejectionClose({
+      outcome: currentOutcome,
+      currentSelection: selectedChoicesRef.current,
+    })
+    updateSelectedChoices(resolution.selection)
+    updateResultOutcome(null)
+    if (resolution.shouldRefreshContext && localProfileSessionStore.getSnapshot().status === 'active') {
+      setContextRefreshing(true)
+      setContextRevision((value) => value + 1)
+    }
     setTimeout(() => registerHeadingRef.current?.focus(), 0)
   }
 
@@ -446,7 +552,8 @@ function LocalProfileEnrollmentScreen() {
   const expired = snapshot.status === 'expired'
   const choices = uncertain?.intent.selection ?? selectedChoices
   const selectionDisabled = snapshot.status !== 'active' || submitting || uncertain !== null
-    || acceptedOutcome !== null || context?.eligibility.state !== 'eligible'
+    || acceptedOutcome !== null || contextRefreshing || error !== null
+    || context?.eligibility.state !== 'eligible' || !context?.preEnrollmentComplete || !context?.offerKnown
   const pickerCourse = context && pickerCourseId
     ? context.offer.find((course) => course.courseId === pickerCourseId) ?? null
     : null
@@ -462,7 +569,12 @@ function LocalProfileEnrollmentScreen() {
         <section className="route-status" role="alert">
           <h2>No se pudo cargar la información</h2>
           <p>{error}</p>
-          <button type="button" onClick={() => setContextRevision((value) => value + 1)}>Intentar de nuevo</button>
+          <button type="button" onClick={() => {
+            setError(null)
+            if (contextEnvelopeRef.current === null) setLoading(true)
+            else setContextRefreshing(true)
+            setContextRevision((value) => value + 1)
+          }}>Intentar de nuevo</button>
         </section>
       )}
       {expired && <p role="status">La sesión local venció. La selección y los envíos están deshabilitados; se permite consultar manualmente un resultado pendiente.</p>}
@@ -479,8 +591,9 @@ function LocalProfileEnrollmentScreen() {
             && ['SYN-SIS-A', 'SYN-SIS-B'].includes(snapshot.status === 'active' ? snapshot.actorId : '') && (
             <section className="regular-enrollment__panel" aria-labelledby="intention-import-heading">
               <h3 id="intention-import-heading" className="regular-enrollment__section-title">Cargar mi intención</h3>
-              <button type="button" disabled={snapshot.status !== 'active' || intentionImportBusy || submitting || lookupBusy
-                || uncertain !== null || resultOutcome !== null || dialogOpen || confirmOpen || context.eligibility.state !== 'eligible'}
+              <button type="button" disabled={snapshot.status !== 'active' || contextRefreshing || error !== null
+                || intentionImportBusy || submitting || lookupBusy || uncertain !== null || resultOutcome !== null
+                || dialogOpen || confirmOpen || context.eligibility.state !== 'eligible'}
                 onClick={() => void handleLoadIntention()}>
                 {intentionImportBusy ? 'Consultando intención…' : 'Cargar mi intención'}
               </button>
@@ -560,6 +673,7 @@ export function RegularEnrollmentScreen() {
   const [selectedActorId, setSelectedActorId] = useState<MatriculaRegularId>('SYN-SIS-A')
   const [contextEnvelope, setContextEnvelope] = useState<MatriculaRegularEnvelope<MatriculaRegularContext> | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
+  const [contextRefreshing, setContextRefreshing] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
   const [session, setSession] = useState<MatriculaRegularSession | null>(null)
   const [sessionBusy, setSessionBusy] = useState(false)
@@ -574,10 +688,13 @@ export function RegularEnrollmentScreen() {
   const [storage] = useState(browserStorage)
   const [flow] = useState(() => createSubmissionFlow({ api: createMatriculaRegularApi({ mode: 'local', publicAccess: import.meta.env.VITE_SUM_SIMULATOR === '1' }), storage }))
   const navigate = useNavigate()
+  const contextEnvelopeRef = useRef<MatriculaRegularEnvelope<MatriculaRegularContext> | null>(contextEnvelope)
   const sessionRef = useRef<MatriculaRegularSession | null>(null)
   const sessionControllerRef = useRef<AbortController | null>(null)
   const submitControllerRef = useRef<AbortController | null>(null)
   const uncertainRef = useRef<UncertainState | null>(null)
+  const selectedChoicesRef = useRef<MatriculaRegularChoice[]>(selectedChoices)
+  const resultOutcomeRef = useRef<MatriculaRegularOutcome | null>(resultOutcome)
   const registerHeadingRef = useRef<HTMLHeadingElement>(null)
   const acceptedHeadingRef = useRef<HTMLHeadingElement>(null)
   const submitButtonRef = useRef<HTMLButtonElement>(null)
@@ -589,15 +706,28 @@ export function RegularEnrollmentScreen() {
     uncertainRef.current = value
     setUncertain(value)
   }, [])
+  const updateSelectedChoices = useCallback((choices: MatriculaRegularChoice[]) => {
+    selectedChoicesRef.current = choices
+    setSelectedChoices(choices)
+  }, [])
+  const updateResultOutcome = useCallback((value: MatriculaRegularOutcome | null) => {
+    resultOutcomeRef.current = value
+    setResultOutcome(value)
+  }, [])
   const acceptEnvelope = useCallback((envelope: MatriculaRegularEnvelope<MatriculaRegularContext>) => {
     const current = sessionRef.current
+    let nextSelection = selectedChoicesRef.current
+    let selectionNotice: Notice | null = null
     if (current && (current.runId !== envelope.runId || current.actorId !== envelope.data.actorId
       || Date.parse(envelope.data.serverNow) >= Date.parse(current.expiresAt))) {
       updateSession(null)
-      setSelectedChoices([])
+      nextSelection = []
       setSessionNotice('La sesión local terminó o cambió el entorno. Ingrese de nuevo.')
     }
-    if (envelope.data.eligibility.state !== 'eligible' || !envelope.data.preEnrollmentComplete || !envelope.data.offerKnown) setSelectedChoices([])
+    const reconciled = reconcileSelectionWithContext(nextSelection, envelope.data)
+    nextSelection = reconciled.choices
+    const dropNotice = formatDroppedSelectionNotice(reconciled)
+    if (dropNotice) selectionNotice = { tone: 'warning', message: dropNotice }
     // Recovery: a stored identity from this run is restored as uncertain; one from another run is cleared with a warning.
     if (!flow.isBusy()) {
       const restored = restoreIntent(storage, { runId: envelope.runId, actorId: envelope.data.actorId })
@@ -608,12 +738,15 @@ export function RegularEnrollmentScreen() {
         }
       } else if (restored.kind === 'reset' || (inMemory !== null && inMemory.intent.runId !== envelope.runId)) {
         updateUncertain(null)
-        setSelectedChoices([])
-        setNotice({ tone: 'warning', message: RUN_RESET_MESSAGE })
+        nextSelection = []
+        selectionNotice = { tone: 'warning', message: RUN_RESET_MESSAGE }
       }
     }
+    updateSelectedChoices(nextSelection)
+    if (selectionNotice) setNotice(selectionNotice)
+    contextEnvelopeRef.current = envelope
     setContextEnvelope(envelope)
-  }, [updateSession, updateUncertain, flow, storage])
+  }, [updateSession, updateUncertain, updateSelectedChoices, flow, storage])
 
   const actorSelectId = useId()
   const activeControllerRef = useRef<AbortController | null>(null)
@@ -623,7 +756,8 @@ export function RegularEnrollmentScreen() {
     const controller = new AbortController()
     activeControllerRef.current = controller
 
-    setLoading(true)
+    if (contextEnvelopeRef.current === null) setLoading(true)
+    else setContextRefreshing(true)
     setError(null)
 
     const api = createMatriculaRegularApi({ mode: 'local', publicAccess: import.meta.env.VITE_SUM_SIMULATOR === '1' })
@@ -632,10 +766,12 @@ export function RegularEnrollmentScreen() {
         if (controller.signal.aborted) return
         acceptEnvelope(envelope)
         setLoading(false)
+        setContextRefreshing(false)
       })
       .catch((err: unknown) => {
         if (controller.signal.aborted) return
         setLoading(false)
+        setContextRefreshing(false)
         if (err instanceof MatriculaRegularApiError) {
           if (err.status === 401 || err.status === 403) localProfileSessionStore.markAccessExpired()
           setError(err.message)
@@ -690,18 +826,20 @@ export function RegularEnrollmentScreen() {
       return
     }
     activeControllerRef.current?.abort()
+    contextEnvelopeRef.current = null
     setContextEnvelope(null)
+    setContextRefreshing(false)
     setError(null)
     setLoading(true)
     sessionControllerRef.current?.abort()
     updateSession(null)
     setSessionBusy(false)
     setSessionNotice('')
-    setSelectedChoices([])
+    updateSelectedChoices([])
     // Each actor keeps its own stored identity; only the in-memory view is reset here.
     updateUncertain(null)
     setNotice(null)
-    setResultOutcome(null)
+    updateResultOutcome(null)
     setDialogOpen(false)
     setSelectedActorId(matchedActor.id)
   }
@@ -727,7 +865,7 @@ export function RegularEnrollmentScreen() {
       if (controller.signal.aborted) return
       if (failure instanceof MatriculaRegularApiError && (failure.code === 'SESSION_EXPIRED' || failure.code === 'RUN_CHANGED')) {
         updateSession(null)
-        setSelectedChoices([])
+        updateSelectedChoices([])
       }
       if (failure instanceof MatriculaRegularApiError && (failure.status === 401 || failure.status === 403)) localProfileSessionStore.markAccessExpired()
       setSessionNotice(failure instanceof Error ? failure.message : 'No se pudo iniciar o renovar la sesión local.')
@@ -743,15 +881,15 @@ export function RegularEnrollmentScreen() {
   const resetAfterRunChange = () => {
     updateUncertain(null)
     updateSession(null)
-    setSelectedChoices([])
-    setResultOutcome(null)
+    updateSelectedChoices([])
+    updateResultOutcome(null)
     setNotice({ tone: 'warning', message: RUN_RESET_MESSAGE })
     loadContext(selectedActorId)
   }
 
   const handleOutcome = (outcome: MatriculaRegularOutcome) => {
     updateUncertain(null)
-    setResultOutcome(outcome)
+    updateResultOutcome(outcome)
     if (outcome.state === 'configuration-pending') {
       setNotice({ tone: 'warning', message: 'Solicitud pendiente de configuración: faltan datos para evaluarla y no se registró matrícula. Cambiar la elección crea una solicitud nueva.' })
     } else if (getDialogKind(outcome) === null) {
@@ -775,7 +913,7 @@ export function RegularEnrollmentScreen() {
       setNotice({ tone: 'warning', message: handling?.message ?? `La API local respondió ${result.code}.` })
       if (handling?.resetSession) updateSession(null)
       if (handling?.resetSelection) {
-        setSelectedChoices([])
+        updateSelectedChoices([])
         loadContext(selectedActorId)
       }
     } else {
@@ -791,8 +929,10 @@ export function RegularEnrollmentScreen() {
 
   const handleSubmit = async () => {
     const current = sessionRef.current
-    if (!contextEnvelope || !current || submitting || flow.isBusy() || uncertainRef.current !== null) return
-    if (selectedChoices.length === 0 || contextEnvelope.data.eligibility.state !== 'eligible') return
+    if (!contextEnvelope || !current || loading || contextRefreshing || error !== null || submitting || flow.isBusy()
+      || uncertainRef.current !== null || resultOutcomeRef.current?.state === 'accepted') return
+    if (selectedChoices.length === 0 || contextEnvelope.data.eligibility.state !== 'eligible'
+      || !contextEnvelope.data.preEnrollmentComplete || !contextEnvelope.data.offerKnown) return
     const controller = new AbortController()
     submitControllerRef.current = controller
     setNotice(null)
@@ -845,10 +985,17 @@ export function RegularEnrollmentScreen() {
 
   const handleDialogClose = () => {
     setDialogOpen(false)
-    if (resultOutcome?.state === 'rejected') {
-      // L-06: a definitive academic rejection returns to an empty selection; nothing is resent.
-      setSelectedChoices([])
-      setResultOutcome(null)
+    const currentOutcome = resultOutcomeRef.current
+    if (currentOutcome?.state === 'rejected') {
+      const resolution = resolveRejectionClose({
+        outcome: currentOutcome,
+        currentSelection: selectedChoicesRef.current,
+      })
+      updateSelectedChoices(resolution.selection)
+      updateResultOutcome(null)
+      if (resolution.shouldRefreshContext) {
+        loadContext(selectedActorId)
+      }
     }
     focusAfterDialogClose()
   }
@@ -887,7 +1034,7 @@ export function RegularEnrollmentScreen() {
             className="regular-enrollment__select"
             value={selectedActorId}
             onChange={handleActorChange}
-            disabled={loading || sessionBusy || submitting}
+            disabled={loading || contextRefreshing || sessionBusy || submitting}
           >
             {AUTHORIZED_SYNTHETIC_ACTORS.map((actor) => (
               <option key={actor.id} value={actor.id}>
@@ -901,9 +1048,9 @@ export function RegularEnrollmentScreen() {
           type="button"
           className="regular-enrollment__refresh-button"
           onClick={handleRefresh}
-          disabled={loading || sessionBusy}
+          disabled={loading || contextRefreshing || sessionBusy}
         >
-          {loading ? 'Cargando contexto…' : 'Actualizar contexto'}
+          {loading || contextRefreshing ? 'Cargando contexto…' : 'Actualizar contexto'}
         </button>
       </section>
 
@@ -923,7 +1070,7 @@ export function RegularEnrollmentScreen() {
         </section>
       )}
 
-      {!loading && !error && contextData && (
+      {!loading && contextData && (
         <div className="regular-enrollment__content">
           <RegularEnrollmentBody
             context={contextData}
@@ -932,9 +1079,10 @@ export function RegularEnrollmentScreen() {
             sessionNotice={sessionNotice}
             onSession={(renew) => { void handleSession(renew) }}
             choices={displayedChoices}
-            onChoices={setSelectedChoices}
-            selectionDisabled={session === null || sessionBusy || submitting || uncertain !== null
-              || acceptedOutcome !== null || contextData.eligibility.state !== 'eligible'}
+            onChoices={updateSelectedChoices}
+            selectionDisabled={loading || contextRefreshing || error !== null || session === null || sessionBusy || submitting || uncertain !== null
+              || acceptedOutcome !== null || contextData.eligibility.state !== 'eligible'
+              || !contextData.preEnrollmentComplete || !contextData.offerKnown}
             outcome={resultOutcome}
           >
             <SubmissionPanel
@@ -942,7 +1090,7 @@ export function RegularEnrollmentScreen() {
               uncertain={uncertain ? { reason: uncertain.reason, lookup: uncertain.lookup } : null}
               storageNotice={uncertain !== null && !uncertain.persisted}
               notice={notice}
-              hasSession={session !== null}
+              hasSession={session !== null && !contextRefreshing && error === null}
               selectionCount={displayedChoices.length}
               eligible={contextData.eligibility.state === 'eligible'}
               acceptedOutcome={acceptedOutcome}
